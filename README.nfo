@@ -387,7 +387,9 @@
  meilleurs coups. Nature : imprécision à partir de 50 cp d'écart, erreur
  à partir de 100, gaffe à partir de 300. L'écart porte "mat" quand le
  coup joué manque un mat ou en concède un : il ne se chiffre pas en
- centipions. G/N/P : chances de gain, de
+ centipions. Un coup nul, "--" dans le PGN, n'est pas évalué : sa ligne
+ garde les trois meilleurs coups de la position, ses autres colonnes
+ portent "-". G/N/P : chances de gain, de
  nulle et de perte des Blancs selon le modèle de Stockfish, à lire comme
  une tendance plutôt que comme une probabilité entre joueurs humains.
 

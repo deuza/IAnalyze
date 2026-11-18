@@ -8,6 +8,31 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.5.4] - 2026-11-18
+
+### Added
+
+- TESTS.nfo : test T52, le coup nul dans le tableau Stockfish.
+- Synthèse, section 3 : une phrase explique la ligne d'un coup nul,
+  quand la partie en contient un.
+- `stockfish/evaluations.json` : clef `non_evalue` sur le coup joué
+  quand c'est un coup nul.
+
+### Changed
+
+- En-tête d'agent HTTP : `collecte-partie/3.5.4`.
+- README.nfo, section 7 : la ligne d'un coup nul.
+
+### Fixed
+
+- Stockfish : un coup nul, `--` dans le PGN, recevait une évaluation, un
+  écart et parfois une nature ("+0.00", 55 cp, "imprécision") que le
+  moteur n'avait jamais donnés, le protocole UCI ne sachant pas
+  restreindre une recherche à ce coup. Sa ligne est gardée avec les
+  meilleurs coups de la position, mais ses colonnes Éval, G/N/P, Écart
+  et Nature portent désormais `-`. La suite de la partie est analysée
+  comme avant.
+
 ## [3.5.3] - 2026-11-18
 
 ### Added

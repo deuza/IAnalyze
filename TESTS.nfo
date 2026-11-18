@@ -7,9 +7,10 @@
  8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les
  pourcentages bougent peu. "Probable" signale un résultat non mesuré.
 
- Plan mis à jour pour la version 3.5.3, le 18 novembre 2026. Les tests
- T34 à T51 ont été joués sur cette version, sous Linux (Python 3.13,
- python-chess 1.11.2, Stockfish 16 pour T51), ainsi que T01 à T08. Ils n'ont été joués ni sous
+ Plan mis à jour pour la version 3.5.4, le 18 novembre 2026. Les tests
+ T34 à T52 ont été joués sur cette version, sous Linux (Python 3.13,
+ python-chess 1.11.2, Stockfish 16 pour T51 et T52), ainsi que T01 à
+ T08. Ils n'ont été joués ni sous
  macOS ni sous Debian Trixie. Les tests avec jeton gardent leurs
  chiffres du 8 octobre, et T33 n'a été vérifié que sur un explorateur
  simulé.
@@ -457,7 +458,7 @@
       Un PGN sain ne déclenche aucun avertissement.
 
  T47  grep -n '^VERSION' collecte-partie.py
-      Attendu : VERSION = "3.5.3". L'en-tête d'agent HTTP en est tiré.
+      Attendu : VERSION = "3.5.4". L'en-tête d'agent HTTP en est tiré.
 
 
  [ M. NOM DU PGN ]
@@ -538,6 +539,24 @@
       L'évaluation de Nc6 varie avec la version du moteur. Avant la
       version 3.5.3, la colonne Écart cp affichait deux nombres voisins
       de 99700.
+
+
+ [ P. STOCKFISH : COUP NUL ]
+
+ T52  printf '1. e4 e5 2. -- Nc6 3. Nf3 *\n' > t-nul-coup.pgn
+      ARCH=$(./collecte-partie.py t-nul-coup.pgn --sans-explorateur \
+          --sans-questions --profondeur 8 --fils 2 --hachage 32)
+      echo $?
+      unzip -p "$ARCH" '*/synthese.md' \
+          | grep -E '^\| [34] \||Coup nul|coup nul'
+      Attendu : 0, puis la phrase "Coup nul `--` : le trait passe sans
+      qu'une pièce ne bouge ...", puis les lignes 3 et 4 du tableau :
+        | 3 | 2 | Blancs | -- | - | - | - | - | <trois coups> |
+        | 4 | 2 | Noirs | Nc6 | <éval> | <G/N/P> | <écart> | ... |
+      et, en section 3 bis, "    - joué : coup nul, non évalué par le
+      moteur". Le coup suivant, Nc6, est évalué normalement. Avant la
+      version 3.5.4, la ligne 3 portait une évaluation "+0.00", un écart
+      et la nature "imprécision", tous inventés.
 
 
  Nettoyage : rm -rf /tmp/analyses /tmp/abime /tmp/cat1.tsv

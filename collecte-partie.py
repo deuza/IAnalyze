@@ -357,7 +357,7 @@ RE_ID_SOURCE = re.compile(r"[A-Za-z0-9]{8}(?:[A-Za-z0-9]{4})?")
 
 #: Version du script, selon le versionnage sémantique. Elle est reprise
 #: dans l'en-tête d'agent : c'est le seul endroit à modifier.
-VERSION = "3.5.3"
+VERSION = "3.5.4"
 
 #: En-tête d'agent, par politesse envers l'API.
 UA = "collecte-partie/%s (analyse personnelle)" % VERSION
@@ -1643,6 +1643,20 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
                 if m["uci"] == coup.uci():
                     eval_joue = m
                     break
+            if eval_joue is None and not coup:
+                # Coup nul, "--" dans le PGN : le trait passe sans qu'aucune
+                # pièce ne bouge. Ce n'est pas un coup des échecs et le
+                # protocole UCI ne sait pas le restreindre : la recherche
+                # limitée à "0000" renvoyait un score sans rapport avec lui,
+                # d'où une évaluation et un écart inventés. La ligne est
+                # gardée, avec les meilleurs coups de la position, mais le
+                # coup joué n'est pas évalué.
+                eval_joue = {
+                    "san": san_joue, "uci": coup.uci(), "score": "-",
+                    "valeur_trait": None, "profondeur": None,
+                    "pv_uci": [], "pv_san": "", "wdl": None,
+                    "non_evalue": True,
+                }
             if eval_joue is None:
                 info = moteur.analyse(plateau, limite, root_moves=[coup])
                 if isinstance(info, list):
@@ -1656,7 +1670,7 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
                 eval_joue = decrire_variante(plateau, info, trait)
 
             ecart = None
-            if meilleurs:
+            if meilleurs and eval_joue["valeur_trait"] is not None:
                 ecart = meilleurs[0]["valeur_trait"] - eval_joue["valeur_trait"]
 
             resultats.append({
@@ -2009,6 +2023,11 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
         a("Nature : imprécision à partir de %d cp d'écart, erreur à partir "
           "de %d, gaffe à partir de %d."
           % (SEUIL_IMPRECISION, SEUIL_ERREUR, SEUIL_GAFFE))
+        if any(r["joue"].get("non_evalue") for r in stockfish["resultats"]):
+            a("Coup nul `--` : le trait passe sans qu'une pièce ne bouge. Ce "
+              "n'est pas un coup des échecs, le moteur ne l'évalue pas : "
+              "ses colonnes Éval, G/N/P, Écart et Nature portent `-`, les "
+              "trois meilleurs coups de la position restant donnés.")
         a("Écart `mat` : l'un des deux scores comparés est un mat, que le "
           "coup joué manque un mat ou qu'il en concède un ; l'écart ne se "
           "chiffre pas en centipions, comparez les colonnes Éval et 1er.")
@@ -2064,7 +2083,9 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
                                           tronquer_variante(
                                               plateau, m["pv_uci"],
                                               longueur_pv)))
-            if not joue_dans_liste:
+            if r["joue"].get("non_evalue"):
+                a("    - joué : coup nul, non évalué par le moteur")
+            elif not joue_dans_liste:
                 a("    - joué (%s) : %s" % (r["joue"]["score"],
                                             tronquer_variante(
                                                 plateau, r["joue"]["pv_uci"],
