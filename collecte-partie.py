@@ -357,7 +357,7 @@ RE_ID_SOURCE = re.compile(r"[A-Za-z0-9]{8}(?:[A-Za-z0-9]{4})?")
 
 #: Version du script, selon le versionnage sémantique. Elle est reprise
 #: dans l'en-tête d'agent : c'est le seul endroit à modifier.
-VERSION = "3.5.4"
+VERSION = "3.5.5"
 
 #: En-tête d'agent, par politesse envers l'API.
 UA = "collecte-partie/%s (analyse personnelle)" % VERSION
@@ -631,10 +631,25 @@ def ecrire_texte(chemin: pathlib.Path, texte: str) -> None:
     remplacé par "?" au lieu de lever UnicodeEncodeError au milieu de la
     collecte. Les fins de ligne restent des LF sur toutes les plateformes.
     Les erreurs d'accès (OSError) remontent à l'appelant.
+
+    L'écriture passe par un fichier voisin, ".<nom>.partiel", renommé une
+    fois complet : une interruption (Ctrl-C) ou une erreur en cours de
+    route ne laisse jamais un fichier tronqué sous son nom définitif. Le
+    fichier qui existait déjà, s'il y en avait un, reste alors intact, et
+    le fichier partiel est retiré.
     """
-    with chemin.open("w", encoding="utf-8", errors="replace",
-                     newline="\n") as f:
-        f.write(texte)
+    partiel = chemin.with_name(".%s.partiel" % chemin.name)
+    try:
+        with partiel.open("w", encoding="utf-8", errors="replace",
+                          newline="\n") as f:
+            f.write(texte)
+        partiel.replace(chemin)
+    except BaseException:
+        # BaseException et non Exception : KeyboardInterrupt doit lui aussi
+        # déclencher le ménage, avant de remonter tel quel.
+        with contextlib.suppress(OSError):
+            partiel.unlink()
+        raise
 
 
 #: Caractères écartés d'un nom de dossier, donc des noms rangés dans le
@@ -2209,32 +2224,62 @@ def archiver(dossier: pathlib.Path, garder: bool) -> pathlib.Path:
 
     Le dossier n'est détruit que si l'archive relit sans erreur et contient
     bien la synthèse. En cas de doute, tout est conservé et signalé.
+
+    L'archive est d'abord écrite sous un nom provisoire,
+    ".<dossier>.partiel.zip", à côté du dossier ; elle ne prend son nom
+    définitif qu'une fois vérifiée. Une interruption (Ctrl-C) ou un échec
+    ne laisse donc jamais, sous le nom d'une archive, un zip tronqué :
+    l'archive provisoire est retirée, le dossier de travail reste.
     """
     archive = chemin_archive(dossier)
     if archive.exists():
         raise SystemExit("L'archive %s existe déjà, dossier conservé."
                          % archive)
 
+    # Base du nom provisoire : shutil.make_archive y ajoute ".zip". Les
+    # chemins rangés dans le zip ne dépendent que de base_dir, ils restent
+    # ceux du dossier de travail.
+    base_partielle = dossier.with_name(".%s.partiel" % dossier.name)
+    partielle = chemin_archive(base_partielle)
+
     journal("Création de l'archive : %s" % archive)
     try:
-        shutil.make_archive(str(dossier), "zip",
-                            root_dir=dossier.parent, base_dir=dossier.name)
-    except (OSError, shutil.Error) as err:
-        raise SystemExit("Échec de la création de l'archive, dossier "
-                         "conservé : %s" % err) from err
+        try:
+            shutil.make_archive(str(base_partielle), "zip",
+                                root_dir=dossier.parent,
+                                base_dir=dossier.name)
+        except (OSError, shutil.Error) as err:
+            raise SystemExit("Échec de la création de l'archive, dossier "
+                             "conservé : %s" % err) from err
 
-    try:
-        with zipfile.ZipFile(archive) as z:
-            corrompu = z.testzip()
-            noms = z.namelist()
-    except (OSError, zipfile.BadZipFile) as err:
-        raise SystemExit("Archive illisible, dossier conservé : %s"
-                         % err) from err
+        try:
+            with zipfile.ZipFile(partielle) as z:
+                corrompu = z.testzip()
+                noms = z.namelist()
+        except (OSError, zipfile.BadZipFile) as err:
+            raise SystemExit("Archive illisible, dossier conservé : %s"
+                             % err) from err
 
-    attendu = "%s/synthese.md" % dossier.name
-    if corrompu is not None or attendu not in noms:
-        raise SystemExit("Archive incomplète ou corrompue (%s), dossier "
-                         "conservé." % (corrompu or "synthèse absente"))
+        attendu = "%s/synthese.md" % dossier.name
+        if corrompu is not None or attendu not in noms:
+            raise SystemExit("Archive incomplète ou corrompue (%s), dossier "
+                             "conservé." % (corrompu or "synthèse absente"))
+
+        # Renommage dans le même répertoire : l'archive apparaît d'un
+        # coup, complète et vérifiée.
+        try:
+            partielle.replace(archive)
+        except OSError as err:
+            raise SystemExit("Archive valide mais impossible à renommer en "
+                             "%s, dossier conservé : %s"
+                             % (archive, err)) from err
+    except BaseException:
+        # Tout arrêt avant le renommage, Ctrl-C compris, retire l'archive
+        # provisoire puis remonte tel quel : le dossier de travail, lui,
+        # est conservé pour diagnostic.
+        with contextlib.suppress(OSError):
+            partielle.unlink()
+        raise
 
     if garder:
         journal("Dossier conservé sur demande : %s" % dossier)

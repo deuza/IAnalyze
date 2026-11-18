@@ -8,6 +8,30 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.5.5] - 2026-11-18
+
+### Added
+
+- TESTS.nfo : test T53, interruption pendant l'archivage et écriture
+  qui échoue en cours de route, sur un archivage simulé.
+
+### Changed
+
+- En-tête d'agent HTTP : `collecte-partie/3.5.5`.
+- README.nfo, section 7 : ce qui reste sur le disque après un échec.
+
+### Fixed
+
+- Une interruption (Ctrl-C) ou un échec pendant la création du zip
+  laissait une archive tronquée sous son nom définitif, que rien ne
+  distinguait d'une archive valide. Le zip est désormais écrit sous un
+  nom provisoire, `.<dossier>.partiel.zip`, vérifié, puis renommé ; en
+  cas d'arrêt il est retiré, et le dossier de travail est conservé.
+- Une écriture interrompue laissait un fichier tronqué, `synthese.md`
+  ou `collecte.json` par exemple, dans le dossier de travail conservé.
+  Chaque fichier de l'archive est désormais écrit dans un fichier
+  voisin `.<nom>.partiel`, renommé une fois complet.
+
 ## [3.5.4] - 2026-11-18
 
 ### Added

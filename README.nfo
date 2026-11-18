@@ -351,6 +351,13 @@
  L'étiquette est assainie (voir section 8) : le journal l'annonce alors
  par "Nom du dossier assaini : ...".
 
+ Une archive présente sous son nom définitif est toujours complète et
+ vérifiée : elle est écrite sous le nom provisoire
+ .<dossier>.partiel.zip, puis renommée. Il en va de même de chaque
+ fichier du dossier de travail, écrit sous .<nom>.partiel. Après une
+ interruption (Ctrl-C) ou un échec, ces fichiers provisoires sont
+ retirés et le dossier de travail reste, sans archive.
+
  Contenu :
 
    synthese.md                 la synthèse, seul fichier à joindre

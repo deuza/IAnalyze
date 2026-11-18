@@ -7,8 +7,8 @@
  8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les
  pourcentages bougent peu. "Probable" signale un résultat non mesuré.
 
- Plan mis à jour pour la version 3.5.4, le 18 novembre 2026. Les tests
- T34 à T52 ont été joués sur cette version, sous Linux (Python 3.13,
+ Plan mis à jour pour la version 3.5.5, le 18 novembre 2026. Les tests
+ T34 à T53 ont été joués sur cette version, sous Linux (Python 3.13,
  python-chess 1.11.2, Stockfish 16 pour T51 et T52), ainsi que T01 à
  T08. Ils n'ont été joués ni sous
  macOS ni sous Debian Trixie. Les tests avec jeton gardent leurs
@@ -458,7 +458,7 @@
       Un PGN sain ne déclenche aucun avertissement.
 
  T47  grep -n '^VERSION' collecte-partie.py
-      Attendu : VERSION = "3.5.4". L'en-tête d'agent HTTP en est tiré.
+      Attendu : VERSION = "3.5.5". L'en-tête d'agent HTTP en est tiré.
 
 
  [ M. NOM DU PGN ]
@@ -557,6 +557,60 @@
       moteur". Le coup suivant, Nc6, est évalué normalement. Avant la
       version 3.5.4, la ligne 3 portait une évaluation "+0.00", un écart
       et la nature "imprécision", tous inventés.
+
+
+ [ Q. INTERRUPTION (SANS RÉSEAU NI JETON) ]
+
+ T53  Interruption simulée pendant l'archivage, puis écriture qui échoue
+      en cours de route. Le script est chargé comme module, comme pour
+      T49. Lancez le test dans un répertoire vide :
+      mkdir t-r1 && cd t-r1
+      $VENV/bin/python3 - <<'EOF'
+      import importlib.util, pathlib, zipfile
+      spec = importlib.util.spec_from_file_location(
+          "cp", "../collecte-partie.py")
+      cp = importlib.util.module_from_spec(spec)
+      spec.loader.exec_module(cp)
+      d = pathlib.Path("analyse-essai-1")
+      d.mkdir()
+      for nom in ("partie.pgn", "synthese.md", "collecte.json"):
+          (d / nom).write_text("x" * 5000, encoding="utf-8")
+      origine = zipfile.ZipFile.write
+      appels = [0]
+      def ecriture(self, *a, **k):
+          appels[0] += 1
+          if appels[0] == 3:
+              raise KeyboardInterrupt
+          return origine(self, *a, **k)
+      zipfile.ZipFile.write = ecriture
+      try:
+          cp.archiver(d, False)
+      except KeyboardInterrupt:
+          print("archivage interrompu")
+      zipfile.ZipFile.write = origine
+      print(sorted(p.name for p in pathlib.Path(".").iterdir()))
+      try:
+          cp.ecrire_texte(d / "synthese.md", 12345)
+      except TypeError:
+          print((d / "synthese.md").stat().st_size)
+      print(sorted(p.name for p in d.iterdir()))
+      print(cp.archiver(d, False))
+      print(sorted(p.name for p in pathlib.Path(".").iterdir()))
+      EOF
+      cd .. && rm -rf t-r1
+      Attendu, hors lignes de journal :
+        archivage interrompu
+        ['analyse-essai-1']
+        5000
+        ['collecte.json', 'partie.pgn', 'synthese.md']
+        analyse-essai-1.zip
+        ['analyse-essai-1.zip']
+      Après l'interruption, il ne reste que le dossier de travail : ni
+      archive, ni fichier .partiel. L'écriture qui échoue laisse
+      synthese.md intact, 5000 octets. L'archivage relancé aboutit
+      ensuite normalement. Avant la version 3.5.5, la deuxième ligne
+      était ['analyse-essai-1', 'analyse-essai-1.zip'], un zip tronqué
+      sous le nom d'une archive, et la troisième 0.
 
 
  Nettoyage : rm -rf /tmp/analyses /tmp/abime /tmp/cat1.tsv
