@@ -347,6 +347,9 @@
  archive homonyme fait ajouter un suffixe -2, -3... En cas d'échec, le
  dossier de travail est conservé tel quel pour diagnostic.
 
+ L'étiquette est assainie (voir section 8) : le journal l'annonce alors
+ par "Nom du dossier assaini : ...".
+
  Contenu :
 
    synthese.md                 la synthèse, seul fichier à joindre
@@ -355,7 +358,9 @@
    contexte.md                 les réponses aux questions de démarrage
    explorateur/NNN-<uci>.json  une réponse brute par demi-coup interrogé
    stockfish/evaluations.json  sauf avec --sans-stockfish
-   collecte.json               paramètres exacts, sans le jeton
+   collecte.json               paramètres exacts, sans le jeton ;
+                               pgn_encodage et pgn_remarques disent
+                               comment le PGN a été décodé
 
  Sections de synthese.md :
 
@@ -391,15 +396,77 @@
    130  interruption (Ctrl-C)
 
 
- [ 8. JETON ]
+ [ 8. ENCODAGES ET CARACTÈRES ]
+
+ Aucune entrée mal encodée ne doit arrêter le script sur une trace
+ Python : au pire, une ligne "Attention" du journal et une dégradation
+ propre.
+
+ PGN et fichier de consignes, essais dans cet ordre :
+
+   1. marque d'ordre des octets (BOM) UTF-8, UTF-16 ou UTF-32 ;
+   2. UTF-16 sans marque, reconnu à son octet nul sur deux ;
+   3. UTF-8 ;
+   4. UTF-8 abîmé : au moins un caractère accentué correctement codé et
+      au plus quatre octets invalides pour chacun d'eux ; ces octets
+      deviennent U+FFFD ;
+   5. cp1252, puis latin-1, qui accepte n'importe quel octet.
+
+ Hors UTF-8 sans défaut, le journal nomme l'encodage retenu :
+
+     Attention, PGN : le contenu n'est pas en UTF-8, encodage retenu :
+     cp1252.
+
+ Les fins de ligne CRLF et CR sont ramenées à LF. Les caractères de
+ contrôle, NUL compris, sont retirés et comptés dans le journal ; la
+ tabulation et le saut de ligne sont conservés. partie.pgn est donc
+ toujours de l'UTF-8 propre : si le fichier fourni a dû être converti,
+ la section 5 de la synthèse le dit, et collecte.json garde le détail.
+
+ Limite : un texte latin-1 se décode aussi sans erreur en cp1252, les
+ deux ne différant que sur les octets 0x80 à 0x9F. C'est donc cp1252 qui
+ est annoncé, sauf si le fichier contient l'un des cinq octets que
+ cp1252 ne définit pas.
+
+ Balises du PGN (White, Black, Event, Site et les autres) : tabulations
+ et caractères de contrôle en sont retirés avant l'écriture des en-têtes
+ de la synthèse et avant tout affichage.
+
+ Autres lectures : le fichier de jeton suit la même détection que le
+ PGN, et un jeton hors de l'ASCII imprimable est refusé avant toute
+ requête ; le catalogue et les réponses de l'explorateur sont lus en
+ UTF-8, marque d'ordre des octets tolérée. La sortie du moteur est
+ décodée en UTF-8 par python-chess, qui écarte une ligne illisible sans
+ s'arrêter. Rien ne dépend de la locale.
+
+ Écritures : tous les fichiers de l'archive sont en UTF-8, fins de ligne
+ LF. Dans l'étiquette de l'archive, les caractères de contrôle, les
+ caractères / \ : * ? " < > | et les octets non décodables du nom du
+ PGN deviennent "_" ; l'étiquette est bornée à 80 caractères. Espaces et
+ lettres accentuées sont conservés.
+
+ Console : un caractère que le terminal ne sait pas afficher devient "?"
+ au lieu d'arrêter le script, sous LANG=C comme avec
+ PYTHONIOENCODING=ascii. Le chemin de l'archive est écrit en octets sur
+ la sortie standard : ARCHIVE=$(...) reste exact dans tous les cas.
+
+ Questions de démarrage : une réponse saisie dans un autre encodage que
+ celui du terminal est redécodée, cp1252 puis latin-1.
+
+
+ [ 9. JETON ]
 
  Le jeton n'est transmis que dans l'en-tête Authorization, jamais dans
  l'URL. Il n'apparaît ni dans le journal, ni dans l'archive, où
  collecte.json note seulement sa présence. Un fichier de jeton lisible
  par d'autres déclenche un avertissement.
 
+ Le fichier peut porter une marque d'ordre des octets ou être en UTF-16,
+ comme en produisent certains éditeurs Windows : le journal le signale
+ et le jeton est lu normalement.
 
- [ 9. SOURCES ET LICENCES ]
+
+ [ 10. SOURCES ET LICENCES ]
 
    Explorateur      https://explorer.lichess.org/masters
                     https://explorer.lichess.org/lichess

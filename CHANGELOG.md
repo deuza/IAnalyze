@@ -8,6 +8,8 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-11-18
+
 ### Added
 
 - Sortie console : la sortie standard et la sortie d'erreur sont
@@ -47,6 +49,18 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 - Questions de démarrage : une réponse saisie dans un autre encodage que
   celui du terminal est redécodée (cp1252, puis latin-1) et nettoyée de
   ses caractères de contrôle.
+- Constante `VERSION`, d'où est tiré l'en-tête d'agent HTTP.
+- TESTS.nfo : section L, tests T34 à T47, dont les fixtures sont
+  produites par les tests eux-mêmes.
+- README.nfo : section 8, encodages et caractères.
+
+### Changed
+
+- En-tête d'agent HTTP : `collecte-partie/3.5.0`.
+- `partie.pgn` est toujours écrit en UTF-8, fins de ligne LF, sans
+  marque d'ordre des octets ni caractère de contrôle : ce n'est plus,
+  octet pour octet, le fichier fourni quand celui-ci s'en écartait.
+- README.nfo : les sections Jeton et Sources deviennent 9 et 10.
 
 ### Fixed
 

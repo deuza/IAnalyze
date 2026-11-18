@@ -7,11 +7,12 @@
  8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les
  pourcentages bougent peu. "Probable" signale un résultat non mesuré.
 
- Plan mis à jour pour la version 3.4.1, le 17 novembre 2026. Les tests
- sans jeton réel (T01 à T13, T26, T27, T30 à T32) ont été rejoués sur
- cette version, sous Linux, avec un fichier de jeton factice pour T12,
- T13 et T26. Les tests avec jeton gardent leurs chiffres du 8 octobre,
- et T33 n'a été vérifié que sur un explorateur simulé.
+ Plan mis à jour pour la version 3.5.0, le 18 novembre 2026. Les tests
+ T34 à T47 ont été joués sur cette version, sous Linux (Python 3.13,
+ python-chess 1.11.2), ainsi que T01 à T08. Ils n'ont été joués ni sous
+ macOS ni sous Debian Trixie. Les tests avec jeton gardent leurs
+ chiffres du 8 octobre, et T33 n'a été vérifié que sur un explorateur
+ simulé.
 
  Les emplacements par défaut dépendent de la plateforme. Posez d'abord
  ces deux variables, que les tests reprennent :
@@ -300,5 +301,164 @@
       simulé qui note le roque e1h1.
 
 
+
+ [ L. ENCODAGES (SANS RÉSEAU NI JETON) ]
+
+ Les fixtures sont produites par printf, aucun fichier binaire n'est
+ versionné. Posez d'abord :
+
+     O="--sans-explorateur --sans-stockfish --sans-questions"
+
+ T34  printf '[White "Jos\351"]\n[Black "M\374ller"]\n[Site "\201"]\n\n' \
+          > t-latin1.pgn
+      printf '1. e4 e5 *\n' >> t-latin1.pgn
+      ARCH=$(./collecte-partie.py t-latin1.pgn $O) ; echo $?
+      unzip -p "$ARCH" '*/synthese.md' | grep -E 'White|Black|Encodage'
+      Attendu, dans le journal :
+        Attention, PGN : le contenu n'est pas en UTF-8, encodage retenu :
+        latin-1.
+        Attention, PGN : 1 caractère(s) de contrôle retiré(s), dont 0 NUL.
+      puis 0. Synthèse : "| White | José |", "| Black | Müller |", et en
+      section 5 la ligne "- Encodage : le PGN fourni a été converti en
+      UTF-8 ...". L'octet 201, que cp1252 ne définit pas, force le repli
+      jusqu'à latin-1.
+
+ T35  printf '[White "Jos\351"]\n[Event "Coupe d\222\351t\351 \226 5 \200"]\n' \
+          > t-cp1252.pgn
+      printf '\n1. e4 e5 *\n' >> t-cp1252.pgn
+      ARCH=$(./collecte-partie.py t-cp1252.pgn $O)
+      unzip -p "$ARCH" '*/synthese.md' | grep -E 'White|Event'
+      Attendu : "Attention, PGN : le contenu n'est pas en UTF-8, encodage
+      retenu : cp1252." ; "| Event | Coupe d’été – 5 € |" avec
+      l'apostrophe courbe, le tiret demi-cadratin et l'euro, et
+      "| White | José |".
+
+ T36  printf '\357\273\277[White "Jos\303\251"]\n\n1. e4 e5 *\n' \
+          > t-bom.pgn
+      ARCH=$(./collecte-partie.py t-bom.pgn $O)
+      unzip -p "$ARCH" '*/partie.pgn' | od -c | head -n 1
+      Attendu : "Attention, PGN : marque d'ordre des octets (BOM) UTF-8
+      retirée." ; la sortie de od commence par "[   W   h   i   t   e",
+      sans 357 273 277.
+
+ T37  printf '[White "Jos\303\251"]\n\n1. e4 e5 *\n' \
+          | iconv -f UTF-8 -t UTF-16LE > t-utf16.pgn
+      { printf '\377\376' ; cat t-utf16.pgn ; } > t-utf16-bom.pgn
+      for f in t-utf16-bom.pgn t-utf16.pgn; do
+          ARCH=$(./collecte-partie.py $f $O)
+          unzip -p "$ARCH" '*/synthese.md' | grep White
+      done
+      Attendu, pour le premier : "Attention, PGN : marque d'ordre des
+      octets (BOM) détectée, encodage retenu : utf-16-le." ; pour le
+      second : "Attention, PGN : un octet nul sur deux et pas de marque
+      d'ordre des octets, encodage retenu : utf-16-le." ; dans les deux
+      cas "| White | José |". Avant la version 3.5.0 : "PGN sans aucun
+      coup dans la ligne principale."
+
+ T38  printf '[White "Jos\303\251"]\n\n1. e4 {tr\377\376s bon} e5 *\n' \
+          > t-abime.pgn
+      ARCH=$(./collecte-partie.py t-abime.pgn $O) ; echo $?
+      unzip -p "$ARCH" '*/synthese.md' | grep White
+      unzip -p "$ARCH" '*/partie.pgn' | grep -c 's bon}'
+      Attendu : "Attention, PGN : UTF-8 abîmé, 2 octet(s) invalide(s)
+      remplacé(s) par U+FFFD, encodage retenu : utf-8.", puis 0 ;
+      "| White | José |" intact ; 1 : le commentaire est gardé, ses deux
+      octets invalides remplacés.
+
+ T39  printf '[White "Jo\000s"]\n\n1. e4\000 e5 *\n' > t-nul.pgn
+      ARCH=$(./collecte-partie.py t-nul.pgn $O) ; echo $?
+      unzip -p "$ARCH" | od -c | grep -c '\\0'
+      Attendu : "Attention, PGN : 2 caractère(s) de contrôle retiré(s),
+      dont 2 NUL.", puis 0, puis 0 : aucun NUL dans l'archive.
+
+ T40  printf '[White "A"]\r\n\r\n1. e4 e5 *\r\n' > t-crlf.pgn
+      ARCH=$(./collecte-partie.py t-crlf.pgn $O 2> t-crlf.log)
+      grep -c Attention t-crlf.log
+      unzip -p "$ARCH" '*/partie.pgn' | od -c | grep -c '\\r'
+      Attendu : 0 et 0. Les fins de ligne CRLF sont ramenées à LF sans
+      avertissement.
+
+ T41  LANG=C ./collecte-partie.py t-latin1.pgn $O ; echo $?
+      LC_ALL=C PYTHONUTF8=0 ./collecte-partie.py --help \
+          | grep 'questions de d'
+      PYTHONIOENCODING=ascii ./collecte-partie.py --help > /dev/null
+      echo $?
+      Attendu : 0 pour le premier lancement, le chemin de l'archive étant
+      affiché ; "questions de d?marrage:" pour le deuxième ; 0 pour le
+      troisième. Sous LANG=C seul, Python passe de lui-même en UTF-8 et
+      les accents s'affichent ; dans les deux autres cas ils deviennent
+      "?". Avant la version 3.5.0, ces deux derniers lancements donnaient
+      "Erreur inattendue (UnicodeEncodeError)" et le code 1.
+
+ T42  printf '[Event "Tour\tnoi"]\n[Site "\033[31mParis\007"]\n\n' \
+          > t-ctrl.pgn
+      printf '1. e4 e5 *\n' >> t-ctrl.pgn
+      ARCH=$(./collecte-partie.py t-ctrl.pgn $O)
+      unzip -p "$ARCH" '*/synthese.md' | grep -E 'Event|Site'
+      unzip -p "$ARCH" | tr -d -c '\033\007' | wc -c
+      Attendu : "Attention, PGN : 2 caractère(s) de contrôle retiré(s),
+      dont 0 NUL." ; "| Event | Tour noi |", la tabulation devenue une
+      espace, et "| Site | [31mParis |" ; puis 0 : ni ESC ni BEL dans
+      l'archive.
+
+ T43  printf '\357\273\277lip_factice\r\n' > t-jeton ; chmod 600 t-jeton
+      ./collecte-partie.py italienne.pgn --sans-stockfish \
+          --sans-questions --jeton-fichier t-jeton --catalogue /nulle/part
+      printf 'lip_factic\351\n' > t-jeton
+      ./collecte-partie.py italienne.pgn --sans-stockfish \
+          --sans-questions --jeton-fichier t-jeton --catalogue /nulle/part
+      echo $?
+      Attendu, premier lancement : "Attention, jeton (.../t-jeton) :
+      marque d'ordre des octets (BOM) UTF-8 retirée.", puis "Catalogue des
+      ouvertures absent", preuve que le jeton est accepté, sans réseau.
+      Second lancement : "Le jeton lu dans .../t-jeton contient des
+      caractères hors de l'ASCII imprimable : recopiez-le depuis Lichess,
+      sans rien d'autre dans le fichier.", puis 1. Le jeton n'est
+      reproduit dans aucun des deux messages.
+
+ T44  cp italienne.pgn 't-a:b?.pgn'
+      ./collecte-partie.py 't-a:b?.pgn' $O
+      cp italienne.pgn "$(printf 't-\351t\351.pgn')"      # Linux seulement
+      ./collecte-partie.py "$(printf 't-\351t\351.pgn')" $O ; echo $?
+      Attendu : "Nom du dossier assaini : t-a_b_", archive
+      analyse-t-a_b_-<horodatage>.zip ; puis "Nom du dossier assaini :
+      t-_t_", archive analyse-t-_t_-<horodatage>.zip, et 0. Avant la
+      version 3.5.0, le second lancement donnait "Erreur inattendue
+      (UnicodeEncodeError)". Probable : sous macOS, le système de
+      fichiers refuse de créer ce second fichier, au nom non UTF-8.
+
+ T45  Réponse saisie en latin-1 aux questions de démarrage. Le test
+      passe par un pseudo-terminal, les questions n'étant posées que sur
+      un terminal :
+      python3 - <<'EOF'
+      import os, pty, time
+      pid, fd = pty.fork()
+      if pid == 0:
+          os.execv("./collecte-partie.py",
+                   ["./collecte-partie.py", "italienne.pgn",
+                    "--sans-explorateur", "--sans-stockfish",
+                    "--garder-dossier"])
+      for reponse in (b"b", b"Zo\xe9", b"", b"", b"", b"", b""):
+          time.sleep(1)
+          os.write(fd, reponse + b"\n")
+      time.sleep(3)
+      print(os.read(fd, 65536).decode("utf-8", "replace")[-160:])
+      os.waitpid(pid, 0)
+      EOF
+      grep Black analyse-italienne-*/partie.pgn
+      Attendu : la sortie se termine par le chemin de l'archive, et
+      partie.pgn porte [Black "Zoé"]. Avant la version 3.5.0 : "Erreur
+      inattendue (UnicodeEncodeError)".
+
+ T46  ARCH=$(./collecte-partie.py italienne.pgn $O 2> t-utf8.log)
+      grep -c Attention t-utf8.log
+      unzip -p "$ARCH" '*/collecte.json' | grep pgn_
+      Attendu : 0, puis "pgn_encodage": "utf-8" et "pgn_remarques": [].
+      Un PGN sain ne déclenche aucun avertissement.
+
+ T47  grep -n '^VERSION' collecte-partie.py
+      Attendu : VERSION = "3.5.0". L'en-tête d'agent HTTP en est tiré.
+
+
  Nettoyage : rm -rf /tmp/analyses /tmp/abime /tmp/cat1.tsv
-             /tmp/consignes.md analyse-*
+             /tmp/consignes.md analyse-* t-*

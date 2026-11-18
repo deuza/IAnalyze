@@ -347,8 +347,12 @@ RE_ID_PARTIE = re.compile(r"([A-Za-z0-9]{8})")
 #: "inexista", et de l'envoyer à Lichess.
 RE_ID_SOURCE = re.compile(r"[A-Za-z0-9]{8}(?:[A-Za-z0-9]{4})?")
 
+#: Version du script, selon le versionnage sémantique. Elle est reprise
+#: dans l'en-tête d'agent : c'est le seul endroit à modifier.
+VERSION = "3.5.0"
+
 #: En-tête d'agent, par politesse envers l'API.
-UA = "collecte-partie/3.4.1 (analyse personnelle)"
+UA = "collecte-partie/%s (analyse personnelle)" % VERSION
 
 
 # ===========================================================================
