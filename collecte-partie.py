@@ -33,6 +33,7 @@ d'utilisation.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
 import datetime
 import http.client
@@ -353,8 +354,42 @@ UA = "collecte-partie/3.4.1 (analyse personnelle)"
 # Utilitaires généraux
 # ===========================================================================
 
+#: Caractères de contrôle retirés d'un texte avant affichage : jeu C0 hors
+#: tabulation et saut de ligne, DEL, puis jeu C1. Une séquence
+#: d'échappement venue d'un PGN ou d'un nom de fichier ne doit jamais
+#: atteindre votre terminal.
+RE_CONTROLES = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+
+
+def configurer_console() -> None:
+    """
+    Rend la sortie standard et la sortie d'erreur tolérantes à l'encodage.
+
+    Un caractère que l'encodage du terminal ne sait pas représenter est
+    remplacé par "?" au lieu de lever UnicodeEncodeError : c'est le cas
+    des accents des messages avec PYTHONIOENCODING=ascii, ou sous une
+    locale C quand le mode UTF-8 de Python est désactivé (PYTHONUTF8=0).
+    L'encodage lui-même n'est pas modifié, seul le traitement des erreurs
+    l'est.
+    """
+    for flux in (sys.stdout, sys.stderr):
+        # Un flux fermé (None) ou remplacé par un objet sans reconfigure()
+        # est laissé tel quel : mieux vaut un affichage dégradé qu'un
+        # échec avant d'avoir commencé.
+        reconfigurer = getattr(flux, "reconfigure", None)
+        if reconfigurer is None:
+            continue
+        with contextlib.suppress(ValueError, OSError):
+            reconfigurer(errors="replace")
+
+
 def journal(message: str) -> None:
-    """Écrit une ligne d'avancement horodatée sur la sortie d'erreur."""
+    """
+    Écrit une ligne d'avancement horodatée sur la sortie d'erreur.
+
+    Les caractères de contrôle du message sont retirés au passage.
+    """
+    message = RE_CONTROLES.sub("", message)
     heure = datetime.datetime.now().strftime("%H:%M:%S")
     sys.stderr.write("[%s] %s\n" % (heure, message))
     sys.stderr.flush()
@@ -2397,12 +2432,20 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
+    # Avant tout affichage, y compris celui de --help par argparse.
+    configurer_console()
     try:
         raise SystemExit(main(sys.argv[1:]))
     except KeyboardInterrupt:
         sys.stderr.write("\nInterrompu.\n")
         raise SystemExit(130) from None
-    except SystemExit:
+    except SystemExit as fin:
+        # Un message d'arrêt est affiché ici plutôt que par l'interpréteur,
+        # afin d'en retirer les caractères de contrôle. Le texte et le code
+        # de retour, 1, restent ceux que produisait l'interpréteur.
+        if isinstance(fin.code, str):
+            sys.stderr.write(RE_CONTROLES.sub("", fin.code) + "\n")
+            raise SystemExit(1) from None
         raise
     except Exception as err:  # noqa: BLE001 - dernier recours volontaire
         # Aucune exception ne doit sortir brute : on affiche un message

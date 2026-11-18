@@ -6,6 +6,18 @@ dans ce fichier.
 Le format suit [Tenez un Changelog](https://keepachangelog.com/fr/1.1.0/)
 et le projet applique le [versionnage sémantique](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Sortie console : la sortie standard et la sortie d'erreur sont
+  reconfigurées avec `errors="replace"`. Un caractère que le terminal ne
+  sait pas afficher devient `?` au lieu de provoquer une
+  `UnicodeEncodeError`, par exemple avec `PYTHONIOENCODING=ascii`, ou
+  sous `LC_ALL=C` avec `PYTHONUTF8=0`.
+- Les caractères de contrôle sont retirés des lignes du journal et des
+  messages d'arrêt avant affichage.
+
 ## [3.4.1] - 2026-11-17
 
 ### Added
