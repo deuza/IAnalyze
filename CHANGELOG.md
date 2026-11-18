@@ -8,6 +8,13 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Explorateur : une réponse JSON dont la clef `moves` n'est pas une
+  liste, ou dont un compteur vaut l'infini (`1e999`), arrêtait le script
+  sur une `TypeError` ou une `OverflowError`. Ces valeurs sont
+  désormais ignorées, comme les autres écarts de schéma.
+
 ## [3.5.1] - 2026-11-18
 
 ### Added

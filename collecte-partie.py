@@ -451,11 +451,13 @@ def entier(valeur) -> int:
     Convertit prudemment une valeur venue d'un JSON externe en entier.
 
     Une valeur absente, nulle ou d'un type inattendu vaut zéro : on préfère
-    un chiffre manquant à une interruption sur un détail de schéma.
+    un chiffre manquant à une interruption sur un détail de schéma. Il en
+    va de même d'un nombre infini : json.loads lit "1e999" comme l'infini,
+    que int() refuse par une OverflowError.
     """
     try:
         return int(valeur)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return 0
 
 
@@ -1386,8 +1388,12 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
 
         # Recherche du coup joué parmi les réponses connues de la base. Les
         # entrées d'un type inattendu sont ignorées plutôt que fatales.
-        liste = [e for e in (donnees.get("moves") or [])
-                 if isinstance(e, dict)]
+        # Il en va de même d'une clef "moves" qui ne serait pas une liste :
+        # un entier ne se parcourt pas, la boucle levait alors TypeError.
+        coups_base = donnees.get("moves")
+        if not isinstance(coups_base, list):
+            coups_base = []
+        liste = [e for e in coups_base if isinstance(e, dict)]
         rang = None
         bloc_joue = None
         for position, entree in enumerate(liste, start=1):
