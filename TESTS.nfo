@@ -7,8 +7,8 @@
  8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les
  pourcentages bougent peu. "Probable" signale un résultat non mesuré.
 
- Plan mis à jour pour la version 3.5.1, le 18 novembre 2026. Les tests
- T34 à T48 ont été joués sur cette version, sous Linux (Python 3.13,
+ Plan mis à jour pour la version 3.5.2, le 18 novembre 2026. Les tests
+ T34 à T50 ont été joués sur cette version, sous Linux (Python 3.13,
  python-chess 1.11.2), ainsi que T01 à T08. Ils n'ont été joués ni sous
  macOS ni sous Debian Trixie. Les tests avec jeton gardent leurs
  chiffres du 8 octobre, et T33 n'a été vérifié que sur un explorateur
@@ -457,7 +457,7 @@
       Un PGN sain ne déclenche aucun avertissement.
 
  T47  grep -n '^VERSION' collecte-partie.py
-      Attendu : VERSION = "3.5.1". L'en-tête d'agent HTTP en est tiré.
+      Attendu : VERSION = "3.5.2". L'en-tête d'agent HTTP en est tiré.
 
 
  [ M. NOM DU PGN ]
@@ -471,6 +471,54 @@
       étant supprimé. Avant la version 3.5.1 : "Archive illisible,
       dossier conservé : [Errno 2] No such file or directory:
       'analyse-t-2026.11.zip'", code 1, rien sur la sortie standard.
+
+
+ [ N. EXPLORATEUR SIMULÉ ET VALEURS NON FINIES (SANS RÉSEAU NI JETON) ]
+
+ T49  Réponses inattendues de l'explorateur, sans réseau : le script est
+      chargé comme module par l'interpréteur de l'environnement virtuel,
+      et l'explorateur est remplacé par un faux.
+      $VENV/bin/python3 - <<'EOF'
+      import importlib.util, io, json, pathlib, tempfile
+      import chess.pgn
+      spec = importlib.util.spec_from_file_location("cp",
+                                                    "collecte-partie.py")
+      cp = importlib.util.module_from_spec(spec)
+      spec.loader.exec_module(cp)
+      partie = chess.pgn.read_game(io.StringIO("1. e4 e5 *"))
+      class Faux:
+          def __init__(self, reponse):
+              self.reponse = reponse
+          def interroger(self, coups):
+              return 200, self.reponse
+      for texte in ('{"white": 10, "draws": 5, "black": 5, "moves": 5}',
+                    '{"white": 1e999, "draws": 5, "black": 5}'):
+          with tempfile.TemporaryDirectory() as d:
+              r = cp.collecter_explorateur(
+                  partie, pathlib.Path(d), Faux(json.loads(texte)),
+                  1, 0.0, 60, False)
+          print(len(r["lignes"]), r["lignes"][0]["parties_position"],
+                r["lignes"][0]["rang"])
+      EOF
+      Attendu : "2 20 None" puis "2 10 None", chacun précédé de deux
+      lignes de journal "Explorateur : demi-coup", sans trace Python.
+      "moves" n'étant pas une liste, le coup joué est hors base ; le
+      compteur infini vaut zéro. Avant la version 3.5.2 : TypeError
+      ("'int' object is not iterable"), puis OverflowError.
+
+ T50  for o in "--pause nan" "--pause inf" "--seuil-frequence nan"; do
+          ./collecte-partie.py italienne.pgn $o 2>&1 | tail -1
+      done
+      ./collecte-partie.py italienne.pgn --pause nan ; echo $?
+      ls -d analyse-italienne-* 2>/dev/null | wc -l
+      Attendu, après "collecte-partie.py: error:" :
+        --pause doit être un nombre fini
+        --pause doit être un nombre fini
+        --seuil-frequence doit être un nombre fini
+      puis le code 2, puis 0 (lancez ce test après le nettoyage : aucun
+      dossier de travail n'est créé). Avant la version 3.5.2, --pause nan
+      donnait "Erreur inattendue (ValueError) : Invalid value NaN" à la
+      première pause, et --seuil-frequence nan était accepté.
 
 
  Nettoyage : rm -rf /tmp/analyses /tmp/abime /tmp/cat1.tsv

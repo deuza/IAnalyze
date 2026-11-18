@@ -8,6 +8,19 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.5.2] - 2026-11-18
+
+### Added
+
+- TESTS.nfo : tests T49, réponses inattendues de l'explorateur, sur un
+  explorateur simulé, et T50, valeurs non finies.
+- README.nfo, section 5 : `--pause` et `--seuil-frequence` refusent
+  `nan` et `inf`.
+
+### Changed
+
+- En-tête d'agent HTTP : `collecte-partie/3.5.2`.
+
 ### Fixed
 
 - Explorateur : une réponse JSON dont la clef `moves` n'est pas une
