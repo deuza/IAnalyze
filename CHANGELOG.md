@@ -41,6 +41,12 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   lettres accentuées sont conservés.
 - Le chemin de l'archive est écrit en octets sur la sortie standard, tel
   que le système de fichiers le connaît.
+- Valeurs issues du PGN (noms des joueurs, Event, Site et toute autre
+  balise) : tabulations et caractères de contrôle sont retirés avant
+  l'écriture des en-têtes dans `synthese.md` et avant tout affichage.
+- Questions de démarrage : une réponse saisie dans un autre encodage que
+  celui du terminal est redécodée (cp1252, puis latin-1) et nettoyée de
+  ses caractères de contrôle.
 
 ### Fixed
 
@@ -58,6 +64,13 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 - Un PGN au nom non décodable, en latin-1 sur un système UTF-8 par
   exemple, arrêtait la collecte sur une `UnicodeEncodeError` à
   l'écriture de `collecte.json`, dossier de travail laissé en place.
+
+- NUL, ESC et autres caractères de contrôle des balises du PGN étaient
+  recopiés tels quels dans `synthese.md`, et une balise `Variant`
+  piégée envoyait ses séquences d'échappement au terminal.
+- Une réponse aux questions de démarrage saisie en latin-1 arrêtait le
+  script sur une `UnicodeEncodeError`, dossier de travail laissé en
+  place.
 
 ## [3.4.1] - 2026-11-17
 

@@ -362,6 +362,30 @@ UA = "collecte-partie/3.4.1 (analyse personnelle)"
 RE_CONTROLES = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
 
 
+#: Séparateurs qu'une valeur tenant sur une ligne ne doit pas contenir :
+#: tabulations, fins de ligne, séparateurs de ligne et de paragraphe
+#: Unicode. Ils deviennent une espace.
+RE_BLANCS_VALEUR = re.compile(r"[\t\n\x0b\x0c\r\x85\u2028\u2029]")
+
+#: Substituts isolés, traces d'octets que l'encodage attendu n'a pas su
+#: décoder (nom de fichier, saisie au clavier).
+RE_SUBSTITUTS = re.compile(r"[\ud800-\udfff]")
+
+
+def nettoyer_valeur(texte: str) -> str:
+    """
+    Nettoie une valeur courte avant de l'écrire ou de l'afficher : nom de
+    joueur, balise Event ou Site, réponse à une question.
+
+    Les séparateurs deviennent une espace, les substituts isolés U+FFFD,
+    et les autres caractères de contrôle ainsi que la marque d'ordre des
+    octets sont retirés. Une valeur saine ressort inchangée.
+    """
+    texte = RE_BLANCS_VALEUR.sub(" ", texte)
+    texte = RE_SUBSTITUTS.sub("\ufffd", texte)
+    return RE_CONTROLES.sub("", texte).replace("\ufeff", "")
+
+
 def configurer_console() -> None:
     """
     Rend la sortie standard et la sortie d'erreur tolérantes à l'encodage.
@@ -372,7 +396,16 @@ def configurer_console() -> None:
     locale C quand le mode UTF-8 de Python est désactivé (PYTHONUTF8=0).
     L'encodage lui-même n'est pas modifié, seul le traitement des erreurs
     l'est.
+
+    L'entrée standard passe en "surrogateescape" : un octet que l'encodage
+    du terminal ne sait pas décoder, un "é" saisi en latin-1 sur une
+    console UTF-8 par exemple, est gardé de côté au lieu de lever
+    UnicodeDecodeError, et demander() le redécode ensuite.
     """
+    reconfigurer = getattr(sys.stdin, "reconfigure", None)
+    if reconfigurer is not None:
+        with contextlib.suppress(ValueError, OSError):
+            reconfigurer(errors="surrogateescape")
     for flux in (sys.stdout, sys.stderr):
         # Un flux fermé (None) ou remplacé par un objet sans reconfigure()
         # est laissé tel quel : mieux vaut un affichage dégradé qu'un
@@ -733,9 +766,19 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
         raise SystemExit("PGN illisible ou vide.")
     if partie.errors:
         raise SystemExit("PGN corrompu, coup illégal ou malformé : %s"
-                         % "; ".join(str(e) for e in partie.errors))
+                         % "; ".join(nettoyer_valeur(str(e))
+                                     for e in partie.errors))
     if not list(partie.mainline_moves()):
         raise SystemExit("PGN sans aucun coup dans la ligne principale.")
+
+    # Les valeurs des balises partent dans les en-têtes de la synthèse et
+    # dans le journal : on en retire tabulations et caractères de contrôle
+    # dès maintenant, une fois pour toutes. La liste est figée avant la
+    # boucle, les balises étant modifiées en cours de route.
+    for cle, valeur in list(partie.headers.items()):
+        propre = nettoyer_valeur(valeur)
+        if propre != valeur:
+            partie.headers[cle] = propre
 
     variante = partie.headers.get("Variant", "Standard")
     if variante.lower() not in ("standard", "from position"):
@@ -779,7 +822,13 @@ def demander(question: str, defaut: str | None = None) -> str | None:
     if not ligne:
         sys.stderr.write("\n")
         return None
-    return ligne.strip() or (defaut or "")
+    if RE_SUBSTITUTS.search(ligne):
+        # Saisie que l'encodage du terminal n'a pas su décoder : on
+        # retrouve les octets tapés et on leur applique le même repli que
+        # pour un fichier, cp1252 puis latin-1.
+        ligne = decoder_octets(
+            ligne.encode("utf-8", errors="surrogateescape"))[0]
+    return nettoyer_valeur(ligne).strip() or (defaut or "")
 
 
 def est_pseudo(nom: str, pseudos: list[str]) -> bool:
@@ -1734,10 +1783,12 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     a = out.append
 
     identifiant = partie.headers.get("Site", "").rstrip("/").split("/")[-1]
-    a("# Dossier d'analyse : %s" % (identifiant or "partie locale"))
+    a("# Dossier d'analyse : %s"
+      % (nettoyer_valeur(identifiant) or "partie locale"))
     a("")
     a("Collecte du %s. Source : `%s`."
-      % (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), source))
+      % (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+         nettoyer_valeur(source)))
     a("Ce fichier ne contient aucune analyse, uniquement des données "
       "collectées.")
     a("")
@@ -1758,7 +1809,7 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     a("| Champ | Valeur |")
     a("|---|---|")
     for cle, valeur in partie.headers.items():
-        a("| %s | %s |" % (cle, valeur.replace("|", "\\|")))
+        a("| %s | %s |" % (cle, nettoyer_valeur(valeur).replace("|", "\\|")))
     a("")
     a("Nombre de demi-coups dans la ligne principale : %d."
       % len(list(partie.mainline_moves())))
