@@ -8,6 +8,26 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.5.1] - 2026-11-18
+
+### Added
+
+- TESTS.nfo : test T48, un point dans le nom du PGN.
+
+### Changed
+
+- En-tête d'agent HTTP : `collecte-partie/3.5.1`.
+
+### Fixed
+
+- Un PGN dont le nom contient un point, comme les exports de Lichess
+  (`lichess_pgn_2026.11.18_A_vs_B.pgn`), faisait échouer l'archivage
+  avec "Archive illisible, dossier conservé" et le code 1 : le script
+  cherchait `analyse-lichess_pgn_2026.11.zip` alors que l'archive,
+  valide, était écrite sous le nom complet du dossier. Le chemin de
+  l'archive n'était pas affiché et le dossier de travail restait en
+  place. Le contrôle des archives homonymes souffrait du même défaut.
+
 ## [3.5.0] - 2026-11-18
 
 ### Added

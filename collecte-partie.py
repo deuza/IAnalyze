@@ -349,7 +349,7 @@ RE_ID_SOURCE = re.compile(r"[A-Za-z0-9]{8}(?:[A-Za-z0-9]{4})?")
 
 #: Version du script, selon le versionnage sémantique. Elle est reprise
 #: dans l'en-tête d'agent : c'est le seul endroit à modifier.
-VERSION = "3.5.0"
+VERSION = "3.5.1"
 
 #: En-tête d'agent, par politesse envers l'API.
 UA = "collecte-partie/%s (analyse personnelle)" % VERSION
@@ -2135,6 +2135,19 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
 # Archive finale
 # ===========================================================================
 
+def chemin_archive(dossier: pathlib.Path) -> pathlib.Path:
+    """
+    Chemin de l'archive d'un dossier de travail : son nom suivi de ".zip".
+
+    Le nom est construit par ajout et non par with_suffix(), qui remplace
+    tout ce qui suit le dernier point : pour un PGN nommé
+    "partie-2026.11.18.pgn", le dossier "analyse-partie-2026.11.18-..."
+    donnait "analyse-partie-2026.11.zip", alors que shutil.make_archive
+    écrit bien "<dossier>.zip".
+    """
+    return dossier.with_name(dossier.name + ".zip")
+
+
 def archiver(dossier: pathlib.Path, garder: bool) -> pathlib.Path:
     """
     Compresse le dossier de travail en zip, le vérifie, puis le supprime.
@@ -2142,7 +2155,7 @@ def archiver(dossier: pathlib.Path, garder: bool) -> pathlib.Path:
     Le dossier n'est détruit que si l'archive relit sans erreur et contient
     bien la synthèse. En cas de doute, tout est conservé et signalé.
     """
-    archive = dossier.with_suffix(".zip")
+    archive = chemin_archive(dossier)
     if archive.exists():
         raise SystemExit("L'archive %s existe déjà, dossier conservé."
                          % archive)
@@ -2624,7 +2637,7 @@ def main(argv: list[str]) -> int:
     suffixe = 1
     while True:
         try:
-            if not dossier.with_suffix(".zip").exists():
+            if not chemin_archive(dossier).exists():
                 dossier.mkdir(parents=True, exist_ok=False)
                 break
         except FileExistsError:
