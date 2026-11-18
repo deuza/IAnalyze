@@ -357,7 +357,7 @@ RE_ID_SOURCE = re.compile(r"[A-Za-z0-9]{8}(?:[A-Za-z0-9]{4})?")
 
 #: Version du script, selon le versionnage sémantique. Elle est reprise
 #: dans l'en-tête d'agent : c'est le seul endroit à modifier.
-VERSION = "3.5.5"
+VERSION = "3.5.6"
 
 #: En-tête d'agent, par politesse envers l'API.
 UA = "collecte-partie/%s (analyse personnelle)" % VERSION
@@ -737,6 +737,19 @@ def lire_jeton(chemin: str) -> str:
     return jeton
 
 
+#: Hôtes dont une URL de partie est acceptée.
+HOTES_LICHESS = ("lichess.org", "www.lichess.org")
+
+#: Rubriques du site dont le nom fait huit lettres : elles ont la forme
+#: d'un identifiant de partie sans en être un. https://lichess.org/analysis
+#: était pris pour la partie "analysis" et demandé à Lichess.
+RUBRIQUES_LICHESS = ("analysis", "training", "practice", "streamer")
+
+#: Préfixes de chemin admis devant l'identifiant, en plus de la forme
+#: directe /<identifiant> : la partie embarquée et l'export PGN.
+PREFIXES_PARTIE = (("embed", "game"), ("embed",), ("game", "export"))
+
+
 def extraire_id(source: str) -> str | None:
     """
     Extrait l'identifiant de partie d'une URL ou d'une chaîne brute.
@@ -745,15 +758,31 @@ def extraire_id(source: str) -> str | None:
     seul, ainsi que les identifiants de coup à douze caractères dont seuls
     les huit premiers sont conservés. L'identifiant, seul ou dans l'URL,
     doit faire exactement 8 ou 12 caractères alphanumériques.
+
+    Une URL doit viser lichess.org et porter l'identifiant en tête de
+    chemin, ou derrière /embed/game/, /embed/ ou /game/export/. Tout autre
+    hôte, toute autre page du site (étude, analyse, exercices) et les
+    rubriques de RUBRIQUES_LICHESS donnent None : rien n'est alors demandé
+    à Lichess.
     """
     source = source.strip()
     if source.startswith(("http://", "https://")):
-        chemin = urllib.parse.urlparse(source).path
-        for morceau in chemin.strip("/").split("/"):
-            if RE_ID_SOURCE.fullmatch(morceau):
-                return morceau[:8]
+        url = urllib.parse.urlparse(source)
+        if (url.hostname or "").lower() not in HOTES_LICHESS:
+            return None
+        morceaux = [m for m in url.path.split("/") if m]
+        for prefixe in PREFIXES_PARTIE:
+            if tuple(morceaux[:len(prefixe)]) == prefixe:
+                morceaux = morceaux[len(prefixe):]
+                break
+        # Seul le premier segment compte : l'ancienne boucle retenait le
+        # premier segment de huit caractères où qu'il soit, l'identifiant
+        # d'une étude par exemple.
+        if (morceaux and RE_ID_SOURCE.fullmatch(morceaux[0])
+                and morceaux[0] not in RUBRIQUES_LICHESS):
+            return morceaux[0][:8]
         return None
-    if RE_ID_SOURCE.fullmatch(source):
+    if RE_ID_SOURCE.fullmatch(source) and source not in RUBRIQUES_LICHESS:
         return source[:8]
     return None
 
@@ -2688,6 +2717,15 @@ def main(argv: list[str]) -> int:
                     and any(c in options.source for c in "./~")):
                 raise SystemExit("Fichier PGN introuvable : %s"
                                  % chemin_local)
+            if options.source.strip().startswith(("http://", "https://")):
+                # Message propre aux URL : dire la forme attendue vaut
+                # mieux qu'un refus général.
+                raise SystemExit("URL non reconnue comme une partie Lichess "
+                                 ": %s\nForme attendue : "
+                                 "https://lichess.org/<identifiant>, "
+                                 "l'identifiant faisant 8 ou 12 caractères "
+                                 "alphanumériques."
+                                 % nettoyer_valeur(options.source))
             raise SystemExit("Source incomprise : ni fichier existant, ni "
                              "URL ou identifiant Lichess valide.")
         texte_pgn = telecharger_pgn(identifiant, options.delai)

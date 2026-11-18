@@ -86,7 +86,11 @@
      ./collecte-partie.py xvoiNy2C                      # identifiant
 
  Les URL du type /xvoiNy2C/black et les identifiants de coup à douze
- caractères sont acceptés. Un identifiant fait exactement 8 ou 12
+ caractères sont acceptés, ainsi que les formes /embed/game/<id>,
+ /embed/<id> et /game/export/<id>. L'URL doit viser lichess.org et
+ porter l'identifiant en tête de chemin : un autre hôte, ou une autre
+ page du site (étude, analyse, exercices), est refusé sans rien envoyer
+ à Lichess. Un identifiant fait exactement 8 ou 12
  caractères alphanumériques : une source qui ressemble à un chemin
  (point, barre oblique ou tilde) et qui n'existe pas est signalée comme
  fichier introuvable, sans rien envoyer à Lichess. Seule la première

@@ -8,6 +8,31 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.5.6] - 2026-11-18
+
+### Added
+
+- TESTS.nfo : test T54, les URL qui ne sont pas des parties.
+- Message d'arrêt propre aux URL refusées, qui rappelle la forme
+  attendue.
+
+### Changed
+
+- En-tête d'agent HTTP : `collecte-partie/3.5.6`.
+- README.nfo, section 3 : les formes d'URL acceptées.
+
+### Fixed
+
+- Une URL qui n'est pas celle d'une partie était quand même demandée à
+  Lichess : `https://lichess.org/analysis/...` donnait l'identifiant
+  "analysis", l'URL d'une étude celui de l'étude, et
+  `https://example.com/abcdefgh` était acceptée quel que soit l'hôte.
+  Il en résultait une requête inutile et un "Export PGN : HTTP 404".
+  Une URL doit désormais viser `lichess.org` et porter l'identifiant en
+  tête de chemin, ou derrière `/embed/game/`, `/embed/` ou
+  `/game/export/`. Les rubriques `analysis`, `training`, `practice` et
+  `streamer` ne passent plus pour des identifiants.
+
 ## [3.5.5] - 2026-11-18
 
 ### Added

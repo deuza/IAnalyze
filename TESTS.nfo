@@ -7,8 +7,8 @@
  8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les
  pourcentages bougent peu. "Probable" signale un résultat non mesuré.
 
- Plan mis à jour pour la version 3.5.5, le 18 novembre 2026. Les tests
- T34 à T53 ont été joués sur cette version, sous Linux (Python 3.13,
+ Plan mis à jour pour la version 3.5.6, le 18 novembre 2026. Les tests
+ T34 à T54 ont été joués sur cette version, sous Linux (Python 3.13,
  python-chess 1.11.2, Stockfish 16 pour T51 et T52), ainsi que T01 à
  T08. Ils n'ont été joués ni sous
  macOS ni sous Debian Trixie. Les tests avec jeton gardent leurs
@@ -458,7 +458,7 @@
       Un PGN sain ne déclenche aucun avertissement.
 
  T47  grep -n '^VERSION' collecte-partie.py
-      Attendu : VERSION = "3.5.5". L'en-tête d'agent HTTP en est tiré.
+      Attendu : VERSION = "3.5.6". L'en-tête d'agent HTTP en est tiré.
 
 
  [ M. NOM DU PGN ]
@@ -611,6 +611,37 @@
       ensuite normalement. Avant la version 3.5.5, la deuxième ligne
       était ['analyse-essai-1', 'analyse-essai-1.zip'], un zip tronqué
       sous le nom d'une archive, et la troisième 0.
+
+
+ [ R. URL DE LA PARTIE (SANS RÉSEAU NI JETON) ]
+
+ T54  for u in https://lichess.org/analysis/standard \
+               https://lichess.org/study/abcdefgh/ijklmnop \
+               https://example.com/abcdefgh ; do
+          ./collecte-partie.py $u --sans-explorateur --sans-stockfish \
+              2>&1 | grep -c -E 'URL non reconnue|chargement du PGN'
+      done
+      ./collecte-partie.py https://example.com/abcdefgh ; echo $?
+      python3 - <<'EOF'
+      import importlib.util
+      spec = importlib.util.spec_from_file_location("cp",
+                                                    "collecte-partie.py")
+      cp = importlib.util.module_from_spec(spec)
+      spec.loader.exec_module(cp)
+      for u in ("https://lichess.org/xvoiNy2C/black",
+                "https://www.lichess.org/xvoiNy2CabcD#12",
+                "https://lichess.org/embed/game/xvoiNy2C",
+                "https://lichess.org/game/export/xvoiNy2C",
+                "xvoiNy2C", "https://lichess.org/practice", "analysis"):
+          print(cp.extraire_id(u))
+      EOF
+      Attendu : 1, 1, 1, une seule ligne à chaque fois, celle du refus,
+      sans ligne "Téléchargement du PGN" ; puis "URL non reconnue comme
+      une partie Lichess : https://example.com/abcdefgh", la forme
+      attendue, et le code 1 ; puis cinq fois "xvoiNy2C" et deux fois
+      "None". Avant la version 3.5.6, les trois URL étaient demandées à
+      Lichess et les deux dernières lignes valaient "practice" et
+      "analysis".
 
 
  Nettoyage : rm -rf /tmp/analyses /tmp/abime /tmp/cat1.tsv
