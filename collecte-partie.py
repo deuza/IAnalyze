@@ -354,7 +354,7 @@ RE_ID_SOURCE = re.compile(r"[A-Za-z0-9]{8}(?:[A-Za-z0-9]{4})?")
 
 #: Version du script, selon le versionnage sémantique. Elle est reprise
 #: dans l'en-tête d'agent : c'est le seul endroit à modifier.
-VERSION = "3.5.7"
+VERSION = "3.5.8"
 
 #: En-tête d'agent, par politesse envers l'API.
 UA = "collecte-partie/%s (analyse personnelle)" % VERSION
@@ -1698,7 +1698,7 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
     plateau = partie.board()
     resultats: list[dict] = []
     coups = list(partie.mainline_moves())
-    # Zéro signifie « toute la partie » ; sinon on borne au nombre réel de
+    # Zéro signifie "toute la partie" ; sinon on borne au nombre réel de
     # demi-coups pour que le compteur affiché soit exact.
     if demicoups <= 0 or demicoups > len(coups):
         demicoups = len(coups)
@@ -2557,8 +2557,8 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                         "(défaut : %(default)s)")
     g.add_argument("--consignes", metavar="FICHIER",
                    help="fichier texte ou markdown inséré tel quel en tête "
-                        "de la synthèse, sous le titre « Consignes "
-                        "d'analyse », à la place des questions de contexte")
+                        "de la synthèse, sous le titre \"Consignes "
+                        "d'analyse\", à la place des questions de contexte")
     g.add_argument("--garder-dossier", action="store_true",
                    help="ne supprime pas le dossier de travail après "
                         "création de l'archive")
@@ -2788,7 +2788,7 @@ def main(argv: list[str]) -> int:
         motif_sans_explorateur = "désactivée par --sans-explorateur"
     elif partie.board().fen() != chess.STARTING_FEN:
         # La base maîtres n'est interrogeable qu'à partir de la position
-        # initiale ; une partie « from position » n'a pas de sens ici.
+        # initiale ; une partie "from position" n'a pas de sens ici.
         motif_sans_explorateur = ("la partie ne commence pas à la position "
                                   "initiale, l'explorateur est inapplicable")
         journal("Explorateur ignoré : %s." % motif_sans_explorateur)

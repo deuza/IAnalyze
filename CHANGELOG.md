@@ -8,6 +8,15 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.5.8] - 2026-11-18
+
+### Changed
+
+- En-tête d'agent HTTP : `collecte-partie/3.5.8`.
+- Les guillemets chevrons du script sont remplacés par des guillemets
+  droits : deux commentaires, et l'aide de `--consignes`, qui affiche
+  désormais `sous le titre "Consignes d'analyse"`.
+
 ## [3.5.7] - 2026-11-18
 
 ### Added

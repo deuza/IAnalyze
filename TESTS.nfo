@@ -7,7 +7,7 @@
  8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les
  pourcentages bougent peu. "Probable" signale un résultat non mesuré.
 
- Plan mis à jour pour la version 3.5.7, le 18 novembre 2026. Les tests
+ Plan mis à jour pour la version 3.5.8, le 18 novembre 2026. Les tests
  T34 à T55 ont été joués sur cette version, sous Linux (Python 3.13,
  python-chess 1.11.2, Stockfish 16 pour T51, T52 et T55), ainsi que T01
  à T08. Ils n'ont été joués ni sous
@@ -458,7 +458,7 @@
       Un PGN sain ne déclenche aucun avertissement.
 
  T47  grep -n '^VERSION' collecte-partie.py
-      Attendu : VERSION = "3.5.7". L'en-tête d'agent HTTP en est tiré.
+      Attendu : VERSION = "3.5.8". L'en-tête d'agent HTTP en est tiré.
 
 
  [ M. NOM DU PGN ]
