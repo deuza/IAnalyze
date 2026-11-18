@@ -468,6 +468,10 @@ BOMS_LARGES = (
 #: Octets examinés pour reconnaître un UTF-16 sans marque d'ordre.
 ECHANTILLON_UTF16 = 4096
 
+#: Octets invalides tolérés, par caractère non ASCII correctement codé,
+#: pour qu'un texte soit encore tenu pour de l'UTF-8 abîmé.
+UTF8_TOLERANCE = 4
+
 
 def utf16_sans_bom(brut: bytes) -> str | None:
     """
@@ -498,7 +502,10 @@ def decoder_octets(brut: bytes) -> tuple[str, str, list[str]]:
     latin-1, qui accepte n'importe quel octet. Un texte manifestement en
     UTF-8 mais abîmé par quelques octets invalides reste décodé en UTF-8,
     ces octets devenant U+FFFD : le passer en cp1252 abîmerait tous ses
-    accents pour en sauver quelques-uns.
+    accents pour en sauver quelques-uns. Le critère : au moins un
+    caractère non ASCII correctement codé, et au plus UTF8_TOLERANCE
+    octets invalides pour chacun d'eux. Un texte latin-1 n'y satisfait
+    pas, ses lettres accentuées étant presque toutes invalides en UTF-8.
 
     Les fins de ligne CRLF et CR sont ramenées à LF, et les caractères de
     contrôle sont retirés, NUL compris ; la tabulation verticale et le
@@ -547,7 +554,7 @@ def decoder_octets(brut: bytes) -> tuple[str, str, list[str]]:
             essai = brut.decode("utf-8", errors="replace")
             invalides = essai.count("\ufffd")
             valides = sum(1 for c in essai if ord(c) > 127) - invalides
-            if valides > invalides:
+            if valides > 0 and invalides <= UTF8_TOLERANCE * valides:
                 texte = essai
                 remarques.append("UTF-8 abîmé, %d octet(s) invalide(s) "
                                  "remplacé(s) par U+FFFD, encodage retenu : "
