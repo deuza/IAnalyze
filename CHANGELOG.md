@@ -14,6 +14,11 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   liste, ou dont un compteur vaut l'infini (`1e999`), arrêtait le script
   sur une `TypeError` ou une `OverflowError`. Ces valeurs sont
   désormais ignorées, comme les autres écarts de schéma.
+- `--pause nan` et `--pause inf` étaient acceptés puis arrêtaient la
+  collecte sur une erreur inattendue à la première pause, dossier de
+  travail déjà créé ; `--seuil-frequence nan` était accepté et
+  neutralisait le critère de fréquence en silence. Ces valeurs sont
+  refusées à la lecture des options, code 2.
 
 ## [3.5.1] - 2026-11-18
 

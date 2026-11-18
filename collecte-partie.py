@@ -40,6 +40,7 @@ import datetime
 import http.client
 import io
 import json
+import math
 import os
 import pathlib
 import re
@@ -2482,6 +2483,13 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
         return options
     if not options.source:
         p.error("il faut un fichier PGN, une URL ou un identifiant de partie")
+    # nan et inf sont des flottants valides pour argparse, mais nan échappe
+    # à toute comparaison et time.sleep() refuse l'un comme l'autre : on
+    # les écarte ici, avant toute création de dossier.
+    for nom in ("pause", "seuil_frequence"):
+        if not math.isfinite(getattr(options, nom)):
+            p.error("--%s doit être un nombre fini"
+                    % nom.replace("_", "-"))
     if options.pause < 2.0:
         p.error("--pause ne doit pas descendre sous 2 secondes")
     for nom in ("seuil_parties", "max_demicoups", "profondeur", "multipv",

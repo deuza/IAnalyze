@@ -321,7 +321,8 @@
      aussi --avec-stockfish ;
    - --pause ne descend pas sous 2, --seuil-frequence reste entre 0 et
      100, --coups-min et --coups-stockfish valent 0 ou plus, les autres
-     valeurs numériques au moins 1.
+     valeurs numériques au moins 1 ;
+   - --pause et --seuil-frequence refusent nan et inf.
 
 
  [ 6. EXPLORATEUR : CRITÈRES D'ARRÊT ]
