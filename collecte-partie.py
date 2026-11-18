@@ -568,6 +568,63 @@ def lire_texte(chemin: pathlib.Path, role: str) -> str:
     return lire_fichier_texte(chemin, role)[0]
 
 
+def ecrire_texte(chemin: pathlib.Path, texte: str) -> None:
+    """
+    Écrit un fichier texte en UTF-8, quelle que soit la locale.
+
+    Un caractère impossible à coder en UTF-8, un substitut isolé venu
+    d'un nom de fichier ou d'une saisie mal encodés par exemple, est
+    remplacé par "?" au lieu de lever UnicodeEncodeError au milieu de la
+    collecte. Les fins de ligne restent des LF sur toutes les plateformes.
+    Les erreurs d'accès (OSError) remontent à l'appelant.
+    """
+    with chemin.open("w", encoding="utf-8", errors="replace",
+                     newline="\n") as f:
+        f.write(texte)
+
+
+#: Caractères écartés d'un nom de dossier, donc des noms rangés dans le
+#: zip : caractères de contrôle, séparateurs de chemin, caractères
+#: interdits par Windows, substituts isolés et U+FFFD. Les espaces et les
+#: lettres accentuées sont conservés.
+RE_NOM_RISQUE = re.compile(
+    r'[\x00-\x1f\x7f-\x9f/\\:*?"<>|\ud800-\udfff\ufffd]')
+
+#: Longueur maximale de l'étiquette reprise dans le nom du dossier.
+ETIQUETTE_MAX = 80
+
+
+def etiquette_sure(nom: str) -> str:
+    """
+    Tire d'un nom de fichier une étiquette sûre pour le dossier de
+    travail et pour les chemins de l'archive.
+
+    Chaque caractère à risque devient "_". Les points et les espaces de
+    bord sont retirés, la longueur est bornée, et une étiquette vide
+    devient "partie".
+    """
+    sure = RE_NOM_RISQUE.sub("_", nom)[:ETIQUETTE_MAX].strip(" .")
+    return sure or "partie"
+
+
+def annoncer_archive(archive: pathlib.Path) -> None:
+    """
+    Écrit le chemin de l'archive, seul, sur la sortie standard.
+
+    Le chemin est écrit en octets, tel que le système de fichiers le
+    connaît : ARCHIVE=$(...) reçoit ainsi un chemin utilisable même si le
+    terminal ne sait pas en afficher tous les caractères. Sans accès aux
+    octets de la sortie, l'écriture en texte d'origine est conservée.
+    """
+    tampon = getattr(sys.stdout, "buffer", None)
+    if tampon is None:
+        sys.stdout.write("%s\n" % archive)
+        return
+    sys.stdout.flush()
+    tampon.write(os.fsencode(str(archive)) + b"\n")
+    tampon.flush()
+
+
 def lire_jeton(chemin: str) -> str:
     """
     Lit le jeton personnel depuis un fichier ne contenant que lui.
@@ -1225,8 +1282,8 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
         # Sauvegarde systématique du brut, même en cas d'erreur : cela vous
         # évitera de relancer toute la collecte pour comprendre un échec.
         fichier = brut / ("%03d-%s.json" % (indice + 1, uci_joue))
-        fichier.write_text(json.dumps(donnees, ensure_ascii=False, indent=1),
-                           encoding="utf-8")
+        ecrire_texte(fichier,
+                     json.dumps(donnees, ensure_ascii=False, indent=1))
 
         if code != 200:
             if code == 0:
@@ -1555,8 +1612,8 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
 
     brut = dossier / "stockfish"
     brut.mkdir(parents=True, exist_ok=True)
-    (brut / "evaluations.json").write_text(
-        json.dumps(resultats, ensure_ascii=False, indent=1), encoding="utf-8")
+    ecrire_texte(brut / "evaluations.json",
+                 json.dumps(resultats, ensure_ascii=False, indent=1))
 
     return {
         "resultats": resultats,
@@ -2009,7 +2066,7 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     a("- `collecte.json` : les paramètres exacts de cette collecte.")
     a("")
 
-    chemin.write_text("\n".join(out) + "\n", encoding="utf-8")
+    ecrire_texte(chemin, "\n".join(out) + "\n")
 
 
 # ===========================================================================
@@ -2436,7 +2493,9 @@ def main(argv: list[str]) -> int:
         journal("Lecture du PGN local : %s" % chemin_local)
         texte_pgn, encodage_pgn, remarques_pgn = lire_fichier_texte(
             chemin_local, "PGN")
-        etiquette = chemin_local.stem
+        etiquette = etiquette_sure(chemin_local.stem)
+        if etiquette != chemin_local.stem:
+            journal("Nom du dossier assaini : %s" % etiquette)
     else:
         identifiant = extraire_id(options.source)
         if identifiant is None:
@@ -2521,15 +2580,13 @@ def main(argv: list[str]) -> int:
         if camp and camp["modifiees"]:
             # Le PGN fourni est gardé tel quel ; partie.pgn reprend la
             # partie, réexportée par python-chess, en-têtes complétés.
-            (dossier / "partie-origine.pgn").write_text(texte_pgn,
-                                                        encoding="utf-8")
-            (dossier / "partie.pgn").write_text(str(partie) + "\n",
-                                                encoding="utf-8")
+            ecrire_texte(dossier / "partie-origine.pgn", texte_pgn)
+            ecrire_texte(dossier / "partie.pgn", str(partie) + "\n")
             annexes.append("- `partie-origine.pgn` : le PGN tel que "
                            "fourni, avant ajout des balises %s."
                            % ", ".join(camp["modifiees"]))
         else:
-            (dossier / "partie.pgn").write_text(texte_pgn, encoding="utf-8")
+            ecrire_texte(dossier / "partie.pgn", texte_pgn)
         if remarques_pgn:
             # Le PGN gardé dans l'archive n'est plus, octet pour octet, le
             # fichier fourni : l'analyste doit le savoir.
@@ -2537,7 +2594,7 @@ def main(argv: list[str]) -> int:
                            "UTF-8 avant d'être rangé dans l'archive (%s)."
                            % " ; ".join(remarques_pgn))
         if contexte is not None:
-            (dossier / "contexte.md").write_text(contexte, encoding="utf-8")
+            ecrire_texte(dossier / "contexte.md", contexte)
             annexes.append("- `contexte.md` : les réponses aux questions de "
                            "démarrage, reprises en tête de cette synthèse.")
     except OSError as err:
@@ -2587,9 +2644,9 @@ def main(argv: list[str]) -> int:
     parametres["contexte_recueilli"] = contexte is not None
     parametres["pgn_encodage"] = encodage_pgn
     parametres["pgn_remarques"] = remarques_pgn
-    (dossier / "collecte.json").write_text(
-        json.dumps(parametres, ensure_ascii=False, indent=1, default=str),
-        encoding="utf-8")
+    ecrire_texte(dossier / "collecte.json",
+                 json.dumps(parametres, ensure_ascii=False, indent=1,
+                            default=str))
 
     # -- Synthèse -----------------------------------------------------------
     synthese = dossier / "synthese.md"
@@ -2602,7 +2659,7 @@ def main(argv: list[str]) -> int:
 
     # -- Archive et nettoyage -----------------------------------------------
     archive = archiver(dossier, options.garder_dossier)
-    sys.stdout.write("%s\n" % archive)
+    annoncer_archive(archive)
     return 0
 
 

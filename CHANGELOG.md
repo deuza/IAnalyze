@@ -33,6 +33,14 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   reproduit pas.
 - Catalogue et réponses de l'explorateur : lecture en `utf-8-sig`, avec
   un traitement des erreurs explicite, sans dépendance à la locale.
+- Écritures : tous les fichiers de l'archive passent par une seule
+  fonction, en UTF-8, fins de ligne LF, sans dépendance à la locale.
+- Nom du dossier de travail et chemins du zip : les caractères de
+  contrôle, `/ \\ : * ? " < > |` et les octets non décodables du nom du
+  PGN deviennent `_`, l'étiquette est bornée à 80 caractères. Espaces et
+  lettres accentuées sont conservés.
+- Le chemin de l'archive est écrit en octets sur la sortie standard, tel
+  que le système de fichiers le connaît.
 
 ### Fixed
 
@@ -46,6 +54,10 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   faisait échouer la première requête avec le diagnostic "réponse non
   JSON : 'latin-1' codec can't encode character '\ufeff'", et l'archive
   était produite sans explorateur.
+
+- Un PGN au nom non décodable, en latin-1 sur un système UTF-8 par
+  exemple, arrêtait la collecte sur une `UnicodeEncodeError` à
+  l'écriture de `collecte.json`, dossier de travail laissé en place.
 
 ## [3.4.1] - 2026-11-17
 
