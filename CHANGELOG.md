@@ -8,6 +8,29 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.5.3] - 2026-11-18
+
+### Added
+
+- TESTS.nfo : test T51, l'écart d'un mat manqué.
+- Synthèse, section 3 : une phrase explique la mention `mat` de la
+  colonne Écart cp.
+
+### Changed
+
+- En-tête d'agent HTTP : `collecte-partie/3.5.3`.
+- README.nfo, section 7 : la mention `mat` de la colonne Écart.
+
+### Fixed
+
+- Tableau Stockfish : quand le coup joué manquait un mat, ou en
+  concédait un, la colonne Écart cp affichait un nombre voisin de
+  100000, 99729 par exemple. Ce nombre vient de la valeur
+  bornée par laquelle le script remplace un mat pour classer les coups,
+  non du moteur. La cellule porte désormais `mat`, comme le palmarès
+  écrivait déjà "écart lié à un mat". `stockfish/evaluations.json`
+  garde la valeur brute dans `ecart_cp`.
+
 ## [3.5.2] - 2026-11-18
 
 ### Added

@@ -313,6 +313,13 @@ SEUIL_IMPRECISION = 50
 SEUIL_ERREUR = 100
 SEUIL_GAFFE = 300
 
+#: Écart, en centipions, à partir duquel il ne mesure plus rien : l'un des
+#: deux scores est un mat, que valeur_pour_trait ramène à une valeur
+#: bornée voisine de 100000 pour pouvoir classer les coups. Ce nombre est
+#: une convention de calcul, non une évaluation du moteur : il n'est pas
+#: affiché.
+SEUIL_ECART_MAT = 10000
+
 #: Erreurs et gaffes reprises au plus, par camp, dans le palmarès.
 PALMARES_MAX = 5
 
@@ -350,7 +357,7 @@ RE_ID_SOURCE = re.compile(r"[A-Za-z0-9]{8}(?:[A-Za-z0-9]{4})?")
 
 #: Version du script, selon le versionnage sémantique. Elle est reprise
 #: dans l'en-tête d'agent : c'est le seul endroit à modifier.
-VERSION = "3.5.2"
+VERSION = "3.5.3"
 
 #: En-tête d'agent, par politesse envers l'API.
 UA = "collecte-partie/%s (analyse personnelle)" % VERSION
@@ -1700,6 +1707,23 @@ def _cellule(valeur, gabarit="%.1f") -> str:
     return "-" if valeur is None else gabarit % valeur
 
 
+def _ecart(ecart: float | None) -> str:
+    """
+    Cellule "Écart cp" du tableau Stockfish.
+
+    Un écart absent donne un tiret. À partir de SEUIL_ECART_MAT, l'écart
+    vient d'un mat ramené à une valeur bornée, que le coup joué manque un
+    mat ou qu'il en concède un : la cellule porte "mat" au lieu d'un
+    nombre de centipions qui n'aurait aucun sens, les colonnes Éval et
+    1er donnant les deux scores.
+    """
+    if ecart is None:
+        return "-"
+    if ecart >= SEUIL_ECART_MAT:
+        return "mat"
+    return "%.0f" % ecart
+
+
 def _gnp(wdl: dict | None, pour_noirs: bool = False) -> str:
     """Gain, nulle et perte en pour cent arrondi, des Blancs ou des Noirs."""
     if not wdl:
@@ -1985,6 +2009,9 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
         a("Nature : imprécision à partir de %d cp d'écart, erreur à partir "
           "de %d, gaffe à partir de %d."
           % (SEUIL_IMPRECISION, SEUIL_ERREUR, SEUIL_GAFFE))
+        a("Écart `mat` : l'un des deux scores comparés est un mat, que le "
+          "coup joué manque un mat ou qu'il en concède un ; l'écart ne se "
+          "chiffre pas en centipions, comparez les colonnes Éval et 1er.")
         if stockfish.get("wdl"):
             a("G/N/P : chances de gain, de nulle et de perte des Blancs "
               "après le coup joué, en pour cent arrondi, selon le modèle de "
@@ -2004,7 +2031,7 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
             a("| %d | %d | %s | %s | %s | %s | %s | %s | %s | %s | %s |"
               % (r["demicoup"], r["numero"], r["trait"], r["joue"]["san"],
                  r["joue"]["score"], _gnp(r["joue"].get("wdl")),
-                 "-" if r["ecart_cp"] is None else "%.0f" % r["ecart_cp"],
+                 _ecart(r["ecart_cp"]),
                  r.get("nature") or "-",
                  colonnes[0], colonnes[1], colonnes[2]))
         a("")
@@ -2069,11 +2096,11 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
             pour_noirs = camp == "Noirs"
             for r in fautes[:PALMARES_MAX]:
                 meilleur = r["meilleurs"][0] if r["meilleurs"] else None
-                # Au delà de 10000, l'écart vient d'un mat ramené à une
-                # valeur bornée : le chiffre n'a plus de sens, les scores
-                # parlent d'eux-mêmes.
+                # À partir de SEUIL_ECART_MAT, l'écart vient d'un mat ramené
+                # à une valeur bornée : le chiffre n'a plus de sens, les
+                # scores parlent d'eux-mêmes.
                 ecart = ("écart %.0f cp" % r["ecart_cp"]
-                         if r["ecart_cp"] < 10000 else
+                         if r["ecart_cp"] < SEUIL_ECART_MAT else
                          "écart lié à un mat, %s au lieu de %s"
                          % (r["joue"]["score"],
                             meilleur["score"] if meilleur else "?"))
