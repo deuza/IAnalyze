@@ -346,9 +346,6 @@ AIDE_STOCKFISH = (CMD_PAQUET_STOCKFISH if EST_MACOS
 #: Fichier contenant le jeton personnel, en mode 600, et rien d'autre.
 JETON_DEFAUT = "~/.lichess_token"
 
-#: Identifiant de partie Lichess : huit caractères alphanumériques.
-RE_ID_PARTIE = re.compile(r"([A-Za-z0-9]{8})")
-
 #: Identifiant tel qu'on le saisit : 8 caractères pour la partie, 12 pour
 #: la vue d'un joueur. Exiger la longueur exacte évite de prendre un nom
 #: de fichier inexistant, "inexistant.pgn" par exemple, pour l'identifiant

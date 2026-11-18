@@ -8,6 +8,16 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- `collecte-partie.py` est enregistré exécutable (mode 755) dans le
+  dépôt.
+
+### Removed
+
+- Constante `RE_ID_PARTIE`, inutilisée depuis que `RE_ID_SOURCE` l'a
+  remplacée.
+
 ## [3.5.6] - 2026-11-18
 
 ### Added
