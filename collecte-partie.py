@@ -354,7 +354,7 @@ RE_ID_SOURCE = re.compile(r"[A-Za-z0-9]{8}(?:[A-Za-z0-9]{4})?")
 
 #: Version du script, selon le versionnage sémantique. Elle est reprise
 #: dans l'en-tête d'agent : c'est le seul endroit à modifier.
-VERSION = "3.5.6"
+VERSION = "3.5.7"
 
 #: En-tête d'agent, par politesse envers l'API.
 UA = "collecte-partie/%s (analyse personnelle)" % VERSION
@@ -1593,6 +1593,69 @@ def verifier_moteur(binaire: str) -> None:
         raise SystemExit("Stockfish non exécutable : %s" % binaire)
 
 
+def lancer_moteur(binaire: str) -> chess.engine.SimpleEngine:
+    """
+    Lance le moteur UCI et renvoie son pilote, ou arrête le script.
+
+    Un binaire non exécutable, absent ou qui n'est pas un moteur UCI se
+    manifeste respectivement par une OSError, une OSError et un délai
+    dépassé à l'attente de "uciok".
+    """
+    try:
+        return chess.engine.SimpleEngine.popen_uci(binaire)
+    except (OSError, TimeoutError, chess.engine.EngineError) as err:
+        raise SystemExit("Impossible de lancer le moteur %s : %s"
+                         % (binaire, str(err)
+                            or "pas de réponse UCI dans le délai")) from err
+
+
+def fermer_moteur(moteur: chess.engine.SimpleEngine) -> None:
+    """
+    Arrête le moteur sans jamais lever d'exception.
+
+    quit() échoue si le moteur est déjà mort ; close() est toujours sûr
+    et garantit qu'aucun processus Stockfish ne survit au script.
+    """
+    try:
+        moteur.quit()
+    except Exception:  # noqa: BLE001 - nettoyage de dernier recours
+        pass
+    moteur.close()
+
+
+def verifier_options_moteur(binaire: str, fils: int, hachage: int,
+                            multipv: int) -> None:
+    """
+    Contrôle --fils, --hachage et --multipv auprès du moteur lui-même,
+    avant toute collecte.
+
+    Le moteur annonce ses options et leurs bornes dès son lancement : une
+    valeur hors bornes, ou une option qu'il ne connaît pas, est refusée
+    ici plutôt qu'après toute la phase explorateur, qui peut durer
+    plusieurs minutes. Rien n'est configuré, donc aucune table de hachage
+    n'est allouée : le moteur est seulement lancé, interrogé, puis arrêté.
+    """
+    moteur = lancer_moteur(binaire)
+    try:
+        for drapeau, option, valeur in (("--fils", "Threads", fils),
+                                        ("--hachage", "Hash", hachage),
+                                        ("--multipv", "MultiPV", multipv)):
+            annonce = moteur.options.get(option)
+            if annonce is None:
+                raise SystemExit("Le moteur %s ne connaît pas l'option UCI "
+                                 "%s, requise par %s."
+                                 % (binaire, option, drapeau))
+            mini, maxi = annonce.min, annonce.max
+            if ((mini is not None and valeur < mini)
+                    or (maxi is not None and valeur > maxi)):
+                raise SystemExit("%s : %d est hors des bornes du moteur %s, "
+                                 "qui admet de %s à %s pour %s."
+                                 % (drapeau, valeur, binaire, mini, maxi,
+                                    option))
+    finally:
+        fermer_moteur(moteur)
+
+
 def decrire_variante(plateau: chess.Board, info: dict, trait: bool) -> dict:
     """
     Met en forme une ligne renvoyée par le moteur : premier coup, score,
@@ -1640,15 +1703,8 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
     if demicoups <= 0 or demicoups > len(coups):
         demicoups = len(coups)
 
-    # Un binaire non exécutable, absent ou qui n'est pas un moteur UCI se
-    # manifeste respectivement par une OSError, une OSError et un délai
-    # dépassé à l'attente de « uciok ».
-    try:
-        moteur = chess.engine.SimpleEngine.popen_uci(binaire)
-    except (OSError, TimeoutError, chess.engine.EngineError) as err:
-        raise SystemExit("Impossible de lancer le moteur %s : %s"
-                         % (binaire, str(err)
-                            or "pas de réponse UCI dans le délai")) from err
+    # Lancement et erreurs de lancement : voir lancer_moteur.
+    moteur = lancer_moteur(binaire)
 
     try:
         moteur.configure({"Threads": fils, "Hash": hachage})
@@ -1731,13 +1787,8 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
         raise SystemExit("Le moteur a échoué en cours d'analyse : %s"
                          % (err or type(err).__name__)) from err
     finally:
-        # quit() échoue si le moteur est déjà mort ; close() est toujours
-        # sûr et garantit qu'aucun processus Stockfish ne survit au script.
-        try:
-            moteur.quit()
-        except Exception:  # noqa: BLE001 - nettoyage de dernier recours
-            pass
-        moteur.close()
+        # Arrêt sûr dans tous les cas : voir fermer_moteur.
+        fermer_moteur(moteur)
 
     brut = dossier / "stockfish"
     brut.mkdir(parents=True, exist_ok=True)
@@ -2751,6 +2802,10 @@ def main(argv: list[str]) -> int:
                 % (catalogue.meta.get("connues"), catalogue.meta.get("date")))
     if options.avec_stockfish:
         verifier_moteur(options.stockfish)
+        # Les options moteur sont contrôlées ici, auprès du moteur, et non
+        # à sa configuration, qui n'a lieu qu'après la phase explorateur.
+        verifier_options_moteur(options.stockfish, options.fils,
+                                options.hachage, options.multipv)
 
     # -- Questions de démarrage ---------------------------------------------
     # Posées après les vérifications, pour ne rien demander à qui va de

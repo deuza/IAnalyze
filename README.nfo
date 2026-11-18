@@ -326,7 +326,10 @@
    - --pause ne descend pas sous 2, --seuil-frequence reste entre 0 et
      100, --coups-min et --coups-stockfish valent 0 ou plus, les autres
      valeurs numériques au moins 1 ;
-   - --pause et --seuil-frequence refusent nan et inf.
+   - --pause et --seuil-frequence refusent nan et inf ;
+   - --fils, --hachage et --multipv sont contrôlés auprès du moteur, qui
+     annonce ses bornes : une valeur qu'il n'admet pas est refusée avant
+     toute requête et avant la création du dossier de travail.
 
 
  [ 6. EXPLORATEUR : CRITÈRES D'ARRÊT ]

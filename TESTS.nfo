@@ -7,10 +7,10 @@
  8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les
  pourcentages bougent peu. "Probable" signale un résultat non mesuré.
 
- Plan mis à jour pour la version 3.5.6, le 18 novembre 2026. Les tests
- T34 à T54 ont été joués sur cette version, sous Linux (Python 3.13,
- python-chess 1.11.2, Stockfish 16 pour T51 et T52), ainsi que T01 à
- T08. Ils n'ont été joués ni sous
+ Plan mis à jour pour la version 3.5.7, le 18 novembre 2026. Les tests
+ T34 à T55 ont été joués sur cette version, sous Linux (Python 3.13,
+ python-chess 1.11.2, Stockfish 16 pour T51, T52 et T55), ainsi que T01
+ à T08. Ils n'ont été joués ni sous
  macOS ni sous Debian Trixie. Les tests avec jeton gardent leurs
  chiffres du 8 octobre, et T33 n'a été vérifié que sur un explorateur
  simulé.
@@ -458,7 +458,7 @@
       Un PGN sain ne déclenche aucun avertissement.
 
  T47  grep -n '^VERSION' collecte-partie.py
-      Attendu : VERSION = "3.5.6". L'en-tête d'agent HTTP en est tiré.
+      Attendu : VERSION = "3.5.7". L'en-tête d'agent HTTP en est tiré.
 
 
  [ M. NOM DU PGN ]
@@ -642,6 +642,32 @@
       "None". Avant la version 3.5.6, les trois URL étaient demandées à
       Lichess et les deux dernières lignes valaient "practice" et
       "analysis".
+
+
+ [ S. OPTIONS MOTEUR HORS BORNES (SANS RÉSEAU NI JETON) ]
+
+ T55  for o in "--fils 100000" "--hachage 99999999999" "--multipv 9999"
+      do
+          ./collecte-partie.py italienne.pgn --sans-explorateur \
+              --sans-questions $o 2>&1 | tail -1
+      done
+      ./collecte-partie.py italienne.pgn --sans-explorateur \
+          --sans-questions --fils 100000 2>/dev/null ; echo $?
+      ls -d analyse-italienne-* 2>/dev/null | wc -l
+      Attendu, avec Stockfish 16 :
+        --fils : 100000 est hors des bornes du moteur <binaire>, qui
+        admet de 1 à 1024 pour Threads.
+        --hachage : 99999999999 est hors des bornes du moteur <binaire>,
+        qui admet de 1 à 33554432 pour Hash.
+        --multipv : 9999 est hors des bornes du moteur <binaire>, qui
+        admet de 1 à 500 pour MultiPV.
+      puis le code 1, puis 0 (lancez ce test après le nettoyage : aucun
+      dossier de travail n'est créé). Les bornes sont celles qu'annonce
+      le moteur, elles varient d'une version à l'autre. Avant la version
+      3.5.7, le refus n'arrivait qu'après la phase explorateur, par "Le
+      moteur a échoué en cours d'analyse : expected value for option
+      'Threads' to be at most 1024, got: 100000", dossier de travail
+      déjà créé.
 
 
  Nettoyage : rm -rf /tmp/analyses /tmp/abime /tmp/cat1.tsv

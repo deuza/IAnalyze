@@ -8,15 +8,35 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.5.7] - 2026-11-18
+
+### Added
+
+- TESTS.nfo : test T55, les options moteur hors bornes.
+
 ### Changed
 
+- En-tête d'agent HTTP : `collecte-partie/3.5.7`.
 - `collecte-partie.py` est enregistré exécutable (mode 755) dans le
   dépôt.
+- Le moteur est lancé une première fois, brièvement, pendant les
+  vérifications préalables, puis une seconde fois pour l'analyse.
+- README.nfo, section 5 : le contrôle des options moteur.
 
 ### Removed
 
 - Constante `RE_ID_PARTIE`, inutilisée depuis que `RE_ID_SOURCE` l'a
   remplacée.
+
+### Fixed
+
+- Une valeur de `--fils`, `--hachage` ou `--multipv` hors des bornes du
+  moteur, ou un moteur ne connaissant pas l'une de ces options, n'était
+  refusée qu'à la configuration du moteur, après toute la phase
+  explorateur, par le message "Le moteur a échoué en cours d'analyse".
+  Ces options sont désormais contrôlées auprès du moteur pendant les
+  vérifications préalables, avant toute requête et avant la création du
+  dossier de travail.
 
 ## [3.5.6] - 2026-11-18
 
