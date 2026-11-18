@@ -17,6 +17,24 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   sous `LC_ALL=C` avec `PYTHONUTF8=0`.
 - Les caractères de contrôle sont retirés des lignes du journal et des
   messages d'arrêt avant affichage.
+- Lecture du PGN et des consignes quel que soit leur encodage : marque
+  d'ordre des octets (BOM) UTF-8, UTF-16 ou UTF-32, UTF-16 sans marque,
+  UTF-8, puis repli sur cp1252 et sur latin-1. Une ligne "Attention" du
+  journal nomme l'encodage retenu. Un fichier UTF-8 abîmé par quelques
+  octets invalides reste lu en UTF-8, ces octets devenant U+FFFD.
+- Les caractères de contrôle du PGN, NUL compris, sont retirés et
+  comptés dans le journal ; les fins de ligne CRLF et CR sont ramenées à
+  LF.
+- collecte.json : clefs `pgn_encodage` et `pgn_remarques`. Si le PGN a
+  dû être converti, la section 5 de la synthèse le signale.
+
+### Fixed
+
+- Un PGN en latin-1 ou en cp1252 était lu comme de l'UTF-8 : chaque
+  lettre accentuée devenait U+FFFD dans `synthese.md` et dans
+  `partie.pgn`, sans aucun avertissement.
+- Un PGN en UTF-16 était refusé avec le message trompeur "PGN sans aucun
+  coup dans la ligne principale".
 
 ## [3.4.1] - 2026-11-17
 

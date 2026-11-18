@@ -33,6 +33,7 @@ d'utilisation.
 from __future__ import annotations
 
 import argparse
+import codecs
 import contextlib
 import csv
 import datetime
@@ -421,12 +422,150 @@ def entier(valeur) -> int:
         return 0
 
 
-def lire_texte(chemin: pathlib.Path, role: str) -> str:
-    """Lit un fichier texte en UTF-8, avec un message clair en cas d'échec."""
+#: Marques d'ordre des octets reconnues en tête de fichier. Celles de
+#: l'UTF-32 passent d'abord : la marque UTF-32 petit-boutiste commence par
+#: celle de l'UTF-16 petit-boutiste.
+BOMS_LARGES = (
+    (codecs.BOM_UTF32_LE, "utf-32-le"),
+    (codecs.BOM_UTF32_BE, "utf-32-be"),
+    (codecs.BOM_UTF16_LE, "utf-16-le"),
+    (codecs.BOM_UTF16_BE, "utf-16-be"),
+)
+
+#: Octets examinés pour reconnaître un UTF-16 sans marque d'ordre.
+ECHANTILLON_UTF16 = 4096
+
+
+def utf16_sans_bom(brut: bytes) -> str | None:
+    """
+    Reconnaît un texte UTF-16 dépourvu de marque d'ordre des octets.
+
+    Un texte surtout ASCII codé en UTF-16 porte un octet nul sur deux :
+    aux rangs impairs en petit-boutiste, aux rangs pairs en gros-boutiste.
+    Renvoie le nom du codec, ou None si le motif n'apparaît pas.
+    """
+    echantillon = brut[:ECHANTILLON_UTF16]
+    pairs, impairs = echantillon[0::2], echantillon[1::2]
+    if len(impairs) < 2:
+        return None
+    nuls_pairs, nuls_impairs = pairs.count(0), impairs.count(0)
+    if nuls_impairs > 0.4 * len(impairs) and nuls_pairs < 0.05 * len(pairs):
+        return "utf-16-le"
+    if nuls_pairs > 0.4 * len(pairs) and nuls_impairs < 0.05 * len(impairs):
+        return "utf-16-be"
+    return None
+
+
+def decoder_octets(brut: bytes) -> tuple[str, str, list[str]]:
+    """
+    Décode le contenu d'un fichier texte sans jamais lever d'exception.
+
+    Ordre des essais : marque d'ordre des octets (UTF-8, UTF-16, UTF-32),
+    UTF-16 sans marque, UTF-8 strict, puis repli sur cp1252 et enfin sur
+    latin-1, qui accepte n'importe quel octet. Un texte manifestement en
+    UTF-8 mais abîmé par quelques octets invalides reste décodé en UTF-8,
+    ces octets devenant U+FFFD : le passer en cp1252 abîmerait tous ses
+    accents pour en sauver quelques-uns.
+
+    Les fins de ligne CRLF et CR sont ramenées à LF, et les caractères de
+    contrôle sont retirés, NUL compris ; la tabulation verticale et le
+    saut de page deviennent une espace.
+
+    Renvoie le texte, le nom de l'encodage retenu et la liste des
+    remarques à signaler, vide pour un fichier UTF-8 sans défaut.
+    """
+    remarques: list[str] = []
+    texte: str | None = None
+    encodage = "utf-8"
+
+    if brut.startswith(codecs.BOM_UTF8):
+        # La marque est retirée, le reste suit le chemin normal : elle ne
+        # garantit pas que la suite soit de l'UTF-8 valide.
+        brut = brut[len(codecs.BOM_UTF8):]
+        remarques.append("marque d'ordre des octets (BOM) UTF-8 retirée")
+    else:
+        large = None
+        for marque, codec in BOMS_LARGES:
+            if brut.startswith(marque):
+                brut = brut[len(marque):]
+                large = codec
+                remarques.append("marque d'ordre des octets (BOM) détectée, "
+                                 "encodage retenu : %s" % codec)
+                break
+        if large is None:
+            large = utf16_sans_bom(brut)
+            if large is not None:
+                remarques.append("un octet nul sur deux et pas de marque "
+                                 "d'ordre des octets, encodage retenu : %s"
+                                 % large)
+        if large is not None:
+            encodage = large
+            try:
+                texte = brut.decode(large)
+            except UnicodeDecodeError:
+                texte = brut.decode(large, errors="replace")
+                remarques.append("séquences %s invalides remplacées par "
+                                 "U+FFFD" % large)
+
+    if texte is None:
+        try:
+            texte = brut.decode("utf-8")
+        except UnicodeDecodeError:
+            essai = brut.decode("utf-8", errors="replace")
+            invalides = essai.count("\ufffd")
+            valides = sum(1 for c in essai if ord(c) > 127) - invalides
+            if valides > invalides:
+                texte = essai
+                remarques.append("UTF-8 abîmé, %d octet(s) invalide(s) "
+                                 "remplacé(s) par U+FFFD, encodage retenu : "
+                                 "utf-8" % invalides)
+            else:
+                try:
+                    texte = brut.decode("cp1252")
+                    encodage = "cp1252"
+                except UnicodeDecodeError:
+                    texte = brut.decode("latin-1")
+                    encodage = "latin-1"
+                remarques.append("le contenu n'est pas en UTF-8, encodage "
+                                 "retenu : %s" % encodage)
+
+    texte = texte.replace("\r\n", "\n").replace("\r", "\n")
+    controles = RE_CONTROLES.findall(texte)
+    if controles:
+        texte = RE_CONTROLES.sub(
+            lambda m: " " if m.group() in "\x0b\x0c" else "", texte)
+        remarques.append("%d caractère(s) de contrôle retiré(s), dont %d NUL"
+                         % (len(controles), controles.count("\x00")))
+    return texte, encodage, remarques
+
+
+def lire_fichier_texte(chemin: pathlib.Path,
+                       role: str) -> tuple[str, str, list[str]]:
+    """
+    Lit un fichier texte quel que soit son encodage, et signale ce qui
+    s'en écarte de l'UTF-8 par une ligne "Attention" du journal.
+
+    Renvoie le texte, l'encodage retenu et les remarques, comme
+    decoder_octets. Seule une erreur d'accès au fichier arrête le script.
+    """
     try:
-        return chemin.read_text(encoding="utf-8", errors="replace")
+        brut = chemin.read_bytes()
     except OSError as err:
         raise SystemExit("Lecture impossible (%s) : %s" % (role, err)) from err
+    texte, encodage, remarques = decoder_octets(brut)
+    for remarque in remarques:
+        journal("Attention, %s : %s." % (role, remarque))
+    return texte, encodage, remarques
+
+
+def lire_texte(chemin: pathlib.Path, role: str) -> str:
+    """
+    Lit un fichier texte, avec un message clair en cas d'échec.
+
+    L'encodage est détecté par lire_fichier_texte ; cette forme courte
+    sert quand seul le texte importe, pour les consignes par exemple.
+    """
+    return lire_fichier_texte(chemin, role)[0]
 
 
 def lire_jeton(chemin: str) -> str:
@@ -493,7 +632,12 @@ def telecharger_pgn(identifiant: str, delai: int) -> str:
     journal("Téléchargement du PGN : %s" % url)
     try:
         with urllib.request.urlopen(requete, timeout=delai) as reponse:
-            return reponse.read().decode("utf-8", errors="replace")
+            # Même décodage que pour un fichier local : Lichess répond en
+            # UTF-8, mais rien ne doit dépendre de cette hypothèse.
+            texte, _encodage, remarques = decoder_octets(reponse.read())
+            for remarque in remarques:
+                journal("Attention, PGN téléchargé : %s." % remarque)
+            return texte
     except urllib.error.HTTPError as err:
         raise SystemExit("Export PGN : HTTP %d pour la partie %s."
                          % (err.code, identifiant)) from err
@@ -2265,10 +2409,15 @@ def main(argv: list[str]) -> int:
         consignes = lire_texte(chemin_consignes, "consignes")
 
     # -- Récupération du PGN ------------------------------------------------
+    # Encodage retenu pour le PGN et remarques de décodage, consignés dans
+    # collecte.json et, s'il y a lieu, dans la section 5 de la synthèse.
+    encodage_pgn = "utf-8"
+    remarques_pgn: list[str] = []
     chemin_local = pathlib.Path(os.path.expanduser(options.source))
     if chemin_local.is_file():
         journal("Lecture du PGN local : %s" % chemin_local)
-        texte_pgn = lire_texte(chemin_local, "PGN")
+        texte_pgn, encodage_pgn, remarques_pgn = lire_fichier_texte(
+            chemin_local, "PGN")
         etiquette = chemin_local.stem
     else:
         identifiant = extraire_id(options.source)
@@ -2363,6 +2512,12 @@ def main(argv: list[str]) -> int:
                            % ", ".join(camp["modifiees"]))
         else:
             (dossier / "partie.pgn").write_text(texte_pgn, encoding="utf-8")
+        if remarques_pgn:
+            # Le PGN gardé dans l'archive n'est plus, octet pour octet, le
+            # fichier fourni : l'analyste doit le savoir.
+            annexes.append("- Encodage : le PGN fourni a été converti en "
+                           "UTF-8 avant d'être rangé dans l'archive (%s)."
+                           % " ; ".join(remarques_pgn))
         if contexte is not None:
             (dossier / "contexte.md").write_text(contexte, encoding="utf-8")
             annexes.append("- `contexte.md` : les réponses aux questions de "
@@ -2412,6 +2567,8 @@ def main(argv: list[str]) -> int:
                                        else None)
     parametres["camp"] = camp
     parametres["contexte_recueilli"] = contexte is not None
+    parametres["pgn_encodage"] = encodage_pgn
+    parametres["pgn_remarques"] = remarques_pgn
     (dossier / "collecte.json").write_text(
         json.dumps(parametres, ensure_ascii=False, indent=1, default=str),
         encoding="utf-8")
