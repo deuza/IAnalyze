@@ -1,0 +1,304 @@
+ .------------------------------------------------------------------------.
+ |    C O L L E C T E - P A R T I E . P Y   :   P L A N   D E   T E S T S |
+ `------------------------------------------------------------------------'
+
+ Lancez les tests depuis le répertoire du script, dans l'ordre. partie1.pgn
+ y désigne votre partie 1.b4 g6. Les chiffres attendus datent du
+ 8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les
+ pourcentages bougent peu. "Probable" signale un résultat non mesuré.
+
+ Plan mis à jour pour la version 3.4.1, le 17 novembre 2026. Les tests
+ sans jeton réel (T01 à T13, T26, T27, T30 à T32) ont été rejoués sur
+ cette version, sous Linux, avec un fichier de jeton factice pour T12,
+ T13 et T26. Les tests avec jeton gardent leurs chiffres du 8 octobre,
+ et T33 n'a été vérifié que sur un explorateur simulé.
+
+ Les emplacements par défaut dépendent de la plateforme. Posez d'abord
+ ces deux variables, que les tests reprennent :
+
+     # Debian
+     CAT=/usr/local/share/collecte-partie ; VENV=/opt/venv/lichess
+     # macOS
+     CAT=~/.local/share/collecte-partie ; VENV=$CAT/venv
+
+ Sur un terminal, le script pose ses questions de démarrage : validez par
+ Entrée, ou ajoutez --sans-questions. Stockfish tourne par défaut : pour
+ raccourcir un test qui ne porte pas sur le moteur, ajoutez
+ --sans-stockfish.
+
+ Préparation, une ligne italienne entièrement cataloguée :
+
+     printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 *\n' \
+         > italienne.pgn
+
+ Pour lire une synthèse :  unzip -p "$ARCH" '*/synthese.md' | less
+
+
+ [ A. SANS RÉSEAU NI JETON ]
+
+ T01  python3 -m py_compile collecte-partie.py ; echo $?
+      Attendu : aucune sortie, puis 0.
+
+ T02  ./collecte-partie.py --help | grep -c -- --coups-min
+      Attendu : 4 (usage, option, deux exemples).
+
+ T03  Options refusées, code 2 à chaque fois :
+      for o in "--base maitres --cadences rapid" \
+               "--base lichess --cadences rapide" \
+               "--base lichess --classements 1100" "--coups-min -1" \
+               "--pause 1" "--seuil-frequence 150" \
+               "--sans-stockfish --profondeur 20" "--base plebe"; do
+          ./collecte-partie.py partie1.pgn $o 2>&1 | tail -1; echo "  $?"
+      done
+      Attendu, dans l'ordre, après "collecte-partie.py: error:" :
+        --cadences n'a d'effet qu'avec --base lichess
+        --cadences : valeur inconnue "rapide", valeurs admises : ...
+        --classements : valeur inconnue "1100", valeurs admises : ...
+        --coups-min doit valoir 0 ou plus
+        --pause ne doit pas descendre sous 2 secondes
+        --seuil-frequence doit être compris entre 0 et 100
+        --profondeur n'a pas d'effet avec --sans-stockfish
+        argument --base: invalid choice: 'plebe' (...)
+      Le "$?" affiche 0 à cause du tube : vérifiez le code avec
+      ./collecte-partie.py partie1.pgn --pause 1 ; echo $?   -> 2
+
+ T04  ./collecte-partie.py /tmp/inexistant.pgn ; echo $?
+      ./collecte-partie.py inexistant.pgn ; echo $?
+      Attendu : "Fichier PGN introuvable : /tmp/inexistant.pgn", puis 1,
+      et de même pour inexistant.pgn, sans aucune requête vers Lichess.
+      Seule une source de 8 ou 12 caractères alphanumériques exactement
+      passe pour un identifiant Lichess.
+
+ T05  ARCH=$(./collecte-partie.py italienne.pgn --sans-explorateur \
+          --sans-stockfish --jeton-fichier /nulle/part \
+          --catalogue /nulle/part 2>/dev/null)
+      echo "$ARCH" ; unzip -l "$ARCH"
+      Attendu : une seule ligne, le chemin de l'archive ; l'archive
+      contient synthese.md, partie.pgn et collecte.json, sans répertoire
+      explorateur/. Section 2 : "Collecte de l'explorateur non effectuée :
+      désactivée par --sans-explorateur."
+
+ T06  ./collecte-partie.py italienne.pgn --sans-explorateur \
+          --sans-stockfish --sans-questions --garder-dossier
+      ls -d analyse-italienne-*/
+      Attendu : le dossier existe à côté de l'archive. Sans l'option
+      (T05), il n'existe pas.
+
+ T07  echo "Annotez en français." > /tmp/consignes.md
+      ./collecte-partie.py italienne.pgn --sans-explorateur \
+          --sans-stockfish --sans-questions --consignes /tmp/consignes.md
+      Attendu : synthese.md commence par la section "## Consignes
+      d'analyse" contenant la phrase.
+
+ T08  ./collecte-partie.py italienne.pgn --sans-explorateur \
+          --sans-stockfish --sans-questions --sortie /tmp/analyses
+      Attendu : archive créée dans /tmp/analyses, répertoire créé au besoin.
+
+
+ [ B. CATALOGUE (RÉSEAU VERS GITHUB, SANS JETON) ]
+
+ T09  ./collecte-partie.py --installer-catalogue
+      Attendu : cinq lignes "Téléchargement du catalogue : ...a.tsv" à
+      "...e.tsv", puis "Catalogue installé : 3865 lignes, 3865 positions
+      nommées, 7982 positions connues, dans $CAT/catalogue.tsv", chemin
+      développé.
+
+ T10  ls -l $CAT/
+      head -1 $CAT/catalogue.tsv
+      Attendu : catalogue.tsv seul sous Debian, à côté du répertoire venv
+      sous macOS, -rw-r--r--, environ 690 Ko. Première
+      ligne : #format=1, date=..., lignes=3865, nommees=3865,
+      connues=7982, source=..., séparés par des tabulations.
+
+ T11  cp $CAT/catalogue.tsv /tmp/cat1.tsv
+      ./collecte-partie.py --installer-catalogue
+      diff <(tail -n +2 /tmp/cat1.tsv) \
+           <(tail -n +2 $CAT/catalogue.tsv) \
+           && echo identique
+      ls -a $CAT/
+      Attendu : "identique" (seule la ligne datée change), aucun fichier
+      .catalogue-*.tmp résiduel.
+
+ T12  ./collecte-partie.py italienne.pgn --catalogue /tmp/vide ; echo $?
+      Attendu : "Catalogue des ouvertures absent :
+      /tmp/vide/catalogue.tsv introuvable.", suivi de la commande
+      d'installation avec --catalogue /tmp/vide, puis 1. Aucun nouveau
+      dossier analyse-* créé.
+      Le fichier de jeton doit exister : il est lu avant le catalogue,
+      sans accès réseau. Il en va de même pour T13 et T26.
+
+ T13  mkdir /tmp/abime
+      head -n $(( $(wc -l < $CAT/catalogue.tsv) - 10 )) \
+          $CAT/catalogue.tsv > /tmp/abime/catalogue.tsv
+      ./collecte-partie.py italienne.pgn --catalogue /tmp/abime
+      Attendu : "Catalogue tronqué : 7982 positions annoncées, 7972 lues
+      dans /tmp/abime/catalogue.tsv.", suivi de la commande de
+      réinstallation. La forme head -n -10 n'existe pas sous macOS,
+      d'où le calcul du nombre de lignes.
+
+
+ [ C. BASE MAÎTRES (JETON) ]
+
+ T14  ./collecte-partie.py italienne.pgn --base maitres
+      Attendu : journal "Catalogue des ouvertures : 7982 positions
+      connues, du ..." puis "Explorateur : base maîtres, ...". Neuf
+      lignes dans la table, colonne Ouverture dans l'ordre :
+        B00 King's Pawn Game
+        C20 King's Pawn Game
+        C40 King's Knight Opening
+        C44 King's Knight Opening: Normal Variation
+        C50 Italian Game
+        C50 Italian Game: Giuoco Piano
+        C53 Italian Game: Classical Variation
+        C54 Italian Game: Classical Variation
+        C54 Italian Game: Classical Variation, Giuoco Pianissimo
+      Arrêt : "fin de la partie". Première sortie : "Aucun coup
+      interrogé ne passe sous le seuil de 10.0 % hors catalogue."
+      (toutes les positions sont cataloguées, aucune sortie possible).
+
+ T15  ./collecte-partie.py partie1.pgn --base maitres
+      Attendu, ligne 1 : 2879587 parties, b4, rang 9, 0.1 %, Ouverture
+      "A00 Polish Opening". Probable : arrêt sur échantillon insuffisant
+      dans les premiers demi-coups, la base maîtres connaissant peu
+      1.b4 g6.
+
+
+ [ D. BASE LICHESS (JETON) ]
+
+ T16  ./collecte-partie.py partie1.pgn --base lichess
+      Attendu :
+        ligne 1 : environ 7 270 millions de parties, b4, rang 11, 0.4 %,
+                  score B. environ 53.5 %, majoritaire e4 à 58.6 %,
+                  Ouverture "A00 Polish Opening" ;
+        ligne 2 : g6 vers 5 %, Ouverture "-", comme les suivantes ;
+        section 2 : ligne "Base interrogée : **Lichess** ..." avec les
+                  filtres par défaut, et ligne "Fenêtre de départ" ;
+        première sortie : "**Noirs joue g6** au coup **1** (demi-coup 2)"
+                  et "dernière position nommée avant la sortie : A00
+                  Polish Opening".
+      Arrêt : sur échantillon insuffisant (probable, avant le demi-coup
+      12), sinon à la première sortie après le demi-coup 12.
+      Contrôle croisé : la fréquence de g6 doit correspondre aux 5 %
+      affichés sur https://lichess.org/opening/Polish_Opening/b4
+
+ T17  ./collecte-partie.py partie1.pgn --base lichess --coups-min 0
+      Attendu : deux lignes, arrêt "sortie de théorie au demi-coup 2 :
+      g6 joué à 5.x %, seuil 10.0 %, hors catalogue".
+
+ T18  ./collecte-partie.py partie1.pgn --base lichess --coups-min 0 \
+          --cadences ' Rapid,CLASSICAL,rapid' --classements 1000,0
+      Attendu : collecte.json porte "cadences": "rapid,classical" et
+      "classements": "0,1000" ; la synthèse affiche les mêmes valeurs ;
+      le total de la ligne 1 est nettement inférieur à celui de T16.
+
+
+ [ E. SEUILS ET MODES (JETON) ]
+
+ T19  ./collecte-partie.py italienne.pgn --base lichess \
+          --seuil-parties 100000000000
+      Attendu : arrêt "échantillon insuffisant au demi-coup 1 : ...
+      parties pour un seuil de 100000000000" ; section 4 liste ce
+      demi-coup, suivi de "Au delà de ce point, la base Lichess (tous
+      joueurs) ne dit plus rien d'exploitable".
+
+ T20  ./collecte-partie.py partie1.pgn --base lichess --coups-min 0 \
+          --seuil-frequence 0
+      Attendu : "Aucun coup interrogé ne passe sous le seuil de 0.0 %
+      hors catalogue." ; arrêt sur échantillon ou position inconnue.
+
+ T21  ./collecte-partie.py partie1.pgn --base lichess --jusqu-a-epuisement
+      Attendu : texte "Mode `--jusqu-a-epuisement`" ; arrêt "position
+      inconnue de la base au demi-coup N" ou plafond de 60 ; première
+      sortie toujours g6, demi-coup 2.
+
+ T22  ./collecte-partie.py italienne.pgn --jusqu-a-epuisement \
+          --max-demicoups 4
+      Attendu : quatre lignes, arrêt "plafond de 4 demi-coups atteint
+      (option --max-demicoups)".
+
+ T23  ./collecte-partie.py italienne.pgn --pause 3 2>&1 | grep demi-coup
+      Attendu : au moins 3 secondes entre deux horodatages successifs.
+
+
+ [ F. SOURCE LICHESS ]
+
+ T24  ./collecte-partie.py https://lichess.org/<ID> --sans-explorateur
+      ./collecte-partie.py <ID> --sans-explorateur
+      (<ID> : une de vos parties Lichess, huit caractères.)
+      Attendu : journal "Téléchargement du PGN :
+      https://lichess.org/game/export/<ID>", archive
+      analyse-<ID>-<horodatage>.zip.
+
+
+ [ G. STOCKFISH ]
+
+ T25  ./collecte-partie.py italienne.pgn --sans-explorateur \
+          --avec-stockfish --coups-stockfish 3 --profondeur 10 \
+          --multipv 2 --longueur-pv 4 --fils 2 --hachage 128
+      Attendu : "Moteur : `<binaire par défaut>`, profondeur 10, multipv
+      2, 6 demi-coups couverts sur 9." ; six lignes, colonne 3e à "-" ;
+      variantes de la section 3 bis tronquées à 4 demi-coups ;
+      stockfish/evaluations.json présent ; fils et hachage visibles dans
+      collecte.json.
+
+ T26  ./collecte-partie.py italienne.pgn --avec-stockfish \
+          --stockfish /nulle/part ; echo $?
+      Attendu : "Stockfish introuvable : /nulle/part. Installez-le (apt
+      install stockfish, dans /usr/games), indiquez son chemin avec
+      --stockfish, ou laissez l'évaluation à l'analyste avec
+      --sans-stockfish.", puis 1. Sous macOS, la parenthèse devient
+      "(brew install stockfish)".
+
+
+ [ H. JETON ]
+
+ T27  ./collecte-partie.py italienne.pgn --jeton-fichier /nulle/part
+      Attendu : "Jeton absent : /nulle/part introuvable.", code 1.
+
+ T28  cp ~/.lichess_token ~/jeton-test ; chmod 644 ~/jeton-test
+      ./collecte-partie.py italienne.pgn --jeton-fichier ~/jeton-test \
+          --max-demicoups 1
+      shred -u ~/jeton-test       # sous macOS : rm ~/jeton-test
+      Attendu : "Attention : <chemin complet de ~/jeton-test> est lisible
+      par d'autres (mode 644)." dans le journal, collecte normale ensuite.
+
+ T29  ARCH=$(./collecte-partie.py italienne.pgn 2>/dev/null)
+      unzip -p "$ARCH" | grep -c -F -f ~/.lichess_token
+      Attendu : 0. Le jeton est lu depuis le fichier par grep, il ne
+      passe pas dans la ligne de commande.
+
+
+ [ I. ENVIRONNEMENT VIRTUEL ]
+
+ T30  ./collecte-partie.py --installer-venv
+      Attendu : "Environnement virtuel déjà présent : $VENV", puis
+      "Installation de python-chess dans l'environnement virtuel." et
+      "Environnement virtuel opérationnel : $VENV/bin/python3", chemins
+      développés.
+
+
+ [ J. PLATEFORME ]
+
+ T31  ./collecte-partie.py --help | grep -c "brew install"
+      Attendu : 0 sous Debian, 3 sous macOS.
+
+ T32  ./collecte-partie.py --help | grep -c "apt install"
+      Attendu : 3 sous Debian, 0 sous macOS.
+
+
+ [ K. ROQUE (JETON) ]
+
+ T33  ./collecte-partie.py Deuza_vs_deanstewart.pgn --sans-stockfish \
+          --sans-questions
+      Attendu : ligne 13, O-O au rang 1, fréquence proche de 65 % (64.9 %
+      le 9 octobre 2026, 14560 parties sur 22436). Avant la version
+      3.4.1, cette ligne affichait 0.0 % au rang "-", et l'arrêt tombait
+      sur "sortie de théorie au demi-coup 13 : O-O joué à 0.0 %".
+      Probable : l'interrogation continue au demi-coup 14, la liste des
+      coups envoyée contenant alors e1g1 ; la suite dépend de la base.
+      Non rejoué avec un jeton : vérifié hors réseau, sur un explorateur
+      simulé qui note le roque e1h1.
+
+
+ Nettoyage : rm -rf /tmp/analyses /tmp/abime /tmp/cat1.tsv
+             /tmp/consignes.md analyse-*
