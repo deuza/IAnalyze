@@ -582,9 +582,16 @@ def lire_jeton(chemin: str) -> str:
 
     try:
         mode = p.stat().st_mode
-        contenu = p.read_text(encoding="utf-8")
+        brut = p.read_bytes()
     except (OSError, UnicodeDecodeError) as err:
         raise SystemExit("Jeton illisible dans %s : %s" % (p, err)) from err
+
+    # Même décodage que pour le PGN : un fichier enregistré par un éditeur
+    # Windows, avec marque d'ordre des octets ou en UTF-16, reste lisible.
+    # Les remarques ne citent jamais le contenu du fichier.
+    contenu, _encodage, remarques = decoder_octets(brut)
+    for remarque in remarques:
+        journal("Attention, jeton (%s) : %s." % (p, remarque))
 
     if mode & 0o077:
         journal("Attention : %s est lisible par d'autres (mode %o)."
@@ -594,6 +601,13 @@ def lire_jeton(chemin: str) -> str:
     if not jeton or any(c.isspace() for c in jeton):
         raise SystemExit("Le fichier %s doit contenir le jeton seul, sans "
                          "espace ni affectation de variable." % p)
+    # Le jeton part dans un en-tête HTTP : hors de l'ASCII imprimable, il
+    # serait refusé par http.client avec une erreur d'encodage que rien ne
+    # relie au fichier. Le message ne reproduit pas le jeton.
+    if not jeton.isascii() or not jeton.isprintable():
+        raise SystemExit("Le jeton lu dans %s contient des caractères hors "
+                         "de l'ASCII imprimable : recopiez-le depuis "
+                         "Lichess, sans rien d'autre dans le fichier." % p)
     return jeton
 
 
@@ -877,7 +891,9 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
         requete = urllib.request.Request(url, headers={"User-Agent": UA})
         try:
             with urllib.request.urlopen(requete, timeout=delai) as reponse:
-                texte = reponse.read().decode("utf-8")
+                # utf-8-sig : une marque d'ordre des octets en tête de
+                # fichier est ignorée au lieu de fausser l'en-tête.
+                texte = reponse.read().decode("utf-8-sig", errors="strict")
         except urllib.error.HTTPError as err:
             raise SystemExit("Catalogue : HTTP %d pour %s."
                              % (err.code, url)) from err
@@ -990,7 +1006,9 @@ def lire_catalogue(repertoire: str) -> Catalogue:
 
     positions: dict[str, tuple[str, str]] = {}
     try:
-        with chemin.open(encoding="utf-8") as f:
+        # Encodage et traitement des erreurs explicites, jamais ceux de la
+        # locale : un index abîmé doit être refusé, non lu de travers.
+        with chemin.open(encoding="utf-8-sig", errors="strict") as f:
             premiere = f.readline().rstrip("\n")
             entete = f.readline().rstrip("\n")
             for numero, ligne in enumerate(f, start=3):
@@ -1091,14 +1109,14 @@ class Explorateur:
         for tentative in (1, 2):
             try:
                 with urllib.request.urlopen(requete, timeout=self.delai) as r:
-                    corps = r.read().decode("utf-8", errors="replace")
+                    corps = r.read().decode("utf-8-sig", errors="replace")
                     donnees = json.loads(corps)
                     if not isinstance(donnees, dict):
                         return 0, {"_erreur": "réponse JSON inattendue, "
                                               "objet attendu"}
                     return r.status, donnees
             except urllib.error.HTTPError as err:
-                corps = err.read().decode("utf-8", errors="replace")
+                corps = err.read().decode("utf-8-sig", errors="replace")
                 if err.code == 429 and tentative == 1:
                     journal("429 reçu, pause de 60 secondes.")
                     time.sleep(60)

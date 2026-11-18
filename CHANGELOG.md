@@ -27,6 +27,12 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   LF.
 - collecte.json : clefs `pgn_encodage` et `pgn_remarques`. Si le PGN a
   dû être converti, la section 5 de la synthèse le signale.
+- Fichier de jeton : même détection d'encodage que pour le PGN, marque
+  d'ordre des octets et UTF-16 compris. Un jeton hors de l'ASCII
+  imprimable est refusé avant toute requête, par un message qui ne le
+  reproduit pas.
+- Catalogue et réponses de l'explorateur : lecture en `utf-8-sig`, avec
+  un traitement des erreurs explicite, sans dépendance à la locale.
 
 ### Fixed
 
@@ -35,6 +41,11 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   `partie.pgn`, sans aucun avertissement.
 - Un PGN en UTF-16 était refusé avec le message trompeur "PGN sans aucun
   coup dans la ligne principale".
+
+- Un fichier de jeton enregistré avec une marque d'ordre des octets
+  faisait échouer la première requête avec le diagnostic "réponse non
+  JSON : 'latin-1' codec can't encode character '\ufeff'", et l'archive
+  était produite sans explorateur.
 
 ## [3.4.1] - 2026-11-17
 
