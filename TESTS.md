@@ -1079,6 +1079,8 @@ for motif in 'Stockfish est inutile' 'Les chiffres de la section 3' 'porte "mat"
 done
 ```
 
+Le prompt demande aussi de se servir de tous les fichiers de l'archive : `grep -c 'Servez-vous de TOUS les fichiers fournis' "$PR"` donne 1, `grep -c '^- stockfish/evaluations.json :' "$PR"` donne 1, et `grep -c '^- explorateur/NNN' "$PR"` donne 0 sans explorateur, 1 avec.
+
 Attendu, sans explorateur : 1, 0, 1, 1, 1. Puis, avec la base maîtres : 1, 1, 1, 0, 1. Le prompt dit toujours que les chiffres du moteur font foi, ne demande jamais à l'analyste d'évaluer lui-même, et lui explique la mention "mat".
 
 ### T66

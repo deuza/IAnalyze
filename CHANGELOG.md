@@ -8,6 +8,16 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Le prompt demande à l'analyste de se servir de tous les fichiers de
+  l'archive, et plus de la seule synthèse. Il décrit chacun d'eux, dont
+  `stockfish/evaluations.json`, qui porte les variantes entières du
+  moteur, et les réponses brutes de l'explorateur, qui listent tous les
+  coups connus de chaque position. Si le LLM n'ouvre pas le zip, le
+  joueur le décompresse et envoie tous les fichiers ; l'analyste qui
+  n'en reçoit qu'une partie doit dire lesquels manquent.
+
 ### Removed
 
 - Option `--avec-stockfish`, sans effet depuis que l'évaluation est

@@ -55,7 +55,7 @@ La chaîne complète tient en trois temps :
 
 2. Dans une conversation neuve avec un LLM, vous collez le contenu du prompt et vous joignez l'archive.
 
-   Si le LLM n'ouvre pas les zip, joignez le seul fichier `synthese.md` (voir section 9).
+   Si le LLM n'ouvre pas les zip, décompressez l'archive et envoyez-lui tous ses fichiers (voir section 9).
 
 3. Le LLM rend un PGN annoté et une synthèse.
 
@@ -710,7 +710,7 @@ Contenu :
 
 | Fichier | Contenu |
 |---|---|
-| `synthese.md` | la synthèse, seul fichier à joindre |
+| `synthese.md` | la synthèse, que l'analyste lit en premier |
 | `partie.pgn` | le PGN, en-têtes complétés s'il y a lieu |
 | `partie-origine.pgn` | le PGN fourni, si des en-têtes manquaient |
 | `contexte.md` | les réponses aux questions de démarrage |
@@ -873,9 +873,13 @@ Le prompt se colle comme un message, dans une conversation neuve, l'archive en p
 Tous les LLM n'ouvrent pas un zip, et tous n'exécutent pas de code.    
 Le prompt prévoit les deux cas :
 
-- **Le LLM n'accepte pas l'archive** : joignez ou collez le seul fichier `synthese.md`, qui suffit à l'analyse.
+- **Le LLM n'accepte pas l'archive** : décompressez-la et envoyez-lui **tous** ses fichiers, joints ou collés.
 
-  `--garder-dossier` le laisse à portée de main, sinon décompressez l'archive.
+  `--garder-dossier` laisse le dossier décompressé à côté de l'archive.
+
+  Le prompt demande à l'analyste de se servir de tous les fichiers, pas de la seule synthèse : les `.json` portent les variantes entières du moteur et tous les coups connus de l'explorateur, que `synthese.md` résume.
+
+  S'il n'en reçoit qu'une partie, il doit dire lesquels manquent et vous proposer de les envoyer.
 
 - **Le LLM exécute du code** : il construit le PGN avec python-chess et en prouve la légalité.
 - **Le LLM n'exécute pas de code** : il écrit le PGN lui-même, le dit, et vous laisse ouvrir le fichier pour confirmer.

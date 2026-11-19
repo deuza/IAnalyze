@@ -1005,6 +1005,12 @@ egal "T65 l'analyste n'a pas à évaluer lui-même" 0 \
     "$(grep -c 'La section 3 est absente' "$PR")"
 egal "T65 Stockfish inutile à l'analyste" 1 \
     "$(grep -c 'Stockfish est inutile' "$PR")"
+egal "T65 tous les fichiers de l'archive à utiliser" 1 \
+    "$(grep -c 'Servez-vous de TOUS les fichiers fournis' "$PR")"
+egal "T65 evaluations.json décrit" 1 \
+    "$(grep -c '^- stockfish/evaluations.json :' "$PR")"
+egal "T65 sans explorateur, ses fichiers ne sont pas annoncés" 0 \
+    "$(grep -c '^- explorateur/NNN' "$PR")"
 egal "T65 sans explorateur, dit dans le prompt" 1 \
     "$(grep -c "collecte de l'explorateur n'a pas" "$PR")"
 egal "T65 base Lichess" 1 \
