@@ -8,6 +8,11 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- TESTS : paragraphes et commandes sur une seule ligne, sans barre
+  oblique inverse de continuation.
+
 ## [3.7.0] - 2026-11-19
 
 ### Added
