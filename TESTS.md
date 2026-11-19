@@ -313,7 +313,7 @@ Attendu : journal "Téléchargement du PGN : https:`//lichess.org/game/export/<I
 ### T25
 
 ```bash
-./collecte-partie.py italienne.pgn --sans-explorateur --avec-stockfish --coups-stockfish 3 --profondeur 10 --multipv 2 --longueur-pv 4 --fils 2 --hachage 128
+./collecte-partie.py italienne.pgn --sans-explorateur --coups-stockfish 3 --profondeur 10 --multipv 2 --longueur-pv 4 --fils 2 --hachage 128
 ```
 
 Attendu : "Moteur : `&lt;binaire par défaut>`, profondeur 10, multipv 2, 6 demi-coups couverts sur 9." ; six lignes, colonne 3e à "-" ; variantes de la section 3 bis tronquées à 4 demi-coups ; stockfish/evaluations.json présent ; fils et hachage visibles dans `collecte.json`.
@@ -321,7 +321,7 @@ Attendu : "Moteur : `&lt;binaire par défaut>`, profondeur 10, multipv 2, 6 demi
 ### T26
 
 ```bash
-./collecte-partie.py italienne.pgn --avec-stockfish --stockfish /nulle/part ; echo $?
+./collecte-partie.py italienne.pgn --stockfish /nulle/part ; echo $?
 ```
 
 Attendu : "Stockfish introuvable : /nulle/part. Installez-le (apt install stockfish, dans /usr/games), indiquez son chemin avec `--stockfish`, ou laissez l'évaluation à l'analyste avec `--sans-stockfish`.", puis 1. Sous macOS, la parenthèse devient "(brew install stockfish)".
@@ -1145,6 +1145,14 @@ ls -d t-rep
 ```
 
 Attendu : "Réglages supprimés : `t-purge.ini`. Ils seront redemandés à la prochaine collecte lancée sur un terminal.", 0, et ls ne trouve plus le fichier ; "Aucun fichier de réglages à supprimer : `t-purge.ini`", 0 ; "`--purge-reglages` : t-rep n'est pas un fichier, rien n'est supprimé.", 1, et le répertoire est toujours là. Aucune partie n'est demandée et la sortie standard reste vide.
+
+### T71
+
+```bash
+./collecte-partie.py italienne.pgn --avec-stockfish ; echo $?
+```
+
+Attendu : "collecte-partie.py: error: unrecognized arguments: --avec-stockfish", puis 2. L'option, sans effet depuis que l'évaluation est le défaut, a été retirée en 4.0.0.
 
 ## W. Partie d'essai
 

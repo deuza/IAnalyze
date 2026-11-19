@@ -608,10 +608,6 @@ Saute l'évaluation Stockfish, laissée alors à l'analyste.
 ./collecte-partie.py ma-partie.pgn --sans-stockfish
 ```
 
-#### `--avec-stockfish`
-
-Sans effet, l'évaluation étant le défaut. Conservée pour que les anciennes commandes continuent de fonctionner.
-
 #### `--coups-stockfish N`
 
 *Défaut : `0`*
@@ -688,7 +684,7 @@ Les variantes complètes restent dans `stockfish/evaluations.json`.
 Une option sans effet est refusée plutôt qu'ignorée en silence :
 
 - `--cadences` et `--classements` exigent `--base lichess`.
-- les options moteur sont refusées avec `--sans-stockfish`, qui exclut aussi `--avec-stockfish`.
+- les options moteur sont refusées avec `--sans-stockfish`.
 - `--pause` ne descend pas sous 2, `--seuil-frequence` reste entre 0 et 100, `--coups-min` et `--coups-stockfish` valent 0 ou plus, les autres valeurs numériques au moins 1.
 - `--pause` et `--seuil-frequence` refusent nan et inf.
 - `--fils`, `--hachage` et `--multipv` sont contrôlés auprès du moteur, qui annonce ses bornes : une valeur qu'il n'admet pas est refusée avant toute requête et avant la création du dossier de travail.

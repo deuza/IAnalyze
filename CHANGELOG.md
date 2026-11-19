@@ -8,6 +8,12 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Removed
+
+- Option `--avec-stockfish`, sans effet depuis que l'évaluation est
+  calculée par défaut. Une commande qui la porte encore est refusée,
+  code 2 : retirez-la simplement.
+
 ## [3.8.0] - 2026-11-19
 
 ### Changed

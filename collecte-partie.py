@@ -3521,9 +3521,6 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
     g.add_argument("--sans-stockfish", action="store_true",
                    help="saute l'évaluation Stockfish, laissée alors à "
                         "l'analyste ; par défaut elle est calculée en local")
-    g.add_argument("--avec-stockfish", action="store_true",
-                   help="sans effet, l'évaluation étant désormais le "
-                        "défaut ; conservée pour les anciennes commandes")
     g.add_argument("--coups-stockfish", type=int, default=0, metavar="N",
                    help="limite l'analyse moteur aux N premiers coups "
                         "entiers, soit 2N demi-coups ; 0 analyse toute la "
@@ -3585,10 +3582,9 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
         options.pseudos = decouper_pseudos(options.pseudos)
         if not options.pseudos:
             p.error("--pseudos : liste vide")
-    if options.avec_stockfish and options.sans_stockfish:
-        p.error("--avec-stockfish et --sans-stockfish s'excluent")
-    # L'évaluation est désormais le défaut : --avec-stockfish ne fait que
-    # le confirmer, et le reste du script continue de lire avec_stockfish.
+    # L'évaluation est le défaut. L'option --avec-stockfish, qui ne faisait
+    # plus que le confirmer, a été retirée en 4.0.0 ; le reste du script
+    # continue de lire avec_stockfish, déduit ici de --sans-stockfish.
     options.avec_stockfish = not options.sans_stockfish
     if not options.avec_stockfish:
         # Une option moteur passée avec --sans-stockfish serait ignorée en

@@ -1127,6 +1127,16 @@ verifier "T69 le répertoire est toujours là" test -d t-rep
 joindre journal
 
 
+titre "T71 : option --avec-stockfish retirée"
+
+"$SCRIPT" italienne.pgn --avec-stockfish > sortie 2> journal
+egal "T71 code de retour" 2 "$?"
+verifier "T71 option inconnue" \
+    contient journal "unrecognized arguments: --avec-stockfish"
+egal "T71 aide muette sur l'option" 0 \
+    "$("$SCRIPT" --help 2>/dev/null | grep -c -- --avec-stockfish)"
+
+
 # --- Moteur -----------------------------------------------------------------
 
 # Liste des processus du moteur, sur une ligne. Elle est relevée avant et
