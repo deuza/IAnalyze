@@ -7,13 +7,23 @@
  8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les
  pourcentages bougent peu. "Probable" signale un résultat non mesuré.
 
- Plan mis à jour pour la version 3.5.9, le 19 novembre 2026. Les tests
- T34 à T56 ont été joués sur cette version, sous Linux (Python 3.13,
- python-chess 1.11.2, Stockfish 16 pour T51, T52 et T55), ainsi que T01
- à T08. Ils n'ont été joués ni sous
- macOS ni sous Debian Trixie. Les tests avec jeton gardent leurs
- chiffres du 8 octobre, et T33 n'a été vérifié que sur un explorateur
- simulé.
+ Plan mis à jour le 19 novembre 2026, pour la version 3.5.9 et les
+ travaux en cours (section Unreleased du CHANGELOG). État des
+ vérifications :
+
+   - T01, T02, T05, T26, T31, T32 et T34 à T55 : joués le 18 novembre
+     2026 sur la version 3.5.8, sous macOS 27.3 (Python 3.15.2,
+     Stockfish 19) et sous Debian 13 Trixie (Python 3.13.5, Stockfish
+     17.1), python-chess 1.11.2 des deux côtés ;
+   - T09 à T24, T29 et T33 : joués le même jour, sur les mêmes machines,
+     avec un jeton. T28 l'a été avec un jeton factice ;
+   - T03, T04, T06 à T08, et T56 : joués sous Linux seulement
+     (Ubuntu 24.04, Python 3.13, Stockfish 16), T56 sur un explorateur
+     simulé ;
+   - T25, T27 et T30 : non rejoués depuis la version 3.4.1.
+
+ Les chiffres des tests avec jeton datent du 8 octobre, sauf ceux de
+ T33, relevés le 18 novembre.
 
  Les emplacements par défaut dépendent de la plateforme. Posez d'abord
  ces deux variables, que les tests reprennent :
@@ -290,16 +300,17 @@
 
  [ K. ROQUE (JETON) ]
 
- T33  ./collecte-partie.py Deuza_vs_deanstewart.pgn --sans-stockfish \
-          --sans-questions
-      Attendu : ligne 13, O-O au rang 1, fréquence proche de 65 % (64.9 %
-      le 9 octobre 2026, 14560 parties sur 22436). Avant la version
-      3.4.1, cette ligne affichait 0.0 % au rang "-", et l'arrêt tombait
-      sur "sortie de théorie au demi-coup 13 : O-O joué à 0.0 %".
-      Probable : l'interrogation continue au demi-coup 14, la liste des
-      coups envoyée contenant alors e1g1 ; la suite dépend de la base.
-      Non rejoué avec un jeton : vérifié hors réseau, sur un explorateur
-      simulé qui note le roque e1h1.
+ T33  printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 d6 ' \
+          > roques.pgn
+      printf '6. O-O O-O *\n' >> roques.pgn
+      ./collecte-partie.py roques.pgn --sans-stockfish --sans-questions
+      Attendu : douze lignes dans la table. Lignes 11 et 12, O-O au rang
+      1 puis au rang 2, fréquences proches de 27 % et de 19 % (27.1 % et
+      18.9 % le 18 novembre 2026, sur 4060402 et 2417197 parties).
+      Arrêt : "fin de la partie". Avant la version 3.4.1, un roque
+      ressortait à 0.0 %, au rang "-", et passait pour une sortie de
+      théorie : la base le note "roi prend tour", e1h1, là où le script
+      comparait avec e1g1.
 
 
 
@@ -425,8 +436,10 @@
       analyse-t-a_b_-<horodatage>.zip ; puis "Nom du dossier assaini :
       t-_t_", archive analyse-t-_t_-<horodatage>.zip, et 0. Avant la
       version 3.5.0, le second lancement donnait "Erreur inattendue
-      (UnicodeEncodeError)". Probable : sous macOS, le système de
-      fichiers refuse de créer ce second fichier, au nom non UTF-8.
+      (UnicodeEncodeError)". Sous macOS, le système de fichiers refuse
+      de créer ce second fichier, au nom non UTF-8 : cp répond "Illegal
+      byte sequence" (vérifié sous macOS 27.3), le cas ne peut donc pas
+      s'y produire.
 
  T45  Réponse saisie en latin-1 aux questions de démarrage. Le test
       passe par un pseudo-terminal, les questions n'étant posées que sur

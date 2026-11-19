@@ -8,6 +8,13 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- TESTS.nfo : T33 rejoue le roque sur une partie générique, produite
+  par le test ; l'état des vérifications par plateforme est mis à jour,
+  et le refus du nom non UTF-8 sous macOS (T44) n'est plus une
+  hypothèse.
+
 ## [3.5.9] - 2026-11-19
 
 ### Added
