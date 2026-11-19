@@ -1,14 +1,14 @@
 # CLAUDE.md
 
 ## Projet
-IA-chess-brief collecte les données d'une partie d'échecs (PGN,
-stats de l'explorateur Lichess, catalogue d'ouvertures, évaluations
-Stockfish) et produit un zip avec synthese.md. Ce zip alimente le
-projet claude.ai "Analyses de parties d'échecs", où l'analyse est faite.
-Le script ne produit lui-même aucune analyse.
+IAnalyze collecte les données d'une partie d'échecs (PGN, stats de
+l'explorateur Lichess, catalogue d'ouvertures, évaluations Stockfish)
+et produit un zip avec synthese.md, plus le prompt d'analyse de la
+partie, écrit à côté. Les deux alimentent une conversation avec un LLM,
+où l'analyse est faite. Le script ne produit lui-même aucune analyse.
 
-Fichiers : IA-chess-brief, catalogue.tsv, README.nfo, TESTS.nfo,
-CHANGELOG.md.
+Fichiers : collecte-partie.py, INSTRUCTIONS.txt (modèle du prompt),
+README.nfo, TESTS.nfo, CHANGELOG.md.
 
 ## Plateformes
 - Serveurs : Debian Trixie, en root, pas de sudo. Stockfish dans

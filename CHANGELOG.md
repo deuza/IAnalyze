@@ -8,6 +8,8 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.6.0] - 2026-11-19
+
 ### Added
 
 - Prompt d'analyse écrit à côté de l'archive, sous le nom
@@ -59,13 +61,15 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- En-tête d'agent HTTP : `collecte-partie/3.6.0`.
 - `INSTRUCTIONS.txt` devient le modèle du prompt : son en-tête ne porte
   plus de pseudo, de niveau ni de cadence en dur, et il décrit les
   sorties apparues depuis la version 3.5.0, que l'analyste rencontrait
   sans explication : la mention `mat` de la colonne Écart, la ligne
   d'un coup nul, la ligne "Encodage" de la section 5, et la cadence
   rédigée par le script.
-- README.nfo : les sections Jeton et Sources deviennent 10 et 11.
+- README.nfo : le titre porte le nom du dépôt, IAnalyze ; les sections
+  Jeton et Sources deviennent 10 et 11.
 - `--pseudos` n'a plus de valeur par défaut dans le code : sans
   l'option, les pseudos viennent du fichier de réglages. Donnée, elle
   l'emporte toujours.

@@ -476,7 +476,7 @@ RE_ID_SOURCE = re.compile(r"[A-Za-z0-9]{8}(?:[A-Za-z0-9]{4})?")
 
 #: Version du script, selon le versionnage sémantique. Elle est reprise
 #: dans l'en-tête d'agent : c'est le seul endroit à modifier.
-VERSION = "3.5.9"
+VERSION = "3.6.0"
 
 #: En-tête d'agent, par politesse envers l'API.
 UA = "collecte-partie/%s (analyse personnelle)" % VERSION

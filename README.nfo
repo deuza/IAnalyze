@@ -1,9 +1,10 @@
  .------------------------------------------------------------------------.
  |                                                                        |
- |    C O L L E C T E - P A R T I E . P Y                                 |
+ |    I A N A L Y Z E   :   C O L L E C T E - P A R T I E . P Y           |
  |                                                                        |
- |    Matériel d'analyse d'une partie d'échecs : PGN, explorateur         |
- |    Lichess, catalogue des ouvertures nommées, Stockfish en option.     |
+ |    Le dossier d'une partie d'échecs pour un analyste LLM : PGN,        |
+ |    explorateur Lichess, catalogue des ouvertures, Stockfish, et le     |
+ |    prompt qui va avec.                                                 |
  |                                                                        |
  `------------------------------------------------------------------------'
 

@@ -7,8 +7,7 @@
  8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les
  pourcentages bougent peu. "Probable" signale un résultat non mesuré.
 
- Plan mis à jour le 19 novembre 2026, pour la version 3.5.9 et les
- travaux en cours (section Unreleased du CHANGELOG). État des
+ Plan mis à jour le 19 novembre 2026, pour la version 3.6.0. État des
  vérifications :
 
    - T01, T02, T05, T26, T31, T32 et T34 à T55 : joués le 18 novembre
@@ -476,7 +475,7 @@
       Un PGN sain ne déclenche aucun avertissement.
 
  T47  grep -n '^VERSION' collecte-partie.py
-      Attendu : VERSION = "3.5.9". L'en-tête d'agent HTTP en est tiré.
+      Attendu : VERSION = "3.6.0". L'en-tête d'agent HTTP en est tiré.
 
 
  [ M. NOM DU PGN ]
@@ -939,7 +938,7 @@
       côté de l'archive ; 1 ; puis 0 et 0 : aucun repère du modèle ne
       reste dans le prompt, et le prompt n'est pas dans le zip. Ses
       premières lignes :
-        Prompt produit par collecte-partie.py 3.5.9 pour l'archive
+        Prompt produit par collecte-partie.py 3.6.0 pour l'archive
         analyse-t-pr-<horodatage>.zip
         Il décrit la synthèse que contient cette archive, telle que cette
         version du script l'écrit.
