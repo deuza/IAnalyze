@@ -74,6 +74,18 @@
 
      umask 077 ; vi ~/.lichess_token
 
+ Vos réglages personnels, pseudo et cadence habituelle, sont gardés dans
+ ~/.config/collecte-partie/reglages.ini sur les deux plateformes. Le
+ script les demande une seule fois, au premier lancement sur un
+ terminal, et vous pouvez ensuite modifier le fichier à la main :
+
+     [joueur]
+     pseudos = MonPseudo, AutrePseudo
+     cadence = rapide, 15 minutes
+
+ Rien de personnel ne figure dans le script : vous pouvez le reprendre
+ tel quel.
+
 
  [ 3. UTILISATION ]
 
@@ -108,8 +120,10 @@
  le script pose ses questions sur la sortie d'erreur, Entrée retenant la
  valeur proposée :
 
+   - au tout premier lancement seulement, votre pseudo et votre
+     cadence habituelle, rangés dans le fichier de réglages ;
    - votre camp, s'il ne se déduit pas des balises White ou Black grâce
-     à --pseudos ; les balises vides sont alors complétées, et le PGN
+     à vos pseudos ; les balises vides sont alors complétées, et le PGN
      fourni est conservé sous partie-origine.pgn ;
    - la cadence, si la balise TimeControl ne la donne pas ;
    - les quatre questions de démarrage du projet : périmètre, objectif,
@@ -158,11 +172,21 @@
      projet d'analyse. Implicite hors terminal interactif.
          ./collecte-partie.py ma-partie.pgn --sans-questions
 
- --pseudos LISTE                                     (défaut : DeuZa42)
+ --pseudos LISTE                       (défaut : ceux de vos réglages)
      Vos noms de joueur, séparés par des virgules, cherchés sans tenir
      compte de la casse dans White et Black pour déduire votre camp. Le
-     premier sert à compléter une balise vide.
-         ./collecte-partie.py ma-partie.pgn --pseudos DeuZa42,Deuza
+     premier sert à compléter une balise vide. L'option remplace, le
+     temps d'un lancement, les pseudos du fichier de réglages.
+         ./collecte-partie.py ma-partie.pgn --pseudos MonPseudo,AutrePseudo
+
+ --reglages FICHIER   (défaut : ~/.config/collecte-partie/reglages.ini)
+     Fichier de réglages, au format INI, section [joueur] : pseudos et
+     cadence. Une clef absente est demandée une seule fois, sur un
+     terminal, puis enregistrée ; une clef présente, même vide, n'est
+     jamais redemandée. Hors terminal, rien n'est demandé ni écrit. Les
+     clefs et les sections que vous y ajoutez sont conservées. Un
+     fichier mal formé arrête le script avec un message.
+         ./collecte-partie.py ma-partie.pgn --reglages ~/echecs.ini
 
  --- Catalogue des ouvertures ----------------------------------------------
 

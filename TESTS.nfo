@@ -17,7 +17,7 @@
      17.1), python-chess 1.11.2 des deux côtés ;
    - T09 à T24, T29 et T33 : joués le même jour, sur les mêmes machines,
      avec un jeton. T28 l'a été avec un jeton factice ;
-   - T03, T04, T06 à T08, et T56 : joués sous Linux seulement
+   - T03, T04, T06 à T08, et T56 à T61 : joués sous Linux seulement
      (Ubuntu 24.04, Python 3.13, Stockfish 16), T56 sur un explorateur
      simulé ;
    - T25, T27 et T30 : non rejoués depuis la version 3.4.1.
@@ -37,6 +37,8 @@
  Entrée, ou ajoutez --sans-questions. Stockfish tourne par défaut : pour
  raccourcir un test qui ne porte pas sur le moteur, ajoutez
  --sans-stockfish.
+ Au tout premier lancement sur un terminal, il demande aussi votre
+ pseudo et votre cadence habituelle, une fois pour toutes (section U).
 
  Préparation, une ligne italienne entièrement cataloguée :
 
@@ -443,7 +445,9 @@
 
  T45  Réponse saisie en latin-1 aux questions de démarrage. Le test
       passe par un pseudo-terminal, les questions n'étant posées que sur
-      un terminal :
+      un terminal. Il fournit son propre fichier de réglages, afin que
+      les questions du premier lancement ne décalent pas ses réponses :
+      printf '[joueur]\npseudos = Moi\ncadence = lente\n' > t-r45.ini
       python3 - <<'EOF'
       import os, pty, time
       pid, fd = pty.fork()
@@ -451,7 +455,7 @@
           os.execv("./collecte-partie.py",
                    ["./collecte-partie.py", "italienne.pgn",
                     "--sans-explorateur", "--sans-stockfish",
-                    "--garder-dossier"])
+                    "--garder-dossier", "--reglages", "t-r45.ini"])
       for reponse in (b"b", b"Zo\xe9", b"", b"", b"", b"", b""):
           time.sleep(1)
           os.write(fd, reponse + b"\n")
@@ -722,6 +726,127 @@
       version 3.5.9 : trois lignes, le coup nul à 0.0 % désigné comme
       première sortie de théorie, puis, sur le vrai explorateur, "HTTP
       400 au demi-coup 4" (illegal move 0000).
+
+
+ [ U. RÉGLAGES (SANS RÉSEAU NI JETON) ]
+
+ Les questions de réglages ne sont posées que sur un terminal. Ces tests
+ passent donc par un pseudo-terminal, piloté par un petit script que le
+ premier d'entre eux crée : il lance collecte-partie.py avec les options
+ données, répond aux questions dans l'ordre, les réponses étant
+ séparées par des barres verticales, puis affiche ce que le terminal a
+ montré. S'il manque une réponse, il envoie une fin de flux après
+ quinze secondes de silence, plutôt que d'attendre sans fin : les
+ questions restantes prennent alors leur valeur par défaut.
+ Tous désignent leur fichier par --reglages : le vôtre n'est ni lu ni
+ modifié.
+
+ T57  cat > t-pty.py <<'EOF'
+      import os, pty, select, sys
+      pid, fd = pty.fork()
+      if pid == 0:
+          os.execv("./collecte-partie.py",
+                   ["./collecte-partie.py"] + sys.argv[2:])
+      vu = b""
+      def lire():
+          global vu
+          while select.select([fd], [], [], 1)[0]:
+              try:
+                  bloc = os.read(fd, 65536)
+              except OSError:
+                  return
+              if not bloc:
+                  return
+              vu += bloc
+      for reponse in sys.argv[1].split("|"):
+          lire()
+          os.write(fd, reponse.encode() + b"\n")
+      silences = 0
+      while not os.waitpid(pid, os.WNOHANG)[0]:
+          avant = len(vu)
+          lire()
+          silences = silences + 1 if len(vu) == avant else 0
+          if silences >= 15:
+              os.write(fd, b"\x04")
+              silences = 0
+      sys.stdout.write(vu.decode("utf-8", "replace").replace("\r", ""))
+      EOF
+      P="--sans-explorateur --sans-stockfish --garder-dossier"
+      python3 t-pty.py "Zoe42, zoe|rapide 15+10|b||||||" italienne.pgn \
+          $P --reglages t-reglages.ini | grep -E 'glages|Votre'
+      grep -v '^#' t-reglages.ini
+      grep White analyse-italienne-*/partie.pgn
+      grep Cadence analyse-italienne-*/contexte.md
+      Attendu, premier lancement : "Réglages : 2 réponse(s) à donner une
+      seule fois, gardée(s) dans t-reglages.ini.", les deux questions
+      "Votre pseudo de joueur, ou plusieurs séparés par des virgules ?
+      (Entrée : aucun)" et "Votre cadence habituelle ? (Entrée : non
+      précisée)", puis "Réglages enregistrés : t-reglages.ini". Le
+      fichier contient :
+        [joueur]
+        pseudos = Zoe42, zoe
+        cadence = rapide 15+10
+      puis [White "Zoe42"], la balise vide ayant reçu le premier pseudo,
+      et "- Cadence : rapide 15+10 (défaut)", la cadence habituelle
+      servant de réponse proposée.
+
+ T58  rm -rf analyse-italienne-*
+      python3 t-pty.py "b||||||" italienne.pgn $P \
+          --reglages t-reglages.ini | grep -c -E 'glages|Votre'
+      printf '[White "Alice"]\n[Black "Zoe42"]\n\n1. e4 e5 *\n' \
+          > t-noms.pgn
+      python3 t-pty.py "||||" t-noms.pgn $P --reglages t-reglages.ini \
+          > /dev/null
+      grep Camp analyse-t-noms-*/contexte.md ; rm -rf analyse-t-noms-*
+      python3 t-pty.py "||||" t-noms.pgn $P --reglages t-reglages.ini \
+          --pseudos Alice > /dev/null
+      grep Camp analyse-t-noms-*/contexte.md
+      Attendu : 0, les réglages n'étant demandés qu'une fois ; puis
+      "- Camp du joueur : Noirs, déduit des en-têtes", le pseudo venant
+      des réglages ; puis "- Camp du joueur : Blancs, déduit des
+      en-têtes", --pseudos l'emportant sur les réglages.
+
+ T59  ./collecte-partie.py italienne.pgn $O --reglages t-abs/reglages.ini
+      ls t-abs
+      python3 t-pty.py "||n|Moi|Lui|||||" italienne.pgn $P \
+          --reglages t-vide.ini | grep 'Votre nom'
+      grep -v '^#' t-vide.ini
+      Attendu : hors terminal ($O porte --sans-questions), la collecte
+      aboutit sans rien demander, et ls ne trouve pas t-abs : aucun
+      fichier n'est créé. Puis, les deux questions de réglages étant
+      validées par Entrée, "Votre nom de joueur ? (Entrée : ?) Moi" :
+      sans pseudo, le nom est demandé comme celui de l'adversaire. Le
+      fichier garde "pseudos =" et "cadence = non précisée", et ne
+      redemandera rien.
+
+ T60  printf 'pseudos = Alice\n' > t-mauvais.ini
+      ./collecte-partie.py italienne.pgn $O --reglages t-mauvais.ini
+      echo $?
+      printf '[joueur]\npseudos = Alice\nniveau = 1500\n\n' > t-plus.ini
+      printf '[perso]\nnote = 100 %% à moi\n' >> t-plus.ini
+      python3 t-pty.py "lente|||||" t-noms.pgn $P --reglages t-plus.ini \
+          > /dev/null
+      grep -v '^#' t-plus.ini
+      Attendu : "Réglages illisibles : File contains no section headers.
+      ...", puis "Corrigez t-mauvais.ini, ou supprimez-le : il sera
+      recréé au prochain lancement sur un terminal.", et 1, sans dossier
+      de travail. Puis, pour t-plus.ini, seule la cadence étant
+      demandée :
+        [joueur]
+        pseudos = Alice
+        cadence = lente
+        niveau = 1500
+
+        [perso]
+        note = 100 % à moi
+      Les clefs et les sections ajoutées à la main sont conservées.
+
+ T61  ./collecte-partie.py --help | grep -c 'ceux de vos réglages'
+      grep -c 'PSEUDOS_DEFAUT' collecte-partie.py
+      ./collecte-partie.py italienne.pgn --pseudos ' , ' 2>&1 | tail -1
+      Attendu : 1, l'aide de --pseudos n'annonçant plus aucun pseudo par
+      défaut ; 0, la constante qui le portait ayant disparu ; puis
+      "collecte-partie.py: error: --pseudos : liste vide".
 
 
  Nettoyage : rm -rf /tmp/analyses /tmp/abime /tmp/cat1.tsv

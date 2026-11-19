@@ -8,12 +8,39 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Fichier de réglages de l'utilisateur,
+  `~/.config/collecte-partie/reglages.ini`, au format INI : il garde vos
+  pseudos et votre cadence habituelle. Les clefs absentes sont demandées
+  une seule fois, au premier lancement sur un terminal ; hors terminal,
+  rien n'est demandé ni écrit.
+- Option `--reglages FICHIER`, pour désigner un autre fichier.
+- Sans pseudo connu, le script demande votre nom de joueur quand votre
+  balise est vide, comme il le fait pour l'adversaire.
+- TESTS.nfo : section U, tests T57 à T61.
+
 ### Changed
 
+- `--pseudos` n'a plus de valeur par défaut dans le code : sans
+  l'option, les pseudos viennent du fichier de réglages. Donnée, elle
+  l'emporte toujours.
+- La cadence proposée par la question "Cadence de la partie ?" est
+  celle de vos réglages, "non précisée" à défaut.
+- `collecte.json` enregistre les pseudos réellement utilisés.
+- TESTS.nfo : T45 fournit son propre fichier de réglages, pour que les
+  questions du premier lancement ne décalent pas ses réponses.
 - TESTS.nfo : T33 rejoue le roque sur une partie générique, produite
   par le test ; l'état des vérifications par plateforme est mis à jour,
   et le refus du nom non UTF-8 sous macOS (T44) n'est plus une
   hypothèse.
+
+### Removed
+
+- Le pseudo et la cadence personnels de l'auteur, jusqu'ici valeurs par
+  défaut du script, ainsi que la constante `PSEUDOS_DEFAUT`. Les
+  exemples de l'aide et de la documentation emploient des pseudos
+  neutres.
 
 ## [3.5.9] - 2026-11-19
 

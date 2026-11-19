@@ -21,6 +21,11 @@ camp si les en-têtes ne le donnent pas, puis vos réponses aux questions
 de démarrage du projet d'analyse, rangées dans contexte.md et reprises en
 tête de la synthèse.
 
+Votre pseudo et votre cadence habituelle ne sont pas dans le code : ils
+vous sont demandés une seule fois, au premier lancement sur un terminal,
+puis gardés dans un fichier de réglages que vous pouvez modifier à la
+main.
+
 Le résultat est une archive zip contenant les données brutes ainsi qu'un
 fichier de synthèse unique, destiné à être joint à une conversation
 d'annotation. Le dossier de travail est supprimé une fois l'archive
@@ -34,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import codecs
+import configparser
 import contextlib
 import csv
 import datetime
@@ -282,14 +288,36 @@ CATALOGUE_FORMAT = "1"
 #: Numéro de coup dans une ligne du catalogue, "1." ou "12." par exemple.
 RE_NUMERO_COUP = re.compile(r"\d+\.+")
 
-#: Pseudos du joueur, séparés par des virgules. Ils sont cherchés, sans
+#: Fichier de réglages de l'utilisateur, au même endroit sous Debian et
+#: sous macOS. Il porte ce qui dépend de la personne et non de la partie :
+#: ses pseudos et sa cadence habituelle. Rien de personnel ne figure donc
+#: dans ce script, que chacun peut reprendre tel quel.
+REGLAGES_DEFAUT = "~/.config/collecte-partie/reglages.ini"
+
+#: Section du fichier de réglages qui décrit le joueur.
+REGLAGES_SECTION = "joueur"
+
+#: Clefs connues de cette section, avec les lignes de commentaire écrites
+#: au-dessus de chacune dans le fichier. Les pseudos sont cherchés, sans
 #: tenir compte de la casse, dans les balises White et Black pour déduire
-#: son camp ; le premier sert à compléter une balise vide.
-PSEUDOS_DEFAUT = "DeuZa42"
+#: le camp du joueur ; le premier sert à compléter une balise vide.
+REGLAGES_CLEFS = (
+    ("pseudos",
+     ("Vos noms de joueur, séparés par des virgules. Ils sont cherchés,",
+      "sans tenir compte de la casse, dans les balises White et Black",
+      "pour déduire votre camp. L'option --pseudos les remplace le temps",
+      "d'un lancement.")),
+    ("cadence",
+     ("Cadence proposée quand la balise TimeControl d'une partie ne la",
+      "donne pas.")),
+)
+
+#: Cadence proposée quand ni la balise TimeControl ni les réglages ne la
+#: donnent.
+CADENCE_DEFAUT = "non précisée"
 
 #: Questions de démarrage du projet d'analyse, avec le défaut que retient
 #: une réponse vide : libellé dans contexte.md, question, défaut.
-CADENCE_DEFAUT = "correspondance, 14 jours par coup"
 QUESTIONS_CONTEXTE = (
     ("a. Périmètre",
      "Périmètre : les N premiers coups, ou la partie complète ?",
@@ -907,6 +935,10 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
     pour le camp du joueur, le nom donné pour l'adversaire. Un nom déjà
     présent n'est jamais remplacé. Renvoie le camp ("Blancs", "Noirs" ou
     None), l'origine de l'information et la liste des balises modifiées.
+
+    `pseudos` peut être vide, quand ni --pseudos ni les réglages n'en
+    donnent : le camp est alors toujours demandé, et le nom du joueur
+    aussi si sa balise est vide.
     """
     moi_blancs = est_pseudo(partie.headers.get("White", "?"), pseudos)
     moi_noirs = est_pseudo(partie.headers.get("Black", "?"), pseudos)
@@ -931,8 +963,16 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
     mienne, autre = (("White", "Black") if camp == "Blancs"
                      else ("Black", "White"))
     if partie.headers.get(mienne, "?").strip() in ("", "?"):
-        partie.headers[mienne] = pseudos[0]
-        modifiees.append(mienne)
+        if pseudos:
+            partie.headers[mienne] = pseudos[0]
+            modifiees.append(mienne)
+        else:
+            # Aucun pseudo connu : pseudos[0] levait IndexError. On demande
+            # le nom, comme pour l'adversaire, et "?" laisse la balise.
+            nom = demander("Votre nom de joueur ?", "?")
+            if nom and nom != "?":
+                partie.headers[mienne] = nom
+                modifiees.append(mienne)
     if partie.headers.get(autre, "?").strip() in ("", "?"):
         nom = demander("Nom de l'adversaire ?", "?")
         if nom and nom != "?":
@@ -941,11 +981,13 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
     return {"camp": camp, "origine": "déclaré", "modifiees": modifiees}
 
 
-def recueillir_contexte(partie: chess.pgn.Game, camp: dict) -> str:
+def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
+                        cadence_habituelle: str = CADENCE_DEFAUT) -> str:
     """
     Pose la question de cadence si la balise TimeControl ne la donne pas,
     puis les quatre questions de démarrage du projet, et rédige le texte
-    de contexte.md.
+    de contexte.md. `cadence_habituelle`, tirée des réglages, est la
+    valeur que propose la question de cadence.
 
     "(défaut)" signale une réponse validée par Entrée : l'analyste
     distingue ainsi un choix du joueur d'une valeur par défaut. Après une
@@ -977,7 +1019,8 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict) -> str:
     if controle not in ("", "?", "-"):
         lignes.append("- Cadence : balise TimeControl `%s`" % controle)
     else:
-        cadence, defaut = poser("Cadence de la partie ?", CADENCE_DEFAUT)
+        cadence, defaut = poser("Cadence de la partie ?",
+                                cadence_habituelle)
         lignes.append("- Cadence : %s%s"
                       % (cadence, " (défaut)" if defaut else ""))
     for libelle, question, valeur in QUESTIONS_CONTEXTE:
@@ -985,6 +1028,150 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict) -> str:
         lignes.append("- %s : %s%s"
                       % (libelle, reponse, " (défaut)" if defaut else ""))
     return "\n".join(lignes) + "\n"
+
+
+# ===========================================================================
+# Réglages de l'utilisateur
+#
+# Ce qui dépend de la personne, et non de la partie, vit dans un petit
+# fichier au format INI, lisible et modifiable à la main :
+#
+#     [joueur]
+#     pseudos = MonPseudo, AutrePseudo
+#     cadence = rapide, 15 minutes
+#
+# Il est créé au premier lancement sur un terminal, par deux questions
+# posées une seule fois. Hors terminal, rien n'est demandé ni écrit : le
+# script se contente de ce que le fichier contient déjà.
+# ===========================================================================
+
+def chemin_reglages(chemin: str) -> pathlib.Path:
+    """Chemin du fichier de réglages, le tilde étant développé."""
+    return pathlib.Path(os.path.expanduser(chemin))
+
+
+def lire_reglages(chemin: str) -> configparser.ConfigParser:
+    """
+    Charge le fichier de réglages, ou des réglages vides s'il n'existe pas.
+
+    Le fichier passe par le même décodage que le PGN : son encodage n'a
+    pas d'importance. Un fichier que configparser refuse arrête le script
+    par un message clair, plutôt que d'être ignoré en silence. La section
+    [joueur] existe toujours dans l'objet renvoyé.
+    """
+    # interpolation=None : le signe pour cent d'une valeur reste un simple
+    # caractère, il ne déclenche aucune substitution.
+    reglages = configparser.ConfigParser(interpolation=None)
+    p = chemin_reglages(chemin)
+    if p.is_file():
+        texte = lire_fichier_texte(p, "réglages")[0]
+        try:
+            reglages.read_string(texte, source=str(p))
+        except configparser.Error as err:
+            raise SystemExit(
+                "Réglages illisibles : %s\n"
+                "Corrigez %s, ou supprimez-le : il sera recréé au prochain "
+                "lancement sur un terminal."
+                % (nettoyer_valeur(str(err)), p)) from err
+    if not reglages.has_section(REGLAGES_SECTION):
+        reglages.add_section(REGLAGES_SECTION)
+    return reglages
+
+
+def reglage(reglages: configparser.ConfigParser, clef: str) -> str:
+    """Valeur d'une clef de la section [joueur], vide si elle manque."""
+    return reglages.get(REGLAGES_SECTION, clef, fallback="").strip()
+
+
+def decouper_pseudos(texte: str) -> list[str]:
+    """Liste de pseudos tirée d'une chaîne séparée par des virgules."""
+    return [x.strip() for x in texte.split(",") if x.strip()]
+
+
+def ecrire_reglages(chemin: str, reglages: configparser.ConfigParser) -> bool:
+    """
+    Écrit le fichier de réglages, commentaires compris.
+
+    Les clefs connues viennent d'abord, chacune sous son commentaire ; les
+    autres clefs de [joueur] et les autres sections, que vous auriez
+    ajoutées, sont recopiées à la suite. Un échec d'écriture n'arrête pas
+    la collecte : il est signalé, et la question sera reposée au prochain
+    lancement. Renvoie vrai si le fichier a été écrit.
+    """
+    def ligne(clef: str, valeur: str) -> str:
+        # Une valeur sur plusieurs lignes se poursuit par des lignes en
+        # retrait : c'est la forme que configparser sait relire.
+        valeur = valeur.replace("\n", "\n\t")
+        return "%s = %s" % (clef, valeur) if valeur else "%s =" % clef
+
+    out = ["# Réglages de collecte-partie.py.",
+           "# Vous pouvez modifier ce fichier à la main. Une clef supprimée",
+           "# sera redemandée au prochain lancement sur un terminal.",
+           "",
+           "[%s]" % REGLAGES_SECTION]
+    connues = [clef for clef, _ in REGLAGES_CLEFS]
+    for clef, commentaire in REGLAGES_CLEFS:
+        if reglages.has_option(REGLAGES_SECTION, clef):
+            out.extend("# %s" % c for c in commentaire)
+            out.append(ligne(clef, reglages.get(REGLAGES_SECTION, clef)))
+    for clef, valeur in reglages.items(REGLAGES_SECTION):
+        if clef not in connues:
+            out.append(ligne(clef, valeur))
+    for section in reglages.sections():
+        if section != REGLAGES_SECTION:
+            out.extend(["", "[%s]" % section])
+            out.extend(ligne(c, v) for c, v in reglages.items(section))
+
+    p = chemin_reglages(chemin)
+    try:
+        p.parent.mkdir(parents=True, exist_ok=True)
+        ecrire_texte(p, "\n".join(out) + "\n")
+    except OSError as err:
+        journal("Attention : réglages non enregistrés dans %s : %s"
+                % (p, err))
+        return False
+    return True
+
+
+def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
+                       pseudos_cli: list[str] | None) -> None:
+    """
+    Demande, une seule fois, les réglages que le fichier ne donne pas.
+
+    Appelée seulement sur un terminal interactif. Chaque clef absente de
+    [joueur] fait l'objet d'une question ; une clef présente, même vide,
+    n'est jamais redemandée. Les pseudos passés par --pseudos servent de
+    réponse proposée. Une fin de flux (Ctrl-D) abandonne sans rien
+    écrire : les questions reviendront au prochain lancement.
+    """
+    manquantes = [clef for clef, _ in REGLAGES_CLEFS
+                  if not reglages.has_option(REGLAGES_SECTION, clef)]
+    if not manquantes:
+        return
+
+    journal("Réglages : %d réponse(s) à donner une seule fois, gardée(s) "
+            "dans %s." % (len(manquantes), chemin_reglages(chemin)))
+    for clef in manquantes:
+        if clef == "pseudos":
+            if pseudos_cli:
+                reponse = demander("Votre pseudo de joueur, ou plusieurs "
+                                   "séparés par des virgules ?",
+                                   ", ".join(pseudos_cli))
+            else:
+                reponse = demander("Votre pseudo de joueur, ou plusieurs "
+                                   "séparés par des virgules ? (Entrée : "
+                                   "aucun)")
+            if reponse is not None:
+                reponse = ", ".join(decouper_pseudos(reponse))
+        else:
+            reponse = demander("Votre cadence habituelle ?", CADENCE_DEFAUT)
+        if reponse is None:
+            journal("Réglages non enregistrés : saisie interrompue.")
+            return
+        reglages.set(REGLAGES_SECTION, clef, reponse)
+
+    if ecrire_reglages(chemin, reglages):
+        journal("Réglages enregistrés : %s" % chemin_reglages(chemin))
 
 
 # ===========================================================================
@@ -2430,7 +2617,7 @@ exemples d'utilisation
   noms de joueur pour que le camp soit déduit des en-têtes :
 
       ./collecte-partie.py ma-partie.pgn --sans-questions
-      ./collecte-partie.py ma-partie.pgn --pseudos DeuZa42,Deuza
+      ./collecte-partie.py ma-partie.pgn --pseudos MonPseudo,AutrePseudo
 
   Descendre aussi loin que la base répond, sans aucun seuil :
 
@@ -2492,11 +2679,15 @@ prérequis
   contenant que le jeton. Il n'apparaît jamais dans la sortie, ni dans les
   fichiers produits, ni dans la ligne de commande.
 
+  Votre pseudo et votre cadence habituelle sont demandés une seule fois,
+  au premier lancement sur un terminal, puis gardés dans
+  %s, que vous pouvez modifier à la main.
+
   Aucune autre dépendance : le HTTP passe par urllib de la bibliothèque
   standard, l'archive par zipfile. Le paquet stockfish est nécessaire
   sauf avec --sans-stockfish ; le moteur est piloté en UCI.
 """ % (CMD_PAQUET_VENV, CMD_PAQUET_VENV, CMD_PAQUET_STOCKFISH,
-       VENV_DEFAUT, CATALOGUE_DEFAUT, JETON_DEFAUT)
+       VENV_DEFAUT, CATALOGUE_DEFAUT, JETON_DEFAUT, REGLAGES_DEFAUT)
 
 
 def valider_liste(p: argparse.ArgumentParser, option: str, valeur: str,
@@ -2561,11 +2752,15 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                    help="ne pose aucune question, ni camp ni contexte, pour "
                         "un usage hors du projet d'analyse ; implicite hors "
                         "terminal interactif")
-    g.add_argument("--pseudos", default=PSEUDOS_DEFAUT, metavar="LISTE",
+    g.add_argument("--pseudos", default=None, metavar="LISTE",
                    help="vos noms de joueur, séparés par des virgules, "
                         "cherchés sans tenir compte de la casse dans White "
                         "et Black pour déduire votre camp "
-                        "(défaut : %(default)s)")
+                        "(défaut : ceux de vos réglages)")
+    g.add_argument("--reglages", default=REGLAGES_DEFAUT, metavar="FICHIER",
+                   help="fichier de réglages, où sont gardés votre pseudo "
+                        "et votre cadence habituelle, demandés une seule "
+                        "fois sur un terminal (défaut : %(default)s)")
 
     g = p.add_argument_group("catalogue des ouvertures")
     g.add_argument("--installer-catalogue", action="store_true",
@@ -2694,10 +2889,12 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
         p.error("--coups-stockfish doit valoir 0 ou plus")
     if options.coups_min < 0:
         p.error("--coups-min doit valoir 0 ou plus")
-    options.pseudos = [x.strip() for x in options.pseudos.split(",")
-                       if x.strip()]
-    if not options.pseudos:
-        p.error("--pseudos : liste vide")
+    # Sans --pseudos, la valeur reste None : les pseudos viendront alors
+    # des réglages. L'option, quand elle est donnée, doit en porter un.
+    if options.pseudos is not None:
+        options.pseudos = decouper_pseudos(options.pseudos)
+        if not options.pseudos:
+            p.error("--pseudos : liste vide")
     if options.avec_stockfish and options.sans_stockfish:
         p.error("--avec-stockfish et --sans-stockfish s'excluent")
     # L'évaluation est désormais le défaut : --avec-stockfish ne fait que
@@ -2765,6 +2962,9 @@ def main(argv: list[str]) -> int:
             raise SystemExit("Fichier de consignes introuvable : %s"
                              % chemin_consignes)
         consignes = lire_texte(chemin_consignes, "consignes")
+
+    # -- Réglages de l'utilisateur, lus tôt eux aussi -----------------------
+    reglages = lire_reglages(options.reglages)
 
     # -- Récupération du PGN ------------------------------------------------
     # Encodage retenu pour le PGN et remarques de décodage, consignés dans
@@ -2836,11 +3036,22 @@ def main(argv: list[str]) -> int:
     # toute façon échouer, et avant la collecte, qui peut durer.
     camp = None
     contexte = None
-    if questions_possibles(options.sans_questions):
+    interactif = questions_possibles(options.sans_questions)
+    if interactif:
+        # Réglages manquants : demandés ici, une fois pour toutes, avant
+        # les questions propres à la partie.
+        completer_reglages(options.reglages, reglages, options.pseudos)
+    # --pseudos l'emporte sur les réglages. La liste retenue remplace
+    # l'option : collecte.json enregistre ainsi les pseudos réellement
+    # utilisés, et elle peut être vide.
+    if options.pseudos is None:
+        options.pseudos = decouper_pseudos(reglage(reglages, "pseudos"))
+    if interactif:
         journal("Questions de démarrage, Entrée retient la valeur proposée.")
         camp = completer_entetes(partie, options.pseudos)
         if consignes is None:
-            contexte = recueillir_contexte(partie, camp)
+            contexte = recueillir_contexte(
+                partie, camp, reglage(reglages, "cadence") or CADENCE_DEFAUT)
             consignes = contexte
     else:
         journal("Questions de démarrage sautées : %s."
