@@ -8,6 +8,8 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.7.0] - 2026-11-19
+
 ### Added
 
 - Option `--purge-reglages` : supprime le fichier de réglages, celui de

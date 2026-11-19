@@ -9,7 +9,7 @@ et écrit un rapport : `sh test-app.sh` hors réseau, `sh test-app.sh
 8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les
 pourcentages bougent peu. "Probable" signale un résultat non mesuré.
 
-Plan mis à jour le 19 novembre 2026, pour la version 3.6.0. État des
+Plan mis à jour le 19 novembre 2026, pour la version 3.7.0. État des
 vérifications :
 
 - T01, T02, T05, T26, T31, T32 et T34 à T55 : joués le 18 novembre
@@ -730,7 +730,7 @@ Un PGN sain ne déclenche aucun avertissement.
 grep -n '^VERSION' collecte-partie.py
 ```
 
-Attendu : VERSION = "3.6.0". L'en-tête d'agent HTTP en est tiré.
+Attendu : VERSION = "3.7.0". L'en-tête d'agent HTTP en est tiré.
 
 ## M. Nom du PGN
 
@@ -1292,7 +1292,7 @@ l'archive ; le fichier analyse-t-pr-<horodatage>.prompt.txt, à
 côté de l'archive ; 1 ; puis 0 et 0 : aucun repère du modèle ne
 reste dans le prompt, et le prompt n'est pas dans le zip. Ses
 premières lignes :
-  Prompt produit par IAnalyze v3.6.0, https://github.com/deuza/IAnalyze
+  Prompt produit par IAnalyze v3.7.0, https://github.com/deuza/IAnalyze
   pour l'archive analyse-t-pr-<horodatage>.zip
 
   Joueur à qui vous vous adressez :
