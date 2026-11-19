@@ -7,8 +7,8 @@
  8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les
  pourcentages bougent peu. "Probable" signale un résultat non mesuré.
 
- Plan mis à jour pour la version 3.5.8, le 18 novembre 2026. Les tests
- T34 à T55 ont été joués sur cette version, sous Linux (Python 3.13,
+ Plan mis à jour pour la version 3.5.9, le 19 novembre 2026. Les tests
+ T34 à T56 ont été joués sur cette version, sous Linux (Python 3.13,
  python-chess 1.11.2, Stockfish 16 pour T51, T52 et T55), ainsi que T01
  à T08. Ils n'ont été joués ni sous
  macOS ni sous Debian Trixie. Les tests avec jeton gardent leurs
@@ -458,7 +458,7 @@
       Un PGN sain ne déclenche aucun avertissement.
 
  T47  grep -n '^VERSION' collecte-partie.py
-      Attendu : VERSION = "3.5.8". L'en-tête d'agent HTTP en est tiré.
+      Attendu : VERSION = "3.5.9". L'en-tête d'agent HTTP en est tiré.
 
 
  [ M. NOM DU PGN ]
@@ -668,6 +668,47 @@
       moteur a échoué en cours d'analyse : expected value for option
       'Threads' to be at most 1024, got: 100000", dossier de travail
       déjà créé.
+
+
+ [ T. EXPLORATEUR : COUP NUL (SANS RÉSEAU NI JETON) ]
+
+ T56  Coup nul dans la partie, explorateur simulé, comme pour T49 :
+      $VENV/bin/python3 - <<'EOF'
+      import importlib.util, io, pathlib, tempfile
+      import chess.pgn
+      spec = importlib.util.spec_from_file_location("cp",
+                                                    "collecte-partie.py")
+      cp = importlib.util.module_from_spec(spec)
+      spec.loader.exec_module(cp)
+      partie = chess.pgn.read_game(
+          io.StringIO("1. e4 e5 2. -- Nc6 3. Nf3 *"))
+      class Faux:
+          appels = 0
+          def interroger(self, coups):
+              Faux.appels += 1
+              assert "0000" not in coups
+              return 200, {"white": 600, "draws": 300, "black": 100,
+                           "moves": [{"uci": c, "san": c, "white": 300,
+                                      "draws": 150, "black": 50}
+                                     for c in ("e2e4", "e7e5")]}
+      with tempfile.TemporaryDirectory() as d:
+          r = cp.collecter_explorateur(
+              partie, pathlib.Path(d), Faux(), 50, 10.0, 60, False)
+      print(Faux.appels, len(r["lignes"]), r["premiere_sortie"])
+      print(r["arret"])
+      print([(n["demicoup"], n["san"], n["motif"])
+             for n in r["non_exploitables"]])
+      EOF
+      Attendu, hors lignes de journal :
+        2 2 None
+        coup nul au demi-coup 3 : ce n'est pas un coup des échecs,
+        l'explorateur ne peut pas suivre la partie au delà
+        [(3, '--', 'coup nul, non interrogé')]
+      Deux requêtes pour deux lignes : rien n'est demandé pour le coup
+      nul ni au delà, et il n'est pas une sortie de théorie. Avant la
+      version 3.5.9 : trois lignes, le coup nul à 0.0 % désigné comme
+      première sortie de théorie, puis, sur le vrai explorateur, "HTTP
+      400 au demi-coup 4" (illegal move 0000).
 
 
  Nettoyage : rm -rf /tmp/analyses /tmp/abime /tmp/cat1.tsv

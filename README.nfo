@@ -343,6 +343,12 @@
    3. sur une sortie de théorie, hors de la fenêtre --coups-min ;
    4. au plafond --max-demicoups, ou à la fin de la partie.
 
+ Un coup nul, "--" dans le PGN, arrête aussi l'interrogation, avant
+ toute requête pour ce demi-coup et quel que soit le mode : ce n'est pas
+ un coup des échecs, la base ne peut pas suivre la partie au delà. Il
+ n'est pas compté comme une sortie de théorie, et la section 4 de la
+ synthèse le signale.
+
  Le catalogue dit "connu", jamais "bon" : "Barnes Opening: Fool's Mate"
  y figure. Il compte aussi les positions intermédiaires des lignes
  nommées, que l'explorateur ne nomme pas lui-même.

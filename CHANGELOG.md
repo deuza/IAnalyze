@@ -8,6 +8,31 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.5.9] - 2026-11-19
+
+### Added
+
+- TESTS.nfo : test T56, le coup nul et l'explorateur, sur un
+  explorateur simulé.
+
+### Changed
+
+- En-tête d'agent HTTP : `collecte-partie/3.5.9`.
+- README.nfo, section 6 : le coup nul parmi les critères d'arrêt.
+
+### Fixed
+
+- Explorateur : un coup nul, `--` dans le PGN, ressortait dans la table
+  à 0.0 %, au rang "-", et était désigné comme la première sortie de
+  théorie. Dans la fenêtre de `--coups-min`, la collecte continuait et
+  envoyait à Lichess une liste de coups contenant `0000`, refusée par un
+  HTTP 400 ("illegal move 0000: illegal uci") : l'arrêt était alors
+  attribué à une erreur HTTP. L'interrogation s'arrête désormais au
+  coup nul, sans requête pour ce demi-coup, avec le motif "coup nul au
+  demi-coup N" ; la section 4 de la synthèse le liste, et il ne compte
+  plus comme une sortie de théorie. Le défaut existait déjà en 3.4.1 :
+  la version 3.5.4 n'avait traité que le côté Stockfish.
+
 ## [3.5.8] - 2026-11-18
 
 ### Changed

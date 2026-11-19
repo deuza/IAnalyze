@@ -354,7 +354,7 @@ RE_ID_SOURCE = re.compile(r"[A-Za-z0-9]{8}(?:[A-Za-z0-9]{4})?")
 
 #: Version du script, selon le versionnage sémantique. Elle est reprise
 #: dans l'en-tête d'agent : c'est le seul endroit à modifier.
-VERSION = "3.5.8"
+VERSION = "3.5.9"
 
 #: En-tête d'agent, par politesse envers l'API.
 UA = "collecte-partie/%s (analyse personnelle)" % VERSION
@@ -1356,6 +1356,11 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
     Avec `jusqu_a_epuisement`, seuls le premier critère et le plafond de
     demi-coups s'appliquent : l'interrogation descend aussi loin que la
     base répond.
+
+    Un coup nul, "--" dans le PGN, arrête la collecte avant toute
+    interrogation pour ce demi-coup, quel que soit le mode : ce n'est pas
+    un coup des échecs, la base ne peut ni le compter ni suivre la partie
+    au delà. Il n'est pas tenu pour une sortie de théorie.
     """
     brut = dossier / "explorateur"
     brut.mkdir(parents=True, exist_ok=True)
@@ -1378,6 +1383,25 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
         trait = "Blancs" if plateau.turn == chess.WHITE else "Noirs"
         san_joue = plateau.san(coup)
         uci_joue = coup.uci()
+
+        # Coup nul : le trait passe sans qu'une pièce ne bouge. La base ne
+        # le connaît pas, il ressortait donc à 0 partie, au rang "hors
+        # base", et passait pour la première sortie de théorie. Pire, le
+        # demi-coup suivant envoyait à l'explorateur une liste de coups
+        # contenant "0000", qu'il refuse par un HTTP 400 ("illegal uci") :
+        # l'arrêt était alors mis sur le compte d'une erreur réseau. On
+        # s'arrête ici, sans rien demander, en donnant la vraie raison.
+        if not coup:
+            arret = ("coup nul au demi-coup %d : ce n'est pas un coup des "
+                     "échecs, l'explorateur ne peut pas suivre la partie au "
+                     "delà" % (indice + 1))
+            journal("Explorateur : %s." % arret)
+            non_exploitables.append({
+                "demicoup": indice + 1, "numero": numero, "trait": trait,
+                "san": san_joue, "motif": "coup nul, non interrogé",
+            })
+            break
+
         # L'explorateur note le roque à la manière de Chess960, "roi prend
         # tour" : e1h1 pour le petit roque des Blancs, là où python-chess
         # écrit e1g1. Les deux formes sont admises pour retrouver le coup
