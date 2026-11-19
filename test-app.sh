@@ -2,7 +2,7 @@
 # ===========================================================================
 # test-app.sh : tests de collecte-partie.py, sous macOS et sous Debian
 #
-# Ce script rejoue les tests de TESTS.nfo qui peuvent l'être sans vous, puis
+# Ce script rejoue les tests de TESTS.md qui peuvent l'être sans vous, puis
 # écrit un rapport que vous pouvez renvoyer tel quel.
 #
 #     sh test-app.sh             tests hors réseau : encodages, archive,
@@ -1299,7 +1299,7 @@ compte_jeton() {
 
 # --- Parties d'essai --------------------------------------------------------
 
-# Une ligne italienne entièrement cataloguée, celle de TESTS.nfo.
+# Une ligne italienne entièrement cataloguée, celle de TESTS.md.
 printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 *\n' > italienne.pgn
 # La Polonaise suivie de g6, coup rare et hors catalogue, comme votre
 # partie 1 ; elle est courte, pour borner le nombre de requêtes.

@@ -9,7 +9,7 @@ où l'analyse est faite. Le script ne produit lui-même aucune analyse.
 
 Fichiers : collecte-partie.py, prompt-modele.txt (modèle du prompt),
 test.pgn (partie d'essai), test-app.sh (suite de tests),
-README.nfo, TESTS.nfo, CHANGELOG.md.
+README.md, TESTS.md, CHANGELOG.md.
 
 ## Plateformes
 - Serveurs : Debian Trixie, en root, pas de sudo. Stockfish dans
@@ -37,8 +37,8 @@ README.nfo, TESTS.nfo, CHANGELOG.md.
   nécessaire est listée à la fin de la livraison.
 - Modification d'un fichier existant : changement ciblé, pas de
   réécriture complète non demandée.
-- Chaque ajout de comportement s'accompagne d'un test dans TESTS.nfo
-  et d'une mise à jour de README.nfo.
+- Chaque ajout de comportement s'accompagne d'un test dans TESTS.md
+  et d'une mise à jour de README.md.
 
 ## Vérifications avant livraison
 Lance ce qui est disponible : python3 -m py_compile, flake8, ruff check,

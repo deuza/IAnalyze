@@ -26,6 +26,11 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- Documentation en Markdown : `README.nfo` devient `README.md` et
+  `TESTS.nfo` devient `TESTS.md`. Le texte est repris tel quel, seule
+  la mise en forme change : titres, blocs de code, tableaux, une option
+  par rubrique. Le README gagne une présentation de la chaîne archive
+  plus prompt, la liste des fichiers du dépôt et les licences.
 - Les tests ne citent plus `partie1.pgn`, une partie qui n'était pas
   dans le dépôt : ils fabriquent `polonaise.pgn`, comme ils fabriquaient
   déjà `italienne.pgn`.
