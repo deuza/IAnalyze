@@ -21,10 +21,14 @@ camp si les en-têtes ne le donnent pas, puis vos réponses aux questions
 de démarrage du projet d'analyse, rangées dans contexte.md et reprises en
 tête de la synthèse.
 
-Votre pseudo et votre cadence habituelle ne sont pas dans le code : ils
-vous sont demandés une seule fois, au premier lancement sur un terminal,
-puis gardés dans un fichier de réglages que vous pouvez modifier à la
-main.
+Votre pseudo, votre cadence habituelle et votre niveau ne sont pas dans
+le code : ils vous sont demandés une seule fois, au premier lancement sur
+un terminal, puis gardés dans un fichier de réglages que vous pouvez
+modifier à la main.
+
+À côté de l'archive, le script écrit le prompt d'analyse de la partie,
+tiré du modèle INSTRUCTIONS.txt : vous le collez dans la conversation,
+l'archive en pièce jointe.
 
 Le résultat est une archive zip contenant les données brutes ainsi qu'un
 fichier de synthèse unique, destiné à être joint à une conversation
@@ -319,7 +323,38 @@ REGLAGES_CLEFS = (
       "                        jours ; ajoutez au besoin \", plafond 20",
       "                        jours\" et \", réserve 50 jours\"",
       "  inconnue")),
+    ("niveau",
+     ("Votre niveau, en points Elo approximatifs, ou inconnu. Il est",
+      "transmis à l'analyste, qui y adapte ses explications. Sans lui,",
+      "c'est l'Elo de votre balise dans la partie qui sert.")),
 )
+
+#: Bornes d'un niveau exprimé en points Elo.
+NIVEAU_MIN, NIVEAU_MAX = 100, 3500
+
+#: Modèle du prompt d'analyse, cherché à côté du script, et suffixe du
+#: prompt écrit à côté de l'archive.
+PROMPT_MODELE = "INSTRUCTIONS.txt"
+PROMPT_SUFFIXE = ".prompt.txt"
+
+#: Repères du modèle. Une ligne commençant par PROMPT_DIRECTIVE est une
+#: directive, jamais recopiée ; une valeur s'écrit entre doubles accolades.
+PROMPT_DIRECTIVE = "#!"
+RE_VALEUR_MODELE = re.compile(r"\{\{([A-Za-z_]+)\}\}")
+
+#: Conditions que connaît une directive "si", et valeurs remplaçables. Un
+#: nom absent de ces listes arrête le script avant la collecte.
+PROMPT_CONDITIONS = ("STOCKFISH", "EXPLORATEUR", "BASE_LICHESS",
+                     "BASE_MAITRES", "REPONSES", "CONSIGNES_LIBRES",
+                     "CAMP_CONNU", "PSEUDO_CONNU", "NIVEAU_DECLARE")
+PROMPT_VALEURS = ("VERSION", "ARCHIVE", "PSEUDOS", "CAMP", "NIVEAU",
+                  "CADENCE", "ANNOTATEUR", "BASE", "SEUIL_IMPRECISION",
+                  "SEUIL_ERREUR", "SEUIL_GAFFE", "PROFONDEUR", "MULTIPV")
+
+#: Valeur de la balise Annotator quand les réglages n'en donnent pas : le
+#: script ignore quel modèle rédigera l'analyse.
+ANNOTATEUR_DEFAUT = ("votre nom de modèle, suivi de son éditeur entre "
+                     "parenthèses")
 
 #: Libellé d'une cadence inconnue, quand ni la balise TimeControl ni les
 #: réglages ne la donnent.
@@ -1228,6 +1263,52 @@ def demander_cadence(libelle: str, defaut: dict) -> tuple[dict, bool] | None:
         sys.stderr.write("  Réponse attendue : t, c ou i.\n")
 
 
+def analyser_niveau(texte: str) -> int | None:
+    """
+    Lit un niveau écrit dans le fichier de réglages : un nombre de points
+    Elo entre NIVEAU_MIN et NIVEAU_MAX. Renvoie 0 pour un niveau inconnu,
+    et None pour une valeur d'une autre forme.
+    """
+    texte = texte.strip().casefold()
+    if texte in ("", "?", "inconnu"):
+        return 0
+    if (re.fullmatch(r"[0-9]{1,4}", texte)
+            and NIVEAU_MIN <= int(texte) <= NIVEAU_MAX):
+        return int(texte)
+    return None
+
+
+def demander_niveau() -> int | None:
+    """
+    Demande le niveau du joueur en points Elo, Entrée valant "inconnu" (0).
+    La question est reposée tant que la réponse n'est pas un nombre entier
+    dans les bornes. Renvoie None à la fin de flux.
+    """
+    while True:
+        reponse = demander("Votre niveau, en points Elo approximatifs ? "
+                           "(Entrée : inconnu)")
+        if reponse is None:
+            return None
+        niveau = analyser_niveau(reponse)
+        if niveau is not None:
+            return niveau
+        sys.stderr.write("  Réponse attendue : un nombre entier entre %d et "
+                         "%d, ou Entrée.\n" % (NIVEAU_MIN, NIVEAU_MAX))
+
+
+def deduire_camp(partie: chess.pgn.Game, pseudos: list[str]) -> str | None:
+    """
+    Camp du joueur d'après ses pseudos, sans poser de question : "Blancs",
+    "Noirs", ou None si aucune balise, ou les deux, portent un pseudo.
+    Sert hors terminal, où completer_entetes n'est pas appelée.
+    """
+    moi_blancs = est_pseudo(partie.headers.get("White", "?"), pseudos)
+    moi_noirs = est_pseudo(partie.headers.get("Black", "?"), pseudos)
+    if moi_blancs == moi_noirs:
+        return None
+    return "Blancs" if moi_blancs else "Noirs"
+
+
 def demander_correspondance() -> dict | None:
     """
     Demande une cadence par correspondance, dans l'un de ses trois
@@ -1547,6 +1628,12 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
         journal("Réglages : la cadence enregistrée, \"%s\", n'est pas "
                 "lisible, elle est redemandée." % nettoyer_valeur(brute))
         manquantes.append("cadence")
+    # Il en va de même du niveau, qui doit être un nombre de points Elo.
+    brute = reglages.get(REGLAGES_SECTION, "niveau", fallback=None)
+    if brute is not None and analyser_niveau(brute) is None:
+        journal("Réglages : le niveau enregistré, \"%s\", n'est pas "
+                "lisible, il est redemandé." % nettoyer_valeur(brute))
+        manquantes.append("niveau")
     if not manquantes:
         return
 
@@ -1564,6 +1651,12 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
                                    "aucun)")
             if reponse is not None:
                 reponse = ", ".join(decouper_pseudos(reponse))
+        elif clef == "niveau":
+            niveau = demander_niveau()
+            if niveau is None:
+                reponse = None
+            else:
+                reponse = str(niveau) if niveau else "inconnu"
         else:
             saisie = demander_cadence("Votre cadence habituelle",
                                       dict(CADENCE_INCONNUE))
@@ -1575,6 +1668,142 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
 
     if ecrire_reglages(chemin, reglages):
         journal("Réglages enregistrés : %s" % chemin_reglages(chemin))
+
+
+# ===========================================================================
+# Prompt d'analyse
+#
+# Les données de l'archive ne suffisent pas : il faut dire à l'analyste ce
+# qu'il doit en faire. Ce texte vit dans un modèle, INSTRUCTIONS.txt, que
+# vous retouchez sans ouvrir ce script. À chaque collecte, le script en
+# tire le prompt de la partie : il remplit les valeurs (pseudo, niveau,
+# nom de l'archive) et ne garde que les passages qui s'appliquent (base
+# interrogée, moteur présent ou non). Le prompt décrit ainsi, toujours, la
+# synthèse que cette version du script vient d'écrire.
+#
+# Deux repères dans le modèle :
+#
+#     {{NOM}}             une valeur, remplacée
+#     #! si CONDITION     garde ce qui suit si la condition est vraie
+#     #! si non CONDITION garde ce qui suit si elle est fausse
+#     #! sinon            bascule
+#     #! fin              ferme le dernier "si" ouvert
+#     #! note ...         commentaire du modèle, jamais recopié
+#
+# Les "si" peuvent s'emboîter.
+# ===========================================================================
+
+def chemin_modele(option: str | None) -> pathlib.Path:
+    """
+    Chemin du modèle de prompt : celui de --prompt, sinon INSTRUCTIONS.txt
+    à côté du script. Le chemin réel du script est suivi, afin qu'un lien
+    symbolique posé ailleurs retrouve le modèle du dépôt.
+    """
+    if option:
+        return pathlib.Path(os.path.expanduser(option))
+    return pathlib.Path(os.path.realpath(__file__)).parent / PROMPT_MODELE
+
+
+def lire_directive(ligne: str) -> list[str] | None:
+    """Mots d'une ligne de directive, ou None pour une ligne ordinaire."""
+    ligne = ligne.strip()
+    if not ligne.startswith(PROMPT_DIRECTIVE):
+        return None
+    return ligne[len(PROMPT_DIRECTIVE):].split()
+
+
+def rendre_modele(texte: str, conditions: dict[str, bool],
+                  valeurs: dict[str, str], source: str) -> str:
+    """
+    Tire un prompt du modèle : applique les directives, remplace les
+    valeurs.
+
+    Tout le modèle est contrôlé, passages écartés compris : une directive
+    inconnue, un "si" jamais fermé, une condition ou une valeur que le
+    script ne connaît pas arrêtent le script avec le numéro de la ligne.
+    Les lignes vides en trop que laisse un passage retiré sont resserrées.
+    """
+    def erreur(numero: int, message: str) -> SystemExit:
+        return SystemExit("Modèle de prompt %s, ligne %d : %s"
+                          % (source, numero, message))
+
+    sortie: list[str] = []
+    # Pile des "si" ouverts : la ligne du "si", la valeur de sa condition,
+    # et si un "sinon" a déjà été rencontré.
+    pile: list[tuple[int, bool, bool]] = []
+    for numero, ligne in enumerate(texte.split("\n"), start=1):
+        mots = lire_directive(ligne)
+        if mots is None:
+            for nom in RE_VALEUR_MODELE.findall(ligne):
+                if nom not in PROMPT_VALEURS:
+                    raise erreur(numero, "valeur inconnue {{%s}}, valeurs "
+                                 "admises : %s"
+                                 % (nom, ", ".join(PROMPT_VALEURS)))
+            if all(vrai for _, vrai, _ in pile):
+                sortie.append(RE_VALEUR_MODELE.sub(
+                    lambda m: valeurs[m.group(1)], ligne).rstrip())
+            continue
+        if not mots or mots[0] == "note":
+            continue
+        if mots[0] == "si":
+            negation = len(mots) == 3 and mots[1] == "non"
+            if len(mots) != (3 if negation else 2):
+                raise erreur(numero, "forme attendue : \"si CONDITION\" ou "
+                             "\"si non CONDITION\"")
+            if mots[-1] not in PROMPT_CONDITIONS:
+                raise erreur(numero, "condition inconnue %s, conditions "
+                             "admises : %s"
+                             % (mots[-1], ", ".join(PROMPT_CONDITIONS)))
+            pile.append((numero, conditions[mots[-1]] != negation, False))
+        elif mots == ["sinon"]:
+            if not pile or pile[-1][2]:
+                raise erreur(numero, "\"sinon\" sans \"si\" ouvert, ou en "
+                             "double")
+            pile[-1] = (pile[-1][0], not pile[-1][1], True)
+        elif mots == ["fin"]:
+            if not pile:
+                raise erreur(numero, "\"fin\" sans \"si\" ouvert")
+            pile.pop()
+        else:
+            raise erreur(numero, "directive inconnue \"%s\", directives "
+                         "admises : si, sinon, fin, note" % " ".join(mots))
+    if pile:
+        raise erreur(pile[-1][0], "ce \"si\" n'est jamais fermé par \"fin\"")
+
+    # Lignes vides : au plus une de suite, aucune en tête ni en queue.
+    resserre: list[str] = []
+    for ligne in sortie:
+        if ligne or (resserre and resserre[-1]):
+            resserre.append(ligne)
+    return "\n".join(resserre).strip("\n") + "\n"
+
+
+def verifier_modele(texte: str, source: str) -> None:
+    """
+    Contrôle le modèle avant la collecte, pour échouer tôt : un repère
+    inconnu ne doit pas se révéler après dix minutes de moteur. Le rendu
+    est fait à blanc, son résultat n'est pas gardé.
+    """
+    rendre_modele(texte, dict.fromkeys(PROMPT_CONDITIONS, False),
+                  dict.fromkeys(PROMPT_VALEURS, ""), source)
+
+
+def decrire_niveau(niveau: int, partie: chess.pgn.Game,
+                   camp: str | None) -> str:
+    """
+    Phrase du niveau du joueur. Le niveau déclaré dans les réglages
+    l'emporte ; à défaut, l'Elo de la balise du joueur dans cette partie,
+    si son camp est connu ; sinon rien de précis.
+    """
+    if niveau:
+        return "environ %d Elo, déclaré par le joueur" % niveau
+    balise = {"Blancs": "WhiteElo", "Noirs": "BlackElo"}.get(camp or "")
+    if balise:
+        elo = partie.headers.get(balise, "").strip()
+        if re.fullmatch(r"[0-9]{3,4}", elo):
+            return "%s Elo, d'après la balise %s de la partie" % (elo, balise)
+    return ("non précisé : jugez-en d'après la partie, et restez "
+            "accessible")
 
 
 # ===========================================================================
@@ -3049,6 +3278,11 @@ exemples d'utilisation
 
       ./collecte-partie.py ma-partie.pgn --garder-dossier
 
+  Utiliser votre propre modèle de prompt, ou ne pas écrire de prompt :
+
+      ./collecte-partie.py ma-partie.pgn --prompt ~/mon-modele.txt
+      ./collecte-partie.py ma-partie.pgn --sans-prompt
+
   Moteur plus profond, ou limité aux quinze premiers coups :
 
       ./collecte-partie.py ma-partie.pgn --profondeur 22
@@ -3062,6 +3296,11 @@ résultat
   l'archive est écrit seul sur la sortie standard, tout le reste va sur la
   sortie d'erreur. En cas d'échec, le dossier de travail est conservé tel
   quel pour diagnostic.
+
+  À côté de l'archive, le prompt d'analyse de la partie, sous le nom
+  analyse-<partie>-<horodatage>.prompt.txt : collez-le dans la
+  conversation, l'archive en pièce jointe. Il est tiré du modèle
+  INSTRUCTIONS.txt, rangé à côté du script, que vous pouvez modifier.
 
 prérequis
 ---------
@@ -3082,8 +3321,8 @@ prérequis
   contenant que le jeton. Il n'apparaît jamais dans la sortie, ni dans les
   fichiers produits, ni dans la ligne de commande.
 
-  Votre pseudo et votre cadence habituelle sont demandés une seule fois,
-  au premier lancement sur un terminal, puis gardés dans
+  Votre pseudo, votre cadence habituelle et votre niveau sont demandés
+  une seule fois, au premier lancement sur un terminal, puis gardés dans
   %s, que vous pouvez modifier à la main.
 
   Aucune autre dépendance : le HTTP passe par urllib de la bibliothèque
@@ -3161,9 +3400,10 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                         "et Black pour déduire votre camp "
                         "(défaut : ceux de vos réglages)")
     g.add_argument("--reglages", default=REGLAGES_DEFAUT, metavar="FICHIER",
-                   help="fichier de réglages, où sont gardés votre pseudo "
-                        "et votre cadence habituelle, demandés une seule "
-                        "fois sur un terminal (défaut : %(default)s)")
+                   help="fichier de réglages, où sont gardés votre pseudo, "
+                        "votre cadence habituelle et votre niveau, demandés "
+                        "une seule fois sur un terminal "
+                        "(défaut : %(default)s)")
 
     g = p.add_argument_group("catalogue des ouvertures")
     g.add_argument("--installer-catalogue", action="store_true",
@@ -3184,6 +3424,12 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
     g.add_argument("--garder-dossier", action="store_true",
                    help="ne supprime pas le dossier de travail après "
                         "création de l'archive")
+    g.add_argument("--prompt", metavar="FICHIER",
+                   help="modèle du prompt d'analyse, écrit à côté de "
+                        "l'archive sous le nom <archive>%s (défaut : %s à "
+                        "côté du script)" % (PROMPT_SUFFIXE, PROMPT_MODELE))
+    g.add_argument("--sans-prompt", action="store_true",
+                   help="n'écrit pas le prompt d'analyse")
 
     g = p.add_argument_group("explorateur")
     g.add_argument("--base", choices=sorted(BASES_EXPLORATEUR),
@@ -3275,6 +3521,8 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
         return options
     if not options.source:
         p.error("il faut un fichier PGN, une URL ou un identifiant de partie")
+    if options.prompt and options.sans_prompt:
+        p.error("--prompt et --sans-prompt s'excluent")
     # nan et inf sont des flottants valides pour argparse, mais nan échappe
     # à toute comparaison et time.sleep() refuse l'un comme l'autre : on
     # les écarte ici, avant toute création de dossier.
@@ -3368,6 +3616,24 @@ def main(argv: list[str]) -> int:
 
     # -- Réglages de l'utilisateur, lus tôt eux aussi -----------------------
     reglages = lire_reglages(options.reglages)
+
+    # -- Modèle du prompt, lu et contrôlé avant la collecte -----------------
+    # Un modèle désigné par --prompt doit exister. Le modèle par défaut,
+    # lui, peut manquer quand le script a été copié seul : la collecte se
+    # fait alors sans prompt, et le journal le dit.
+    modele_prompt = None
+    if not options.sans_prompt:
+        fichier_modele = chemin_modele(options.prompt)
+        if fichier_modele.is_file():
+            modele_prompt = lire_texte(fichier_modele, "modèle de prompt")
+            verifier_modele(modele_prompt, str(fichier_modele))
+        elif options.prompt:
+            raise SystemExit("Modèle de prompt introuvable : %s"
+                             % fichier_modele)
+        else:
+            journal("Attention : modèle de prompt introuvable (%s), aucun "
+                    "prompt ne sera écrit. Voir --prompt et --sans-prompt."
+                    % fichier_modele)
 
     # -- Récupération du PGN ------------------------------------------------
     # Encodage retenu pour le PGN et remarques de décodage, consignés dans
@@ -3554,6 +3820,9 @@ def main(argv: list[str]) -> int:
     parametres["contexte_recueilli"] = contexte is not None
     parametres["pgn_encodage"] = encodage_pgn
     parametres["pgn_remarques"] = remarques_pgn
+    # Nom du prompt écrit à côté de l'archive, ou rien s'il n'y en a pas.
+    parametres["prompt_ecrit"] = (dossier.name + PROMPT_SUFFIXE
+                                  if modele_prompt is not None else None)
     ecrire_texte(dossier / "collecte.json",
                  json.dumps(parametres, ensure_ascii=False, indent=1,
                             default=str))
@@ -3569,6 +3838,55 @@ def main(argv: list[str]) -> int:
 
     # -- Archive et nettoyage -----------------------------------------------
     archive = archiver(dossier, options.garder_dossier)
+
+    # -- Prompt d'analyse, écrit à côté de l'archive ------------------------
+    # Après l'archivage : un échec ne laisse pas un prompt sans archive. Le
+    # prompt n'entre pas dans le zip, il se colle dans la conversation.
+    if modele_prompt is not None:
+        camp_joueur = ((camp or {}).get("camp")
+                       or deduire_camp(partie, options.pseudos))
+        niveau = analyser_niveau(reglage(reglages, "niveau")) or 0
+        habituelle = (analyser_cadence(reglage(reglages, "cadence"))
+                      or dict(CADENCE_INCONNUE))
+        conditions = {
+            "STOCKFISH": resume_stockfish is not None,
+            "EXPLORATEUR": resume_explorateur is not None,
+            "BASE_LICHESS": options.base == "lichess",
+            "BASE_MAITRES": options.base == "maitres",
+            "REPONSES": contexte is not None,
+            "CONSIGNES_LIBRES": bool(options.consignes),
+            "CAMP_CONNU": camp_joueur is not None,
+            "PSEUDO_CONNU": bool(options.pseudos),
+            "NIVEAU_DECLARE": bool(niveau),
+        }
+        valeurs = {
+            "VERSION": VERSION,
+            "ARCHIVE": archive.name,
+            "PSEUDOS": ", ".join(options.pseudos),
+            "CAMP": camp_joueur or "inconnu",
+            "NIVEAU": decrire_niveau(niveau, partie, camp_joueur),
+            "CADENCE": decrire_cadence(habituelle),
+            "ANNOTATEUR": (nettoyer_valeur(reglage(reglages, "annotateur"))
+                           or ANNOTATEUR_DEFAUT),
+            "BASE": base["libelle"],
+            "SEUIL_IMPRECISION": str(SEUIL_IMPRECISION),
+            "SEUIL_ERREUR": str(SEUIL_ERREUR),
+            "SEUIL_GAFFE": str(SEUIL_GAFFE),
+            "PROFONDEUR": str(options.profondeur),
+            "MULTIPV": str(options.multipv),
+        }
+        prompt = archive.with_name(dossier.name + PROMPT_SUFFIXE)
+        try:
+            ecrire_texte(prompt, rendre_modele(
+                modele_prompt, conditions, valeurs,
+                str(chemin_modele(options.prompt))))
+            journal("Prompt d'analyse écrit : %s, à coller dans la "
+                    "conversation, l'archive en pièce jointe." % prompt)
+        except OSError as err:
+            # L'archive est faite : un prompt impossible à écrire ne doit
+            # pas faire échouer la collecte.
+            journal("Attention : prompt non écrit (%s) : %s" % (prompt, err))
+
     annoncer_archive(archive)
     return 0
 

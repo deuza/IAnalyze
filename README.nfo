@@ -26,7 +26,24 @@
 
  Le résultat est une archive zip contenant une synthèse unique
  (synthese.md), destinée à être jointe à une conversation d'annotation,
- ainsi que les données brutes.
+ ainsi que les données brutes. À côté de l'archive, le script écrit le
+ prompt d'analyse de la partie.
+
+ La chaîne complète tient en trois temps :
+
+   1. ./collecte-partie.py ma-partie.pgn
+      Le script collecte, calcule, et écrit deux fichiers :
+      analyse-<partie>-<date>.zip et analyse-<partie>-<date>.prompt.txt.
+   2. Dans une conversation avec un LLM disposant d'un bac à sable,
+      vous collez le contenu du prompt et vous joignez l'archive.
+   3. Le LLM rend un PGN annoté et une synthèse : il explique, il ne
+      calcule pas. Les évaluations viennent de Stockfish, la théorie de
+      l'explorateur et du catalogue, et le prompt lui impose de s'y
+      tenir.
+
+ Le prompt est tiré du modèle INSTRUCTIONS.txt, rangé à côté du script
+ (voir section 9). Il décrit toujours la synthèse que cette version du
+ script vient d'écrire : les deux ne peuvent pas diverger.
 
 
  [ 2. PRÉREQUIS ET INSTALLATION ]
@@ -74,14 +91,27 @@
 
      umask 077 ; vi ~/.lichess_token
 
- Vos réglages personnels, pseudo et cadence habituelle, sont gardés dans
- ~/.config/collecte-partie/reglages.ini sur les deux plateformes. Le
- script les demande une seule fois, au premier lancement sur un
- terminal, et vous pouvez ensuite modifier le fichier à la main :
+ Vos réglages personnels, pseudo, cadence habituelle et niveau, sont
+ gardés dans ~/.config/collecte-partie/reglages.ini sur les deux
+ plateformes. Le script les demande une seule fois, au premier
+ lancement sur un terminal, et vous pouvez ensuite modifier le fichier
+ à la main :
 
      [joueur]
      pseudos = MonPseudo, AutrePseudo
      cadence = 15+10
+     niveau = 1300
+
+ Le niveau est un nombre de points Elo approximatifs, de 100 à 3500, ou
+ "inconnu". Il est transmis à l'analyste, qui y adapte ses explications ;
+ sans lui, c'est l'Elo de votre balise dans la partie qui sert. Une clef
+ facultative, que le script ne demande pas, fixe la balise Annotator du
+ PGN annoté :
+
+     annotateur = Claude (Anthropic)
+
+ Sans elle, le prompt demande à l'analyste d'y mettre son propre nom de
+ modèle.
 
  La cadence s'écrit de l'une de ces façons :
 
@@ -144,8 +174,9 @@
  le script pose ses questions sur la sortie d'erreur, Entrée retenant la
  valeur proposée :
 
-   - au tout premier lancement seulement, votre pseudo et votre
-     cadence habituelle, rangés dans le fichier de réglages ;
+   - au tout premier lancement seulement, votre pseudo, votre cadence
+     habituelle et votre niveau en points Elo, rangés dans le fichier
+     de réglages ;
    - votre camp, s'il ne se déduit pas des balises White ou Black grâce
      à vos pseudos ; les balises vides sont alors complétées, et le PGN
      fourni est conservé sous partie-origine.pgn ;
@@ -217,13 +248,13 @@
          ./collecte-partie.py ma-partie.pgn --pseudos MonPseudo,AutrePseudo
 
  --reglages FICHIER   (défaut : ~/.config/collecte-partie/reglages.ini)
-     Fichier de réglages, au format INI, section [joueur] : pseudos et
-     cadence. Une clef absente est demandée une seule fois, sur un
+     Fichier de réglages, au format INI, section [joueur] : pseudos,
+     cadence et niveau. Une clef absente est demandée une seule fois, sur un
      terminal, puis enregistrée ; une clef présente, même vide, n'est
      jamais redemandée. Hors terminal, rien n'est demandé ni écrit. Les
      clefs et les sections que vous y ajoutez sont conservées. Un
      fichier mal formé arrête le script avec un message. Une cadence
-     qui n'a aucune des formes admises est redemandée.
+     ou un niveau qui n'a pas la forme admise est redemandé.
          ./collecte-partie.py ma-partie.pgn --reglages ~/echecs.ini
 
  --- Catalogue des ouvertures ----------------------------------------------
@@ -257,6 +288,19 @@
      Conserve le dossier de travail à côté de l'archive. Sans cette
      option, il est supprimé une fois l'archive vérifiée.
          ./collecte-partie.py ma-partie.pgn --garder-dossier
+
+ --prompt FICHIER          (défaut : INSTRUCTIONS.txt à côté du script)
+     Modèle du prompt d'analyse, écrit à côté de l'archive sous le nom
+     <archive>.prompt.txt (voir section 9). Le modèle est contrôlé avant
+     la collecte : un repère inconnu arrête le script en donnant le
+     numéro de la ligne. Un fichier désigné par l'option doit exister.
+     Si le modèle par défaut manque, parce que le script a été copié
+     seul, la collecte se fait sans prompt et le journal le signale.
+         ./collecte-partie.py ma-partie.pgn --prompt ~/mon-modele.txt
+
+ --sans-prompt
+     N'écrit pas le prompt d'analyse. S'exclut avec --prompt.
+         ./collecte-partie.py ma-partie.pgn --sans-prompt
 
  --- Explorateur -----------------------------------------------------------
 
@@ -443,7 +487,16 @@
    stockfish/evaluations.json  sauf avec --sans-stockfish
    collecte.json               paramètres exacts, sans le jeton ;
                                pgn_encodage et pgn_remarques disent
-                               comment le PGN a été décodé
+                               comment le PGN a été décodé,
+                               prompt_ecrit nomme le prompt
+
+ À côté de l'archive, et non dedans :
+
+   analyse-<étiquette>-<AAAAMMJJ-HHMMSS>.prompt.txt
+                               le prompt d'analyse de cette partie, à
+                               coller dans la conversation. Son chemin
+                               est donné par le journal ; la sortie
+                               standard ne porte que celui de l'archive.
 
  Sections de synthese.md :
 
@@ -541,7 +594,73 @@
  celui du terminal est redécodée, cp1252 puis latin-1.
 
 
- [ 9. JETON ]
+ [ 9. PROMPT D'ANALYSE ]
+
+ Les données ne suffisent pas : il faut dire à l'analyste ce qu'il doit
+ en faire. Ce texte vit dans le modèle INSTRUCTIONS.txt, que vous pouvez
+ modifier librement, sans toucher au script. À chaque collecte, le
+ script en tire le prompt de la partie : il remplit les valeurs et ne
+ garde que les passages qui s'appliquent.
+
+ Deux sortes de repères sont interprétés :
+
+   {{NOM}}               une valeur, remplacée
+   #! si CONDITION       garde ce qui suit si la condition est vraie
+   #! si non CONDITION   garde ce qui suit si elle est fausse
+   #! sinon              bascule
+   #! fin                ferme le dernier "si" ouvert
+   #! note ...           commentaire du modèle, jamais recopié
+
+ Une directive occupe une ligne entière, et les "si" peuvent
+ s'emboîter. Les lignes vides laissées par un passage retiré sont
+ resserrées.
+
+ Valeurs :
+
+   VERSION             version du script
+   ARCHIVE             nom du fichier de l'archive
+   PSEUDOS             vos pseudos, séparés par des virgules
+   CAMP                Blancs, Noirs ou inconnu
+   NIVEAU              votre niveau, rédigé : "environ 1300 Elo,
+                       déclaré par le joueur", sinon l'Elo de votre
+                       balise, sinon "non précisé"
+   CADENCE             votre cadence habituelle, rédigée
+   ANNOTATEUR          valeur de la balise Annotator
+   BASE                base interrogée : "Lichess (tous joueurs)" ou
+                       "maîtres"
+   SEUIL_IMPRECISION   seuils de nature du coup, en centipions :
+   SEUIL_ERREUR        50, 100 et 300
+   SEUIL_GAFFE
+   PROFONDEUR          valeurs de --profondeur et de --multipv
+   MULTIPV
+
+ Conditions :
+
+   STOCKFISH           la section 3 est présente
+   EXPLORATEUR         la section 2 a été collectée
+   BASE_LICHESS        base de tous les joueurs
+   BASE_MAITRES        base des maîtres
+   REPONSES            le script a recueilli vos réponses aux questions
+                       de démarrage
+   CONSIGNES_LIBRES    un fichier a été passé par --consignes
+   CAMP_CONNU          votre camp est connu
+   PSEUDO_CONNU        au moins un pseudo est connu
+   NIVEAU_DECLARE      votre niveau figure dans les réglages
+
+ Hors terminal, le camp se déduit de vos pseudos sans poser de
+ question. Un repère inconnu, un "si" jamais fermé ou une directive mal
+ formée arrêtent le script avant la collecte :
+
+     Modèle de prompt INSTRUCTIONS.txt, ligne 12 : condition inconnue
+     MOTEUR, conditions admises : STOCKFISH, EXPLORATEUR, ...
+
+ Le prompt se colle comme un message, l'archive en pièce jointe. Vous
+ pouvez aussi l'installer comme instructions d'un projet, mais il vaut
+ pour une partie : c'est le coller à chaque conversation qui garantit
+ qu'il correspond à l'archive.
+
+
+ [ 10. JETON ]
 
  Le jeton n'est transmis que dans l'en-tête Authorization, jamais dans
  l'URL. Il n'apparaît ni dans le journal, ni dans l'archive, où
@@ -553,7 +672,7 @@
  et le jeton est lu normalement.
 
 
- [ 10. SOURCES ET LICENCES ]
+ [ 11. SOURCES ET LICENCES ]
 
    Explorateur      https://explorer.lichess.org/masters
                     https://explorer.lichess.org/lichess
@@ -561,3 +680,8 @@
                     chess-openings/master/{a,b,c,d,e}.tsv
                     Domaine public (CC0). Ce sont les fichiers que charge
                     aussi le serveur de l'explorateur.
+   Cadences         Catégories du temps réel : source de Lichess,
+                    scalachess, Speed.scala et Clock.scala.
+                    Correspondance : ICCF Rules en vigueur depuis le
+                    1er janvier 2026, section 2.4 ; règlement de
+                    chess-mail.com.

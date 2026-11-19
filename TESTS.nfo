@@ -17,7 +17,7 @@
      17.1), python-chess 1.11.2 des deux côtés ;
    - T09 à T24, T29 et T33 : joués le même jour, sur les mêmes machines,
      avec un jeton. T28 l'a été avec un jeton factice ;
-   - T03, T04, T06 à T08, et T56 à T63 : joués sous Linux seulement
+   - T03, T04, T06 à T08, et T56 à T68 : joués sous Linux seulement
      (Ubuntu 24.04, Python 3.13, Stockfish 16), T56 sur un explorateur
      simulé ;
    - T25, T27 et T30 : non rejoués depuis la version 3.4.1.
@@ -448,6 +448,7 @@
       un terminal. Il fournit son propre fichier de réglages, afin que
       les questions du premier lancement ne décalent pas ses réponses :
       printf '[joueur]\npseudos = Moi\ncadence = 14 jours\n' > t-r45.ini
+      printf 'niveau = 1300\n' >> t-r45.ini
       python3 - <<'EOF'
       import os, pty, time
       pid, fd = pty.fork()
@@ -485,8 +486,8 @@
       echo "$ARCH" ; unzip -l "$ARCH" | grep -c synthese.md
       ls -d analyse-t-2026*
       Attendu : 0, puis analyse-t-2026.11.18_A_vs_B-<horodatage>.zip,
-      puis 1 ; ls ne montre que cette archive, le dossier de travail
-      étant supprimé. Avant la version 3.5.1 : "Archive illisible,
+      puis 1 ; ls ne montre que cette archive et son prompt, le dossier
+      de travail étant supprimé. Avant la version 3.5.1 : "Archive illisible,
       dossier conservé : [Errno 2] No such file or directory:
       'analyse-t-2026.11.zip'", code 1, rien sur la sortie standard.
 
@@ -772,21 +773,23 @@
       sys.stdout.write(vu.decode("utf-8", "replace").replace("\r", ""))
       EOF
       P="--sans-explorateur --sans-stockfish --garder-dossier"
-      python3 t-pty.py "Zoe42, zoe|t|15|10|b||||||" italienne.pgn \
+      python3 t-pty.py "Zoe42, zoe|t|15|10|1300|b||||||" italienne.pgn \
           $P --reglages t-reglages.ini | grep -E 'glages|Votre|par '
       grep -v '^#' t-reglages.ini
       grep White analyse-italienne-*/partie.pgn
       grep Cadence analyse-italienne-*/contexte.md
-      Attendu, premier lancement : "Réglages : 2 réponse(s) à donner une
+      Attendu, premier lancement : "Réglages : 3 réponse(s) à donner une
       seule fois, gardée(s) dans t-reglages.ini.", la question "Votre
       pseudo de joueur, ou plusieurs séparés par des virgules ? (Entrée
       : aucun)", puis "Votre cadence habituelle : [t]emps réel,
       [c]orrespondance ou [i]nconnue ? (Entrée : non précisée)",
-      "Minutes par joueur ?" et "Incrément en secondes ?", enfin
+      "Minutes par joueur ?" et "Incrément en secondes ?", puis "Votre
+      niveau, en points Elo approximatifs ? (Entrée : inconnu)", enfin
       "Réglages enregistrés : t-reglages.ini". Le fichier contient :
         [joueur]
         pseudos = Zoe42, zoe
         cadence = 15+10
+        niveau = 1300
       puis [White "Zoe42"], la balise vide ayant reçu le premier pseudo,
       et "- Cadence : rapide, 15 minutes + 10 secondes par coup
       (défaut)" : la question de cadence de la partie, validée par
@@ -810,16 +813,16 @@
 
  T59  ./collecte-partie.py italienne.pgn $O --reglages t-abs/reglages.ini
       ls t-abs
-      python3 t-pty.py "||n|Moi|Lui|||||" italienne.pgn $P \
+      python3 t-pty.py "|||n|Moi|Lui|||||" italienne.pgn $P \
           --reglages t-vide.ini | grep 'Votre nom'
       grep -v '^#' t-vide.ini
       Attendu : hors terminal ($O porte --sans-questions), la collecte
       aboutit sans rien demander, et ls ne trouve pas t-abs : aucun
-      fichier n'est créé. Puis, les deux questions de réglages étant
+      fichier n'est créé. Puis, les trois questions de réglages étant
       validées par Entrée, "Votre nom de joueur ? (Entrée : ?) Moi" :
       sans pseudo, le nom est demandé comme celui de l'adversaire. Le
-      fichier garde "pseudos =" et "cadence = inconnue", et ne
-      redemandera rien.
+      fichier garde "pseudos =", "cadence = inconnue" et "niveau =
+      inconnu", et ne redemandera rien.
 
  T60  printf 'pseudos = Alice\n' > t-mauvais.ini
       ./collecte-partie.py italienne.pgn $O --reglages t-mauvais.ini
@@ -845,8 +848,8 @@
       Les clefs et les sections ajoutées à la main sont conservées.
 
  T62  Cadence : seules des réponses vérifiées sont acceptées.
-      printf '[joueur]\npseudos = Alice\ncadence = Ploum ploum\n' \
-          > t-cad.ini
+      printf '[joueur]\npseudos = Alice\nniveau = inconnu\n' > t-cad.ini
+      printf 'cadence = Ploum ploum\n' >> t-cad.ini
       python3 t-pty.py "x|t|abc|-5|0|0|t|15|10|||||" t-noms.pgn $P \
           --reglages t-cad.ini | grep -E 'lisible|attendue|existe'
       grep cadence t-cad.ini
@@ -874,7 +877,7 @@
       sous 3 minutes, blitz sous 8, rapide sous 25, classique au delà.
 
  T63  Correspondance : trois systèmes, tous vérifiés.
-      printf '[joueur]\npseudos = Alice\n' > t-corr.ini
+      printf '[joueur]\npseudos = Alice\nniveau = inconnu\n' > t-corr.ini
       python3 t-pty.py "c|x|c|0|0h|||c|5|36|36h|2||c|5|36h|20||||||" \
           t-noms.pgn $P --reglages t-corr.ini \
           | grep -E 'attendue|incohérente'
@@ -882,8 +885,9 @@
       grep Cadence analyse-t-noms-*/contexte.md ; rm -rf analyse-t-noms-*
       for c in '10 coups en 50 jours' \
                '50j+3j, plafond 50j, réserve 75j'; do
-          printf '[joueur]\npseudos = Alice\ncadence = %s\n' "$c" \
+          printf '[joueur]\npseudos = Alice\nniveau = inconnu\n' \
               > t-corr.ini
+          printf 'cadence = %s\n' "$c" >> t-corr.ini
           python3 t-pty.py "||||" t-noms.pgn $P --reglages t-corr.ini \
               > /dev/null
           grep Cadence analyse-t-noms-*/contexte.md
@@ -911,6 +915,123 @@
       Attendu : 1, l'aide de --pseudos n'annonçant plus aucun pseudo par
       défaut ; 0, la constante qui le portait ayant disparu ; puis
       "collecte-partie.py: error: --pseudos : liste vide".
+
+
+ [ V. PROMPT D'ANALYSE (SANS RÉSEAU NI JETON) ]
+
+ Préparation, une partie aux deux noms connus et des réglages complets :
+
+     printf '[White "Alice"]\n[Black "Bob"]\n[BlackElo "1500"]\n\n' \
+         > t-pr.pgn
+     printf '1. e4 e5 *\n' >> t-pr.pgn
+     printf '[joueur]\npseudos = Alice\ncadence = 14 jours\n' > t-pr.ini
+     printf 'niveau = 1300\n' >> t-pr.ini
+     R="--sans-explorateur --sans-questions --reglages t-pr.ini"
+
+ T64  ARCH=$(./collecte-partie.py t-pr.pgn $R --sans-stockfish \
+          2> t-pr.log)
+      echo "$ARCH" | wc -l ; PR="${ARCH%.zip}.prompt.txt" ; ls "$PR"
+      grep -c 'Prompt d.analyse écrit' t-pr.log
+      grep -c -E '^#!|\{\{' "$PR" ; unzip -l "$ARCH" | grep -c prompt
+      sed -n 1,13p "$PR"
+      Attendu : 1, la sortie standard ne portant que le chemin de
+      l'archive ; le fichier analyse-t-pr-<horodatage>.prompt.txt, à
+      côté de l'archive ; 1 ; puis 0 et 0 : aucun repère du modèle ne
+      reste dans le prompt, et le prompt n'est pas dans le zip. Ses
+      premières lignes :
+        Prompt produit par collecte-partie.py 3.5.9 pour l'archive
+        analyse-t-pr-<horodatage>.zip
+        Il décrit la synthèse que contient cette archive, telle que cette
+        version du script l'écrit.
+
+        Joueur à qui vous vous adressez :
+        - pseudo, sur Lichess et en général : Alice
+        - camp dans cette partie : Blancs
+        - niveau : environ 1300 Elo, déclaré par le joueur
+        - cadence habituelle, si ni les en-têtes ni les consignes ne donnent
+          celle de la partie : correspondance, 14 jours par coup
+        Balise Annotator du PGN que vous produirez :
+        votre nom de modèle, suivi de son éditeur entre parenthèses
+      Le camp est déduit du pseudo, hors terminal et sans question.
+
+ T65  Le prompt ne garde que les passages qui s'appliquent.
+      for motif in 'Stockfish. : absente de ce dossier' \
+                   'La section 3 est absente' 'Stockfish est inutile' \
+                   'collecte de l.explorateur n.a pas' \
+                   'celle de tous les joueurs de Lichess'; do
+          grep -c "$motif" "$PR"
+      done
+      ARCH=$(./collecte-partie.py t-pr.pgn $R --profondeur 6 --fils 1 \
+          --hachage 16 --base maitres 2>/dev/null)
+      PR="${ARCH%.zip}.prompt.txt"
+      for motif in 'Stockfish est inutile' 'Les chiffres de la section 3' \
+                   'porte "mat"' 'La section 3 est absente' \
+                   'celle des maîtres'; do
+          grep -c "$motif" "$PR"
+      done
+      Attendu, sans moteur : 1, 1, 0, 1, 1. Puis, avec le moteur et la
+      base maîtres : 1, 1, 1, 0, 1. Le premier prompt demande à
+      l'analyste d'évaluer lui-même, le second lui dit que les chiffres
+      font foi et lui explique la mention "mat".
+
+ T66  printf 'Bonjour {{PSEUDO}}\n' > t-modele.txt
+      ./collecte-partie.py t-pr.pgn $R --sans-stockfish \
+          --prompt t-modele.txt ; echo $?
+      printf 'a\n#! si MOTEUR\nb\n#! fin\n' > t-modele.txt
+      ./collecte-partie.py t-pr.pgn $R --sans-stockfish \
+          --prompt t-modele.txt 2>&1 | cut -c1-60
+      printf 'a\n#! si STOCKFISH\nb\n' > t-modele.txt
+      ./collecte-partie.py t-pr.pgn $R --sans-stockfish \
+          --prompt t-modele.txt
+      ./collecte-partie.py t-pr.pgn $R --prompt /nulle/part.txt
+      ./collecte-partie.py t-pr.pgn --prompt x --sans-prompt 2>&1 | tail -1
+      rm -f analyse-t-pr-*
+      ./collecte-partie.py t-pr.pgn $R --sans-stockfish --sans-prompt
+      ls analyse-t-pr-* | grep -c prompt
+      Attendu, dans l'ordre : "Modèle de prompt t-modele.txt, ligne 1 :
+      valeur inconnue {{PSEUDO}}, valeurs admises : VERSION, ARCHIVE,
+      PSEUDOS, ...", puis 1 ; "Modèle de prompt t-modele.txt, ligne 2 :
+      condition inconnue MOTEUR" ; "Modèle de prompt t-modele.txt, ligne
+      2 : ce "si" n'est jamais fermé par "fin"" ; "Modèle de prompt
+      introuvable : /nulle/part.txt" ; "collecte-partie.py: error:
+      --prompt et --sans-prompt s'excluent" ; enfin le chemin de
+      l'archive et 0. Les quatre refus ont lieu avant la collecte :
+      aucun dossier ni archive n'est créé.
+
+ T67  mkdir t-seul && cp collecte-partie.py t-seul/
+      rm -f analyse-t-pr-*
+      t-seul/collecte-partie.py t-pr.pgn $R --sans-stockfish 2> t-pr.log
+      echo $? ; grep -c 'modèle de prompt introuvable' t-pr.log
+      ls analyse-t-pr-* | grep -c prompt
+      Attendu : le chemin de l'archive, 0, 1, puis 0. Copié sans son
+      modèle, le script collecte quand même, sans prompt, et le journal
+      le signale : "Attention : modèle de prompt introuvable
+      (.../t-seul/INSTRUCTIONS.txt), aucun prompt ne sera écrit. Voir
+      --prompt et --sans-prompt."
+
+ T68  Niveau en points Elo, vérifié comme la cadence. Le test passe par
+      le pilote de pseudo-terminal de T57.
+      printf '[joueur]\npseudos = Alice\ncadence = 14 jours\n' > t-niv.ini
+      printf 'niveau = fort\n' >> t-niv.ini
+      rm -rf analyse-t-pr-*
+      python3 t-pty.py "abc|50|9999|1450|||||" t-pr.pgn $P \
+          --reglages t-niv.ini | grep -c -E 'lisible|entre 100 et 3500'
+      grep '^niveau' t-niv.ini
+      grep -h -E 'niveau :|contient les réponses' analyse-t-pr-*.prompt.txt
+      printf '[joueur]\npseudos = Bob\ncadence = 14 jours\n' > t-niv.ini
+      printf 'niveau = inconnu\n' >> t-niv.ini
+      rm -rf analyse-t-pr-*
+      ./collecte-partie.py t-pr.pgn --sans-explorateur --sans-questions \
+          --sans-stockfish --reglages t-niv.ini > /dev/null 2>&1
+      grep -h -E 'camp dans|niveau :' analyse-t-pr-*.prompt.txt
+      Attendu : 4, soit "Réglages : le niveau enregistré, "fort", n'est
+      pas lisible, il est redemandé." puis trois fois "Réponse attendue
+      : un nombre entier entre 100 et 3500, ou Entrée." ; "niveau =
+      1450" ; "- niveau : environ 1450 Elo, déclaré par le joueur" et
+      "La section "Consignes d'analyse" contient les réponses du joueur
+      : ne", le script ayant recueilli les réponses. Enfin, sans niveau
+      déclaré : "- camp dans cette partie : Noirs" et "- niveau : 1500
+      Elo, d'après la balise BlackElo de la partie".
 
 
  Nettoyage : rm -rf /tmp/analyses /tmp/abime /tmp/cat1.tsv

@@ -10,6 +10,27 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Added
 
+- Prompt d'analyse écrit à côté de l'archive, sous le nom
+  `<archive>.prompt.txt`, à coller dans la conversation avec l'archive
+  en pièce jointe. Il est tiré d'un modèle, `INSTRUCTIONS.txt`, rangé à
+  côté du script et modifiable sans toucher au code : le script y
+  remplit les valeurs (pseudo, camp, niveau, cadence, nom de l'archive)
+  et ne garde que les passages qui s'appliquent (base interrogée,
+  moteur présent ou non, réponses recueillies ou non). Le prompt décrit
+  ainsi toujours la synthèse que cette version vient d'écrire.
+- Repères du modèle : `{{NOM}}` pour une valeur, et les directives
+  `#! si`, `#! si non`, `#! sinon`, `#! fin` et `#! note`. Le modèle est
+  contrôlé avant la collecte ; un repère inconnu arrête le script en
+  donnant le numéro de la ligne.
+- Options `--prompt FICHIER`, pour un autre modèle, et `--sans-prompt`.
+- Réglage `niveau`, en points Elo, demandé une seule fois comme le
+  pseudo et la cadence ; réglage facultatif `annotateur`.
+- Hors terminal, le camp du joueur se déduit de ses pseudos pour le
+  prompt, sans poser de question.
+- `collecte.json` : clef `prompt_ecrit`.
+- README.nfo : la chaîne complète en présentation, et la section 9,
+  prompt d'analyse.
+- TESTS.nfo : section V, tests T64 à T68.
 - Fichier de réglages de l'utilisateur,
   `~/.config/collecte-partie/reglages.ini`, au format INI : il garde vos
   pseudos et votre cadence habituelle. Les clefs absentes sont demandées
@@ -38,6 +59,13 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- `INSTRUCTIONS.txt` devient le modèle du prompt : son en-tête ne porte
+  plus de pseudo, de niveau ni de cadence en dur, et il décrit les
+  sorties apparues depuis la version 3.5.0, que l'analyste rencontrait
+  sans explication : la mention `mat` de la colonne Écart, la ligne
+  d'un coup nul, la ligne "Encodage" de la section 5, et la cadence
+  rédigée par le script.
+- README.nfo : les sections Jeton et Sources deviennent 10 et 11.
 - `--pseudos` n'a plus de valeur par défaut dans le code : sans
   l'option, les pseudos viennent du fichier de réglages. Donnée, elle
   l'emporte toujours.
