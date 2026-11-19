@@ -1030,6 +1030,20 @@
       déclaré : "- camp dans cette partie : Noirs" et "- niveau : 1500
       Elo, d'après la balise BlackElo de la partie".
 
+ T69  Purge des réglages.
+      printf '[joueur]\npseudos = Alice\n' > t-purge.ini ; mkdir t-rep
+      ./collecte-partie.py --purge-reglages --reglages t-purge.ini
+      echo $? ; ls t-purge.ini
+      ./collecte-partie.py --purge-reglages --reglages t-purge.ini ; echo $?
+      ./collecte-partie.py --purge-reglages --reglages t-rep ; echo $?
+      ls -d t-rep
+      Attendu : "Réglages supprimés : t-purge.ini. Ils seront redemandés
+      à la prochaine collecte lancée sur un terminal.", 0, et ls ne
+      trouve plus le fichier ; "Aucun fichier de réglages à supprimer :
+      t-purge.ini", 0 ; "--purge-reglages : t-rep n'est pas un fichier,
+      rien n'est supprimé.", 1, et le répertoire est toujours là. Aucune
+      partie n'est demandée et la sortie standard reste vide.
+
 
  Nettoyage : rm -rf /tmp/analyses /tmp/abime /tmp/cat1.tsv
              /tmp/consignes.md analyse-* t-*

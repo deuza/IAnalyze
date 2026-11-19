@@ -259,6 +259,14 @@
      ou un niveau qui n'a pas la forme admise est redemandé.
          ./collecte-partie.py ma-partie.pgn --reglages ~/echecs.ini
 
+ --purge-reglages
+     Supprime le fichier de réglages, puis quitte : aucune partie n'est
+     attendue. Vos réponses seront redemandées à la prochaine collecte
+     lancée sur un terminal. Avec --reglages, c'est le fichier désigné
+     qui est supprimé. Seul le fichier l'est, son répertoire reste. Un
+     fichier absent n'est pas une erreur ; un répertoire est refusé.
+         ./collecte-partie.py --purge-reglages
+
  --- Catalogue des ouvertures ----------------------------------------------
 
  --installer-catalogue

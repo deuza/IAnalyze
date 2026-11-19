@@ -1529,6 +1529,32 @@ def chemin_reglages(chemin: str) -> pathlib.Path:
     return pathlib.Path(os.path.expanduser(chemin))
 
 
+def purger_reglages(chemin: str) -> None:
+    """
+    Supprime le fichier de réglages, et lui seul : son répertoire reste en
+    place, il peut contenir autre chose.
+
+    Les questions de réglages seront reposées au prochain lancement sur un
+    terminal. Un fichier absent n'est pas une erreur : le but, ne plus
+    avoir de réglages, est déjà atteint. Un répertoire, ou tout ce qui
+    n'est pas un fichier, est refusé plutôt que supprimé.
+    """
+    p = chemin_reglages(chemin)
+    if not p.exists() and not p.is_symlink():
+        journal("Aucun fichier de réglages à supprimer : %s" % p)
+        return
+    if not (p.is_file() or p.is_symlink()):
+        raise SystemExit("--purge-reglages : %s n'est pas un fichier, rien "
+                         "n'est supprimé." % p)
+    try:
+        p.unlink()
+    except OSError as e:
+        raise SystemExit("--purge-reglages : suppression de %s impossible : "
+                         "%s" % (p, e)) from e
+    journal("Réglages supprimés : %s. Ils seront redemandés à la prochaine "
+            "collecte lancée sur un terminal." % p)
+
+
 def lire_reglages(chemin: str) -> configparser.ConfigParser:
     """
     Charge le fichier de réglages, ou des réglages vides s'il n'existe pas.
@@ -3409,6 +3435,11 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                         "votre cadence habituelle et votre niveau, demandés "
                         "une seule fois sur un terminal "
                         "(défaut : %(default)s)")
+    g.add_argument("--purge-reglages", action="store_true",
+                   help="supprime le fichier de réglages, celui de "
+                        "--reglages s'il est donné, puis quitte ; vos "
+                        "réponses seront redemandées à la prochaine "
+                        "collecte")
 
     g = p.add_argument_group("catalogue des ouvertures")
     g.add_argument("--installer-catalogue", action="store_true",
@@ -3522,7 +3553,8 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
 
     options = p.parse_args(argv)
 
-    if options.installer_venv or options.installer_catalogue:
+    if (options.installer_venv or options.installer_catalogue
+            or options.purge_reglages):
         return options
     if not options.source:
         p.error("il faut un fichier PGN, une URL ou un identifiant de partie")
@@ -3600,6 +3632,11 @@ def main(argv: list[str]) -> int:
     # -- Environnement virtuel ----------------------------------------------
     if options.installer_venv:
         installer_venv(options.venv)
+        return 0
+    # -- Purge des réglages -------------------------------------------------
+    # Placée avant la relance : elle ne demande ni python-chess ni partie.
+    if options.purge_reglages:
+        purger_reglages(options.reglages)
         return 0
     if not CHESS_DISPONIBLE:
         relancer_dans_venv(options.venv, argv)

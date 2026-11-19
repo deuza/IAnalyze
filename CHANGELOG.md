@@ -8,6 +8,13 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Option `--purge-reglages` : supprime le fichier de réglages, celui de
+  `--reglages` s'il est donné, puis quitte. Les réponses sont redemandées
+  à la prochaine collecte lancée sur un terminal. Un fichier absent
+  n'est pas une erreur, un répertoire est refusé.
+
 ### Changed
 
 - Le modèle du prompt s'appelle `prompt-modele.txt` et non plus
