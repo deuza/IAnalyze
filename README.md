@@ -99,11 +99,11 @@ Emplacements par défaut, choisis selon la plateforme :
 
 ```text
 Debian   --venv       /opt/venv/lichess
-         --catalogue  /usr/local/share/collecte-partie
+         --catalogue  /usr/local/share/IAnalyze
          --stockfish  /usr/games/stockfish
 
-macOS    --venv       ~/.local/share/collecte-partie/venv
-         --catalogue  ~/.local/share/collecte-partie
+macOS    --venv       ~/.local/share/IAnalyze/venv
+         --catalogue  ~/.local/share/IAnalyze
          --stockfish  le binaire trouvé dans le PATH, sinon
                       /opt/homebrew/bin/stockfish
 ```
@@ -119,7 +119,7 @@ Le jeton personnel Lichess (aucun droit particulier requis) est lu dans `~/.lich
 umask 077 ; vi ~/.lichess_token
 ```
 
-Vos réglages personnels, pseudo, cadence habituelle et niveau, sont gardés dans `~/.config/collecte-partie/reglages.ini` sur les deux plateformes.    
+Vos réglages personnels, pseudo, cadence habituelle et niveau, sont gardés dans `~/.config/IAnalyze/reglages.ini` sur les deux plateformes.    
 
 Le script les demande une seule fois, au premier lancement sur un terminal, et vous pouvez ensuite modifier le fichier à la main :
 
@@ -280,7 +280,7 @@ Le premier sert à compléter une balise vide. L'option remplace, le temps d'un 
 
 #### `--reglages FICHIER`
 
-*Défaut : `~/.config/collecte-partie/reglages.ini`*
+*Défaut : `~/.config/IAnalyze/reglages.ini`*
 
 Fichier de réglages, au format INI, section [joueur] : pseudos, cadence et niveau. Une clef absente est demandée une seule fois, sur un terminal, puis enregistrée : une clef présente, même vide, n'est jamais redemandée.    
 Hors terminal, rien n'est demandé ni écrit. Les clefs et les sections que vous y ajoutez sont conservées. 

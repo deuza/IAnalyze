@@ -18,9 +18,9 @@ Les emplacements par défaut dépendent de la plateforme. Posez d'abord ces deux
 
 ```bash
 # Debian
-CAT=/usr/local/share/collecte-partie ; VENV=/opt/venv/lichess
+CAT=/usr/local/share/IAnalyze ; VENV=/opt/venv/lichess
 # macOS
-CAT=~/.local/share/collecte-partie ; VENV=$CAT/venv
+CAT=~/.local/share/IAnalyze ; VENV=$CAT/venv
 ```
 
 Sur un terminal, le script pose ses questions de démarrage : validez par Entrée, ou ajoutez `--sans-questions`. Stockfish tourne par défaut : pour raccourcir un test qui ne porte pas sur le moteur, ajoutez `--sans-stockfish`. Au tout premier lancement sur un terminal, il demande aussi votre pseudo et votre cadence habituelle, une fois pour toutes (section U).

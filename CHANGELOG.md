@@ -10,6 +10,18 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- Les emplacements par défaut portent le nom du projet, IAnalyze, et
+  non plus celui du script :
+  - réglages : `~/.config/IAnalyze/reglages.ini` ;
+  - catalogue sous Debian : `/usr/local/share/IAnalyze` ;
+  - catalogue et environnement virtuel sous macOS :
+    `~/.local/share/IAnalyze` et `~/.local/share/IAnalyze/venv`.
+
+  L'environnement virtuel de Debian reste `/opt/venv/lichess`. Rien
+  n'est repris des anciens emplacements : relancez `--installer-venv`
+  sous macOS et `--installer-catalogue` partout, les réglages sont
+  redemandés au premier lancement. Les anciens répertoires
+  `collecte-partie` peuvent être supprimés.
 - TESTS : paragraphes et commandes sur une seule ligne, sans barre
   oblique inverse de continuation.
 

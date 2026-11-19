@@ -86,7 +86,7 @@ EST_MACOS = sys.platform == "darwin"
 
 #: Répertoire utilisateur des données du script sous macOS : vous n'avez
 #: besoin d'aucun droit root, contrairement à /opt et à /usr/local.
-DONNEES_MACOS = "~/.local/share/collecte-partie"
+DONNEES_MACOS = "~/.local/share/IAnalyze"
 
 #: Commandes d'installation des prérequis, reprises dans les messages et
 #: dans l'aide. Sous macOS, le Python de Homebrew fournit déjà le module
@@ -283,7 +283,7 @@ CATALOGUE_PARTIES = ("a", "b", "c", "d", "e")
 #: macOS, /usr/local/share n'est pas inscriptible sans root : le catalogue
 #: va dans le répertoire utilisateur du script.
 CATALOGUE_DEFAUT = (DONNEES_MACOS if EST_MACOS
-                    else "/usr/local/share/collecte-partie")
+                    else "/usr/local/share/IAnalyze")
 CATALOGUE_INDEX = "catalogue.tsv"
 
 #: Version du format de l'index, vérifiée au chargement.
@@ -296,7 +296,9 @@ RE_NUMERO_COUP = re.compile(r"\d+\.+")
 #: sous macOS. Il porte ce qui dépend de la personne et non de la partie :
 #: ses pseudos et sa cadence habituelle. Rien de personnel ne figure donc
 #: dans ce script, que chacun peut reprendre tel quel.
-REGLAGES_DEFAUT = "~/.config/collecte-partie/reglages.ini"
+#: Les répertoires portent le nom du projet, IAnalyze, et non celui du
+#: script : il en va de même du catalogue et des données sous macOS.
+REGLAGES_DEFAUT = "~/.config/IAnalyze/reglages.ini"
 
 #: Section du fichier de réglages qui décrit le joueur.
 REGLAGES_SECTION = "joueur"

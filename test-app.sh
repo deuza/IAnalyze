@@ -89,7 +89,7 @@ SYSTEME=$(uname -s)
 # que dans collecte-partie.py.
 if [ -z "${VENV:-}" ]; then
     if [ "$SYSTEME" = "Darwin" ]; then
-        VENV="$HOME/.local/share/collecte-partie/venv"
+        VENV="$HOME/.local/share/IAnalyze/venv"
     else
         VENV="/opt/venv/lichess"
     fi
@@ -293,7 +293,7 @@ if [ "$SYSTEME" = "Darwin" ]; then
     egal "T31 brew install cité 3 fois" 3 "$(grep -c 'brew install' aide)"
     egal "T32 apt install absent" 0 "$(grep -c 'apt install' aide)"
     verifier "défaut de --venv sous le répertoire utilisateur" \
-        contient aide ".local/share/collecte-partie/venv"
+        contient aide ".local/share/IAnalyze/venv"
 else
     egal "T31 brew install absent" 0 "$(grep -c 'brew install' aide)"
     egal "T32 apt install cité 3 fois" 3 "$(grep -c 'apt install' aide)"
