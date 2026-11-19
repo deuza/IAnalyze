@@ -81,7 +81,14 @@
 
      [joueur]
      pseudos = MonPseudo, AutrePseudo
-     cadence = rapide, 15 minutes
+     cadence = 15+10
+
+ La cadence s'écrit de l'une de ces trois façons :
+
+     15+10        temps réel : minutes par joueur, puis incrément en
+                  secondes, à la manière de Lichess
+     14 jours     correspondance : jours par coup
+     inconnue
 
  Rien de personnel ne figure dans le script : vous pouvez le reprendre
  tel quel.
@@ -125,7 +132,14 @@
    - votre camp, s'il ne se déduit pas des balises White ou Black grâce
      à vos pseudos ; les balises vides sont alors complétées, et le PGN
      fourni est conservé sous partie-origine.pgn ;
-   - la cadence, si la balise TimeControl ne la donne pas ;
+   - la cadence, si la balise TimeControl ne la donne pas : temps
+     réel, correspondance ou inconnue, puis les minutes par joueur et
+     l'incrément en secondes, ou les jours par coup. Seuls des nombres
+     entiers sont acceptés, une autre réponse fait reposer la question,
+     et Entrée retient votre cadence habituelle. Le script rédige
+     lui-même la phrase transmise à l'analyste, avec la catégorie de
+     Lichess : "rapide, 15 minutes + 10 secondes par coup",
+     "correspondance, 14 jours par coup" ;
    - les quatre questions de démarrage du projet : périmètre, objectif,
      contexte particulier, commentaires à inclure dans le PGN final.
 
@@ -185,7 +199,8 @@
      terminal, puis enregistrée ; une clef présente, même vide, n'est
      jamais redemandée. Hors terminal, rien n'est demandé ni écrit. Les
      clefs et les sections que vous y ajoutez sont conservées. Un
-     fichier mal formé arrête le script avec un message.
+     fichier mal formé arrête le script avec un message. Une cadence
+     qui n'a aucune des trois formes admises est redemandée.
          ./collecte-partie.py ma-partie.pgn --reglages ~/echecs.ini
 
  --- Catalogue des ouvertures ----------------------------------------------

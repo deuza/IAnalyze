@@ -308,13 +308,41 @@ REGLAGES_CLEFS = (
       "pour déduire votre camp. L'option --pseudos les remplace le temps",
       "d'un lancement.")),
     ("cadence",
-     ("Cadence proposée quand la balise TimeControl d'une partie ne la",
-      "donne pas.")),
+     ("Votre cadence habituelle, proposée quand la balise TimeControl",
+      "d'une partie ne la donne pas. Trois formes : 15+10 (minutes par",
+      "joueur, puis incrément en secondes), 14 jours (correspondance,",
+      "jours par coup), ou inconnue.")),
 )
 
-#: Cadence proposée quand ni la balise TimeControl ni les réglages ne la
-#: donnent.
+#: Libellé d'une cadence inconnue, quand ni la balise TimeControl ni les
+#: réglages ne la donnent.
 CADENCE_DEFAUT = "non précisée"
+
+#: Catégories de cadence de Lichess, de la plus lente à la plus rapide,
+#: chacune avec la durée estimée, en secondes, à partir de laquelle elle
+#: s'applique. La durée estimée d'une partie vaut le temps initial plus
+#: COUPS_ESTIMES fois l'incrément. Bornes et formule reprises du source de
+#: Lichess (scalachess : Speed.scala et Clock.scala). Au delà de six
+#: heures, Lichess parle de correspondance ; une cadence saisie comme du
+#: temps réel reste ici "classique".
+CATEGORIES_CADENCE = ((1500, "classique"), (480, "rapide"), (180, "blitz"),
+                      (30, "bullet"), (0, "ultrabullet"))
+COUPS_ESTIMES = 40
+
+#: Formes de cadence admises dans le fichier de réglages : "15+10", minutes
+#: par joueur puis incrément en secondes, à la manière de Lichess, et
+#: "14 jours" pour la correspondance. Les autres valeurs de
+#: CADENCES_INCONNUES désignent une cadence inconnue.
+RE_CADENCE_REELLE = re.compile(r"([0-9]{1,5})\s*\+\s*([0-9]{1,5})")
+RE_CADENCE_JOURS = re.compile(r"([0-9]{1,4})\s*(?:j|jour|jours)")
+CADENCES_INCONNUES = ("", "?", "inconnue", "non précisée")
+
+#: Balise TimeControl du standard PGN, dans ses deux formes les plus
+#: courantes : "600+5", secondes puis incrément, et "300", temps seul.
+RE_TIMECONTROL = re.compile(r"([0-9]{1,6})(?:\+([0-9]{1,5}))?")
+
+#: Cadence inconnue, valeur de repli.
+CADENCE_INCONNUE = {"type": "inconnue"}
 
 #: Questions de démarrage du projet d'analyse, avec le défaut que retient
 #: une réponse vide : libellé dans contexte.md, question, défaut.
@@ -921,6 +949,164 @@ def demander(question: str, defaut: str | None = None) -> str | None:
     return nettoyer_valeur(ligne).strip() or (defaut or "")
 
 
+# ---------------------------------------------------------------------------
+# Cadence
+#
+# Une cadence est un petit dictionnaire, de l'une de ces trois formes :
+#
+#     {"type": "reel", "initial": 900, "increment": 10}    en secondes
+#     {"type": "correspondance", "jours": 14}              par coup
+#     {"type": "inconnue"}
+#
+# Elle n'est jamais un texte libre : la phrase que lit l'analyste est
+# rédigée ici, toujours de la même façon, à partir de nombres vérifiés.
+# ---------------------------------------------------------------------------
+
+def analyser_cadence(texte: str) -> dict | None:
+    """
+    Lit une cadence écrite dans le fichier de réglages.
+
+    Renvoie None si le texte n'a aucune des formes admises, "0+0" compris :
+    une partie sans temps ni incrément n'existe pas.
+    """
+    texte = texte.strip().casefold()
+    if texte in CADENCES_INCONNUES:
+        return dict(CADENCE_INCONNUE)
+    trouve = RE_CADENCE_REELLE.fullmatch(texte)
+    if trouve:
+        minutes, increment = int(trouve.group(1)), int(trouve.group(2))
+        if minutes == 0 and increment == 0:
+            return None
+        return {"type": "reel", "initial": 60 * minutes,
+                "increment": increment}
+    trouve = RE_CADENCE_JOURS.fullmatch(texte)
+    if trouve and int(trouve.group(1)) >= 1:
+        return {"type": "correspondance", "jours": int(trouve.group(1))}
+    return None
+
+
+def cadence_de_balise(controle: str) -> dict | None:
+    """
+    Lit une balise TimeControl de la forme "600+5" ou "300", en secondes.
+
+    Les autres formes du standard (coups par période, sablier) et les
+    valeurs libres donnent None : la balise est alors citée telle quelle.
+    """
+    trouve = RE_TIMECONTROL.fullmatch(controle.strip())
+    if not trouve:
+        return None
+    initial, increment = int(trouve.group(1)), int(trouve.group(2) or 0)
+    if initial == 0 and increment == 0:
+        return None
+    return {"type": "reel", "initial": initial, "increment": increment}
+
+
+def noter_cadence(cadence: dict) -> str:
+    """Forme d'une cadence dans le fichier de réglages."""
+    if cadence["type"] == "reel":
+        return "%d+%d" % (cadence["initial"] // 60, cadence["increment"])
+    if cadence["type"] == "correspondance":
+        return pluriel(cadence["jours"], "jour")
+    return "inconnue"
+
+
+def pluriel(nombre: int, mot: str) -> str:
+    """ "1 jour", "14 jours" : le nombre suivi du mot accordé."""
+    return "%d %s%s" % (nombre, mot, "s" if nombre > 1 else "")
+
+
+def categorie_cadence(initial: int, increment: int) -> str:
+    """Catégorie Lichess d'une cadence en temps réel (CATEGORIES_CADENCE)."""
+    estimee = initial + COUPS_ESTIMES * increment
+    for seuil, nom in CATEGORIES_CADENCE:
+        if estimee >= seuil:
+            return nom
+    return CATEGORIES_CADENCE[-1][1]
+
+
+def decrire_cadence(cadence: dict) -> str:
+    """
+    Phrase décrivant une cadence, telle qu'elle part dans contexte.md :
+    "rapide, 15 minutes + 10 secondes par coup", "blitz, 5 minutes sans
+    incrément", "correspondance, 14 jours par coup", ou "non précisée".
+    """
+    if cadence["type"] == "correspondance":
+        return "correspondance, %s par coup" % pluriel(cadence["jours"],
+                                                       "jour")
+    if cadence["type"] != "reel":
+        return CADENCE_DEFAUT
+    minutes, secondes = divmod(cadence["initial"], 60)
+    duree = []
+    if minutes or not secondes:
+        duree.append(pluriel(minutes, "minute"))
+    if secondes:
+        duree.append(pluriel(secondes, "seconde"))
+    increment = (" + %s par coup" % pluriel(cadence["increment"], "seconde")
+                 if cadence["increment"] else " sans incrément")
+    return "%s, %s%s" % (categorie_cadence(cadence["initial"],
+                                           cadence["increment"]),
+                         " ".join(duree), increment)
+
+
+def demander_entier(question: str, minimum: int) -> int | None:
+    """
+    Demande un nombre entier d'au moins `minimum`, et repose la question
+    tant que la réponse n'en est pas un. La fin de flux renvoie None.
+    """
+    while True:
+        reponse = demander(question)
+        if reponse is None:
+            return None
+        if re.fullmatch(r"[0-9]{1,5}", reponse) and int(reponse) >= minimum:
+            return int(reponse)
+        sys.stderr.write("  Réponse attendue : un nombre entier, %d ou plus.\n"
+                         % minimum)
+
+
+def demander_cadence(libelle: str, defaut: dict) -> tuple[dict, bool] | None:
+    """
+    Demande une cadence en deux ou trois questions, toutes vérifiées.
+
+    Le type d'abord, temps réel, correspondance ou inconnue ; puis les
+    minutes par joueur et l'incrément en secondes, ou les jours par coup.
+    Entrée, à la première question, retient `defaut`. Renvoie la cadence
+    et un booléen disant si c'est le défaut, ou None à la fin de flux.
+    Aucun texte libre n'est accepté : une réponse hors des formes prévues
+    fait reposer la question.
+    """
+    propose = decrire_cadence(defaut)
+    while True:
+        reponse = demander("%s : [t]emps réel, [c]orrespondance ou "
+                           "[i]nconnue ?" % libelle, propose)
+        if reponse is None:
+            return None
+        if reponse == propose:
+            return defaut, True
+        choix = reponse.casefold()
+        if choix in ("t", "temps", "temps réel", "temps reel", "r", "reel",
+                     "réel"):
+            minutes = demander_entier("  Minutes par joueur ?", 0)
+            if minutes is None:
+                return None
+            increment = demander_entier("  Incrément en secondes ?", 0)
+            if increment is None:
+                return None
+            if minutes == 0 and increment == 0:
+                sys.stderr.write("  Une cadence sans temps ni incrément "
+                                 "n'existe pas.\n")
+                continue
+            return ({"type": "reel", "initial": 60 * minutes,
+                     "increment": increment}, False)
+        if choix in ("c", "corr", "correspondance"):
+            jours = demander_entier("  Jours par coup ?", 1)
+            if jours is None:
+                return None
+            return {"type": "correspondance", "jours": jours}, False
+        if choix in ("i", "inconnue", "?"):
+            return dict(CADENCE_INCONNUE), False
+        sys.stderr.write("  Réponse attendue : t, c ou i.\n")
+
+
 def est_pseudo(nom: str, pseudos: list[str]) -> bool:
     """Vrai si la balise contient l'un des pseudos, casse ignorée."""
     nom = nom.casefold()
@@ -982,12 +1168,13 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
 
 
 def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
-                        cadence_habituelle: str = CADENCE_DEFAUT) -> str:
+                        cadence_habituelle: dict | None = None) -> str:
     """
     Pose la question de cadence si la balise TimeControl ne la donne pas,
     puis les quatre questions de démarrage du projet, et rédige le texte
     de contexte.md. `cadence_habituelle`, tirée des réglages, est la
-    valeur que propose la question de cadence.
+    cadence que propose la question ; sans elle, c'est "non précisée".
+    Une balise TimeControl de forme courante est citée, puis traduite.
 
     "(défaut)" signale une réponse validée par Entrée : l'analyste
     distingue ainsi un choix du joueur d'une valeur par défaut. Après une
@@ -1017,12 +1204,22 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
     # correspondance : elle ne dit pas la cadence réelle, on la demande.
     controle = partie.headers.get("TimeControl", "?").strip()
     if controle not in ("", "?", "-"):
-        lignes.append("- Cadence : balise TimeControl `%s`" % controle)
+        # "600+5" se lit mal : dix minutes, ou six cents ? La balise est
+        # citée telle quelle, puis traduite quand sa forme le permet.
+        lue = cadence_de_balise(controle)
+        lignes.append("- Cadence : balise TimeControl `%s`%s"
+                      % (controle,
+                         ", soit %s" % decrire_cadence(lue) if lue else ""))
     else:
-        cadence, defaut = poser("Cadence de la partie ?",
-                                cadence_habituelle)
+        habituelle = cadence_habituelle or dict(CADENCE_INCONNUE)
+        saisie = (None if fin_de_flux
+                  else demander_cadence("Cadence de la partie", habituelle))
+        if saisie is None:
+            fin_de_flux = True
+            saisie = (habituelle, True)
         lignes.append("- Cadence : %s%s"
-                      % (cadence, " (défaut)" if defaut else ""))
+                      % (decrire_cadence(saisie[0]),
+                         " (défaut)" if saisie[1] else ""))
     for libelle, question, valeur in QUESTIONS_CONTEXTE:
         reponse, defaut = poser(question, valeur)
         lignes.append("- %s : %s%s"
@@ -1146,6 +1343,14 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
     """
     manquantes = [clef for clef, _ in REGLAGES_CLEFS
                   if not reglages.has_option(REGLAGES_SECTION, clef)]
+    # Une cadence présente mais illisible, écrite à la main ou héritée
+    # d'une version qui acceptait un texte libre, est redemandée elle
+    # aussi : elle ne doit pas partir telle quelle vers l'analyste.
+    brute = reglages.get(REGLAGES_SECTION, "cadence", fallback=None)
+    if brute is not None and analyser_cadence(brute) is None:
+        journal("Réglages : la cadence enregistrée, \"%s\", n'est pas "
+                "lisible, elle est redemandée." % nettoyer_valeur(brute))
+        manquantes.append("cadence")
     if not manquantes:
         return
 
@@ -1164,7 +1369,9 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
             if reponse is not None:
                 reponse = ", ".join(decouper_pseudos(reponse))
         else:
-            reponse = demander("Votre cadence habituelle ?", CADENCE_DEFAUT)
+            saisie = demander_cadence("Votre cadence habituelle",
+                                      dict(CADENCE_INCONNUE))
+            reponse = None if saisie is None else noter_cadence(saisie[0])
         if reponse is None:
             journal("Réglages non enregistrés : saisie interrompue.")
             return
@@ -3051,7 +3258,7 @@ def main(argv: list[str]) -> int:
         camp = completer_entetes(partie, options.pseudos)
         if consignes is None:
             contexte = recueillir_contexte(
-                partie, camp, reglage(reglages, "cadence") or CADENCE_DEFAUT)
+                partie, camp, analyser_cadence(reglage(reglages, "cadence")))
             consignes = contexte
     else:
         journal("Questions de démarrage sautées : %s."

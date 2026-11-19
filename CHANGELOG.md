@@ -18,15 +18,26 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 - Option `--reglages FICHIER`, pour désigner un autre fichier.
 - Sans pseudo connu, le script demande votre nom de joueur quand votre
   balise est vide, comme il le fait pour l'adversaire.
-- TESTS.nfo : section U, tests T57 à T61.
+- Cadence saisie par des questions vérifiées, et non plus en texte
+  libre : temps réel, correspondance ou inconnue, puis les minutes par
+  joueur et l'incrément en secondes, ou les jours par coup. Seuls des
+  nombres entiers sont acceptés. Le script rédige lui-même la phrase
+  transmise à l'analyste, avec la catégorie de Lichess (ultrabullet,
+  bullet, blitz, rapide, classique), calculée comme le fait Lichess sur
+  le temps initial plus quarante fois l'incrément.
+- Une balise `TimeControl` de la forme `600+5` ou `300` est citée, puis
+  traduite : "soit rapide, 10 minutes + 5 secondes par coup".
+- TESTS.nfo : section U, tests T57 à T62.
 
 ### Changed
 
 - `--pseudos` n'a plus de valeur par défaut dans le code : sans
   l'option, les pseudos viennent du fichier de réglages. Donnée, elle
   l'emporte toujours.
-- La cadence proposée par la question "Cadence de la partie ?" est
-  celle de vos réglages, "non précisée" à défaut.
+- La cadence proposée par la question de cadence de la partie est celle
+  de vos réglages, "non précisée" à défaut. Dans le fichier de
+  réglages, elle s'écrit `15+10`, `14 jours` ou `inconnue` ; une valeur
+  d'une autre forme est redemandée.
 - `collecte.json` enregistre les pseudos réellement utilisés.
 - TESTS.nfo : T45 fournit son propre fichier de réglages, pour que les
   questions du premier lancement ne décalent pas ses réponses.

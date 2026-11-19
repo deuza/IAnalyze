@@ -447,7 +447,7 @@
       passe par un pseudo-terminal, les questions n'étant posées que sur
       un terminal. Il fournit son propre fichier de réglages, afin que
       les questions du premier lancement ne décalent pas ses réponses :
-      printf '[joueur]\npseudos = Moi\ncadence = lente\n' > t-r45.ini
+      printf '[joueur]\npseudos = Moi\ncadence = 14 jours\n' > t-r45.ini
       python3 - <<'EOF'
       import os, pty, time
       pid, fd = pty.fork()
@@ -772,23 +772,25 @@
       sys.stdout.write(vu.decode("utf-8", "replace").replace("\r", ""))
       EOF
       P="--sans-explorateur --sans-stockfish --garder-dossier"
-      python3 t-pty.py "Zoe42, zoe|rapide 15+10|b||||||" italienne.pgn \
-          $P --reglages t-reglages.ini | grep -E 'glages|Votre'
+      python3 t-pty.py "Zoe42, zoe|t|15|10|b||||||" italienne.pgn \
+          $P --reglages t-reglages.ini | grep -E 'glages|Votre|par '
       grep -v '^#' t-reglages.ini
       grep White analyse-italienne-*/partie.pgn
       grep Cadence analyse-italienne-*/contexte.md
       Attendu, premier lancement : "Réglages : 2 réponse(s) à donner une
-      seule fois, gardée(s) dans t-reglages.ini.", les deux questions
-      "Votre pseudo de joueur, ou plusieurs séparés par des virgules ?
-      (Entrée : aucun)" et "Votre cadence habituelle ? (Entrée : non
-      précisée)", puis "Réglages enregistrés : t-reglages.ini". Le
-      fichier contient :
+      seule fois, gardée(s) dans t-reglages.ini.", la question "Votre
+      pseudo de joueur, ou plusieurs séparés par des virgules ? (Entrée
+      : aucun)", puis "Votre cadence habituelle : [t]emps réel,
+      [c]orrespondance ou [i]nconnue ? (Entrée : non précisée)",
+      "Minutes par joueur ?" et "Incrément en secondes ?", enfin
+      "Réglages enregistrés : t-reglages.ini". Le fichier contient :
         [joueur]
         pseudos = Zoe42, zoe
-        cadence = rapide 15+10
+        cadence = 15+10
       puis [White "Zoe42"], la balise vide ayant reçu le premier pseudo,
-      et "- Cadence : rapide 15+10 (défaut)", la cadence habituelle
-      servant de réponse proposée.
+      et "- Cadence : rapide, 15 minutes + 10 secondes par coup
+      (défaut)" : la question de cadence de la partie, validée par
+      Entrée, a retenu la cadence habituelle.
 
  T58  rm -rf analyse-italienne-*
       python3 t-pty.py "b||||||" italienne.pgn $P \
@@ -816,7 +818,7 @@
       fichier n'est créé. Puis, les deux questions de réglages étant
       validées par Entrée, "Votre nom de joueur ? (Entrée : ?) Moi" :
       sans pseudo, le nom est demandé comme celui de l'adversaire. Le
-      fichier garde "pseudos =" et "cadence = non précisée", et ne
+      fichier garde "pseudos =" et "cadence = inconnue", et ne
       redemandera rien.
 
  T60  printf 'pseudos = Alice\n' > t-mauvais.ini
@@ -824,7 +826,7 @@
       echo $?
       printf '[joueur]\npseudos = Alice\nniveau = 1500\n\n' > t-plus.ini
       printf '[perso]\nnote = 100 %% à moi\n' >> t-plus.ini
-      python3 t-pty.py "lente|||||" t-noms.pgn $P --reglages t-plus.ini \
+      python3 t-pty.py "c|14|||||" t-noms.pgn $P --reglages t-plus.ini \
           > /dev/null
       grep -v '^#' t-plus.ini
       Attendu : "Réglages illisibles : File contains no section headers.
@@ -834,12 +836,41 @@
       demandée :
         [joueur]
         pseudos = Alice
-        cadence = lente
+        cadence = 14 jours
         niveau = 1500
 
         [perso]
         note = 100 % à moi
       Les clefs et les sections ajoutées à la main sont conservées.
+
+ T62  Cadence : seules des réponses vérifiées sont acceptées.
+      printf '[joueur]\npseudos = Alice\ncadence = Ploum ploum\n' \
+          > t-cad.ini
+      python3 t-pty.py "x|t|abc|-5|0|0|t|15|10|||||" t-noms.pgn $P \
+          --reglages t-cad.ini | grep -E 'lisible|attendue|existe'
+      grep cadence t-cad.ini
+      rm -rf analyse-t-noms-*
+      python3 t-pty.py "t|5|0||||" t-noms.pgn $P --reglages t-cad.ini \
+          > /dev/null
+      grep Cadence analyse-t-noms-*/contexte.md ; rm -rf analyse-t-noms-*
+      printf '[White "Alice"]\n[Black "Bob"]\n' > t-tc.pgn
+      printf '[TimeControl "600+5"]\n\n1. e4 e5 *\n' >> t-tc.pgn
+      python3 t-pty.py "||||" t-tc.pgn $P --reglages t-cad.ini \
+          | grep -c 'Cadence de la partie'
+      grep Cadence analyse-t-tc-*/contexte.md
+      Attendu : "Réglages : la cadence enregistrée, "Ploum ploum", n'est
+      pas lisible, elle est redemandée.", puis, les réponses fausses
+      étant refusées une à une, "Réponse attendue : t, c ou i." une
+      fois, "Réponse attendue : un nombre entier, 0 ou plus." deux
+      fois, et "Une cadence sans temps ni incrément n'existe pas." une
+      fois ; le fichier porte ensuite "cadence = 15+10". Puis
+      "- Cadence : blitz, 5 minutes sans incrément", la cadence de la
+      partie pouvant différer de l'habituelle. Enfin 0 et "- Cadence :
+      balise TimeControl `600+5`, soit rapide, 10 minutes + 5 secondes
+      par coup" : la balise dispense de la question, et elle est
+      traduite. Catégories de Lichess, d'après le temps initial plus
+      quarante fois l'incrément : ultrabullet sous 30 secondes, bullet
+      sous 3 minutes, blitz sous 8, rapide sous 25, classique au delà.
 
  T61  ./collecte-partie.py --help | grep -c 'ceux de vos réglages'
       grep -c 'PSEUDOS_DEFAUT' collecte-partie.py
