@@ -4,7 +4,7 @@ Plan de tests de `collecte-partie.py`. Retour au [README](README.md).
 
 Lancez les tests depuis le répertoire du script, dans l'ordre. Le script `test-app.sh`, à côté, joue la plupart d'entre eux d'un seul coup et écrit un rapport : `sh test-app.sh` hors réseau, `sh test-app.sh --reseau` avec votre jeton. Les chiffres attendus datent du 8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les pourcentages bougent peu. "Probable" signale un résultat non mesuré.
 
-Plan mis à jour le 19 novembre 2026, pour la version 3.8.0. État des vérifications :
+Plan mis à jour le 19 novembre 2026, pour la version 4.0.0. État des vérifications :
 
 - T01, T02, T05, T26, T31, T32 et T34 à T55 : joués le 18 novembre 2026 sur la version 3.5.8, sous macOS 27.3 (Python 3.15.2, Stockfish 19) et sous Debian 13 Trixie (Python 3.13.5, Stockfish 17.1), python-chess 1.11.2 des deux côtés ;
 - T09 à T24, T29 et T33 : joués le même jour, sur les mêmes machines, avec un jeton. T28 l'a été avec un jeton factice ;
@@ -575,7 +575,7 @@ Attendu : 0, puis "pgn_encodage": "utf-8" et "pgn_remarques": []. Un PGN sain ne
 grep -n '^VERSION' collecte-partie.py
 ```
 
-Attendu : VERSION = "3.8.0". L'en-tête d'agent HTTP en est tiré.
+Attendu : VERSION = "4.0.0". L'en-tête d'agent HTTP en est tiré.
 
 ## M. Nom du PGN
 
@@ -1047,7 +1047,7 @@ l'archive ; le fichier analyse-t-pr-<horodatage>.prompt.txt, à
 côté de l'archive ; 1 ; puis 0 et 0 : aucun repère du modèle ne
 reste dans le prompt, et le prompt n'est pas dans le zip. Ses
 premières lignes :
-  Prompt produit par IAnalyze v3.8.0, https://github.com/deuza/IAnalyze
+  Prompt produit par IAnalyze v4.0.0, https://github.com/deuza/IAnalyze
   pour l'archive analyse-t-pr-<horodatage>.zip
 
   Joueur à qui vous vous adressez :

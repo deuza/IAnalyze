@@ -8,6 +8,8 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-11-19
+
 ### Changed
 
 - Sous Debian, l'environnement virtuel et le catalogue vont dans le
