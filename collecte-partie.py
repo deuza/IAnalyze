@@ -27,7 +27,7 @@ un terminal, puis gardés dans un fichier de réglages que vous pouvez
 modifier à la main.
 
 À côté de l'archive, le script écrit le prompt d'analyse de la partie,
-tiré du modèle INSTRUCTIONS.txt : vous le collez dans la conversation,
+tiré du modèle prompt-modele.txt : vous le collez dans la conversation,
 l'archive en pièce jointe.
 
 Le résultat est une archive zip contenant les données brutes ainsi qu'un
@@ -334,7 +334,7 @@ NIVEAU_MIN, NIVEAU_MAX = 100, 3500
 
 #: Modèle du prompt d'analyse, cherché à côté du script, et suffixe du
 #: prompt écrit à côté de l'archive.
-PROMPT_MODELE = "INSTRUCTIONS.txt"
+PROMPT_MODELE = "prompt-modele.txt"
 PROMPT_SUFFIXE = ".prompt.txt"
 
 #: Repères du modèle. Une ligne commençant par PROMPT_DIRECTIVE est une
@@ -347,7 +347,7 @@ RE_VALEUR_MODELE = re.compile(r"\{\{([A-Za-z_]+)\}\}")
 PROMPT_CONDITIONS = ("STOCKFISH", "EXPLORATEUR", "BASE_LICHESS",
                      "BASE_MAITRES", "REPONSES", "CONSIGNES_LIBRES",
                      "CAMP_CONNU", "PSEUDO_CONNU", "NIVEAU_DECLARE")
-PROMPT_VALEURS = ("VERSION", "ARCHIVE", "PSEUDOS", "CAMP", "NIVEAU",
+PROMPT_VALEURS = ("VERSION", "DEPOT", "ARCHIVE", "PSEUDOS", "CAMP", "NIVEAU",
                   "CADENCE", "ANNOTATEUR", "BASE", "SEUIL_IMPRECISION",
                   "SEUIL_ERREUR", "SEUIL_GAFFE", "PROFONDEUR", "MULTIPV")
 
@@ -477,6 +477,11 @@ RE_ID_SOURCE = re.compile(r"[A-Za-z0-9]{8}(?:[A-Za-z0-9]{4})?")
 #: Version du script, selon le versionnage sémantique. Elle est reprise
 #: dans l'en-tête d'agent : c'est le seul endroit à modifier.
 VERSION = "3.6.0"
+
+#: Adresse du dépôt du projet, citée en tête du prompt d'analyse pour
+#: que l'analyste, ou toute personne à qui le prompt est transmis,
+#: sache d'où viennent le prompt et l'archive.
+DEPOT = "https://github.com/deuza/IAnalyze"
 
 #: En-tête d'agent, par politesse envers l'API.
 UA = "collecte-partie/%s (analyse personnelle)" % VERSION
@@ -1674,7 +1679,7 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
 # Prompt d'analyse
 #
 # Les données de l'archive ne suffisent pas : il faut dire à l'analyste ce
-# qu'il doit en faire. Ce texte vit dans un modèle, INSTRUCTIONS.txt, que
+# qu'il doit en faire. Ce texte vit dans un modèle, prompt-modele.txt, que
 # vous retouchez sans ouvrir ce script. À chaque collecte, le script en
 # tire le prompt de la partie : il remplit les valeurs (pseudo, niveau,
 # nom de l'archive) et ne garde que les passages qui s'appliquent (base
@@ -1695,7 +1700,7 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
 
 def chemin_modele(option: str | None) -> pathlib.Path:
     """
-    Chemin du modèle de prompt : celui de --prompt, sinon INSTRUCTIONS.txt
+    Chemin du modèle de prompt : celui de --prompt, sinon prompt-modele.txt
     à côté du script. Le chemin réel du script est suivi, afin qu'un lien
     symbolique posé ailleurs retrouve le modèle du dépôt.
     """
@@ -3300,7 +3305,7 @@ résultat
   À côté de l'archive, le prompt d'analyse de la partie, sous le nom
   analyse-<partie>-<horodatage>.prompt.txt : collez-le dans la
   conversation, l'archive en pièce jointe. Il est tiré du modèle
-  INSTRUCTIONS.txt, rangé à côté du script, que vous pouvez modifier.
+  prompt-modele.txt, rangé à côté du script, que vous pouvez modifier.
 
 prérequis
 ---------
@@ -3861,6 +3866,7 @@ def main(argv: list[str]) -> int:
         }
         valeurs = {
             "VERSION": VERSION,
+            "DEPOT": DEPOT,
             "ARCHIVE": archive.name,
             "PSEUDOS": ", ".join(options.pseudos),
             "CAMP": camp_joueur or "inconnu",

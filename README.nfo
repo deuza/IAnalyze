@@ -35,14 +35,15 @@
    1. ./collecte-partie.py ma-partie.pgn
       Le script collecte, calcule, et écrit deux fichiers :
       analyse-<partie>-<date>.zip et analyse-<partie>-<date>.prompt.txt.
-   2. Dans une conversation avec un LLM disposant d'un bac à sable,
-      vous collez le contenu du prompt et vous joignez l'archive.
+   2. Dans une conversation neuve avec un LLM, vous collez le contenu
+      du prompt et vous joignez l'archive, ou le seul fichier
+      synthese.md si le LLM n'ouvre pas les zip (voir section 9).
    3. Le LLM rend un PGN annoté et une synthèse : il explique, il ne
       calcule pas. Les évaluations viennent de Stockfish, la théorie de
       l'explorateur et du catalogue, et le prompt lui impose de s'y
       tenir.
 
- Le prompt est tiré du modèle INSTRUCTIONS.txt, rangé à côté du script
+ Le prompt est tiré du modèle prompt-modele.txt, rangé à côté du script
  (voir section 9). Il décrit toujours la synthèse que cette version du
  script vient d'écrire : les deux ne peuvent pas diverger.
 
@@ -290,7 +291,7 @@
      option, il est supprimé une fois l'archive vérifiée.
          ./collecte-partie.py ma-partie.pgn --garder-dossier
 
- --prompt FICHIER          (défaut : INSTRUCTIONS.txt à côté du script)
+ --prompt FICHIER          (défaut : prompt-modele.txt à côté du script)
      Modèle du prompt d'analyse, écrit à côté de l'archive sous le nom
      <archive>.prompt.txt (voir section 9). Le modèle est contrôlé avant
      la collecte : un repère inconnu arrête le script en donnant le
@@ -598,7 +599,7 @@
  [ 9. PROMPT D'ANALYSE ]
 
  Les données ne suffisent pas : il faut dire à l'analyste ce qu'il doit
- en faire. Ce texte vit dans le modèle INSTRUCTIONS.txt, que vous pouvez
+ en faire. Ce texte vit dans le modèle prompt-modele.txt, que vous pouvez
  modifier librement, sans toucher au script. À chaque collecte, le
  script en tire le prompt de la partie : il remplit les valeurs et ne
  garde que les passages qui s'appliquent.
@@ -619,6 +620,7 @@
  Valeurs :
 
    VERSION             version du script
+   DEPOT               adresse du dépôt d'IAnalyze
    ARCHIVE             nom du fichier de l'archive
    PSEUDOS             vos pseudos, séparés par des virgules
    CAMP                Blancs, Noirs ou inconnu
@@ -652,13 +654,24 @@
  question. Un repère inconnu, un "si" jamais fermé ou une directive mal
  formée arrêtent le script avant la collecte :
 
-     Modèle de prompt INSTRUCTIONS.txt, ligne 12 : condition inconnue
+     Modèle de prompt prompt-modele.txt, ligne 12 : condition inconnue
      MOTEUR, conditions admises : STOCKFISH, EXPLORATEUR, ...
 
- Le prompt se colle comme un message, l'archive en pièce jointe. Vous
- pouvez aussi l'installer comme instructions d'un projet, mais il vaut
- pour une partie : c'est le coller à chaque conversation qui garantit
- qu'il correspond à l'archive.
+ Le prompt se colle comme un message, dans une conversation neuve,
+ l'archive en pièce jointe. Il vaut pour une partie : c'est le coller à
+ chaque conversation qui garantit qu'il correspond à l'archive.
+
+ Tous les LLM n'ouvrent pas un zip, et tous n'exécutent pas de code. Le
+ prompt prévoit les deux cas :
+
+   - si l'archive n'est pas acceptée, joignez ou collez le seul fichier
+     synthese.md, qui suffit à l'analyse (--garder-dossier le laisse à
+     portée de main, sinon décompressez l'archive) ;
+   - un analyste qui exécute du code construit le PGN avec python-chess
+     et en prouve la légalité ; un analyste qui n'en exécute pas l'écrit
+     lui-même, le dit, et vous laisse ouvrir le fichier pour confirmer.
+     Sans moteur de son côté, il ne donne alors aucun chiffre : gardez
+     Stockfish dans la collecte.
 
 
  [ 10. JETON ]

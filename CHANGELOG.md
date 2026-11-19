@@ -8,6 +8,22 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Le modèle du prompt s'appelle `prompt-modele.txt` et non plus
+  `INSTRUCTIONS.txt` : le fichier n'est plus un texte à coller tel quel
+  mais ce dont le script tire le prompt de chaque partie. Un modèle
+  personnel passé par `--prompt` n'est pas concerné.
+- En-tête du prompt : "Prompt produit par IAnalyze vX.Y.Z", suivi de
+  l'adresse du dépôt, que porte la nouvelle valeur `{{DEPOT}}` du
+  modèle.
+- Le prompt ne suppose plus que l'analyste dispose d'un bac à sable. Il
+  admet le seul fichier `synthese.md`, joint ou collé, quand l'archive
+  ne peut pas être ouverte, et distingue deux cas : l'analyste qui
+  exécute du code construit et vérifie le PGN avec python-chess, celui
+  qui n'en exécute pas l'écrit lui-même, l'annonce, et n'invente ni
+  résultat d'exécution ni évaluation chiffrée.
+
 ## [3.6.0] - 2026-11-19
 
 ### Added

@@ -938,10 +938,8 @@
       côté de l'archive ; 1 ; puis 0 et 0 : aucun repère du modèle ne
       reste dans le prompt, et le prompt n'est pas dans le zip. Ses
       premières lignes :
-        Prompt produit par collecte-partie.py 3.6.0 pour l'archive
-        analyse-t-pr-<horodatage>.zip
-        Il décrit la synthèse que contient cette archive, telle que cette
-        version du script l'écrit.
+        Prompt produit par IAnalyze v3.6.0, https://github.com/deuza/IAnalyze
+        pour l'archive analyse-t-pr-<horodatage>.zip
 
         Joueur à qui vous vous adressez :
         - pseudo, sur Lichess et en général : Alice
@@ -988,8 +986,8 @@
       ./collecte-partie.py t-pr.pgn $R --sans-stockfish --sans-prompt
       ls analyse-t-pr-* | grep -c prompt
       Attendu, dans l'ordre : "Modèle de prompt t-modele.txt, ligne 1 :
-      valeur inconnue {{PSEUDO}}, valeurs admises : VERSION, ARCHIVE,
-      PSEUDOS, ...", puis 1 ; "Modèle de prompt t-modele.txt, ligne 2 :
+      valeur inconnue {{PSEUDO}}, valeurs admises : VERSION, DEPOT,
+      ARCHIVE, ...", puis 1 ; "Modèle de prompt t-modele.txt, ligne 2 :
       condition inconnue MOTEUR" ; "Modèle de prompt t-modele.txt, ligne
       2 : ce "si" n'est jamais fermé par "fin"" ; "Modèle de prompt
       introuvable : /nulle/part.txt" ; "collecte-partie.py: error:
@@ -1005,7 +1003,7 @@
       Attendu : le chemin de l'archive, 0, 1, puis 0. Copié sans son
       modèle, le script collecte quand même, sans prompt, et le journal
       le signale : "Attention : modèle de prompt introuvable
-      (.../t-seul/INSTRUCTIONS.txt), aucun prompt ne sera écrit. Voir
+      (.../t-seul/prompt-modele.txt), aucun prompt ne sera écrit. Voir
       --prompt et --sans-prompt."
 
  T68  Niveau en points Elo, vérifié comme la cadence. Le test passe par

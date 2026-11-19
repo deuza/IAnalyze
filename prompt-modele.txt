@@ -1,5 +1,5 @@
 #! note ===============================================================
-#! note Modèle du prompt d'analyse, lu par collecte-partie.py.
+#! note Modèle du prompt d'analyse d'IAnalyze, lu par collecte-partie.py.
 #! note
 #! note À chaque collecte, le script en tire un prompt propre à la
 #! note partie, écrit à côté de l'archive (fichier .prompt.txt) : vous le
@@ -14,14 +14,15 @@
 #! note     recopiée : "si CONDITION", "si non CONDITION", "sinon", "fin"
 #! note     gardent ou retirent un passage, "note" est un commentaire.
 #! note
-#! note La liste des valeurs et des conditions est dans README.nfo. Un
+#! note La liste des valeurs et des conditions est dans README.md. Un
 #! note repère inconnu arrête le script avant la collecte, en donnant le
 #! note numéro de la ligne.
 #! note ===============================================================
-Prompt produit par collecte-partie.py {{VERSION}} pour l'archive
-{{ARCHIVE}}
-Il décrit la synthèse que contient cette archive, telle que cette
-version du script l'écrit.
+Prompt produit par IAnalyze v{{VERSION}}, {{DEPOT}}
+pour l'archive {{ARCHIVE}}
+IAnalyze, appelé plus bas "le script", rassemble les données d'une
+partie d'échecs sans rien analyser lui-même. Ce prompt décrit la
+synthèse que contient cette archive, telle que cette version l'écrit.
 
 Joueur à qui vous vous adressez :
 #! si PSEUDO_CONNU
@@ -46,11 +47,12 @@ dans les commentaires du PGN.
 
 === PIÈCE JOINTE ATTENDUE ===
 
-Le joueur joint à ce message l'archive zip nommée ci-dessus, produite
-par le script collecte-partie.py (décompressez-la dans votre bac à
-sable), ou le seul fichier synthese.md qu'elle contient. Si le fichier
-joint n'a pas la forme décrite ci-dessous, ou si aucun fichier n'est
-joint, demandez-le en une phrase, sans rien analyser.
+Le joueur fournit avec ce message l'archive zip nommée ci-dessus, ou le
+seul fichier synthese.md qu'elle contient, joint ou collé dans la
+conversation : ce fichier suffit à l'analyse. Si vous ne pouvez pas
+ouvrir l'archive, demandez synthese.md en une phrase, sans rien
+analyser. Faites de même si rien n'est fourni, ou si ce qui l'est n'a
+pas la forme décrite ci-dessous.
 
 synthese.md ne contient aucune analyse, uniquement des données. Ses
 sections, désignées ci-dessous par leur titre :
@@ -190,14 +192,22 @@ aurait dû connaître, et le plan typique associé à la structure obtenue.
 
 === OUTILS ===
 
+Deux cas, selon ce dont vous disposez réellement. Annoncez en une
+ligne, au début de votre réponse, dans lequel vous êtes. Ne prétendez
+jamais avoir exécuté un outil que vous n'avez pas, et n'inventez aucun
+résultat d'exécution.
+
+CAS A, vous pouvez exécuter du code (bac à sable, interpréteur de
+code) :
+
 #! si STOCKFISH
-Vous disposez d'un bac à sable Linux. Installez-y python-chess (pip
-install chess, dans un venv si le système l'exige).
+Installez-y python-chess (pip install chess, dans un venv si le système
+l'exige).
 Stockfish est inutile : la section 3 fournit les évaluations.
 #! sinon
-Vous disposez d'un bac à sable Linux. Installez-y python-chess (pip
-install chess, dans un venv si le système l'exige) et Stockfish (apt
-install stockfish, binaire /usr/games/stockfish).
+Installez-y python-chess (pip install chess, dans un venv si le système
+l'exige) et Stockfish (apt install stockfish, binaire
+/usr/games/stockfish).
 #! fin
 
 Construisez le PGN annoté avec python-chess (objets Game, variations,
@@ -214,6 +224,18 @@ python-chess :
   d'insertion : insérez-les dans l'ordre alphabétique.
 Rechargez ensuite le fichier avec chess.pgn.read_game, puis vérifiez que
 game.errors est vide et qu'aucune ligne ne dépasse 79 caractères.
+
+CAS B, vous ne pouvez pas exécuter de code :
+
+Écrivez le PGN vous-même, en suivant STRUCTURE DU FICHIER PGN et
+CONTRAINTES DE FORMAT. Rien ne vérifie alors vos coups à votre place :
+- recopiez la ligne principale de la section 1 sans la modifier ;
+- rejouez chaque variante coup par coup depuis la position où elle
+  commence, et préférez une variante courte et sûre à une longue ;
+#! si STOCKFISH
+- reprenez de préférence les lignes de la section 3 bis, déjà légales ;
+#! fin
+- coupez vous-même chaque ligne avant 80 caractères.
 
 === ÉVALUATION MOTEUR ===
 
@@ -239,6 +261,10 @@ point de vue des Blancs. Marquez-les comme vos estimations et
 n'inventez aucun chiffre. Dans la conversation, ne montrez sous le
 titre "Évaluations Stockfish" que les coups dont l'écart atteint
 {{SEUIL_IMPRECISION}} cp : le tableau complet reste dans le bac à sable.
+Sans exécution de code (cas B), vous n'avez aucun moteur : ne donnez
+aucun chiffre en centipions, désignez les coups douteux par votre seul
+jugement, annoncé comme une estimation, et conseillez au joueur de
+relancer la collecte sans l'option --sans-stockfish.
 #! fin
 
 === LIVRAISON ===
@@ -246,6 +272,8 @@ titre "Évaluations Stockfish" que les coups dont l'écart atteint
 Livrez un seul fichier, le PGN, en .pgn encodé en UTF-8, sans le
 reproduire dans la conversation et sans aucun autre fichier. La
 synthèse finale va dans la conversation, après le fichier.
+Si vous ne pouvez pas produire de fichier, donnez le PGN entier dans un
+seul bloc de code, que le joueur enregistrera lui-même en .pgn.
 
 === STRUCTURE DU FICHIER PGN ===
 
@@ -368,9 +396,11 @@ décroche.
    un commentaire en français. Roque : O-O et O-O-O, avec la lettre O
    majuscule, jamais le chiffre zéro.
 6. RÉSULTAT : le marqueur final est identique à la balise Result.
-7. LÉGALITÉ : aucun coup illégal, variantes comprises. La construction
-   par python-chess et le rechargement décrits dans OUTILS en sont la
-   preuve : mentionnez-en le résultat en une ligne.
+7. LÉGALITÉ : aucun coup illégal, variantes comprises. En cas A, la
+   construction par python-chess et le rechargement décrits dans OUTILS
+   en sont la preuve : mentionnez-en le résultat en une ligne. En cas
+   B, dites en une ligne que la légalité a été vérifiée à la main, sans
+   outil, et que le joueur doit ouvrir le fichier pour la confirmer.
 8. ENCODAGE : UTF-8. Si SCID affiche des caractères incorrects, le
    joueur réencodera en ISO-8859-1 de son côté.
 
@@ -388,7 +418,8 @@ Après le fichier, dans la conversation et en texte simple :
    CETTE partie.
 3. DEUX POSITIONS À REVOIR, données en FEN, avec la question à se poser
    devant chacune. Reprenez les FEN de la section 3 ter, sinon
-   générez-les avec python-chess, jamais à la main.
+   générez-les avec python-chess, jamais à la main. Sans FEN sûre,
+   désignez la position par son numéro de coup et le camp au trait.
 4. CE QUI A ÉTÉ BIEN JOUÉ.
 
 === HONNÊTETÉ D'ANALYSE ===
@@ -400,7 +431,8 @@ Après le fichier, dans la conversation et en texte simple :
   priment sur votre mémoire. Quand ils manquent, dites que vous
   estimez. Si la table de la section 2 s'arrête avant le point que
   vous voulez commenter, dites-le au lieu d'affirmer.
-- Une position trop complexe se tranche avec le moteur.
+- Une position trop complexe se tranche avec le moteur, si vous en
+  avez un. Sinon, dites qu'elle reste ouverte.
 - Les repères de phase et les chances G/N/P sont indicatifs.
 - Ne réécrivez pas l'histoire de la partie pour la rendre didactique.
 

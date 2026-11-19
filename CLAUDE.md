@@ -7,7 +7,7 @@ et produit un zip avec synthese.md, plus le prompt d'analyse de la
 partie, écrit à côté. Les deux alimentent une conversation avec un LLM,
 où l'analyse est faite. Le script ne produit lui-même aucune analyse.
 
-Fichiers : collecte-partie.py, INSTRUCTIONS.txt (modèle du prompt),
+Fichiers : collecte-partie.py, prompt-modele.txt (modèle du prompt),
 README.nfo, TESTS.nfo, CHANGELOG.md.
 
 ## Plateformes
