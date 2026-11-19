@@ -20,14 +20,21 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   balise est vide, comme il le fait pour l'adversaire.
 - Cadence saisie par des questions vérifiées, et non plus en texte
   libre : temps réel, correspondance ou inconnue, puis les minutes par
-  joueur et l'incrément en secondes, ou les jours par coup. Seuls des
-  nombres entiers sont acceptés. Le script rédige lui-même la phrase
+  joueur et l'incrément en secondes. La correspondance connaît trois
+  systèmes : un délai fixe en jours par coup (Lichess, chess.com) ; un
+  nombre de coups par période, comme "10 coups en 50 jours" (cadence
+  standard de l'ICCF) ; ou un capital de temps, jours au départ,
+  incrément par coup en heures ou en jours, plafond et réserve
+  facultatifs (chess-mail.com, Triple Block de l'ICCF). Les deux
+  derniers suivent les ICCF Rules en vigueur depuis le 1er janvier
+  2026. Seuls des nombres entiers sont acceptés. Le script rédige
+  lui-même la phrase
   transmise à l'analyste, avec la catégorie de Lichess (ultrabullet,
   bullet, blitz, rapide, classique), calculée comme le fait Lichess sur
   le temps initial plus quarante fois l'incrément.
 - Une balise `TimeControl` de la forme `600+5` ou `300` est citée, puis
   traduite : "soit rapide, 10 minutes + 5 secondes par coup".
-- TESTS.nfo : section U, tests T57 à T62.
+- TESTS.nfo : section U, tests T57 à T63.
 
 ### Changed
 
@@ -36,8 +43,9 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   l'emporte toujours.
 - La cadence proposée par la question de cadence de la partie est celle
   de vos réglages, "non précisée" à défaut. Dans le fichier de
-  réglages, elle s'écrit `15+10`, `14 jours` ou `inconnue` ; une valeur
-  d'une autre forme est redemandée.
+  réglages, elle s'écrit `15+10`, `14 jours`, `10 coups en 50 jours`,
+  `5 jours + 36 heures, plafond 20 jours, réserve 50 jours` ou
+  `inconnue` ; une valeur d'une autre forme est redemandée.
 - `collecte.json` enregistre les pseudos réellement utilisés.
 - TESTS.nfo : T45 fournit son propre fichier de réglages, pour que les
   questions du premier lancement ne décalent pas ses réponses.

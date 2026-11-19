@@ -309,9 +309,16 @@ REGLAGES_CLEFS = (
       "d'un lancement.")),
     ("cadence",
      ("Votre cadence habituelle, proposée quand la balise TimeControl",
-      "d'une partie ne la donne pas. Trois formes : 15+10 (minutes par",
-      "joueur, puis incrément en secondes), 14 jours (correspondance,",
-      "jours par coup), ou inconnue.")),
+      "d'une partie ne la donne pas. Formes admises :",
+      "  15+10                 temps réel, minutes puis incrément en",
+      "                        secondes",
+      "  14 jours              correspondance, délai fixe par coup",
+      "  10 coups en 50 jours  correspondance, coups par période",
+      "  5 jours + 36 heures   correspondance, capital de départ puis",
+      "                        incrément par coup, en heures ou en",
+      "                        jours ; ajoutez au besoin \", plafond 20",
+      "                        jours\" et \", réserve 50 jours\"",
+      "  inconnue")),
 )
 
 #: Libellé d'une cadence inconnue, quand ni la balise TimeControl ni les
@@ -335,6 +342,30 @@ COUPS_ESTIMES = 40
 #: CADENCES_INCONNUES désignent une cadence inconnue.
 RE_CADENCE_REELLE = re.compile(r"([0-9]{1,5})\s*\+\s*([0-9]{1,5})")
 RE_CADENCE_JOURS = re.compile(r"([0-9]{1,4})\s*(?:j|jour|jours)")
+
+#: Correspondance par période : "10 coups en 50 jours". C'est la cadence
+#: dite standard de l'ICCF, le temps économisé sur une période étant
+#: reporté sur la suivante.
+RE_CADENCE_PERIODE = re.compile(
+    r"([0-9]{1,3})\s*coups?\s*en\s*([0-9]{1,4})\s*(?:j|jour|jours)")
+
+#: Correspondance à capital de temps : "5 jours + 36 heures", suivi au
+#: besoin de ", plafond 20 jours" et de ", réserve 50 jours". Un capital
+#: est donné au départ, un incrément s'y ajoute à chaque coup, un plafond
+#: peut le borner, et une réserve peut exister à côté, où le joueur puise
+#: à sa guise. chess-mail.com en est la forme simple (5 jours, 36 heures
+#: par coup, plafond de 20 jours), le Triple Block de l'ICCF la forme
+#: complète (50 jours, un incrément en jours, plafond de 50 jours, réserve
+#: de 50 ou 75 jours). L'incrément porte son unité, heures ou jours : un
+#: jour et demi ne s'écrit pas en jours entiers.
+RE_CADENCE_CAPITAL = re.compile(
+    r"([0-9]{1,4})\s*(?:j|jour|jours)\s*\+\s*([0-9]{1,4})\s*"
+    r"(h|heure|heures|j|jour|jours)"
+    r"(?:\s*,?\s*plafond\s*([0-9]{1,4})\s*(?:j|jour|jours))?"
+    r"(?:\s*,?\s*r[ée]serve\s*([0-9]{1,4})\s*(?:j|jour|jours))?")
+
+#: Incrément saisi avec son unité : "36h" ou "3j".
+RE_INCREMENT = re.compile(r"([0-9]{1,4})\s*(h|heure|heures|j|jour|jours)")
 CADENCES_INCONNUES = ("", "?", "inconnue", "non précisée")
 
 #: Balise TimeControl du standard PGN, dans ses deux formes les plus
@@ -952,11 +983,32 @@ def demander(question: str, defaut: str | None = None) -> str | None:
 # ---------------------------------------------------------------------------
 # Cadence
 #
-# Une cadence est un petit dictionnaire, de l'une de ces trois formes :
+# Une cadence est un petit dictionnaire, de l'une de ces cinq formes :
 #
 #     {"type": "reel", "initial": 900, "increment": 10}    en secondes
-#     {"type": "correspondance", "jours": 14}              par coup
+#     {"type": "correspondance", "jours": 14}              délai par coup
+#     {"type": "correspondance", "coups": 10,              coups par
+#      "periode": 50}                                      période, en jours
+#     {"type": "correspondance", "capital": 5,             jours au départ,
+#      "increment": 36, "plafond": 20, "reserve": 0}       heures par coup,
+#                                                          plafond et
+#                                                          réserve en jours,
+#                                                          0 s'il n'y en a
+#                                                          pas
 #     {"type": "inconnue"}
+#
+# La correspondance connaît en effet trois systèmes :
+#
+#   - un délai fixe pour chaque coup, rien n'étant reporté d'un coup au
+#     suivant : Lichess, chess.com ;
+#   - un nombre de coups à jouer par période, le temps économisé étant
+#     reporté : cadence standard de l'ICCF, "10 coups en 50 jours" ;
+#   - un capital de temps qui grossit d'un incrément à chaque coup, avec
+#     un plafond et une réserve facultatifs : chess-mail.com, et le Triple
+#     Block de l'ICCF.
+#
+# Les deux derniers suivent les ICCF Rules en vigueur depuis le 1er janvier
+# 2026 (section 2.4). Le premier n'existe pas à l'ICCF.
 #
 # Elle n'est jamais un texte libre : la phrase que lit l'analyste est
 # rédigée ici, toujours de la même façon, à partir de nombres vérifiés.
@@ -982,7 +1034,45 @@ def analyser_cadence(texte: str) -> dict | None:
     trouve = RE_CADENCE_JOURS.fullmatch(texte)
     if trouve and int(trouve.group(1)) >= 1:
         return {"type": "correspondance", "jours": int(trouve.group(1))}
+    trouve = RE_CADENCE_PERIODE.fullmatch(texte)
+    if trouve and int(trouve.group(1)) >= 1 and int(trouve.group(2)) >= 1:
+        return {"type": "correspondance", "coups": int(trouve.group(1)),
+                "periode": int(trouve.group(2))}
+    trouve = RE_CADENCE_CAPITAL.fullmatch(texte)
+    if trouve:
+        return cadence_a_capital(
+            int(trouve.group(1)),
+            heures_increment(int(trouve.group(2)), trouve.group(3)),
+            int(trouve.group(4) or 0), int(trouve.group(5) or 0))
     return None
+
+
+def heures_increment(nombre: int, unite: str) -> int:
+    """Incrément en heures, d'après un nombre et son unité, h ou j."""
+    return nombre * 24 if unite.startswith("j") else nombre
+
+
+def duree_increment(heures: int) -> str:
+    """ "36 heures", ou "3 jours" quand le compte tombe juste en jours."""
+    if heures and heures % 24 == 0:
+        return pluriel(heures // 24, "jour")
+    return pluriel(heures, "heure")
+
+
+def cadence_a_capital(capital: int, increment: int, plafond: int,
+                      reserve: int = 0) -> dict | None:
+    """
+    Cadence par correspondance à capital de temps, ou None si elle est
+    incohérente : ni capital ni incrément, ou plafond sous le capital de
+    départ. `increment` est en heures, les autres durées en jours. Un
+    plafond ou une réserve nuls signifient qu'il n'y en a pas.
+    """
+    if capital == 0 and increment == 0:
+        return None
+    if plafond and plafond < max(capital, 1):
+        return None
+    return {"type": "correspondance", "capital": capital,
+            "increment": increment, "plafond": plafond, "reserve": reserve}
 
 
 def cadence_de_balise(controle: str) -> dict | None:
@@ -1005,6 +1095,17 @@ def noter_cadence(cadence: dict) -> str:
     """Forme d'une cadence dans le fichier de réglages."""
     if cadence["type"] == "reel":
         return "%d+%d" % (cadence["initial"] // 60, cadence["increment"])
+    if cadence["type"] == "correspondance" and "capital" in cadence:
+        note = "%s + %s" % (pluriel(cadence["capital"], "jour"),
+                            duree_increment(cadence["increment"]))
+        if cadence["plafond"]:
+            note += ", plafond %s" % pluriel(cadence["plafond"], "jour")
+        if cadence["reserve"]:
+            note += ", réserve %s" % pluriel(cadence["reserve"], "jour")
+        return note
+    if cadence["type"] == "correspondance" and "coups" in cadence:
+        return "%s en %s" % (pluriel(cadence["coups"], "coup"),
+                             pluriel(cadence["periode"], "jour"))
     if cadence["type"] == "correspondance":
         return pluriel(cadence["jours"], "jour")
     return "inconnue"
@@ -1028,8 +1129,23 @@ def decrire_cadence(cadence: dict) -> str:
     """
     Phrase décrivant une cadence, telle qu'elle part dans contexte.md :
     "rapide, 15 minutes + 10 secondes par coup", "blitz, 5 minutes sans
-    incrément", "correspondance, 14 jours par coup", ou "non précisée".
+    incrément", "correspondance, 14 jours par coup", "correspondance,
+    10 coups en 50 jours", "correspondance, capital de 5 jours + 36
+    heures par coup, plafonné à 20 jours", ou "non précisée".
     """
+    if cadence["type"] == "correspondance" and "capital" in cadence:
+        phrase = ("correspondance, capital de %s + %s par coup"
+                  % (pluriel(cadence["capital"], "jour"),
+                     duree_increment(cadence["increment"])))
+        if cadence["plafond"]:
+            phrase += ", plafonné à %s" % pluriel(cadence["plafond"], "jour")
+        if cadence["reserve"]:
+            phrase += ", réserve de %s" % pluriel(cadence["reserve"], "jour")
+        return phrase
+    if cadence["type"] == "correspondance" and "coups" in cadence:
+        return "correspondance, %s en %s" % (
+            pluriel(cadence["coups"], "coup"),
+            pluriel(cadence["periode"], "jour"))
     if cadence["type"] == "correspondance":
         return "correspondance, %s par coup" % pluriel(cadence["jours"],
                                                        "jour")
@@ -1048,15 +1164,19 @@ def decrire_cadence(cadence: dict) -> str:
                          " ".join(duree), increment)
 
 
-def demander_entier(question: str, minimum: int) -> int | None:
+def demander_entier(question: str, minimum: int,
+                    vide: int | None = None) -> int | None:
     """
     Demande un nombre entier d'au moins `minimum`, et repose la question
-    tant que la réponse n'en est pas un. La fin de flux renvoie None.
+    tant que la réponse n'en est pas un. La fin de flux renvoie None. Si
+    `vide` est donné, c'est la valeur que retient la touche Entrée seule.
     """
     while True:
         reponse = demander(question)
         if reponse is None:
             return None
+        if reponse == "" and vide is not None:
+            return vide
         if re.fullmatch(r"[0-9]{1,5}", reponse) and int(reponse) >= minimum:
             return int(reponse)
         sys.stderr.write("  Réponse attendue : un nombre entier, %d ou plus.\n"
@@ -1068,7 +1188,8 @@ def demander_cadence(libelle: str, defaut: dict) -> tuple[dict, bool] | None:
     Demande une cadence en deux ou trois questions, toutes vérifiées.
 
     Le type d'abord, temps réel, correspondance ou inconnue ; puis les
-    minutes par joueur et l'incrément en secondes, ou les jours par coup.
+    minutes par joueur et l'incrément en secondes, ou, par correspondance,
+    le système et ses nombres (voir demander_correspondance).
     Entrée, à la première question, retient `defaut`. Renvoie la cadence
     et un booléen disant si c'est le défaut, ou None à la fin de flux.
     Aucun texte libre n'est accepté : une réponse hors des formes prévues
@@ -1098,13 +1219,88 @@ def demander_cadence(libelle: str, defaut: dict) -> tuple[dict, bool] | None:
             return ({"type": "reel", "initial": 60 * minutes,
                      "increment": increment}, False)
         if choix in ("c", "corr", "correspondance"):
-            jours = demander_entier("  Jours par coup ?", 1)
-            if jours is None:
+            saisie = demander_correspondance()
+            if saisie is None:
                 return None
-            return {"type": "correspondance", "jours": jours}, False
+            return saisie, False
         if choix in ("i", "inconnue", "?"):
             return dict(CADENCE_INCONNUE), False
         sys.stderr.write("  Réponse attendue : t, c ou i.\n")
+
+
+def demander_correspondance() -> dict | None:
+    """
+    Demande une cadence par correspondance, dans l'un de ses trois
+    systèmes.
+
+    Délai fixe : un nombre de jours pour chaque coup. Coups par période :
+    un nombre de coups et une durée en jours. Capital de temps : des jours
+    au départ, un incrément par coup saisi avec son unité, puis un plafond
+    et une réserve facultatifs. Une saisie incohérente fait reprendre au
+    choix du système. Renvoie None à la fin de flux.
+    """
+    while True:
+        reponse = demander("  Correspondance : [d]élai fixe par coup, "
+                           "[p]ériode pour un nombre de coups, ou [c]apital "
+                           "de temps avec incrément ?")
+        if reponse is None:
+            return None
+        choix = reponse.casefold()
+        if choix in ("d", "delai", "délai"):
+            jours = demander_entier("  Jours par coup ?", 1)
+            if jours is None:
+                return None
+            return {"type": "correspondance", "jours": jours}
+        if choix in ("p", "periode", "période"):
+            coups = demander_entier("  Nombre de coups par période ?", 1)
+            if coups is None:
+                return None
+            periode = demander_entier("  Durée de la période, en jours ?", 1)
+            if periode is None:
+                return None
+            return {"type": "correspondance", "coups": coups,
+                    "periode": periode}
+        if choix in ("c", "capital"):
+            capital = demander_entier("  Capital de départ, en jours ?", 0)
+            if capital is None:
+                return None
+            increment = demander_increment()
+            if increment is None:
+                return None
+            plafond = demander_entier("  Plafond du capital, en jours ? "
+                                      "(Entrée : aucun)", 1, vide=0)
+            if plafond is None:
+                return None
+            reserve = demander_entier("  Réserve à côté du capital, en "
+                                      "jours ? (Entrée : aucune)", 1, vide=0)
+            if reserve is None:
+                return None
+            cadence = cadence_a_capital(capital, increment, plafond, reserve)
+            if cadence is not None:
+                return cadence
+            sys.stderr.write("  Cadence incohérente : il faut un capital ou "
+                             "un incrément, et un plafond au moins égal au "
+                             "capital de départ.\n")
+            continue
+        sys.stderr.write("  Réponse attendue : d, p ou c.\n")
+
+
+def demander_increment() -> int | None:
+    """
+    Demande l'incrément par coup, avec son unité, et le renvoie en heures :
+    "36h" donne 36, "3j" donne 72. La question est reposée tant que la
+    réponse n'a pas cette forme. Renvoie None à la fin de flux.
+    """
+    while True:
+        reponse = demander("  Incrément par coup, avec son unité, 36h ou 3j "
+                           "par exemple ?")
+        if reponse is None:
+            return None
+        trouve = RE_INCREMENT.fullmatch(reponse.casefold())
+        if trouve:
+            return heures_increment(int(trouve.group(1)), trouve.group(2))
+        sys.stderr.write("  Réponse attendue : un nombre entier suivi de h "
+                         "ou de j.\n")
 
 
 def est_pseudo(nom: str, pseudos: list[str]) -> bool:

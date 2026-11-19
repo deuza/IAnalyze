@@ -83,12 +83,29 @@
      pseudos = MonPseudo, AutrePseudo
      cadence = 15+10
 
- La cadence s'écrit de l'une de ces trois façons :
+ La cadence s'écrit de l'une de ces façons :
 
      15+10        temps réel : minutes par joueur, puis incrément en
                   secondes, à la manière de Lichess
-     14 jours     correspondance : jours par coup
+     14 jours     correspondance à délai fixe : jours par coup, rien
+                  n'étant reporté d'un coup au suivant, comme sur
+                  Lichess ou chess.com
+     10 coups en 50 jours
+                  correspondance par période : le temps économisé est
+                  reporté. C'est la cadence standard de l'ICCF
+     5 jours + 36 heures, plafond 20 jours
+                  correspondance à capital de temps : jours au départ,
+                  puis incrément par coup, en heures ou en jours. Le
+                  plafond est facultatif. C'est le système de
+                  chess-mail.com
+     50 jours + 3 jours, plafond 50 jours, réserve 75 jours
+                  le même, avec une réserve à côté du capital : c'est le
+                  Triple Block de l'ICCF
      inconnue
+
+ Les deux systèmes de l'ICCF suivent ses règles en vigueur depuis le
+ 1er janvier 2026 (ICCF Rules, section 2.4). Le délai fixe par coup, lui,
+ n'existe pas à l'ICCF.
 
  Rien de personnel ne figure dans le script : vous pouvez le reprendre
  tel quel.
@@ -133,13 +150,19 @@
      à vos pseudos ; les balises vides sont alors complétées, et le PGN
      fourni est conservé sous partie-origine.pgn ;
    - la cadence, si la balise TimeControl ne la donne pas : temps
-     réel, correspondance ou inconnue, puis les minutes par joueur et
-     l'incrément en secondes, ou les jours par coup. Seuls des nombres
-     entiers sont acceptés, une autre réponse fait reposer la question,
-     et Entrée retient votre cadence habituelle. Le script rédige
-     lui-même la phrase transmise à l'analyste, avec la catégorie de
-     Lichess : "rapide, 15 minutes + 10 secondes par coup",
-     "correspondance, 14 jours par coup" ;
+     réel, correspondance ou inconnue. En temps réel, les minutes par
+     joueur et l'incrément en secondes. Par correspondance, trois
+     systèmes : un délai fixe en jours par coup ; un nombre de coups
+     par période ; ou un capital de temps, jours au départ, incrément
+     par coup saisi avec son unité (36h, 3j), plafond et réserve
+     facultatifs. Seuls des nombres entiers sont acceptés, une autre
+     réponse fait reposer la question, et Entrée retient votre cadence
+     habituelle. Le script
+     rédige lui-même la phrase transmise à l'analyste, avec la
+     catégorie de Lichess en temps réel : "rapide, 15 minutes + 10
+     secondes par coup", "correspondance, 14 jours par coup",
+     "correspondance, capital de 5 jours + 36 heures par coup, plafonné
+     à 20 jours" ;
    - les quatre questions de démarrage du projet : périmètre, objectif,
      contexte particulier, commentaires à inclure dans le PGN final.
 
@@ -200,7 +223,7 @@
      jamais redemandée. Hors terminal, rien n'est demandé ni écrit. Les
      clefs et les sections que vous y ajoutez sont conservées. Un
      fichier mal formé arrête le script avec un message. Une cadence
-     qui n'a aucune des trois formes admises est redemandée.
+     qui n'a aucune des formes admises est redemandée.
          ./collecte-partie.py ma-partie.pgn --reglages ~/echecs.ini
 
  --- Catalogue des ouvertures ----------------------------------------------

@@ -17,7 +17,7 @@
      17.1), python-chess 1.11.2 des deux côtés ;
    - T09 à T24, T29 et T33 : joués le même jour, sur les mêmes machines,
      avec un jeton. T28 l'a été avec un jeton factice ;
-   - T03, T04, T06 à T08, et T56 à T61 : joués sous Linux seulement
+   - T03, T04, T06 à T08, et T56 à T63 : joués sous Linux seulement
      (Ubuntu 24.04, Python 3.13, Stockfish 16), T56 sur un explorateur
      simulé ;
    - T25, T27 et T30 : non rejoués depuis la version 3.4.1.
@@ -826,7 +826,8 @@
       echo $?
       printf '[joueur]\npseudos = Alice\nniveau = 1500\n\n' > t-plus.ini
       printf '[perso]\nnote = 100 %% à moi\n' >> t-plus.ini
-      python3 t-pty.py "c|14|||||" t-noms.pgn $P --reglages t-plus.ini \
+      python3 t-pty.py "c|d|14|||||" t-noms.pgn $P \
+          --reglages t-plus.ini \
           > /dev/null
       grep -v '^#' t-plus.ini
       Attendu : "Réglages illisibles : File contains no section headers.
@@ -871,6 +872,38 @@
       traduite. Catégories de Lichess, d'après le temps initial plus
       quarante fois l'incrément : ultrabullet sous 30 secondes, bullet
       sous 3 minutes, blitz sous 8, rapide sous 25, classique au delà.
+
+ T63  Correspondance : trois systèmes, tous vérifiés.
+      printf '[joueur]\npseudos = Alice\n' > t-corr.ini
+      python3 t-pty.py "c|x|c|0|0h|||c|5|36|36h|2||c|5|36h|20||||||" \
+          t-noms.pgn $P --reglages t-corr.ini \
+          | grep -E 'attendue|incohérente'
+      grep cadence t-corr.ini
+      grep Cadence analyse-t-noms-*/contexte.md ; rm -rf analyse-t-noms-*
+      for c in '10 coups en 50 jours' \
+               '50j+3j, plafond 50j, réserve 75j'; do
+          printf '[joueur]\npseudos = Alice\ncadence = %s\n' "$c" \
+              > t-corr.ini
+          python3 t-pty.py "||||" t-noms.pgn $P --reglages t-corr.ini \
+              > /dev/null
+          grep Cadence analyse-t-noms-*/contexte.md
+          rm -rf analyse-t-noms-*
+      done
+      Attendu, dans l'ordre : "Réponse attendue : d, p ou c." pour un
+      système inconnu ; "Cadence incohérente : il faut un capital ou un
+      incrément, et un plafond au moins égal au capital de départ." pour
+      0 jour et 0 heure ; "Réponse attendue : un nombre entier suivi de
+      h ou de j." pour un incrément sans unité ; puis la même "Cadence
+      incohérente" pour un plafond de 2 jours sous un capital de 5. Le
+      fichier porte ensuite "cadence = 5 jours + 36 heures, plafond 20
+      jours", et contexte.md "- Cadence : correspondance, capital de 5
+      jours + 36 heures par coup, plafonné à 20 jours (défaut)" : c'est
+      le système de chess-mail.com. Les deux autres formes, écrites à la
+      main dans le fichier, donnent "- Cadence : correspondance, 10
+      coups en 50 jours (défaut)", cadence standard de l'ICCF, puis
+      "- Cadence : correspondance, capital de 50 jours + 3 jours par
+      coup, plafonné à 50 jours, réserve de 75 jours (défaut)", son
+      Triple Block.
 
  T61  ./collecte-partie.py --help | grep -c 'ceux de vos réglages'
       grep -c 'PSEUDOS_DEFAUT' collecte-partie.py
