@@ -4,12 +4,12 @@ Plan de tests de `collecte-partie.py`. Retour au [README](README.md).
 
 Lancez les tests depuis le répertoire du script, dans l'ordre. Le script `test-app.sh`, à côté, joue la plupart d'entre eux d'un seul coup et écrit un rapport : `sh test-app.sh` hors réseau, `sh test-app.sh --reseau` avec votre jeton. Les chiffres attendus datent du 8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les pourcentages bougent peu. "Probable" signale un résultat non mesuré.
 
-Plan mis à jour le 19 novembre 2026, pour la version 3.7.0. État des vérifications :
+Plan mis à jour le 19 novembre 2026, pour la version 3.8.0. État des vérifications :
 
 - T01, T02, T05, T26, T31, T32 et T34 à T55 : joués le 18 novembre 2026 sur la version 3.5.8, sous macOS 27.3 (Python 3.15.2, Stockfish 19) et sous Debian 13 Trixie (Python 3.13.5, Stockfish 17.1), python-chess 1.11.2 des deux côtés ;
 - T09 à T24, T29 et T33 : joués le même jour, sur les mêmes machines, avec un jeton. T28 l'a été avec un jeton factice ;
-- T56 à T68 : joués le 19 novembre 2026 sur la version 3.6.0, sur les mêmes machines, T56 sur un explorateur simulé ;
-- T03, T04, T06 à T08, T69 et T70 : joués sous Linux seulement (Ubuntu 24.04, Python 3.13, Stockfish 16) ;
+- T56 à T70 : joués le 19 novembre 2026 sur la version 3.7.0, sur les mêmes machines, T56 sur un explorateur simulé ;
+- T03, T04 et T06 à T08 : joués sous Linux seulement (Ubuntu 24.04, Python 3.13, Stockfish 16) ;
 - T25, T27 et T30 : non rejoués depuis la version 3.4.1.
 
 Les chiffres des tests avec jeton datent du 8 octobre, sauf ceux de T33, relevés le 18 novembre.
@@ -578,7 +578,7 @@ Attendu : 0, puis "pgn_encodage": "utf-8" et "pgn_remarques": []. Un PGN sain ne
 grep -n '^VERSION' collecte-partie.py
 ```
 
-Attendu : VERSION = "3.7.0". L'en-tête d'agent HTTP en est tiré.
+Attendu : VERSION = "3.8.0". L'en-tête d'agent HTTP en est tiré.
 
 ## M. Nom du PGN
 
@@ -1050,7 +1050,7 @@ l'archive ; le fichier analyse-t-pr-<horodatage>.prompt.txt, à
 côté de l'archive ; 1 ; puis 0 et 0 : aucun repère du modèle ne
 reste dans le prompt, et le prompt n'est pas dans le zip. Ses
 premières lignes :
-  Prompt produit par IAnalyze v3.7.0, https://github.com/deuza/IAnalyze
+  Prompt produit par IAnalyze v3.8.0, https://github.com/deuza/IAnalyze
   pour l'archive analyse-t-pr-<horodatage>.zip
 
   Joueur à qui vous vous adressez :

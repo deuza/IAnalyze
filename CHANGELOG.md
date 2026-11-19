@@ -8,6 +8,8 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.8.0] - 2026-11-19
+
 ### Changed
 
 - Les emplacements par défaut portent le nom du projet, IAnalyze, et
