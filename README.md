@@ -41,87 +41,141 @@ Plateformes : Debian et macOS (Homebrew). Python 3 et python-chess, que le scrip
 
 ## 1. Présentation
 
-Ce programme ne produit aucune analyse. Il rassemble et met en forme :
+Le script rassemble et met en forme :
 
-- le PGN de la partie, lu depuis un fichier local ou téléchargé depuis
-  Lichess
-- les statistiques de l'explorateur Lichess, position par position,
-  pour situer la sortie de théorie : base de l'ensemble des joueurs
-  Lichess par défaut, ou base maîtres
-- l'évaluation Stockfish de la partie en multipv, calculée en local
-  pour épargner ce travail à l'analyste, sauf avec `--sans-stockfish`
-
-Avant la collecte, sur un terminal interactif, le script demande votre camp si les en-têtes ne le donnent pas, puis vos réponses aux questions de démarrage (voir section 3).
-
-Le résultat est une archive zip contenant une synthèse unique (`synthese.md`), destinée à être jointe à une conversation d'annotation, ainsi que les données brutes. À côté de l'archive, le script écrit le prompt d'analyse de la partie.
+- **le PGN** de la partie, lu depuis un fichier local ou téléchargé depuis Lichess
+- **les statistiques de l'explorateur Lichess**, position par position, pour situer la sortie de théorie
+- **l'évaluation Stockfish** de chaque coup, calculée sur votre machine
 
 La chaîne complète tient en trois temps :
 
-1. `./collecte-partie.py ma-partie.pgn` :
-   le script collecte, calcule, et écrit deux fichiers :
-   `analyse-<partie>-<date>.zip` et `analyse-<partie>-<date>.prompt.txt`.
-2. Dans une conversation neuve avec un LLM, vous collez le contenu du prompt et vous joignez l'archive, ou le seul fichier `synthese.md` si le LLM n'ouvre pas les zip (voir section 9).
-3. Le LLM rend un PGN annoté et une synthèse : il explique, il ne calcule pas. Les évaluations viennent de Stockfish, la théorie de l'explorateur et du catalogue, et le prompt lui impose de s'y tenir.
+1. `./collecte-partie.py ma-partie.pgn`
 
-Le prompt est tiré du modèle `prompt-modele.txt`, rangé à côté du script (voir section 9).  
+   Le script collecte, calcule, et écrit deux fichiers : `analyse-<partie>-<date>.zip` et `analyse-<partie>-<date>.prompt.txt`.
+
+2. Dans une conversation neuve avec un LLM, vous collez le contenu du prompt et vous joignez l'archive.
+
+   Si le LLM n'ouvre pas les zip, joignez le seul fichier `synthese.md` (voir section 9).
+
+3. Le LLM rend un PGN annoté et une synthèse.
+
+   Il explique, il ne calcule pas : les évaluations viennent de Stockfish, la théorie vient de l'explorateur et du catalogue.
+
+Le prompt est tiré du modèle `prompt-modele.txt`, rangé à côté du script.
+
 Il décrit toujours la synthèse que cette version du script vient d'écrire : les deux ne peuvent pas diverger.
 
 ## 2. Prérequis et installation
 
-Paquets Debian, en root :
+### Debian
+
+L'installation se fait **en root**, depuis `/root`, une fois pour toute la machine :
 
 ```bash
-apt install python3-venv
-apt install stockfish          # sauf avec --sans-stockfish
+apt install git python3-venv stockfish
 ```
-
-Paquets macOS, avec Homebrew, dont le Python fournit déjà le module venv :
 
 ```bash
-brew install python
-brew install stockfish         # sauf avec --sans-stockfish
+git clone https://github.com/deuza/IAnalyze.git
 ```
 
-Première installation, une seule fois, sur les deux plateformes :
+```bash
+cd IAnalyze
+```
 
 ```bash
 ./collecte-partie.py --installer-venv
+```
+
+```bash
 ./collecte-partie.py --installer-catalogue
 ```
 
-**python-chess** n'est pas empaqueté par Debian : `--installer-venv` crée un environnement virtuel dédié et y installe le module.   
-Le script s'y relance ensuite tout seul, vous continuez à l'appeler avec le python du système.
+Le joueur n'a pas besoin des droits root pour s'en servir.
 
-Le catalogue des ouvertures nommées de Lichess est gardé en local.    
-Relancez `--installer-catalogue` de temps en temps pour le mettre à jour.
+Copiez le dépôt dans son répertoire personnel et donnez-lui en la propriété, `joueur` étant ici son nom de compte :
 
-Emplacements par défaut, choisis selon la plateforme :
-
-```text
-Debian   --venv       /opt/venv/lichess
-         --catalogue  /usr/local/share/IAnalyze
-         --stockfish  /usr/games/stockfish
-
-macOS    --venv       ~/.local/share/IAnalyze/venv
-         --catalogue  ~/.local/share/IAnalyze
-         --stockfish  le binaire trouvé dans le PATH, sinon
-                      /opt/homebrew/bin/stockfish
+```bash
+cp -r /root/IAnalyze /home/joueur/IAnalyze
 ```
 
-Sous macOS, rien ne demande les droits root : tout va dans votre répertoire personnel. 
+```bash
+chown -R joueur:joueur /home/joueur/IAnalyze
+```
 
-Sous Debian, les droits root sont nécessaires pour l'installation des paquets.    
-Ensuite le binaire peut être déplacé dans le /home/ des utilisateurs avec les bons droits (chown à faire après la copie)
+Le joueur lance ensuite le script depuis `/home/joueur/IAnalyze`, sous son propre compte.
 
-Le jeton personnel Lichess (aucun droit particulier requis) est lu dans `~/.lichess_token`, fichier en mode 600 qui ne contient que le jeton :
+Son jeton et ses réglages vont dans son répertoire personnel, pas dans celui de root.
+
+### macOS
+
+Rien ne demande les droits root, tout va dans votre répertoire personnel.
+
+Avec Homebrew, dont le Python fournit déjà le module venv :
+
+```bash
+brew install git python stockfish
+```
+
+```bash
+git clone https://github.com/deuza/IAnalyze.git
+```
+
+```bash
+cd IAnalyze
+```
+
+```bash
+./collecte-partie.py --installer-venv
+```
+
+```bash
+./collecte-partie.py --installer-catalogue
+```
+
+### Ce que font ces deux commandes
+
+**`--installer-venv`** crée un environnement virtuel dédié et y installe python-chess, que Debian n'empaquette pas.
+
+Le script s'y relance ensuite tout seul : vous continuez à l'appeler avec le Python du système.
+
+**`--installer-catalogue`** télécharge le catalogue des ouvertures nommées de Lichess, gardé en local.
+
+Relancez-la de temps en temps pour le mettre à jour.
+
+Stockfish est facultatif : sans lui, lancez le script avec `--sans-stockfish`.
+
+### Emplacements par défaut
+
+| | Debian | macOS |
+|---|---|---|
+| `--venv` | `/opt/venv/lichess` | `~/.local/share/IAnalyze/venv` |
+| `--catalogue` | `/usr/local/share/IAnalyze` | `~/.local/share/IAnalyze` |
+| `--stockfish` | `/usr/games/stockfish` | le binaire trouvé dans le PATH, sinon `/opt/homebrew/bin/stockfish` |
+| jeton | `~/.lichess_token` | `~/.lichess_token` |
+| réglages | `~/.config/IAnalyze/reglages.ini` | `~/.config/IAnalyze/reglages.ini` |
+
+### Jeton Lichess
+
+L'explorateur de Lichess demande un jeton d'accès personnel.
+
+Une fois connecté à Lichess, créez-le sur https://lichess.org/account/oauth/token, sans cocher aucun droit.
+
+Le script le lit dans `~/.lichess_token`, un fichier en mode 600 qui ne contient que le jeton :
 
 ```bash
 umask 077 ; vi ~/.lichess_token
 ```
 
-Vos réglages personnels, pseudo, cadence habituelle et niveau, sont gardés dans `~/.config/IAnalyze/reglages.ini` sur les deux plateformes.    
+Sans jeton, lancez le script avec `--sans-explorateur`.
 
-Le script les demande une seule fois, au premier lancement sur un terminal, et vous pouvez ensuite modifier le fichier à la main :
+### Réglages personnels
+
+Votre pseudo, votre cadence habituelle et votre niveau sont gardés dans `~/.config/IAnalyze/reglages.ini`.
+
+Le script les demande une seule fois, au premier lancement dans un terminal.
+
+Vous pouvez ensuite modifier le fichier à la main, ou le supprimer avec `--purge-reglages` :
 
 ```ini
 [joueur]
@@ -130,8 +184,11 @@ cadence = 15+10
 niveau = 1300
 ```
 
-Le niveau est un nombre de points Elo approximatifs, de 100 à 3500, ou "inconnu". Il est transmis à l'analyste, qui y adapte ses explications, sans lui c'est l'Elo de votre balise dans la partie qui sert.    
-Une clef facultative, que le script ne demande pas, fixe la balise Annotator du PGN annoté :
+**Le niveau** est un nombre de points Elo approximatifs, de 100 à 3500, ou "inconnu".
+
+Il est transmis à l'analyste, qui y adapte ses explications. Sans lui, c'est l'Elo de votre balise dans la partie qui sert.
+
+**L'annotateur** est une clef facultative, que le script ne demande pas. Elle fixe la balise Annotator du PGN annoté :
 
 ```text
 annotateur = Claude (Anthropic)
@@ -139,29 +196,20 @@ annotateur = Claude (Anthropic)
 
 Sans elle, le prompt demande à l'analyste d'y mettre son propre nom de modèle.
 
-La cadence s'écrit de l'une de ces façons :
+**La cadence** s'écrit de l'une de ces façons :
 
-```text
-15+10        temps réel : minutes par joueur, puis incrément en
-             secondes, à la manière de Lichess
-14 jours     correspondance à délai fixe : jours par coup, rien
-             n'étant reporté d'un coup au suivant, comme sur
-             Lichess ou chess.com
-10 coups en 50 jours
-             correspondance par période : le temps économisé est
-             reporté. C'est la cadence standard de l'ICCF
-5 jours + 36 heures, plafond 20 jours
-             correspondance à capital de temps : jours au départ,
-             puis incrément par coup, en heures ou en jours. Le
-             plafond est facultatif. C'est le système de
-             chess-mail.com
-50 jours + 3 jours, plafond 50 jours, réserve 75 jours
-             le même, avec une réserve à côté du capital : c'est le
-             Triple Block de l'ICCF
-inconnue
-```
+| Vous écrivez | Système | Où on le trouve |
+|---|---|---|
+| `15+10` | temps réel : minutes par joueur, puis incrément en secondes | Lichess |
+| `14 jours` | correspondance à délai fixe : jours par coup, rien n'est reporté d'un coup au suivant | Lichess, chess.com |
+| `10 coups en 50 jours` | correspondance par période : le temps économisé est reporté | ICCF, cadence standard |
+| `5 jours + 36 heures, plafond 20 jours` | correspondance à capital de temps : jours au départ, puis incrément par coup en heures ou en jours, plafond facultatif | chess-mail.com |
+| `50 jours + 3 jours, plafond 50 jours, réserve 75 jours` | le même, avec une réserve à côté du capital | ICCF, Triple Block |
+| `inconnue` | | |
 
-Les deux systèmes de l'ICCF suivent ses règles en vigueur depuis le 1er janvier 2026 (ICCF Rules, section 2.4). Le délai fixe par coup, lui, n'existe pas à l'ICCF.
+Les deux systèmes de l'ICCF suivent ses règles en vigueur depuis le 1er janvier 2026, section 2.4.
+
+Le délai fixe par coup, lui, n'existe pas à l'ICCF.
 
 ## 3. Utilisation
 
@@ -177,10 +225,19 @@ SOURCE accepte trois formes :
 ./collecte-partie.py xvoiNy2C                      # identifiant
 ```
 
-Les URL du type `/xvoiNy2C/black` et les identifiants de coup à douze caractères sont acceptés, ainsi que les formes `/embed/game/<id>`, `/embed/<id>` et `/game/export/<id>`. L'URL doit viser lichess.org et porter l'identifiant en tête de chemin : un autre hôte, ou une autre page du site (étude, analyse, exercices), est refusé sans rien envoyer à Lichess. 
+**Une URL** doit viser lichess.org et porter l'identifiant en tête de chemin.
 
-Un identifiant fait exactement 8 ou 12 caractères alphanumériques : une source qui ressemble à un chemin (point, barre oblique ou tilde) et qui n'existe pas est signalée comme fichier introuvable, sans rien envoyer à Lichess.    
-Seule la première partie d'un PGN est traitée, en échecs standard uniquement. Un PGN corrompu est refusé plutôt qu'analysé tronqué. Une partie qui ne part pas de la position initiale est traitée sans explorateur.
+Les formes `/xvoiNy2C/black`, `/embed/game/<id>`, `/embed/<id>` et `/game/export/<id>` sont acceptées.
+
+Un autre hôte, ou une autre page du site (étude, analyse, exercices), est refusé sans rien envoyer à Lichess.
+
+**Un identifiant** fait exactement 8 ou 12 caractères alphanumériques.
+
+Une source qui ressemble à un chemin (point, barre oblique ou tilde) et qui n'existe pas est signalée comme fichier introuvable.
+
+**Un PGN** n'est traité que pour sa première partie, en échecs standard uniquement.
+
+Un PGN corrompu est refusé plutôt qu'analysé tronqué. Une partie qui ne part pas de la position initiale est traitée sans explorateur.
 
 Le chemin de l'archive est écrit seul sur la sortie standard, le journal horodaté va sur la sortie d'erreur :
 
@@ -188,21 +245,47 @@ Le chemin de l'archive est écrit seul sur la sortie standard, le journal horoda
 ARCHIVE=$(./collecte-partie.py ma-partie.pgn 2>/dev/null)
 ```
 
-Questions de démarrage :
+### Questions de démarrage
 
-Sur un terminal interactif, avant la collecte, le script pose ses questions sur la sortie d'erreur, Entrée retenant la valeur proposée :
+Avant la collecte, le script vous pose quelques questions. Entrée retient la valeur proposée.
 
-- au tout premier lancement seulement, votre pseudo, votre cadence habituelle et votre niveau en points Elo, rangés dans le fichier de réglages.
-- votre camp, s'il ne se déduit pas des balises White ou Black grâce à vos pseudos ; les balises vides sont alors complétées, et le PGN fourni est conservé sous `partie-origine.pgn`.
-- la cadence, si la balise TimeControl ne la donne pas : temps réel, correspondance ou inconnue. En temps réel, les minutes par joueur et l'incrément en secondes.
-Par correspondance, trois  systèmes : un délai fixe en jours par coup ; un nombre de coup par période ; ou un capital de temps, jours au départ, incrément par coup saisi avec son unité (36h, 3j), plafond et réserve facultatifs. 
-Seuls des nombres entiers sont acceptés, une autre réponse fait reposer la question, et Entrée retient votre cadence habituelle. Le script rédige lui-même la phrase transmise à l'analyste, avec la catégorie de Lichess en temps réel :
-  "rapide, 15 minutes + 10 secondes par coup", "correspondance, 14 jours par coup", "correspondance, capital de 5 jours + 36 heures par coup, plafonné à 20 jours".
-- les quatre questions de démarrage : périmètre, objectif, contexte particulier, commentaires à inclure dans le PGN final.
+- **Au tout premier lancement seulement** : votre pseudo, votre cadence habituelle et votre niveau, rangés dans le fichier de réglages.
+- **Votre camp**, s'il ne se déduit pas des balises White ou Black grâce à vos pseudos.
 
-Les réponses vont dans `contexte.md`, repris en tête de la synthèse sous le titre "Consignes d'analyse". 
+  Les balises vides sont alors complétées, et le PGN fourni est conservé sous `partie-origine.pgn`.
 
-Hors terminal interactif, ou avec `--sans-questions`, rien n'est demandé.
+- **La cadence de la partie**, si la balise TimeControl ne la donne pas : temps réel, correspondance ou inconnue.
+
+  Entrée retient votre cadence habituelle. Seuls des nombres entiers sont acceptés, une autre réponse fait reposer la question.
+
+- **Quatre questions de contexte** : périmètre, objectif, contexte particulier, commentaires à inclure dans le PGN final.
+
+Le script rédige lui-même la cadence transmise à l'analyste, toujours de la même façon :
+
+```text
+rapide, 15 minutes + 10 secondes par coup
+correspondance, 14 jours par coup
+correspondance, capital de 5 jours + 36 heures par coup, plafonné à 20 jours
+```
+
+Les réponses vont dans `contexte.md`, repris en tête de la synthèse sous le titre "Consignes d'analyse".
+
+### Quand les questions ne sont pas posées
+
+Les questions s'affichent dans le terminal et attendent une réponse au clavier.
+
+Le script ne les pose donc que s'il est lancé à la main, dans un terminal. Il ne demande rien, et retient les valeurs par défaut, dans ces quatre cas :
+
+- vous passez `--sans-questions`
+- un autre programme le lance : cron, un script, un service
+- son entrée ne vient pas du clavier : `./collecte-partie.py ma-partie.pgn < /dev/null`
+- son journal ne va pas à l'écran : `./collecte-partie.py ma-partie.pgn 2> journal.log`
+
+Le dernier cas surprend : les questions s'écrivent au même endroit que le journal, la sortie d'erreur. Si vous la redirigez, vous ne les verriez pas.
+
+L'exemple plus haut, avec `2>/dev/null`, ne pose donc aucune question. Sans cette redirection, `ARCHIVE=$(./collecte-partie.py ma-partie.pgn)` les pose normalement.
+
+Dans la suite, "sans terminal" désigne ces quatre cas.
 
 ## 4. Options
 
@@ -247,9 +330,9 @@ Crée l'environnement virtuel s'il manque, y installe ou met à jour python-ches
 
 #### `--venv CHEMIN`
 
-*Défaut : selon la plateforme*
+*Défaut : selon la plateforme, voir la section 2*
 
-Emplacement de l'environnement virtuel, à l'installation comme à l'usage. Défaut : voir la section 2.
+Emplacement de l'environnement virtuel, à l'installation comme à l'usage.
 
 ```bash
 ./collecte-partie.py --installer-venv --venv /opt/venv/echecs
@@ -260,8 +343,7 @@ Emplacement de l'environnement virtuel, à l'installation comme à l'usage. Déf
 
 #### `--sans-questions`
 
-Ne pose aucune question, ni camp ni contexte, pour un usage hors du projet d'analyse.   
-Implicite hors terminal interactif.
+Ne pose aucune question, ni camp ni contexte. Les valeurs par défaut sont retenues.
 
 ```bash
 ./collecte-partie.py ma-partie.pgn --sans-questions
@@ -282,10 +364,15 @@ Le premier sert à compléter une balise vide. L'option remplace, le temps d'un 
 
 *Défaut : `~/.config/IAnalyze/reglages.ini`*
 
-Fichier de réglages, au format INI, section [joueur] : pseudos, cadence et niveau. Une clef absente est demandée une seule fois, sur un terminal, puis enregistrée : une clef présente, même vide, n'est jamais redemandée.    
-Hors terminal, rien n'est demandé ni écrit. Les clefs et les sections que vous y ajoutez sont conservées. 
+Fichier de réglages, au format INI, section `[joueur]` : pseudos, cadence et niveau.
 
-Un fichier mal formé arrête le script avec un message. Une cadence ou un niveau qui n'a pas la forme admise est redemandé.
+- Une clef absente est demandée une seule fois, dans un terminal, puis enregistrée.
+- Une clef présente, même vide, n'est jamais redemandée.
+- Une cadence ou un niveau illisible est redemandé.
+- Les clefs et les sections que vous ajoutez sont conservées.
+- Sans terminal, rien n'est demandé ni écrit.
+
+Un fichier mal formé arrête le script avec un message.
 
 ```bash
 ./collecte-partie.py ma-partie.pgn --reglages ~/echecs.ini
@@ -293,10 +380,13 @@ Un fichier mal formé arrête le script avec un message. Une cadence ou un nivea
 
 #### `--purge-reglages`
 
-Supprime le fichier de réglages, puis quitte : aucune partie n'est attendue.   
-Vos réponses seront redemandées à la prochaine collecte lancée sur un terminal. Avec `--reglages`, c'est le fichier désigné qui est supprimé.   
+Supprime le fichier de réglages, puis quitte. Aucune partie n'est attendue.
 
-Seul le fichier l'est, son répertoire reste. Un fichier absent n'est pas une erreur et un répertoire est refusé.
+Vos réponses seront redemandées à la prochaine collecte lancée dans un terminal.
+
+Avec `--reglages`, c'est le fichier désigné qui est supprimé. Son répertoire reste en place.
+
+Un fichier absent n'est pas une erreur, un répertoire est refusé.
 
 ```bash
 ./collecte-partie.py --purge-reglages
@@ -316,10 +406,9 @@ Le remplacement est atomique : un échec laisse l'ancien index en place. Relance
 
 #### `--catalogue REP`
 
-*Défaut : selon la plateforme*
+*Défaut : selon la plateforme, voir la section 2*
 
-Répertoire du catalogue local, à l'installation comme à l'usage.   
-Défaut : voir la section 2.
+Répertoire du catalogue local, à l'installation comme à l'usage.
 
 ```bash
 ./collecte-partie.py --installer-catalogue --catalogue /srv/cat
@@ -340,8 +429,9 @@ Répertoire où écrire l'archive, créé au besoin.
 
 #### `--consignes FICHIER`
 
-Insère tel quel un fichier texte ou markdown en tête de la synthèse, sous le titre "Consignes d'analyse" : un seul fichier à joindre.
-Remplace alors les questions de contexte.
+Insère tel quel un fichier texte ou Markdown en tête de la synthèse, sous le titre "Consignes d'analyse".
+
+Il remplace alors les questions de contexte.
 
 ```bash
 ./collecte-partie.py ma-partie.pgn --consignes ~/annotation.md
@@ -383,7 +473,10 @@ N'écrit pas le prompt d'analyse. S'exclut avec `--prompt`.
 
 *Défaut : `lichess`*
 
-Base interrogée : lichess, les parties classées de tous les joueurs du site, celle de https://lichess.org/opening, ou maitres.
+Base interrogée :
+
+- `lichess` : les parties classées de tous les joueurs du site, la base de https://lichess.org/opening
+- `maitres` : les parties de maîtres
 
 ```bash
 ./collecte-partie.py ma-partie.pgn --base maitres
@@ -391,8 +484,11 @@ Base interrogée : lichess, les parties classées de tous les joueurs du site, c
 
 #### `--cadences LISTE`
 
-Base lichess seulement, celle par défaut. Cadences retenues, séparées par des virgules, parmi : ultraBullet, bullet, blitz, rapid, classical, correspondence. La casse est tolérée, les doublons retirés.  
-Défaut : bullet, blitz, rapid, classical, correspondence.
+*Défaut : `bullet,blitz,rapid,classical,correspondence`*
+
+Base `lichess` seulement. Cadences retenues, séparées par des virgules, parmi : ultraBullet, bullet, blitz, rapid, classical, correspondence.
+
+La casse est tolérée, les doublons sont retirés.
 
 ```bash
 ./collecte-partie.py ma-partie.pgn --cadences rapid,classical,correspondence
@@ -400,15 +496,17 @@ Défaut : bullet, blitz, rapid, classical, correspondence.
 
 #### `--classements LISTE`
 
-Base lichess seulement. Tranches de classement retenues parmi 0, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2500. Chaque tranche court de sa valeur à la suivante :   
-0 couvre 0 à 999 (affichée "400" sur le site), 2500 tout ce qui dépasse. Une partie est rangée selon la moyenne des classements de ses deux joueurs.
+*Défaut : `1000,1200,1400,1600,1800,2000,2200,2500`*
 
-Défaut : 1000,1200,1400,1600,1800,2000,2200,2500.
+Base `lichess` seulement. Tranches de classement retenues parmi 0, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2500.
+
+Chaque tranche court de sa valeur à la suivante : 0 couvre 0 à 999 (affichée "400" sur le site), 2500 tout ce qui dépasse.
+
+Une partie est rangée selon la moyenne des classements de ses deux joueurs.
 
 ```bash
 ./collecte-partie.py ma-partie.pgn --classements 0,1000
 ```
-
 
 Les filtres par défaut, plus la date de début fixée à janvier 2017, reprennent ceux de https://lichess.org/opening : vous y retrouvez les mêmes pourcentages.
 
@@ -436,8 +534,10 @@ Arrêt quand la position compte moins de N parties dans la base.
 
 *Défaut : `10.0`*
 
-Un coup joué dans moins de P % des parties de la position est rare.   
-Un coup rare qui mène hors du catalogue des ouvertures est une sortie de théorie, s'il reste dans une ligne nommée, ce n'en est pas une.    
+Un coup joué dans moins de P % des parties de la position est rare.
+
+Un coup rare qui mène hors du catalogue des ouvertures est une sortie de théorie. S'il reste dans une ligne nommée, ce n'en est pas une.
+
 0 désactive le critère.
 
 ```bash
@@ -449,7 +549,11 @@ Un coup rare qui mène hors du catalogue des ouvertures est une sortie de théor
 
 *Défaut : `6`*
 
-Aucun arrêt sur la fréquence avant la fin du coup N (2N demi-coups). La table couvre ainsi le début de partie même après une sortie précoce. Le seuil de parties reste actif, et la première sortie est notée même dans la fenêtre. 0 arrête dès la première sortie.
+Aucun arrêt sur la fréquence avant la fin du coup N, soit 2N demi-coups.
+
+La table couvre ainsi le début de partie même après une sortie précoce.
+
+Le seuil de parties reste actif, et la première sortie est notée même dans la fenêtre. 0 arrête dès la première sortie.
 
 ```bash
 ./collecte-partie.py ma-partie.pgn --coups-min 10
@@ -512,11 +616,10 @@ Sans effet, l'évaluation étant le défaut. Conservée pour que les anciennes c
 
 *Défaut : `0`*
 
-Limite le moteur aux N premiers coups entiers (2N demi-coups) ; 0 analyse toute la partie.
+Limite le moteur aux N premiers coups entiers, soit 2N demi-coups. 0 analyse toute la partie.
 
 ```bash
-./collecte-partie.py ma-partie.pgn \
-    --coups-stockfish 15
+./collecte-partie.py ma-partie.pgn --coups-stockfish 15
 ```
 
 #### `--profondeur D`
@@ -561,13 +664,12 @@ Table de hachage du moteur, en mégaoctets.
 
 #### `--stockfish CHEMIN`
 
-*Défaut : selon la plateforme*
+*Défaut : selon la plateforme, voir la section 2*
 
-Binaire du moteur. Défaut : voir la section 2.
+Binaire du moteur.
 
 ```bash
-./collecte-partie.py ma-partie.pgn \
-    --stockfish /usr/local/bin/stockfish
+./collecte-partie.py ma-partie.pgn --stockfish /usr/local/bin/stockfish
 ```
 
 #### `--longueur-pv N`
@@ -585,7 +687,7 @@ Les variantes complètes restent dans `stockfish/evaluations.json`.
 
 Une option sans effet est refusée plutôt qu'ignorée en silence :
 
-- `--cadences` et `--classements` exigent `--base` lichess.
+- `--cadences` et `--classements` exigent `--base lichess`.
 - les options moteur sont refusées avec `--sans-stockfish`, qui exclut aussi `--avec-stockfish`.
 - `--pause` ne descend pas sous 2, `--seuil-frequence` reste entre 0 et 100, `--coups-min` et `--coups-stockfish` valent 0 ou plus, les autres valeurs numériques au moins 1.
 - `--pause` et `--seuil-frequence` refusent nan et inf.
@@ -627,7 +729,7 @@ Contenu :
 | `contexte.md` | les réponses aux questions de démarrage |
 | `explorateur/NNN-<uci>.json` | une réponse brute par demi-coup interrogé |
 | `stockfish/evaluations.json` | sauf avec `--sans-stockfish` |
-| `collecte.json` | paramètres exacts, sans le jeton ; `pgn_encodage` et `pgn_remarques` disent comment le PGN a été décodé, `prompt_ecrit` nomme le prompt |
+| `collecte.json` | paramètres exacts de la collecte, sans le jeton. `pgn_encodage` et `pgn_remarques` disent comment le PGN a été décodé, `prompt_ecrit` nomme le prompt |
 
 À côté de l'archive, et non dedans :
 
@@ -644,16 +746,33 @@ Sections de `synthese.md` :
 | Consignes d'analyse | `contexte.md`, ou le fichier de `--consignes` |
 | 1. En-têtes et coups | en-têtes, ligne principale, repères de phase (roques, dames, entrée en finale) |
 | 2. Explorateur | filtres, seuils, table, première sortie |
-| 3. Évaluations Stockfish | nature et G/N/P de chaque coup ; 3 bis, variantes principales ; 3 ter, erreurs et gaffes par camp, avec la FEN |
+| 3. Évaluations Stockfish | nature et G/N/P de chaque coup |
+| 3 bis | variantes principales du moteur |
+| 3 ter | erreurs et gaffes par camp, avec la FEN |
 | 4. Positions non exploitables | là où la base ne dit plus rien, ou le demi-coup d'un coup nul |
 | 5. Données brutes de l'archive | le contenu du zip, et l'encodage du PGN s'il a été converti |
 
-Colonnes de la table de l'explorateur : demi-coup, numéro du coup, trait, parties de la position, coup joué, rang, fréquence, score des Blancs sur ce coup, coup majoritaire, sa fréquence et son score, et Ouverture : nom ECO de la position atteinte, "(intermédiaire)" pour une position de passage d'une ligne nommée, "-" hors catalogue.
+**Table de l'explorateur**, une ligne par demi-coup :
 
-Colonnes de la table Stockfish : demi-coup, numéro du coup, trait, coup joué, évaluation du point de vue des Blancs, G/N/P, écart au premier choix du moteur du point de vue du joueur au trait, nature, et les trois meilleurs coups. 
+- demi-coup, numéro du coup, trait
+- parties de la position
+- coup joué, son rang, sa fréquence, le score des Blancs sur ce coup
+- coup majoritaire, sa fréquence et son score
+- Ouverture : nom ECO de la position atteinte, "(intermédiaire)" pour une position de passage d'une ligne nommée, "-" hors catalogue
 
-Nature : imprécision à partir de 50 cp d'écart, erreur à partir de 100, gaffe à partir de 300.    
-L'écart porte "mat" quand le coup joué manque un mat ou en concède un : il ne se chiffre pas en centipions. Un coup nul, "--" dans le PGN, n'est pas évalué : sa ligne garde les trois meilleurs coups de la position, ses autres colonnes portent "-". G/N/P : chances de gain, de nulle et de perte des Blancs selon le modèle de Stockfish, à lire comme une tendance plutôt que comme une probabilité entre joueurs humains.
+**Table Stockfish**, une ligne par demi-coup :
+
+- demi-coup, numéro du coup, trait, coup joué
+- évaluation, du point de vue des Blancs
+- G/N/P : chances de gain, de nulle et de perte des Blancs selon le modèle de Stockfish, à lire comme une tendance plutôt que comme une probabilité entre joueurs humains
+- écart au premier choix du moteur, du point de vue du joueur au trait
+- nature : imprécision à partir de 50 cp d'écart, erreur à partir de 100, gaffe à partir de 300
+- les trois meilleurs coups
+
+Deux cas particuliers :
+
+- l'écart porte "mat" quand le coup joué manque un mat ou en concède un : il ne se chiffre pas en centipions
+- un coup nul, "--" dans le PGN, n'est pas évalué : sa ligne garde les trois meilleurs coups de la position, ses autres colonnes portent "-"
 
 Codes de retour :
 
@@ -689,11 +808,16 @@ Limite : un texte latin-1 se décode aussi sans erreur en cp1252, les deux ne di
 
 Balises du PGN (White, Black, Event, Site et les autres) : tabulations et caractères de contrôle en sont retirés avant l'écriture des en-têtes de la synthèse et avant tout affichage.
 
-Autres lectures : le fichier de jeton suit la même détection que le PGN, et un jeton hors de l'ASCII imprimable est refusé avant toute requête, le catalogue et les réponses de l'explorateur sont lus en UTF-8, marque d'ordre des octets tolérée.   
-La sortie du moteur est décodée en UTF-8 par python-chess, qui écarte une ligne illisible sans s'arrêter. Rien ne dépend de la locale.
+Autres lectures :
+
+- le fichier de jeton suit la même détection que le PGN, et un jeton hors de l'ASCII imprimable est refusé avant toute requête
+- le catalogue et les réponses de l'explorateur sont lus en UTF-8, marque d'ordre des octets tolérée
+- la sortie du moteur est décodée en UTF-8 par python-chess, qui écarte une ligne illisible sans s'arrêter
+
+Rien ne dépend de la locale.
 
 Écritures : tous les fichiers de l'archive sont en UTF-8, fins de ligne LF.    
-Dans l'étiquette de l'archive, les caractères de contrôle, les caractères `/ \ : * ? " < > |` et les octets non décodables du nom du PGN deviennent "\_" l'étiquette est bornée à 80 caractères.   
+Dans l'étiquette de l'archive, les caractères de contrôle, les caractères `/ \ : * ? " < > |` et les octets non décodables du nom du PGN deviennent "\_". L'étiquette est bornée à 80 caractères.   
 Espaces et lettres accentuées sont conservés.
 
 Console : un caractère que le terminal ne sait pas afficher devient "?" au lieu d'arrêter le script, sous LANG=C comme avec PYTHONIOENCODING=ascii.    
@@ -749,7 +873,9 @@ Conditions :
 | `PSEUDO_CONNU` | au moins un pseudo est connu |
 | `NIVEAU_DECLARE` | votre niveau figure dans les réglages |
 
-Hors terminal, le camp se déduit de vos pseudos sans poser de question. Un repère inconnu, un "si" jamais fermé ou une directive mal formée arrêtent le script avant la collecte :
+Sans terminal, le camp se déduit de vos pseudos sans poser de question.
+
+Un repère inconnu, un "si" jamais fermé ou une directive mal formée arrêtent le script avant la collecte :
 
 ```text
 Modèle de prompt prompt-modele.txt, ligne 12 : condition inconnue MOTEUR, conditions admises : STOCKFISH, EXPLORATEUR, ...
@@ -760,9 +886,14 @@ Le prompt se colle comme un message, dans une conversation neuve, l'archive en p
 Tous les LLM n'ouvrent pas un zip, et tous n'exécutent pas de code.    
 Le prompt prévoit les deux cas :
 
-- si l'archive n'est pas acceptée, joignez ou collez le seul fichier  `synthese.md`, qui suffit à l'analyse (`--garder-dossier` le laisse à portée de main, sinon décompressez l'archive).
-- un analyste qui exécute du code construit le PGN avec python-chess et en prouve la légalité ; un analyste qui n'en exécute pas l'écrit lui-même, le dit, et vous laisse ouvrir le fichier pour confirmer.   
-Sans moteur de son côté, il ne donne alors aucun chiffre : gardez Stockfish dans la collecte.
+- **Le LLM n'accepte pas l'archive** : joignez ou collez le seul fichier `synthese.md`, qui suffit à l'analyse.
+
+  `--garder-dossier` le laisse à portée de main, sinon décompressez l'archive.
+
+- **Le LLM exécute du code** : il construit le PGN avec python-chess et en prouve la légalité.
+- **Le LLM n'exécute pas de code** : il écrit le PGN lui-même, le dit, et vous laisse ouvrir le fichier pour confirmer.
+
+  Sans moteur de son côté, il ne donne alors aucun chiffre : gardez Stockfish dans la collecte.
 
 ## 10. Jeton
 
@@ -772,17 +903,33 @@ Un fichier de jeton lisible par d'autres déclenche un avertissement.
 
 Le fichier peut porter une marque d'ordre des octets ou être en UTF-16, comme en produisent certains éditeurs Windows : le journal le signale et le jeton est lu normalement.
 
-## 11. Sources
+## 11. Sources et liens
 
-```text
-Explorateur      https://explorer.lichess.org/masters
-                 https://explorer.lichess.org/lichess
-Catalogue        https://raw.githubusercontent.com/lichess-org/chess-openings/master/{a,b,c,d,e}.tsv
-                 Domaine public (CC0). Ce sont les fichiers que charge aussi le serveur de l'explorateur.
-Cadences         Catégories du temps réel : source de Lichess, scalachess, Speed.scala et Clock.scala.
-                 Correspondance : ICCF Rules en vigueur depuis le 1er janvier 2026, section 2.4 ; règlement de chess-mail.com.
-```
+Ce que le script interroge :
 
+- Jeton d'accès personnel : https://lichess.org/account/oauth/token, une fois connecté à Lichess
+
+- Explorateur, base de tous les joueurs : `https://explorer.lichess.org/lichess`
+- Explorateur, base des maîtres : `https://explorer.lichess.org/masters`
+- Catalogue des ouvertures : [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings), fichiers `a.tsv` à `e.tsv`. Ce sont ceux que charge aussi le serveur de l'explorateur.
+
+Ce sur quoi il s'appuie :
+
+- [python-chess](https://python-chess.readthedocs.io/en/latest/), la bibliothèque qui lit le PGN et pilote le moteur
+- [Stockfish](https://stockfishchess.org/), le moteur
+- [Spécification PGN](https://www.saremba.de/chessgml/standards/pgn/pgn-complete.htm), Steven J. Edwards, 1994
+
+D'où viennent les cadences :
+
+- Catégories du temps réel : [Speed.scala](https://raw.githubusercontent.com/lichess-org/scalachess/master/core/src/main/scala/Speed.scala), dans [scalachess](https://github.com/lichess-org/scalachess), la bibliothèque de règles de Lichess
+- Correspondance, ICCF : [ICCF Rules, en vigueur depuis le 1er janvier 2026](https://webfiles.iccf.com/rules/2026/2026%20ICCF%20Rules%2C%20260311.pdf), section 2.4 (PDF, en anglais)
+- Correspondance, capital de temps : [règlement de chess-mail.com](https://www.chess-mail.com/index.php?page=reg)
+
+Conventions du dépôt :
+
+- [Tenez un Changelog](https://keepachangelog.com/fr/1.1.0/) pour `CHANGELOG.md`
+- [Gestion sémantique de version](https://semver.org/lang/fr/) pour les numéros de version
+- [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/deed.fr) pour la licence
 
 ---
 

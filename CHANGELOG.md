@@ -22,6 +22,13 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   sous macOS et `--installer-catalogue` partout, les réglages sont
   redemandés au premier lancement. Les anciens répertoires
   `collecte-partie` peuvent être supprimés.
+- README : une procédure d'installation par plateforme, dont
+  l'installation en root sous Debian suivie de la copie dans le
+  répertoire du joueur ; les cas où les questions ne sont pas posées
+  sont expliqués un par un ; les paragraphes ne sont plus coupés à 80
+  colonnes, les exemples tiennent sur une ligne ; une section de liens
+  vers les sources citées, dont la page des jetons de Lichess et les
+  règles de l'ICCF.
 - TESTS : paragraphes et commandes sur une seule ligne, sans barre
   oblique inverse de continuation.
 
