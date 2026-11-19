@@ -78,14 +78,16 @@ import zipfile
 #     marche à suivre, ou on le crée si vous avez passé --installer-venv.
 # ===========================================================================
 
-#: Vrai sous macOS. Les emplacements par défaut et les commandes
-#: d'installation proposées dans les messages en dépendent. Sous Debian,
-#: rien ne change par rapport aux versions précédentes.
+#: Vrai sous macOS. Les commandes d'installation proposées dans les
+#: messages et l'emplacement du moteur en dépendent.
 EST_MACOS = sys.platform == "darwin"
 
-#: Répertoire utilisateur des données du script sous macOS : vous n'avez
-#: besoin d'aucun droit root, contrairement à /opt et à /usr/local.
-DONNEES_MACOS = "~/.local/share/IAnalyze"
+#: Répertoire des données du script, dans le répertoire personnel sous
+#: Debian comme sous macOS : l'environnement virtuel et le catalogue y
+#: vont, et vous n'avez besoin d'aucun droit root pour les installer.
+#: Jusqu'à la version 3.8.0, Debian les rangeait dans /opt/venv/lichess
+#: et dans /usr/local/share.
+DONNEES = "~/.local/share/IAnalyze"
 
 #: Commandes d'installation des prérequis, reprises dans les messages et
 #: dans l'aide. Sous macOS, le Python de Homebrew fournit déjà le module
@@ -98,7 +100,7 @@ else:
     CMD_PAQUET_STOCKFISH = "apt install stockfish"
 
 #: Emplacement par défaut de l'environnement virtuel dédié.
-VENV_DEFAUT = (DONNEES_MACOS + "/venv") if EST_MACOS else "/opt/venv/lichess"
+VENV_DEFAUT = DONNEES + "/venv"
 
 #: Variable d'environnement servant de garde-fou contre une relance en
 #: boucle si l'environnement virtuel existe mais reste incomplet.
@@ -278,11 +280,8 @@ CATALOGUE_SOURCE = ("https://raw.githubusercontent.com/lichess-org/"
                     "chess-openings/master/{partie}.tsv")
 CATALOGUE_PARTIES = ("a", "b", "c", "d", "e")
 
-#: Répertoire par défaut du catalogue local, et nom de son index. Sous
-#: macOS, /usr/local/share n'est pas inscriptible sans root : le catalogue
-#: va dans le répertoire utilisateur du script.
-CATALOGUE_DEFAUT = (DONNEES_MACOS if EST_MACOS
-                    else "/usr/local/share/IAnalyze")
+#: Répertoire par défaut du catalogue local, et nom de son index.
+CATALOGUE_DEFAUT = DONNEES
 CATALOGUE_INDEX = "catalogue.tsv"
 
 #: Version du format de l'index, vérifiée au chargement.

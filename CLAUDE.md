@@ -13,9 +13,10 @@ README.md, TESTS.md, CHANGELOG.md.
 
 ## Plateformes
 - Serveurs : Debian Trixie, en root, pas de sudo. Stockfish dans
-  /usr/games/stockfish, venv par défaut /opt/venv/lichess.
-- Poste : macOS M1 (Homebrew), venv et catalogue dans
-  ~/.local/share/IAnalyze.
+  /usr/games/stockfish.
+- Poste : macOS M1 (Homebrew).
+- Sur les deux : venv dans ~/.local/share/IAnalyze/venv, catalogue dans
+  ~/.local/share/IAnalyze, réglages dans ~/.config/IAnalyze.
 - Le comportement doit rester identique sur les deux. Toute option de
   la ligne de commande existante doit continuer à fonctionner.
 - Python : modules hors apt installés dans un venv dédié, jamais dans

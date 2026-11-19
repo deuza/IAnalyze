@@ -88,11 +88,7 @@ SYSTEME=$(uname -s)
 # Environnement virtuel par défaut, selon la plateforme : les mêmes valeurs
 # que dans collecte-partie.py.
 if [ -z "${VENV:-}" ]; then
-    if [ "$SYSTEME" = "Darwin" ]; then
-        VENV="$HOME/.local/share/IAnalyze/venv"
-    else
-        VENV="/opt/venv/lichess"
-    fi
+    VENV="$HOME/.local/share/IAnalyze/venv"
 fi
 PYVENV="$VENV/bin/python3"
 
@@ -292,12 +288,14 @@ titre "T31, T32 : commandes d'installation selon la plateforme"
 if [ "$SYSTEME" = "Darwin" ]; then
     egal "T31 brew install cité 3 fois" 3 "$(grep -c 'brew install' aide)"
     egal "T32 apt install absent" 0 "$(grep -c 'apt install' aide)"
-    verifier "défaut de --venv sous le répertoire utilisateur" \
-        contient aide ".local/share/IAnalyze/venv"
 else
     egal "T31 brew install absent" 0 "$(grep -c 'brew install' aide)"
     egal "T32 apt install cité 3 fois" 3 "$(grep -c 'apt install' aide)"
 fi
+verifier "défaut de --venv sous le répertoire utilisateur" \
+    contient aide ".local/share/IAnalyze/venv"
+verifier "défaut de --catalogue sous le répertoire utilisateur" \
+    contient aide ".local/share/IAnalyze)"
 
 titre "T05 : collecte minimale"
 lancer italienne.pgn $O

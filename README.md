@@ -67,56 +67,26 @@ Il décrit toujours la synthèse que cette version du script vient d'écrire : l
 
 ## 2. Prérequis et installation
 
-### Debian
+Tout s'installe dans votre répertoire personnel, sous Debian comme sous macOS.
 
-L'installation se fait **en root**, depuis `/root`, une fois pour toute la machine :
+Seule l'installation des paquets de Debian demande les droits root.
+
+**1. Les paquets**
+
+Sous Debian, en root :
 
 ```bash
 apt install git python3-venv stockfish
 ```
 
-```bash
-git clone https://github.com/deuza/IAnalyze.git
-```
-
-```bash
-cd IAnalyze
-```
-
-```bash
-./collecte-partie.py --installer-venv
-```
-
-```bash
-./collecte-partie.py --installer-catalogue
-```
-
-Le joueur n'a pas besoin des droits root pour s'en servir.
-
-Copiez le dépôt dans son répertoire personnel et donnez-lui en la propriété, `joueur` étant ici son nom de compte :
-
-```bash
-cp -r /root/IAnalyze /home/joueur/IAnalyze
-```
-
-```bash
-chown -R joueur:joueur /home/joueur/IAnalyze
-```
-
-Le joueur lance ensuite le script depuis `/home/joueur/IAnalyze`, sous son propre compte.
-
-Son jeton et ses réglages vont dans son répertoire personnel, pas dans celui de root.
-
-### macOS
-
-Rien ne demande les droits root, tout va dans votre répertoire personnel.
-
-Avec Homebrew, dont le Python fournit déjà le module venv :
+Sous macOS, avec Homebrew, dont le Python fournit déjà le module venv :
 
 ```bash
 brew install git python stockfish
 ```
 
+**2. Le dépôt**, sous le compte du joueur :
+
 ```bash
 git clone https://github.com/deuza/IAnalyze.git
 ```
@@ -125,6 +95,8 @@ git clone https://github.com/deuza/IAnalyze.git
 cd IAnalyze
 ```
 
+**3. L'environnement virtuel et le catalogue**, sous le même compte :
+
 ```bash
 ./collecte-partie.py --installer-venv
 ```
@@ -132,6 +104,8 @@ cd IAnalyze
 ```bash
 ./collecte-partie.py --installer-catalogue
 ```
+
+Chaque joueur de la machine refait les étapes 2 et 3 sous son propre compte : rien n'est partagé, rien n'est à copier.
 
 ### Ce que font ces deux commandes
 
@@ -147,13 +121,16 @@ Relancez-la de temps en temps pour le mettre à jour.
 
 ### Emplacements par défaut
 
-| | Debian | macOS |
-|---|---|---|
-| `--venv` | `/opt/venv/lichess` | `~/.local/share/IAnalyze/venv` |
-| `--catalogue` | `/usr/local/share/IAnalyze` | `~/.local/share/IAnalyze` |
-| `--stockfish` | `/usr/games/stockfish` | le binaire trouvé dans le PATH, sinon `/opt/homebrew/bin/stockfish` |
-| jeton | `~/.lichess_token` | `~/.lichess_token` |
-| réglages | `~/.config/IAnalyze/reglages.ini` | `~/.config/IAnalyze/reglages.ini` |
+Les mêmes sur les deux plateformes, sauf pour le moteur :
+
+| | Emplacement |
+|---|---|
+| `--venv` | `~/.local/share/IAnalyze/venv` |
+| `--catalogue` | `~/.local/share/IAnalyze` |
+| réglages | `~/.config/IAnalyze/reglages.ini` |
+| jeton | `~/.lichess_token` |
+| `--stockfish`, Debian | `/usr/games/stockfish` |
+| `--stockfish`, macOS | le binaire trouvé dans le PATH, sinon `/opt/homebrew/bin/stockfish` |
 
 ### Jeton Lichess
 
@@ -330,7 +307,7 @@ Crée l'environnement virtuel s'il manque, y installe ou met à jour python-ches
 
 #### `--venv CHEMIN`
 
-*Défaut : selon la plateforme, voir la section 2*
+*Défaut : `~/.local/share/IAnalyze/venv`*
 
 Emplacement de l'environnement virtuel, à l'installation comme à l'usage.
 
@@ -406,7 +383,7 @@ Le remplacement est atomique : un échec laisse l'ancien index en place. Relance
 
 #### `--catalogue REP`
 
-*Défaut : selon la plateforme, voir la section 2*
+*Défaut : `~/.local/share/IAnalyze`*
 
 Répertoire du catalogue local, à l'installation comme à l'usage.
 

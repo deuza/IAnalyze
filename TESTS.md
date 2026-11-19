@@ -14,12 +14,9 @@ Plan mis à jour le 19 novembre 2026, pour la version 3.8.0. État des vérifica
 
 Les chiffres des tests avec jeton datent du 8 octobre, sauf ceux de T33, relevés le 18 novembre.
 
-Les emplacements par défaut dépendent de la plateforme. Posez d'abord ces deux variables, que les tests reprennent :
+Les emplacements par défaut sont les mêmes sous Debian et sous macOS. Posez d'abord ces deux variables, que les tests reprennent :
 
 ```bash
-# Debian
-CAT=/usr/local/share/IAnalyze ; VENV=/opt/venv/lichess
-# macOS
 CAT=~/.local/share/IAnalyze ; VENV=$CAT/venv
 ```
 

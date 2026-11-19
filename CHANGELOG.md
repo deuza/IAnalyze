@@ -10,6 +10,14 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- Sous Debian, l'environnement virtuel et le catalogue vont dans le
+  répertoire personnel, comme sous macOS :
+  `~/.local/share/IAnalyze/venv` et `~/.local/share/IAnalyze`, au lieu
+  de `/opt/venv/lichess` et `/usr/local/share/IAnalyze`. Seuls les
+  paquets demandent encore les droits root, et chaque joueur d'une
+  machine a sa propre installation. Rien n'est repris des anciens
+  emplacements : relancez `--installer-venv` et `--installer-catalogue`,
+  puis supprimez les anciens répertoires.
 - Le prompt demande à l'analyste de se servir de tous les fichiers de
   l'archive, et plus de la seule synthèse. Il décrit chacun d'eux, dont
   `stockfish/evaluations.json`, qui porte les variantes entières du
