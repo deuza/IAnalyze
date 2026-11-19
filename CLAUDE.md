@@ -8,6 +8,7 @@ partie, écrit à côté. Les deux alimentent une conversation avec un LLM,
 où l'analyse est faite. Le script ne produit lui-même aucune analyse.
 
 Fichiers : collecte-partie.py, prompt-modele.txt (modèle du prompt),
+test.pgn (partie d'essai), test-app.sh (suite de tests),
 README.nfo, TESTS.nfo, CHANGELOG.md.
 
 ## Plateformes

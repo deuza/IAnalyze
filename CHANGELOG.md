@@ -14,9 +14,21 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   `--reglages` s'il est donné, puis quitte. Les réponses sont redemandées
   à la prochaine collecte lancée sur un terminal. Un fichier absent
   n'est pas une erreur, un répertoire est refusé.
+- `test.pgn`, partie d'essai qui réunit les cas tordus d'un PGN :
+  balises accentuées, commentaires de toutes sortes, NAG, variantes
+  emboîtées, mat manqué, prise en passant, promotion, les deux roques
+  et un coup nul. Le test T70 dit ce que le script doit en tirer.
+- `test-app.sh`, qui joue d'un seul coup la plupart des tests de
+  TESTS et écrit un rapport, sous Linux comme sous macOS : `sh
+  test-app.sh` hors réseau, `sh test-app.sh --reseau` avec un jeton.
+- `.gitignore` : rapports de `test-app.sh`, archives, dossiers de
+  travail et prompts produits dans le dépôt.
 
 ### Changed
 
+- Les tests ne citent plus `partie1.pgn`, une partie qui n'était pas
+  dans le dépôt : ils fabriquent `polonaise.pgn`, comme ils fabriquaient
+  déjà `italienne.pgn`.
 - Le modèle du prompt s'appelle `prompt-modele.txt` et non plus
   `INSTRUCTIONS.txt` : le fichier n'est plus un texte à coller tel quel
   mais ce dont le script tire le prompt de chaque partie. Un modèle

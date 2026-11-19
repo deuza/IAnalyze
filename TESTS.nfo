@@ -2,8 +2,10 @@
  |    C O L L E C T E - P A R T I E . P Y   :   P L A N   D E   T E S T S |
  `------------------------------------------------------------------------'
 
- Lancez les tests depuis le répertoire du script, dans l'ordre. partie1.pgn
- y désigne votre partie 1.b4 g6. Les chiffres attendus datent du
+ Lancez les tests depuis le répertoire du script, dans l'ordre. Le
+ script test-app.sh, à côté, joue la plupart d'entre eux d'un seul coup
+ et écrit un rapport : "sh test-app.sh" hors réseau, "sh test-app.sh
+ --reseau" avec votre jeton. Les chiffres attendus datent du
  8 octobre 2026 : les totaux de la base Lichess croissent chaque mois, les
  pourcentages bougent peu. "Probable" signale un résultat non mesuré.
 
@@ -44,6 +46,14 @@
      printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 *\n' \
          > italienne.pgn
 
+ Et une Polonaise, 1.b4 g6, qui sort tôt de la théorie :
+
+     printf '1. b4 g6 2. Bb2 Nf6 3. e3 Bg7 4. Nf3 O-O *\n' \
+         > polonaise.pgn
+
+ Le dépôt fournit aussi test.pgn, une partie d'essai qui réunit les cas
+ tordus : voir T70.
+
  Pour lire une synthèse :  unzip -p "$ARCH" '*/synthese.md' | less
 
 
@@ -61,7 +71,7 @@
                "--base lichess --classements 1100" "--coups-min -1" \
                "--pause 1" "--seuil-frequence 150" \
                "--sans-stockfish --profondeur 20" "--base plebe"; do
-          ./collecte-partie.py partie1.pgn $o 2>&1 | tail -1; echo "  $?"
+          ./collecte-partie.py italienne.pgn $o 2>&1 | tail -1; echo "  $?"
       done
       Attendu, dans l'ordre, après "collecte-partie.py: error:" :
         --cadences n'a d'effet qu'avec --base lichess
@@ -73,7 +83,7 @@
         --profondeur n'a pas d'effet avec --sans-stockfish
         argument --base: invalid choice: 'plebe' (...)
       Le "$?" affiche 0 à cause du tube : vérifiez le code avec
-      ./collecte-partie.py partie1.pgn --pause 1 ; echo $?   -> 2
+      ./collecte-partie.py italienne.pgn --pause 1 ; echo $?   -> 2
 
  T04  ./collecte-partie.py /tmp/inexistant.pgn ; echo $?
       ./collecte-partie.py inexistant.pgn ; echo $?
@@ -169,7 +179,7 @@
       interrogé ne passe sous le seuil de 10.0 % hors catalogue."
       (toutes les positions sont cataloguées, aucune sortie possible).
 
- T15  ./collecte-partie.py partie1.pgn --base maitres
+ T15  ./collecte-partie.py polonaise.pgn --base maitres
       Attendu, ligne 1 : 2879587 parties, b4, rang 9, 0.1 %, Ouverture
       "A00 Polish Opening". Probable : arrêt sur échantillon insuffisant
       dans les premiers demi-coups, la base maîtres connaissant peu
@@ -178,7 +188,7 @@
 
  [ D. BASE LICHESS (JETON) ]
 
- T16  ./collecte-partie.py partie1.pgn --base lichess
+ T16  ./collecte-partie.py polonaise.pgn --base lichess
       Attendu :
         ligne 1 : environ 7 270 millions de parties, b4, rang 11, 0.4 %,
                   score B. environ 53.5 %, majoritaire e4 à 58.6 %,
@@ -189,16 +199,16 @@
         première sortie : "**Noirs joue g6** au coup **1** (demi-coup 2)"
                   et "dernière position nommée avant la sortie : A00
                   Polish Opening".
-      Arrêt : sur échantillon insuffisant (probable, avant le demi-coup
-      12), sinon à la première sortie après le demi-coup 12.
+      Arrêt : sur échantillon insuffisant, sinon "fin de la partie", la
+      Polonaise d'essai ne comptant que 8 demi-coups.
       Contrôle croisé : la fréquence de g6 doit correspondre aux 5 %
       affichés sur https://lichess.org/opening/Polish_Opening/b4
 
- T17  ./collecte-partie.py partie1.pgn --base lichess --coups-min 0
+ T17  ./collecte-partie.py polonaise.pgn --base lichess --coups-min 0
       Attendu : deux lignes, arrêt "sortie de théorie au demi-coup 2 :
       g6 joué à 5.x %, seuil 10.0 %, hors catalogue".
 
- T18  ./collecte-partie.py partie1.pgn --base lichess --coups-min 0 \
+ T18  ./collecte-partie.py polonaise.pgn --base lichess --coups-min 0 \
           --cadences ' Rapid,CLASSICAL,rapid' --classements 1000,0
       Attendu : collecte.json porte "cadences": "rapid,classical" et
       "classements": "0,1000" ; la synthèse affiche les mêmes valeurs ;
@@ -214,15 +224,15 @@
       demi-coup, suivi de "Au delà de ce point, la base Lichess (tous
       joueurs) ne dit plus rien d'exploitable".
 
- T20  ./collecte-partie.py partie1.pgn --base lichess --coups-min 0 \
+ T20  ./collecte-partie.py polonaise.pgn --base lichess --coups-min 0 \
           --seuil-frequence 0
       Attendu : "Aucun coup interrogé ne passe sous le seuil de 0.0 %
       hors catalogue." ; arrêt sur échantillon ou position inconnue.
 
- T21  ./collecte-partie.py partie1.pgn --base lichess --jusqu-a-epuisement
+ T21  ./collecte-partie.py polonaise.pgn --base lichess --jusqu-a-epuisement
       Attendu : texte "Mode `--jusqu-a-epuisement`" ; arrêt "position
-      inconnue de la base au demi-coup N" ou plafond de 60 ; première
-      sortie toujours g6, demi-coup 2.
+      inconnue de la base au demi-coup N" ou "fin de la partie" ;
+      première sortie toujours g6, demi-coup 2.
 
  T22  ./collecte-partie.py italienne.pgn --jusqu-a-epuisement \
           --max-demicoups 4
@@ -1043,6 +1053,45 @@
       t-purge.ini", 0 ; "--purge-reglages : t-rep n'est pas un fichier,
       rien n'est supprimé.", 1, et le répertoire est toujours là. Aucune
       partie n'est demandée et la sortie standard reste vide.
+
+
+ [ W. PARTIE D'ESSAI ]
+
+ test.pgn, fourni avec le dépôt, réunit dans une seule partie légale ce
+ qui a déjà fait trébucher un lecteur de PGN : balises accentuées,
+ commentaire d'avant le premier coup, commentaire de fin de ligne
+ introduit par un point-virgule, NAG ($6, $5) et signes ?? et ?,
+ commentaires d'horloge [%clk], variantes emboîtées, mat manqué, prise
+ en passant, promotion avec prise et échec, les deux roques et un coup
+ nul. La partie n'a aucun intérêt échiquéen.
+
+ T70  ARCH=$(./collecte-partie.py test.pgn --sans-explorateur \
+          --sans-questions --profondeur 8 --pseudos "zoé blanche" \
+          2> t-essai.log)
+      grep -c Attention t-essai.log
+      unzip -p "$ARCH" '*/partie.pgn' | cmp - test.pgn ; echo $?
+      unzip -p "$ARCH" '*/synthese.md' > t-essai.md
+      grep -E 'demi-coups dans|^- Roque|Black \|' t-essai.md
+      grep -E '^\| (3|4|9|17|29) \|' t-essai.md | cut -c1-60
+      grep -c -E '^\| [0-9]+ \| [0-9]+ \| (Blancs|Noirs) ' t-essai.md
+      grep 'camp dans' "${ARCH%.zip}.prompt.txt"
+      Attendu : 0 ; 0, partie.pgn étant la copie exacte de test.pgn,
+      commentaires et variantes compris ; "| Black | Müller, Noël |",
+      "Nombre de demi-coups dans la ligne principale : 36.", "Roque des
+      Blancs : O-O-O au coup 14 (demi-coup 27)." et "Roque des Noirs :
+      O-O au coup 7 (demi-coup 14)." ; puis cinq lignes du tableau :
+        | 3 | 2 | Blancs | g4 | #-1 | 0/0/100 | mat | gaffe | ...
+        | 4 | 2 | Noirs | Nc6 | ... | mat | gaffe | Qh4# (#-1) | ...
+        | 9 | 5 | Blancs | gxf6 | ...            la prise en passant
+        | 17 | 9 | Blancs | gxf8=Q+ | ...        la promotion
+        | 29 | 15 | Blancs | -- | - | - | - | - | ...   le coup nul
+      puis 36, et "- camp dans cette partie : Blancs", le pseudo étant
+      reconnu malgré la casse. Les évaluations chiffrées varient d'une
+      version de Stockfish à l'autre : seules la nature "mat", "gaffe"
+      des lignes 3 et 4 et les colonnes vides de la ligne 29 sont
+      attendues telles quelles. Le journal répète "Not
+      transmitting history with null moves to UCI engine", message de
+      python-chess sans conséquence.
 
 
  Nettoyage : rm -rf /tmp/analyses /tmp/abime /tmp/cat1.tsv

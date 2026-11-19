@@ -1,0 +1,4 @@
+# Productions du script et des tests lancés depuis le dépôt.
+rapport-tests-*.txt
+analyse-*
+__pycache__/
