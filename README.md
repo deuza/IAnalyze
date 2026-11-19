@@ -143,7 +143,7 @@ Le script s'y relance ensuite tout seul : vous continuez à l'appeler avec le Py
 
 Relancez-la de temps en temps pour le mettre à jour.
 
-Stockfish est facultatif : sans lui, lancez le script avec `--sans-stockfish`.
+**Stockfish est obligatoire** : son évaluation fait partie de toute collecte.
 
 ### Emplacements par défaut
 
@@ -596,17 +596,9 @@ Saute la collecte explorateur : ni réseau vers l'explorateur, ni jeton, ni cata
 ./collecte-partie.py ma-partie.pgn --sans-explorateur
 ```
 
-### Moteur (inactif avec `--sans-stockfish`)
+### Moteur
 
-L'évaluation Stockfish est calculée par défaut, le binaire étant vérifié avant toute écriture.
-
-#### `--sans-stockfish`
-
-Saute l'évaluation Stockfish, laissée alors à l'analyste.
-
-```bash
-./collecte-partie.py ma-partie.pgn --sans-stockfish
-```
+L'évaluation Stockfish fait partie de toute collecte. Le binaire est vérifié avant toute écriture.
 
 #### `--coups-stockfish N`
 
@@ -684,7 +676,6 @@ Les variantes complètes restent dans `stockfish/evaluations.json`.
 Une option sans effet est refusée plutôt qu'ignorée en silence :
 
 - `--cadences` et `--classements` exigent `--base lichess`.
-- les options moteur sont refusées avec `--sans-stockfish`.
 - `--pause` ne descend pas sous 2, `--seuil-frequence` reste entre 0 et 100, `--coups-min` et `--coups-stockfish` valent 0 ou plus, les autres valeurs numériques au moins 1.
 - `--pause` et `--seuil-frequence` refusent nan et inf.
 - `--fils`, `--hachage` et `--multipv` sont contrôlés auprès du moteur, qui annonce ses bornes : une valeur qu'il n'admet pas est refusée avant toute requête et avant la création du dossier de travail.
@@ -724,7 +715,7 @@ Contenu :
 | `partie-origine.pgn` | le PGN fourni, si des en-têtes manquaient |
 | `contexte.md` | les réponses aux questions de démarrage |
 | `explorateur/NNN-<uci>.json` | une réponse brute par demi-coup interrogé |
-| `stockfish/evaluations.json` | sauf avec `--sans-stockfish` |
+| `stockfish/evaluations.json` | les évaluations complètes du moteur, variantes entières |
 | `collecte.json` | paramètres exacts de la collecte, sans le jeton. `pgn_encodage` et `pgn_remarques` disent comment le PGN a été décodé, `prompt_ecrit` nomme le prompt |
 
 À côté de l'archive, et non dedans :
@@ -859,7 +850,7 @@ Conditions :
 
 | Condition | Vraie quand |
 |---|---|
-| `STOCKFISH` | la section 3 est présente |
+| `STOCKFISH` | toujours, depuis la version 4.0.0. Gardée pour les modèles personnels qui l'emploient |
 | `EXPLORATEUR` | la section 2 a été collectée |
 | `BASE_LICHESS` | base de tous les joueurs |
 | `BASE_MAITRES` | base des maîtres |
@@ -888,8 +879,6 @@ Le prompt prévoit les deux cas :
 
 - **Le LLM exécute du code** : il construit le PGN avec python-chess et en prouve la légalité.
 - **Le LLM n'exécute pas de code** : il écrit le PGN lui-même, le dit, et vous laisse ouvrir le fichier pour confirmer.
-
-  Sans moteur de son côté, il ne donne alors aucun chiffre : gardez Stockfish dans la collecte.
 
 ## 10. Jeton
 

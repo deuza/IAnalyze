@@ -144,7 +144,7 @@ cd "$TRAVAIL" || exit 2
 
 # Options communes aux tests qui ne portent ni sur l'explorateur ni sur le
 # moteur. La variable est volontairement développée sans guillemets.
-O="--sans-explorateur --sans-stockfish --sans-questions"
+O="--sans-explorateur --profondeur 1 --sans-questions"
 
 # Fichier de réglages propre aux tests : le vôtre n'est ni lu ni modifié.
 # Il porte un pseudo, pour que les tests qui passent par un terminal ne
@@ -438,14 +438,14 @@ egal "T42 ni ESC ni BEL dans l'archive" 0 \
 titre "T43 : fichier de jeton factice"
 printf '\357\273\277lip_factice\r\n' > t-jeton
 chmod 600 t-jeton
-lancer italienne.pgn --sans-stockfish --sans-questions \
+lancer italienne.pgn --profondeur 1 --sans-questions \
     --jeton-fichier t-jeton --catalogue /nulle/part
 verifier "T43 BOM du jeton retirée" contient journal "(BOM) UTF-8 retirée"
 verifier "T43 jeton accepté, arrêt sur le catalogue" \
     contient journal "Catalogue des ouvertures absent"
 egal "T43 le jeton n'est pas affiché" 0 "$(grep -c lip_factice journal)"
 printf 'lip_factic\351\n' > t-jeton
-lancer italienne.pgn --sans-stockfish --sans-questions \
+lancer italienne.pgn --profondeur 1 --sans-questions \
     --jeton-fichier t-jeton --catalogue /nulle/part
 egal "T43 jeton non ASCII, code de retour" 1 "$RC"
 verifier "T43 jeton non ASCII refusé" \
@@ -496,7 +496,7 @@ script = os.environ["SCRIPT"]
 pid, fd = pty.fork()
 if pid == 0:
     os.execv(script, [script, "italienne.pgn", "--sans-explorateur",
-                      "--sans-stockfish", "--garder-dossier",
+                      "--profondeur", "1", "--garder-dossier",
                       "--venv", os.environ["VENV"],
                       "--reglages", os.environ["REGL"]])
 for reponse in (b"b", b"Zo\xe9", b"", b"", b"", b"", b""):
@@ -649,7 +649,7 @@ titre "T54 : URL qui ne sont pas des parties"
 for url in https://lichess.org/analysis/standard \
            https://lichess.org/study/abcdefgh/ijklmnop \
            https://example.com/abcdefgh; do
-    lancer "$url" --sans-explorateur --sans-stockfish
+    lancer "$url" --sans-explorateur --profondeur 1
     egal "T54 $url, code de retour" 1 "$RC"
     verifier "T54 $url, refusée" contient journal "URL non reconnue"
     egal "T54 $url, aucun téléchargement" 0 "$(grep -c 'chargement du PGN' journal)"
@@ -768,7 +768,7 @@ while not os.waitpid(pid, os.WNOHANG)[0]:
 sys.stdout.write(vu.decode("utf-8", "replace").replace("\r", ""))
 EOF
 # Options des lancements sur pseudo-terminal.
-P="--sans-explorateur --sans-stockfish --garder-dossier --venv $VENV"
+P="--sans-explorateur --profondeur 1 --garder-dossier --venv $VENV"
 
 titre "T57 : premier lancement, réglages demandés puis enregistrés"
 rm -rf analyse-italienne-*
@@ -970,7 +970,7 @@ printf '[joueur]\npseudos = Alice\ncadence = 14 jours\nniveau = 1300\n' \
 R="--sans-explorateur --sans-questions --venv $VENV --reglages t-pr.ini"
 
 titre "T64 : prompt écrit à côté de l'archive"
-"$SCRIPT" t-pr.pgn $R --sans-stockfish > sortie 2> journal
+"$SCRIPT" t-pr.pgn $R --profondeur 1 > sortie 2> journal
 egal "T64 code de retour" 0 $?
 egal "T64 une seule ligne sur la sortie standard" 1 "$(lignes sortie)"
 ARCH=$(head -n 1 sortie)
@@ -999,11 +999,11 @@ joindre ligne
 noter "  note   lignes du prompt : $(lignes "$PR")"
 
 titre "T65 : le prompt ne garde que ce qui s'applique"
-egal "T65 sans moteur, section 3 dite absente" 1 \
-    "$(grep -c 'Stockfish. : absente de ce dossier' "$PR")"
-egal "T65 sans moteur, évaluation confiée à l'analyste" 1 \
+egal "T65 les chiffres du moteur font foi" 1 \
+    "$(grep -c 'Les chiffres de la section 3 font foi' "$PR")"
+egal "T65 l'analyste n'a pas à évaluer lui-même" 0 \
     "$(grep -c 'La section 3 est absente' "$PR")"
-egal "T65 sans moteur, pas la branche inverse" 0 \
+egal "T65 Stockfish inutile à l'analyste" 1 \
     "$(grep -c 'Stockfish est inutile' "$PR")"
 egal "T65 sans explorateur, dit dans le prompt" 1 \
     "$(grep -c "collecte de l'explorateur n'a pas" "$PR")"
@@ -1011,7 +1011,7 @@ egal "T65 base Lichess" 1 \
     "$(grep -c 'celle de tous les joueurs de Lichess' "$PR")"
 egal "T65 hors terminal, réponses non recueillies" 1 \
     "$(grep -c "n'a pas recueilli les réponses" "$PR")"
-"$SCRIPT" t-pr.pgn $R --sans-stockfish --base maitres > sortie 2> journal
+"$SCRIPT" t-pr.pgn $R --profondeur 1 --base maitres > sortie 2> journal
 PR="$(head -n 1 sortie)"
 PR="${PR%.zip}.prompt.txt"
 egal "T65 base maîtres" 1 "$(grep -c 'celle des maîtres' "$PR")"
@@ -1021,25 +1021,25 @@ egal "T65 base maîtres, pas la branche Lichess" 0 \
 titre "T66 : modèle fautif refusé avant la collecte"
 rm -f analyse-t-pr-*
 printf 'Bonjour {{PSEUDO}}\n' > t-modele.txt
-"$SCRIPT" t-pr.pgn $R --sans-stockfish --prompt t-modele.txt \
+"$SCRIPT" t-pr.pgn $R --profondeur 1 --prompt t-modele.txt \
     > sortie 2> journal
 egal "T66 valeur inconnue, code de retour" 1 $?
 verifier "T66 valeur inconnue, ligne et nom donnés" \
     contient journal "t-modele.txt, ligne 1 : valeur inconnue {{PSEUDO}}"
 printf 'a\n#! si MOTEUR\nb\n#! fin\n' > t-modele.txt
-"$SCRIPT" t-pr.pgn $R --sans-stockfish --prompt t-modele.txt \
+"$SCRIPT" t-pr.pgn $R --profondeur 1 --prompt t-modele.txt \
     > sortie 2> journal
 verifier "T66 condition inconnue" \
     contient journal "ligne 2 : condition inconnue MOTEUR"
 printf 'a\n#! si STOCKFISH\nb\n' > t-modele.txt
-"$SCRIPT" t-pr.pgn $R --sans-stockfish --prompt t-modele.txt \
+"$SCRIPT" t-pr.pgn $R --profondeur 1 --prompt t-modele.txt \
     > sortie 2> journal
 verifier "T66 si jamais fermé" contient journal "n'est jamais fermé par"
 printf 'a\n#! tantque STOCKFISH\n' > t-modele.txt
-"$SCRIPT" t-pr.pgn $R --sans-stockfish --prompt t-modele.txt \
+"$SCRIPT" t-pr.pgn $R --profondeur 1 --prompt t-modele.txt \
     > sortie 2> journal
 verifier "T66 directive inconnue" contient journal "directive inconnue"
-"$SCRIPT" t-pr.pgn $R --sans-stockfish --prompt /nulle/part.txt \
+"$SCRIPT" t-pr.pgn $R --profondeur 1 --prompt /nulle/part.txt \
     > sortie 2> journal
 egal "T66 modèle absent, code de retour" 1 $?
 verifier "T66 modèle absent, message" \
@@ -1048,19 +1048,19 @@ verifier "T66 modèle absent, message" \
 egal "T66 options exclusives, code de retour" 2 $?
 egal "T66 aucun dossier ni archive créés par ces refus" 0 \
     "$(find . -maxdepth 1 -name 'analyse-t-pr-*' | wc -l)"
-printf 'Pour {{PSEUDOS}}.\n#! si non STOCKFISH\nsans moteur\n' > t-modele.txt
+printf 'Pour {{PSEUDOS}}.\n#! si non EXPLORATEUR\nsans base\n' > t-modele.txt
 printf '#! si BASE_LICHESS\nlichess\n#! sinon\nmaitres\n#! fin\n' >> t-modele.txt
-printf '#! sinon\navec moteur\n#! fin\n\n\n\nfin\n' >> t-modele.txt
-"$SCRIPT" t-pr.pgn $R --sans-stockfish --prompt t-modele.txt \
+printf '#! sinon\navec base\n#! fin\n\n\n\nfin\n' >> t-modele.txt
+"$SCRIPT" t-pr.pgn $R --profondeur 1 --prompt t-modele.txt \
     > sortie 2> journal
 PR="$(head -n 1 sortie)"
 PR="${PR%.zip}.prompt.txt"
-printf 'Pour Alice.\nsans moteur\nlichess\n\nfin\n' > attendu
+printf 'Pour Alice.\nsans base\nlichess\n\nfin\n' > attendu
 verifier "T66 emboîtement, négation et lignes vides resserrées" \
     cmp -s attendu "$PR"
 joindre "$PR"
 rm -f analyse-t-pr-*
-"$SCRIPT" t-pr.pgn $R --sans-stockfish --sans-prompt > sortie 2> journal
+"$SCRIPT" t-pr.pgn $R --profondeur 1 --sans-prompt > sortie 2> journal
 egal "T66 --sans-prompt, code de retour" 0 $?
 egal "T66 --sans-prompt, aucun prompt écrit" 0 \
     "$(find . -maxdepth 1 -name 'analyse-t-pr-*.prompt.txt' | wc -l)"
@@ -1069,7 +1069,7 @@ titre "T67 : script copié sans son modèle"
 mkdir t-seul
 cp "$SCRIPT" t-seul/
 rm -f analyse-t-pr-*
-t-seul/collecte-partie.py t-pr.pgn $R --sans-stockfish > sortie 2> journal
+t-seul/collecte-partie.py t-pr.pgn $R --profondeur 1 > sortie 2> journal
 egal "T67 code de retour" 0 $?
 verifier "T67 l'archive est produite" test -f "$(head -n 1 sortie)"
 verifier "T67 avertissement du journal" \
@@ -1097,7 +1097,7 @@ egal "T68 pas d'erreur inattendue" 0 "$(grep -c 'Erreur inattendue' sortie-pty)"
 printf '[joueur]\npseudos = Bob\ncadence = 14 jours\nniveau = inconnu\n' \
     > t-niv.ini
 rm -rf analyse-t-pr-*
-"$SCRIPT" t-pr.pgn --sans-explorateur --sans-questions --sans-stockfish \
+"$SCRIPT" t-pr.pgn --sans-explorateur --sans-questions --profondeur 1 \
     --venv "$VENV" --reglages t-niv.ini > sortie 2> journal
 cat analyse-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T68 camp déduit de l'autre pseudo" \
@@ -1127,7 +1127,12 @@ verifier "T69 le répertoire est toujours là" test -d t-rep
 joindre journal
 
 
-titre "T71 : option --avec-stockfish retirée"
+titre "T71 : options --avec-stockfish et --sans-stockfish retirées"
+
+"$SCRIPT" italienne.pgn --sans-stockfish > sortie 2> journal
+egal "T71 --sans-stockfish, code de retour" 2 "$?"
+verifier "T71 --sans-stockfish, option inconnue" \
+    contient journal "unrecognized arguments: --sans-stockfish"
 
 "$SCRIPT" italienne.pgn --avec-stockfish > sortie 2> journal
 egal "T71 code de retour" 2 "$?"
@@ -1265,7 +1270,7 @@ CAT="$TRAVAIL/catalogue"
 # Options communes à toutes les collectes de cette partie : aucune
 # question. Collecte de l'explorateur seule, sans moteur, pour EXPL.
 BASE="--sans-questions"
-EXPL="$BASE --sans-stockfish"
+EXPL="$BASE --profondeur 1"
 
 # collecter options... : lance une collecte avec le catalogue temporaire
 # et votre jeton. Sortie standard dans "sortie", journal dans "journal",

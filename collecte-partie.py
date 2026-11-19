@@ -13,8 +13,7 @@ Ce programme ne produit aucune analyse. Il rassemble et met en forme :
      des ouvertures nommées, gardé en local, ne compte pas comme une
      sortie ;
   3. l'évaluation Stockfish de la partie en multipv, calculée en local
-     pour épargner ce travail à l'analyste ; --sans-stockfish la lui
-     laisse.
+     pour épargner ce travail à l'analyste. Le moteur est obligatoire.
 
 Avant la collecte, sur un terminal interactif, le script demande votre
 camp si les en-têtes ne le donnent pas, puis vos réponses aux questions
@@ -2461,9 +2460,9 @@ def verifier_moteur(binaire: str) -> None:
     """Vérifie l'existence du binaire avant d'avoir créé quoi que ce soit."""
     if not pathlib.Path(binaire).is_file():
         raise SystemExit("Stockfish introuvable : %s. Installez-le (%s), "
-                         "indiquez son "
-                         "chemin avec --stockfish, ou laissez l'évaluation "
-                         "à l'analyste avec --sans-stockfish."
+                         "ou indiquez son chemin avec --stockfish. "
+                         "L'évaluation du moteur fait partie de toute "
+                         "collecte."
                          % (binaire, AIDE_STOCKFISH))
     if not os.access(binaire, os.X_OK):
         raise SystemExit("Stockfish non exécutable : %s" % binaire)
@@ -2974,9 +2973,8 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     a("## 3. Évaluations Stockfish")
     a("")
     if stockfish is None:
-        a("Aucune évaluation moteur dans ce dossier : la collecte a été "
-          "lancée avec `--sans-stockfish`. L'évaluation de la partie est "
-          "à la charge de l'analyste.")
+        a("Aucune évaluation moteur dans ce dossier. L'évaluation de la "
+          "partie est à la charge de l'analyste.")
         a("")
     else:
         a("Moteur : `%s`, profondeur %d, multipv %d, %d demi-coups "
@@ -3302,9 +3300,8 @@ exemples d'utilisation
       ./collecte-partie.py ma-partie.pgn --coups-min 10
       ./collecte-partie.py ma-partie.pgn --coups-min 0
 
-  Laisser l'évaluation à l'analyste, ou moteur seul, sans réseau :
+  Moteur seul, sans réseau ni jeton :
 
-      ./collecte-partie.py ma-partie.pgn --sans-stockfish
       ./collecte-partie.py ma-partie.pgn --sans-explorateur
 
   Conserver le dossier de travail à côté de l'archive :
@@ -3339,7 +3336,7 @@ prérequis
 ---------
 
   %s
-  %-29s# sauf avec --sans-stockfish
+  %s
 
   python-chess n'est pas empaqueté par Debian. L'option --installer-venv
   crée un environnement virtuel dédié (%s par défaut) et y installe le
@@ -3359,8 +3356,8 @@ prérequis
   %s, que vous pouvez modifier à la main.
 
   Aucune autre dépendance : le HTTP passe par urllib de la bibliothèque
-  standard, l'archive par zipfile. Le paquet stockfish est nécessaire
-  sauf avec --sans-stockfish ; le moteur est piloté en UCI.
+  standard, l'archive par zipfile. Le paquet stockfish est obligatoire,
+  le moteur est piloté en UCI.
 """ % (CMD_PAQUET_VENV, CMD_PAQUET_VENV, CMD_PAQUET_STOCKFISH,
        VENV_DEFAUT, CATALOGUE_DEFAUT, JETON_DEFAUT, REGLAGES_DEFAUT)
 
@@ -3517,10 +3514,7 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
     g.add_argument("--sans-explorateur", action="store_true",
                    help="saute entièrement la collecte explorateur")
 
-    g = p.add_argument_group("moteur (inactif avec --sans-stockfish)")
-    g.add_argument("--sans-stockfish", action="store_true",
-                   help="saute l'évaluation Stockfish, laissée alors à "
-                        "l'analyste ; par défaut elle est calculée en local")
+    g = p.add_argument_group("moteur")
     g.add_argument("--coups-stockfish", type=int, default=0, metavar="N",
                    help="limite l'analyse moteur aux N premiers coups "
                         "entiers, soit 2N demi-coups ; 0 analyse toute la "
@@ -3582,18 +3576,11 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
         options.pseudos = decouper_pseudos(options.pseudos)
         if not options.pseudos:
             p.error("--pseudos : liste vide")
-    # L'évaluation est le défaut. L'option --avec-stockfish, qui ne faisait
-    # plus que le confirmer, a été retirée en 4.0.0 ; le reste du script
-    # continue de lire avec_stockfish, déduit ici de --sans-stockfish.
-    options.avec_stockfish = not options.sans_stockfish
-    if not options.avec_stockfish:
-        # Une option moteur passée avec --sans-stockfish serait ignorée en
-        # silence : mieux vaut le dire que laisser croire à une analyse.
-        for nom in ("coups_stockfish", "profondeur", "multipv", "fils",
-                    "hachage", "stockfish", "longueur_pv"):
-            if getattr(options, nom) != p.get_default(nom):
-                p.error("--%s n'a pas d'effet avec --sans-stockfish"
-                        % nom.replace("_", "-"))
+    # L'évaluation du moteur fait partie de toute collecte depuis la
+    # version 4.0.0 : les options --avec-stockfish et --sans-stockfish ont
+    # été retirées. Le reste du script continue de lire avec_stockfish,
+    # désormais toujours vrai.
+    options.avec_stockfish = True
     if options.seuil_frequence < 0 or options.seuil_frequence > 100:
         p.error("--seuil-frequence doit être compris entre 0 et 100")
     if options.longueur_pv < 0:

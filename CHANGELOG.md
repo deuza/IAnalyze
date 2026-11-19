@@ -13,6 +13,12 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 - Option `--avec-stockfish`, sans effet depuis que l'évaluation est
   calculée par défaut. Une commande qui la porte encore est refusée,
   code 2 : retirez-la simplement.
+- Option `--sans-stockfish` : Stockfish devient obligatoire, son
+  évaluation fait partie de toute collecte. Une synthèse sans chiffres
+  du moteur laissait l'analyste estimer seul, ce qui n'est pas le but
+  du projet. Le prompt ne décrit plus que le cas avec moteur ; la
+  condition `STOCKFISH` du modèle, toujours vraie, est gardée pour les
+  modèles personnels.
 
 ## [3.8.0] - 2026-11-19
 

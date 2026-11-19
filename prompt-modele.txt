@@ -93,7 +93,6 @@ Section 2, "Explorateur {{BASE}}" :
    Vous n'avez aucune donnée de théorie : dites-le, et annoncez comme
    tel ce que vous tirez de votre mémoire.
 #! fin
-#! si STOCKFISH
 Section 3, "Évaluations Stockfish" : pour chaque demi-coup,
    l'évaluation du point de vue des Blancs, les chances G/N/P (gain,
    nulle, perte des Blancs selon le modèle du moteur), l'écart en
@@ -109,11 +108,6 @@ Section 3, "Évaluations Stockfish" : pour chaque demi-coup,
    moteur ne l'évalue pas, ses colonnes Éval, G/N/P, Écart et Nature
    portent "-", les trois meilleurs coups de la position restant
    donnés.
-#! sinon
-Section 3, "Évaluations Stockfish" : absente de ce dossier, la collecte
-   ayant été lancée avec --sans-stockfish. L'évaluation vous revient
-   (voir ÉVALUATION MOTEUR).
-#! fin
 Section 4, "Positions à échantillon non exploitable" : là où la base
    interrogée ne dit plus rien, ou le demi-coup d'un coup nul.
 Section 5, "Données brutes de l'archive" : le contenu du zip, dont
@@ -200,15 +194,9 @@ résultat d'exécution.
 CAS A, vous pouvez exécuter du code (bac à sable, interpréteur de
 code) :
 
-#! si STOCKFISH
 Installez-y python-chess (pip install chess, dans un venv si le système
 l'exige).
 Stockfish est inutile : la section 3 fournit les évaluations.
-#! sinon
-Installez-y python-chess (pip install chess, dans un venv si le système
-l'exige) et Stockfish (apt install stockfish, binaire
-/usr/games/stockfish).
-#! fin
 
 Construisez le PGN annoté avec python-chess (objets Game, variations,
 commentaires, NAGs) et exportez-le avec StringExporter, plutôt que de
@@ -232,14 +220,11 @@ CONTRAINTES DE FORMAT. Rien ne vérifie alors vos coups à votre place :
 - recopiez la ligne principale de la section 1 sans la modifier ;
 - rejouez chaque variante coup par coup depuis la position où elle
   commence, et préférez une variante courte et sûre à une longue ;
-#! si STOCKFISH
 - reprenez de préférence les lignes de la section 3 bis, déjà légales ;
-#! fin
 - coupez vous-même chaque ligne avant 80 caractères.
 
 === ÉVALUATION MOTEUR ===
 
-#! si STOCKFISH
 Les chiffres de la section 3 font foi : ne réévaluez aucun coup. La
 colonne Nature désigne les coups à commenter
 obligatoirement. La section 3 ter fournit pour chaque erreur et gaffe
@@ -248,24 +233,6 @@ parenthèses partent des lignes de la section 3 bis. Les chances G/N/P
 peuvent illustrer un basculement, présentées comme une tendance du
 modèle de Stockfish, jamais comme la probabilité réelle entre deux
 joueurs humains.
-#! sinon
-La section 3 est absente : évaluez vous-même chaque position du
-périmètre avant d'annoter, avec python-chess et Stockfish, profondeur
-{{PROFONDEUR}}, multipv {{MULTIPV}}.
-Pour chaque demi-coup, relevez l'évaluation du coup joué (seconde
-analyse restreinte à ce coup s'il n'est pas parmi les trois premiers),
-les trois meilleurs coups et leur variante, l'écart en centipions du
-point de vue du joueur au trait, et la nature selon ces seuils :
-imprécision dès {{SEUIL_IMPRECISION}} cp, erreur dès {{SEUIL_ERREUR}}, gaffe dès {{SEUIL_GAFFE}}. Évaluations du
-point de vue des Blancs. Marquez-les comme vos estimations et
-n'inventez aucun chiffre. Dans la conversation, ne montrez sous le
-titre "Évaluations Stockfish" que les coups dont l'écart atteint
-{{SEUIL_IMPRECISION}} cp : le tableau complet reste dans le bac à sable.
-Sans exécution de code (cas B), vous n'avez aucun moteur : ne donnez
-aucun chiffre en centipions, désignez les coups douteux par votre seul
-jugement, annoncé comme une estimation, et conseillez au joueur de
-relancer la collecte sans l'option --sans-stockfish.
-#! fin
 
 === LIVRAISON ===
 
@@ -336,7 +303,7 @@ Contenu de chaque commentaire, selon ce qui s'applique :
 
 Après une erreur, indiquez toujours ce qu'il fallait jouer et POURQUOI,
 avec la variante, en partant du premier choix du moteur et de sa ligne :
-sections 3 bis et 3 ter, ou votre propre tableau.
+sections 3 bis et 3 ter.
 
 === NAGs (glyphes d'annotation numériques) ===
 
@@ -410,7 +377,7 @@ Après le fichier, dans la conversation et en texte simple :
 
 1. LES TROIS ERREURS LES PLUS COÛTEUSES, par ordre de gravité
    décroissante. Pour chacune : numéro de coup, coup joué, coup
-   correct, écart lu dans la section 3 ou dans votre propre tableau, et
+   correct, écart lu dans la section 3, et
    nature de l'erreur (calcul, évaluation, plan, négligence tactique,
    décision de structure).
 2. LE THÈME À TRAVAILLER EN PRIORITÉ, un seul, celui dont la correction
@@ -427,8 +394,7 @@ Après le fichier, dans la conversation et en texte simple :
 - Distinguez ce que vous voyez avec certitude de ce que vous estimez.
   Une variante que vous n'avez pas calculée jusqu'au bout est annoncée
   comme telle.
-- Les chiffres des sections 2 et 3, ou de votre propre tableau,
-  priment sur votre mémoire. Quand ils manquent, dites que vous
+- Les chiffres des sections 2 et 3 priment sur votre mémoire. Quand ils manquent, dites que vous
   estimez. Si la table de la section 2 s'arrête avant le point que
   vous voulez commenter, dites-le au lieu d'affirmer.
 - Une position trop complexe se tranche avec le moteur, si vous en

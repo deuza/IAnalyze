@@ -23,7 +23,7 @@ CAT=/usr/local/share/IAnalyze ; VENV=/opt/venv/lichess
 CAT=~/.local/share/IAnalyze ; VENV=$CAT/venv
 ```
 
-Sur un terminal, le script pose ses questions de démarrage : validez par Entrée, ou ajoutez `--sans-questions`. Stockfish tourne par défaut : pour raccourcir un test qui ne porte pas sur le moteur, ajoutez `--sans-stockfish`. Au tout premier lancement sur un terminal, il demande aussi votre pseudo et votre cadence habituelle, une fois pour toutes (section U).
+Sur un terminal, le script pose ses questions de démarrage : validez par Entrée, ou ajoutez `--sans-questions`. Stockfish tourne à chaque collecte : les tests qui ne portent pas sur le moteur le règlent au plus court, `--profondeur 1`. Au tout premier lancement sur un terminal, il demande aussi votre pseudo et votre cadence habituelle, une fois pour toutes (section U).
 
 Préparation, une ligne italienne entièrement cataloguée :
 
@@ -68,7 +68,7 @@ Attendu : 4 (usage, option, deux exemples).
 Options refusées, code 2 à chaque fois :
 
 ```bash
-for o in "--base maitres --cadences rapid" "--base lichess --cadences rapide" "--base lichess --classements 1100" "--coups-min -1" "--pause 1" "--seuil-frequence 150" "--sans-stockfish --profondeur 20" "--base plebe"; do
+for o in "--base maitres --cadences rapid" "--base lichess --cadences rapide" "--base lichess --classements 1100" "--coups-min -1" "--pause 1" "--seuil-frequence 150" "--sans-stockfish" "--base plebe"; do
     ./collecte-partie.py italienne.pgn $o 2>&1 | tail -1; echo "  $?"
 done
 ```
@@ -81,7 +81,7 @@ Attendu, dans l'ordre, après "collecte-partie.py: error:" :
   --coups-min doit valoir 0 ou plus
   --pause ne doit pas descendre sous 2 secondes
   --seuil-frequence doit être compris entre 0 et 100
-  --profondeur n'a pas d'effet avec --sans-stockfish
+  unrecognized arguments: --sans-stockfish
   argument --base: invalid choice: 'plebe' (...)
 Le "$?" affiche 0 à cause du tube : vérifiez le code avec
 ./collecte-partie.py italienne.pgn --pause 1 ; echo $?   -> 2
@@ -99,7 +99,7 @@ Attendu : "Fichier PGN introuvable : /tmp/inexistant.pgn", puis 1, et de même p
 ### T05
 
 ```bash
-ARCH=$(./collecte-partie.py italienne.pgn --sans-explorateur --sans-stockfish --jeton-fichier /nulle/part --catalogue /nulle/part 2>/dev/null)
+ARCH=$(./collecte-partie.py italienne.pgn --sans-explorateur --profondeur 1 --jeton-fichier /nulle/part --catalogue /nulle/part 2>/dev/null)
 echo "$ARCH" ; unzip -l "$ARCH"
 ```
 
@@ -108,7 +108,7 @@ Attendu : une seule ligne, le chemin de l'archive ; l'archive contient `synthese
 ### T06
 
 ```bash
-./collecte-partie.py italienne.pgn --sans-explorateur --sans-stockfish --sans-questions --garder-dossier
+./collecte-partie.py italienne.pgn --sans-explorateur --profondeur 1 --sans-questions --garder-dossier
 ls -d analyse-italienne-*/
 ```
 
@@ -118,7 +118,7 @@ Attendu : le dossier existe à côté de l'archive. Sans l'option (T05), il n'ex
 
 ```bash
 echo "Annotez en français." > /tmp/consignes.md
-./collecte-partie.py italienne.pgn --sans-explorateur --sans-stockfish --sans-questions --consignes /tmp/consignes.md
+./collecte-partie.py italienne.pgn --sans-explorateur --profondeur 1 --sans-questions --consignes /tmp/consignes.md
 ```
 
 Attendu : `synthese.md` commence par la section "## Consignes d'analyse" contenant la phrase.
@@ -126,7 +126,7 @@ Attendu : `synthese.md` commence par la section "## Consignes d'analyse" contena
 ### T08
 
 ```bash
-./collecte-partie.py italienne.pgn --sans-explorateur --sans-stockfish --sans-questions --sortie /tmp/analyses
+./collecte-partie.py italienne.pgn --sans-explorateur --profondeur 1 --sans-questions --sortie /tmp/analyses
 ```
 
 Attendu : archive créée dans /tmp/analyses, répertoire créé au besoin.
@@ -324,7 +324,7 @@ Attendu : "Moteur : `&lt;binaire par défaut>`, profondeur 10, multipv 2, 6 demi
 ./collecte-partie.py italienne.pgn --stockfish /nulle/part ; echo $?
 ```
 
-Attendu : "Stockfish introuvable : /nulle/part. Installez-le (apt install stockfish, dans /usr/games), indiquez son chemin avec `--stockfish`, ou laissez l'évaluation à l'analyste avec `--sans-stockfish`.", puis 1. Sous macOS, la parenthèse devient "(brew install stockfish)".
+Attendu : "Stockfish introuvable : /nulle/part. Installez-le (apt install stockfish, dans /usr/games), ou indiquez son chemin avec `--stockfish`. L'évaluation du moteur fait partie de toute collecte.", puis 1. Sous macOS, la parenthèse devient "(brew install stockfish)".
 
 ## H. Jeton
 
@@ -390,7 +390,7 @@ Attendu : 3 sous Debian, 0 sous macOS.
 ```bash
 printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 d6 ' > roques.pgn
 printf '6. O-O O-O *\n' >> roques.pgn
-./collecte-partie.py roques.pgn --sans-stockfish --sans-questions
+./collecte-partie.py roques.pgn --profondeur 1 --sans-questions
 ```
 
 Attendu : douze lignes dans la table. Lignes 11 et 12, O-O au rang 1 puis au rang 2, fréquences proches de 27 % et de 19 % (27.1 % et 18.9 % le 18 novembre 2026, sur 4060402 et 2417197 parties). Arrêt : "fin de la partie". Avant la version 3.4.1, un roque ressortait à 0.0 %, au rang "-", et passait pour une sortie de théorie : la base le note "roi prend tour", e1h1, là où le script comparait avec e1g1.
@@ -400,7 +400,7 @@ Attendu : douze lignes dans la table. Lignes 11 et 12, O-O au rang 1 puis au ran
 Les fixtures sont produites par printf, aucun fichier binaire n'est versionné. Posez d'abord :
 
 ```bash
-O="--sans-explorateur --sans-stockfish --sans-questions"
+O="--sans-explorateur --profondeur 1 --sans-questions"
 ```
 
 ### T34
@@ -516,9 +516,9 @@ Attendu : "Attention, PGN : 2 caractère(s) de contrôle retiré(s), dont 0 NUL.
 
 ```bash
 printf '\357\273\277lip_factice\r\n' > t-jeton ; chmod 600 t-jeton
-./collecte-partie.py italienne.pgn --sans-stockfish --sans-questions --jeton-fichier t-jeton --catalogue /nulle/part
+./collecte-partie.py italienne.pgn --profondeur 1 --sans-questions --jeton-fichier t-jeton --catalogue /nulle/part
 printf 'lip_factic\351\n' > t-jeton
-./collecte-partie.py italienne.pgn --sans-stockfish --sans-questions --jeton-fichier t-jeton --catalogue /nulle/part
+./collecte-partie.py italienne.pgn --profondeur 1 --sans-questions --jeton-fichier t-jeton --catalogue /nulle/part
 echo $?
 ```
 
@@ -548,7 +548,7 @@ pid, fd = pty.fork()
 if pid == 0:
     os.execv("./collecte-partie.py",
              ["./collecte-partie.py", "italienne.pgn",
-              "--sans-explorateur", "--sans-stockfish",
+              "--sans-explorateur", "--profondeur", "1",
               "--garder-dossier", "--reglages", "t-r45.ini"])
 for reponse in (b"b", b"Zo\xe9", b"", b"", b"", b"", b""):
     time.sleep(1)
@@ -758,7 +758,7 @@ sous le nom d'une archive, et la troisième 0.
 
 ```bash
 for u in https://lichess.org/analysis/standard https://lichess.org/study/abcdefgh/ijklmnop https://example.com/abcdefgh ; do
-    ./collecte-partie.py $u --sans-explorateur --sans-stockfish 2>&1 | grep -c -E 'URL non reconnue|chargement du PGN'
+    ./collecte-partie.py $u --sans-explorateur --profondeur 1 2>&1 | grep -c -E 'URL non reconnue|chargement du PGN'
 done
 ./collecte-partie.py https://example.com/abcdefgh ; echo $?
 python3 - <<'EOF'
@@ -893,7 +893,7 @@ while not os.waitpid(pid, os.WNOHANG)[0]:
         silences = 0
 sys.stdout.write(vu.decode("utf-8", "replace").replace("\r", ""))
 EOF
-P="--sans-explorateur --sans-stockfish --garder-dossier"
+P="--sans-explorateur --profondeur 1 --garder-dossier"
 python3 t-pty.py "Zoe42, zoe|t|15|10|1300|b||||||" italienne.pgn $P --reglages t-reglages.ini | grep -E 'glages|Votre|par '
 grep -v '^#' t-reglages.ini
 grep White analyse-italienne-*/partie.pgn
@@ -1037,7 +1037,7 @@ R="--sans-explorateur --sans-questions --reglages t-pr.ini"
 ### T64
 
 ```bash
-ARCH=$(./collecte-partie.py t-pr.pgn $R --sans-stockfish 2> t-pr.log)
+ARCH=$(./collecte-partie.py t-pr.pgn $R --profondeur 1 2> t-pr.log)
 echo "$ARCH" | wc -l ; PR="${ARCH%.zip}.prompt.txt" ; ls "$PR"
 grep -c 'Prompt d.analyse écrit' t-pr.log
 grep -c -E '^#!|\{\{' "$PR" ; unzip -l "$ARCH" | grep -c prompt
@@ -1069,7 +1069,7 @@ Le camp est déduit du pseudo, hors terminal et sans question.
 Le prompt ne garde que les passages qui s'appliquent.
 
 ```bash
-for motif in 'Stockfish. : absente de ce dossier' 'La section 3 est absente' 'Stockfish est inutile' 'collecte de l.explorateur n.a pas' 'celle de tous les joueurs de Lichess'; do
+for motif in 'Les chiffres de la section 3' 'La section 3 est absente' 'Stockfish est inutile' 'collecte de l.explorateur n.a pas' 'celle de tous les joueurs de Lichess'; do
     grep -c "$motif" "$PR"
 done
 ARCH=$(./collecte-partie.py t-pr.pgn $R --profondeur 6 --fils 1 --hachage 16 --base maitres 2>/dev/null)
@@ -1079,21 +1079,21 @@ for motif in 'Stockfish est inutile' 'Les chiffres de la section 3' 'porte "mat"
 done
 ```
 
-Attendu, sans moteur : 1, 1, 0, 1, 1. Puis, avec le moteur et la base maîtres : 1, 1, 1, 0, 1. Le premier prompt demande à l'analyste d'évaluer lui-même, le second lui dit que les chiffres font foi et lui explique la mention "mat".
+Attendu, sans explorateur : 1, 0, 1, 1, 1. Puis, avec la base maîtres : 1, 1, 1, 0, 1. Le prompt dit toujours que les chiffres du moteur font foi, ne demande jamais à l'analyste d'évaluer lui-même, et lui explique la mention "mat".
 
 ### T66
 
 ```bash
 printf 'Bonjour {{PSEUDO}}\n' > t-modele.txt
-./collecte-partie.py t-pr.pgn $R --sans-stockfish --prompt t-modele.txt ; echo $?
+./collecte-partie.py t-pr.pgn $R --profondeur 1 --prompt t-modele.txt ; echo $?
 printf 'a\n#! si MOTEUR\nb\n#! fin\n' > t-modele.txt
-./collecte-partie.py t-pr.pgn $R --sans-stockfish --prompt t-modele.txt 2>&1 | cut -c1-60
+./collecte-partie.py t-pr.pgn $R --profondeur 1 --prompt t-modele.txt 2>&1 | cut -c1-60
 printf 'a\n#! si STOCKFISH\nb\n' > t-modele.txt
-./collecte-partie.py t-pr.pgn $R --sans-stockfish --prompt t-modele.txt
+./collecte-partie.py t-pr.pgn $R --profondeur 1 --prompt t-modele.txt
 ./collecte-partie.py t-pr.pgn $R --prompt /nulle/part.txt
 ./collecte-partie.py t-pr.pgn --prompt x --sans-prompt 2>&1 | tail -1
 rm -f analyse-t-pr-*
-./collecte-partie.py t-pr.pgn $R --sans-stockfish --sans-prompt
+./collecte-partie.py t-pr.pgn $R --profondeur 1 --sans-prompt
 ls analyse-t-pr-* | grep -c prompt
 ```
 
@@ -1104,7 +1104,7 @@ Attendu, dans l'ordre : "Modèle de prompt `t-modele.txt`, ligne 1 : valeur inco
 ```bash
 mkdir t-seul && cp collecte-partie.py t-seul/
 rm -f analyse-t-pr-*
-t-seul/collecte-partie.py t-pr.pgn $R --sans-stockfish 2> t-pr.log
+t-seul/collecte-partie.py t-pr.pgn $R --profondeur 1 2> t-pr.log
 echo $? ; grep -c 'modèle de prompt introuvable' t-pr.log
 ls analyse-t-pr-* | grep -c prompt
 ```
@@ -1125,7 +1125,7 @@ grep -h -E 'niveau :|contient les réponses' analyse-t-pr-*.prompt.txt
 printf '[joueur]\npseudos = Bob\ncadence = 14 jours\n' > t-niv.ini
 printf 'niveau = inconnu\n' >> t-niv.ini
 rm -rf analyse-t-pr-*
-./collecte-partie.py t-pr.pgn --sans-explorateur --sans-questions --sans-stockfish --reglages t-niv.ini > /dev/null 2>&1
+./collecte-partie.py t-pr.pgn --sans-explorateur --sans-questions --profondeur 1 --reglages t-niv.ini > /dev/null 2>&1
 grep -h -E 'camp dans|niveau :' analyse-t-pr-*.prompt.txt
 ```
 
@@ -1150,9 +1150,10 @@ Attendu : "Réglages supprimés : `t-purge.ini`. Ils seront redemandés à la pr
 
 ```bash
 ./collecte-partie.py italienne.pgn --avec-stockfish ; echo $?
+./collecte-partie.py italienne.pgn --sans-stockfish ; echo $?
 ```
 
-Attendu : "collecte-partie.py: error: unrecognized arguments: --avec-stockfish", puis 2. L'option, sans effet depuis que l'évaluation est le défaut, a été retirée en 4.0.0.
+Attendu : "collecte-partie.py: error: unrecognized arguments: --avec-stockfish", puis 2, et de même pour `--sans-stockfish`. Les deux options ont été retirées en 4.0.0 : l'évaluation du moteur fait partie de toute collecte.
 
 ## W. Partie d'essai
 
