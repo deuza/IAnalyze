@@ -81,6 +81,23 @@ import zipfile
 #     marche à suivre, ou on le crée si vous avez passé --installer-venv.
 # ===========================================================================
 
+
+def est_fichier(candidat: pathlib.Path) -> bool:
+    """
+    Vrai si le chemin désigne un fichier, faux dans tous les autres cas.
+
+    Path.is_file() rend faux pour un fichier absent, mais laisse passer
+    d'autres erreurs du système : nom trop long, répertoire interdit. Un
+    texte collé par mégarde à la place d'un nom de fichier finissait
+    ainsi en erreur inattendue. Ici, ce que le système refuse de
+    regarder n'est pas un fichier lisible, et le message habituel suit.
+    """
+    try:
+        return candidat.is_file()
+    except OSError:
+        return False
+
+
 #: Vrai sous macOS. Les commandes d'installation proposées dans les
 #: messages et l'emplacement du moteur en dépendent.
 EST_MACOS = sys.platform == "darwin"
@@ -149,7 +166,7 @@ def venv_operationnel(venv: str) -> bool:
     environnement fonctionnel.
     """
     interpreteur = python_du_venv(venv)
-    if not interpreteur.is_file():
+    if not est_fichier(interpreteur):
         return False
     try:
         subprocess.run([str(interpreteur), "-c", "import chess"],
@@ -170,7 +187,7 @@ def installer_venv(venv: str) -> None:
     racine = pathlib.Path(os.path.expanduser(venv))
     interpreteur = python_du_venv(venv)
 
-    if not interpreteur.is_file():
+    if not est_fichier(interpreteur):
         journal("Création de l'environnement virtuel : %s" % racine)
         try:
             racine.parent.mkdir(parents=True, exist_ok=True)
@@ -225,7 +242,7 @@ def relancer_dans_venv(venv: str, argv: list[str]) -> None:
             "Réparez-le avec : %s --installer-venv --venv %s"
             % (venv, script, venv))
 
-    if interpreteur.is_file():
+    if est_fichier(interpreteur):
         journal("Module chess absent, relance via %s" % interpreteur)
         os.environ[MARQUEUR_RELANCE] = "1"
         try:
@@ -852,7 +869,7 @@ def lire_jeton(chemin: str) -> str:
     sont contrôlés au passage.
     """
     p = pathlib.Path(os.path.expanduser(chemin))
-    if not p.is_file():
+    if not est_fichier(p):
         raise SystemExit("Jeton absent : %s introuvable." % p)
 
     try:
@@ -916,8 +933,14 @@ def extraire_id(source: str) -> str | None:
     """
     source = source.strip()
     if source.startswith(("http://", "https://")):
-        url = urllib.parse.urlparse(source)
-        if (url.hostname or "").lower() not in HOTES_LICHESS:
+        try:
+            url = urllib.parse.urlparse(source)
+            hote = (url.hostname or "").lower()
+        except ValueError:
+            # Crochets mal placés, par exemple : urlparse y voit une
+            # adresse IPv6 invalide. Ce n'est pas une partie Lichess.
+            return None
+        if hote not in HOTES_LICHESS:
             return None
         morceaux = [m for m in url.path.split("/") if m]
         for prefixe in PREFIXES_PARTIE:
@@ -979,6 +1002,26 @@ RE_JETON_PGN = re.compile(
     r"|\d+\.*"
     r"|\$\d+"
     r"|[!?]{1,2}")
+
+
+#: Défauts d'une position de départ, dans l'ordre où ils sont annoncés.
+#: Les drapeaux sont nommés et non lus dans le module chess, qui n'est
+#: pas encore chargé quand le script s'amorce hors de son environnement
+#: virtuel.
+POSITIONS_ILLEGALES = (
+    ("STATUS_NO_WHITE_KING", "pas de roi blanc"),
+    ("STATUS_NO_BLACK_KING", "pas de roi noir"),
+    ("STATUS_TOO_MANY_KINGS", "plus d'un roi par camp"),
+    ("STATUS_OPPOSITE_CHECK",
+     "le camp qui n'a pas le trait est en échec"),
+    ("STATUS_PAWNS_ON_BACKRANK",
+     "un pion sur la première ou la huitième rangée"),
+    ("STATUS_TOO_MANY_WHITE_PIECES", "trop de pièces blanches"),
+    ("STATUS_TOO_MANY_BLACK_PIECES", "trop de pièces noires"),
+    ("STATUS_TOO_MANY_WHITE_PAWNS", "trop de pions blancs"),
+    ("STATUS_TOO_MANY_BLACK_PAWNS", "trop de pions noirs"),
+    ("STATUS_EMPTY", "échiquier vide"),
+)
 
 
 def controler_lexique(texte_pgn: str) -> None:
@@ -1079,6 +1122,20 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
                                      for e in partie.errors))
     if not list(partie.mainline_moves()):
         raise SystemExit("PGN sans aucun coup dans la ligne principale.")
+    # Une balise FEN peut décrire une position qui n'existe pas aux
+    # échecs. python-chess la joue quand même, et le moteur s'arrête sur
+    # une erreur qui ne dit rien de la cause. Les droits de roque et la
+    # case de prise en passant mal renseignés ne sont pas retenus : ils
+    # sont fréquents dans une FEN écrite à la main, et python-chess les
+    # corrige de lui-même.
+    etat = partie.board().status() & ~(chess.STATUS_BAD_CASTLING_RIGHTS
+                                       | chess.STATUS_INVALID_EP_SQUARE)
+    if etat != chess.STATUS_VALID:
+        defauts = [texte for drapeau, texte in POSITIONS_ILLEGALES
+                   if etat & getattr(chess, drapeau)
+                   ] or ["position impossible"]
+        raise SystemExit("Position de départ illégale, balise FEN : %s."
+                         % ", ".join(defauts))
 
     # Les valeurs des balises partent dans les en-têtes de la synthèse et
     # dans le journal : on en retire tabulations et caractères de contrôle
@@ -1119,9 +1176,15 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
 # ===========================================================================
 
 def questions_possibles(sans_questions: bool) -> bool:
-    """Vrai si l'on peut poser des questions : terminal des deux côtés."""
-    return (not sans_questions and sys.stdin.isatty()
-            and sys.stderr.isatty())
+    """
+    Vrai si l'on peut poser des questions : terminal des deux côtés.
+
+    Un flux fermé par l'appelant, "<&-" dans un script, vaut None en
+    Python : ce n'est pas un terminal, et aucune question n'est posée.
+    """
+    return (not sans_questions
+            and sys.stdin is not None and sys.stderr is not None
+            and sys.stdin.isatty() and sys.stderr.isatty())
 
 
 def demander(question: str, defaut: str | None = None) -> str | None:
@@ -1672,7 +1735,7 @@ def purger_reglages(chemin: str) -> None:
     if not p.exists() and not p.is_symlink():
         journal("Aucun fichier de réglages à supprimer : %s" % p)
         return
-    if not (p.is_file() or p.is_symlink()):
+    if not (est_fichier(p) or p.is_symlink()):
         raise SystemExit("--purge-reglages : %s n'est pas un fichier, rien "
                          "n'est supprimé." % p)
     try:
@@ -1697,7 +1760,7 @@ def lire_reglages(chemin: str) -> configparser.ConfigParser:
     # caractère, il ne déclenche aucune substitution.
     reglages = configparser.ConfigParser(interpolation=None)
     p = chemin_reglages(chemin)
-    if p.is_file():
+    if est_fichier(p):
         texte = lire_fichier_texte(p, "réglages")[0]
         try:
             reglages.read_string(texte, source=str(p))
@@ -2146,7 +2209,7 @@ def lire_catalogue(repertoire: str) -> Catalogue:
     une base incomplète.
     """
     chemin = chemin_catalogue(repertoire)
-    if not chemin.is_file():
+    if not est_fichier(chemin):
         raise SystemExit(
             "Catalogue des ouvertures absent : %s introuvable.\n\n"
             "Installez-le en une commande :\n"
@@ -2613,7 +2676,7 @@ def reste_estime(ecoule: float, faits: int, total: int) -> str:
 
 def verifier_moteur(binaire: str) -> None:
     """Vérifie l'existence du binaire avant d'avoir créé quoi que ce soit."""
-    if not pathlib.Path(binaire).is_file():
+    if not est_fichier(pathlib.Path(binaire)):
         raise SystemExit("Stockfish introuvable : %s. Installez-le (%s), "
                          "ou indiquez son chemin avec --stockfish. "
                          "L'évaluation du moteur fait partie de toute "
@@ -3915,7 +3978,7 @@ def main(argv: list[str]) -> int:
     consignes = None
     if options.consignes:
         chemin_consignes = pathlib.Path(os.path.expanduser(options.consignes))
-        if not chemin_consignes.is_file():
+        if not est_fichier(chemin_consignes):
             raise SystemExit("Fichier de consignes introuvable : %s"
                              % chemin_consignes)
         consignes = lire_texte(chemin_consignes, "consignes")
@@ -3930,7 +3993,7 @@ def main(argv: list[str]) -> int:
     modele_prompt = None
     if not options.sans_prompt:
         fichier_modele = chemin_modele(options.prompt, options.prompt_seul)
-        if fichier_modele.is_file():
+        if est_fichier(fichier_modele):
             modele_prompt = lire_texte(fichier_modele, "modèle de prompt")
             verifier_modele(modele_prompt, str(fichier_modele))
             # Un prompt à coller seul doit porter la partie : un modèle
@@ -3956,7 +4019,7 @@ def main(argv: list[str]) -> int:
     encodage_pgn = "utf-8"
     remarques_pgn: list[str] = []
     chemin_local = pathlib.Path(os.path.expanduser(options.source))
-    if chemin_local.is_file():
+    if est_fichier(chemin_local):
         journal("Lecture du PGN local : %s" % chemin_local)
         texte_pgn, encodage_pgn, remarques_pgn = lire_fichier_texte(
             chemin_local, "PGN")

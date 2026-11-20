@@ -72,6 +72,11 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- Quatre entrées finissaient en "Erreur inattendue" au lieu du message
+  prévu : l'entrée standard fermée par l'appelant, un nom de fichier
+  trop long ou dans un répertoire interdit, une URL aux crochets mal
+  placés, et une balise FEN décrivant une position illégale, où le
+  moteur s'arrêtait sans dire pourquoi.
 - `verifier-analyse.py` : un PGN aux fins de ligne CRLF voyait chacune
   de ses lignes de 79 caractères comptée 80. Certains PGN abîmés, et
   une archive incomplète ou altérée, finissaient en trace Python ou en

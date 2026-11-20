@@ -1387,6 +1387,45 @@ printf '4... Nf6 5. 0-0 0-0 *\n' >> t-formes.pgn
 lancer t-formes.pgn $O
 egal "T75 formes admises, code de retour" 0 "$RC"
 
+titre "T77 : entrées qui finissaient en erreur inattendue"
+
+# Entrée standard fermée par l'appelant, sans --sans-questions : ce n'est
+# pas un terminal, aucune question n'est posée et la collecte se fait.
+"$SCRIPT" italienne.pgn --sans-explorateur --profondeur 1 \
+    --venv "$VENV" --reglages "$REGL" <&- > sortie 2> journal
+egal "T77 entrée standard fermée, code de retour" 0 "$?"
+verifier "T77 entrée standard fermée, questions sautées" \
+    contient journal "terminal non interactif"
+rm -rf analyse-italienne-*
+# Un nom de fichier que le système refuse de regarder, ici trop long.
+lancer "$(printf '%0300d' 0).pgn" $O
+egal "T77 nom trop long, code de retour" 1 "$RC"
+verifier "T77 nom trop long, fichier introuvable" \
+    contient journal "Fichier PGN introuvable"
+# Une URL aux crochets mal placés.
+lancer 'https://[lichess.org]/abcdefgh' $O
+egal "T77 URL mal formée, code de retour" 1 "$RC"
+verifier "T77 URL mal formée, refusée" contient journal "URL non reconnue"
+# Une position de départ sans roi noir, puis une où le camp qui n'a pas
+# le trait est en échec.
+printf '[SetUp "1"]\n[FEN "8/8/8/8/8/8/4P3/4K3 w - - 0 1"]\n\n1. e4 *\n' > t-sans-roi.pgn
+lancer t-sans-roi.pgn $O
+egal "T77 position sans roi, code de retour" 1 "$RC"
+verifier "T77 position sans roi, cause nommée" \
+    contient journal "Position de départ illégale, balise FEN : pas de roi noir"
+printf '[SetUp "1"]\n[FEN "4k3/4R3/8/8/8/8/8/4K3 w - - 0 1"]\n\n1. Rxe8 *\n' > t-roi-en-prise.pgn
+lancer t-roi-en-prise.pgn $O
+egal "T77 roi en prise, code de retour" 1 "$RC"
+verifier "T77 roi en prise, cause nommée" \
+    contient journal "le camp qui n'a pas le trait est en échec"
+# Une FEN écrite à la main, aux droits de roque faux, reste acceptée.
+printf '[SetUp "1"]\n[FEN "4k3/8/8/8/8/8/4P3/4K3 w KQkq - 0 1"]\n\n1. e4 *\n' > t-roques-faux.pgn
+lancer t-roques-faux.pgn $O
+egal "T77 droits de roque faux, acceptés" 0 "$RC"
+cat journal > journal-t77
+egal "T77 aucune erreur inattendue" 0 \
+    "$(cat journal-t77 journal | grep -c 'Erreur inattendue')"
+
 titre "T06, T07, T08 : dossier gardé, consignes, répertoire de sortie"
 
 rm -rf analyse-italienne-*
