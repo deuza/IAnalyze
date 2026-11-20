@@ -1681,6 +1681,20 @@ def construire(fautif):
 
 
 open("t-conforme.pgn", "w", encoding="utf-8").write(construire(False))
+# Trois défauts que le PGN conforme ne porte pas, un par fichier, pour
+# que chacun soit relevé seul : ils ne changent ni les coups ni leur
+# nombre, et passaient donc inaperçus.
+conforme = construire(False)
+lignes = conforme.rstrip("\n").split("\n")
+lignes.insert(len(lignes) - 1, "")
+open("t-vide-fin.pgn", "w", encoding="utf-8").write("\n".join(lignes) + "\n")
+open("t-fermante.pgn", "w", encoding="utf-8").write(
+    conforme.replace("Partie d'essai, ouverture",
+                     "Partie d'essai } ouverture", 1))
+blancs = '[White "%s"]\n' % source.headers["White"]
+noirs = '[Black "%s"]\n' % source.headers["Black"]
+open("t-balises.pgn", "w", encoding="utf-8").write(
+    conforme.replace(blancs + noirs, noirs + blancs, 1))
 open("t-fautif.pgn", "w", encoding="utf-8").write(construire(True))
 open("t-conversation.txt", "w", encoding="utf-8").write(
     "Position 1 : %s\n"
@@ -1718,6 +1732,19 @@ FIN
         verifier "T73 chiffre inventé nommé" contient bilan "+7.77"
         grep -E '^  (ECHEC|ATTENTION)' bilan | cut -c1-110 > lignes
         joindre lignes 20
+        # Défauts qui ne changent pas les coups lus : chacun doit être
+        # relevé à lui seul, sur un PGN par ailleurs conforme.
+        while IFS='|' read -r fichier constat; do
+            "$PYVENV" "$VERIF" "$ARCH" "$fichier" > bilan 2>&1
+            egal "T73 $fichier, code de retour" 1 "$?"
+            egal "T73 $fichier, un seul échec" 1 "$(grep -c '^  ECHEC' bilan)"
+            verifier "T73 $fichier, défaut nommé" \
+                grep -q -E "^  ECHEC .*$constat" bilan
+        done <<'FIN'
+t-vide-fin.pgn|ligne vide dans le corps de la partie
+t-fermante.pgn|aucune accolade dans un commentaire
+t-balises.pgn|les sept balises obligatoires, dans l'ordre
+FIN
         "$PYVENV" "$VERIF" "$ARCH" - --synthese t-conversation.txt \
             > bilan 2>&1
         egal "T73 aucun PGN rendu, code de retour" 1 "$?"

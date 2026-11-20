@@ -68,6 +68,12 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- `verifier-analyse.py` déclarait conformes trois défauts qu'il dit
+  contrôler. Une ligne vide dans le corps n'était relevée que si elle
+  raccourcissait la ligne principale : placée avant une variante, elle
+  passait, et la variante n'était jamais lue. Une accolade fermante
+  dans un commentaire n'était pas vue. L'ordre des sept balises ne
+  pouvait pas être trouvé fautif, python-chess les rangeant toujours.
 - Partie partant d'une balise FEN : la ligne "Résultat et évaluation
   finale se contredisent" n'était jamais écrite, ni dans la synthèse ni
   dans le prompt, dès que la FEN ne valait pas "coup 1, trait aux

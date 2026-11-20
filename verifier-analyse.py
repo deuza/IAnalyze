@@ -28,11 +28,14 @@ Ce qui est contrôlé :
   5. chaque évaluation citée existe bien dans les données du moteur ;
   6. les variantes : nombre, longueur, appui sur une ligne du moteur,
      et celles qu'un LLM écrit à tort à l'intérieur d'un commentaire ;
-  7. avec --synthese : les FEN citées sont valides et viennent du dossier.
+  7. avec --synthese : les FEN citées sont valides et viennent du dossier ;
+  8. avec --synthese : les évaluations citées dans la conversation
+     existent dans les données du moteur.
 
-Deux pièges relevés sur de vrais PGN de LLM sont nommés en clair : une
+Trois pièges relevés sur de vrais PGN de LLM sont nommés en clair : une
 ligne vide dans le corps de la partie, où python-chess arrête sa lecture,
-et un NAG de position contraire à l'évaluation du moteur.
+une variante écrite à l'intérieur d'un commentaire, qui n'est alors que
+du texte, et un NAG de position contraire à l'évaluation du moteur.
 
 Chaque ligne du bilan porte l'un de ces repères :
 
@@ -230,16 +233,25 @@ def controler_lecture(b: Bilan, brut: bytes) -> tuple[str, chess.pgn.Game]:
     # sa lecture. Le reste du fichier devient une seconde partie, sans
     # balises. Le défaut est nommé, puis les contrôles continuent sur le
     # fichier réparé, pour mesurer tout de même le travail rendu.
+    #
+    # Toute ligne vide du corps est relevée, et pas seulement celle qui
+    # raccourcit la ligne principale : placée avant une variante ou avant
+    # le marqueur de fin, elle cache la suite sans changer le compte des
+    # coups, et ce qui la suit ne serait jamais contrôlé.
     repare, retirees = retirer_lignes_vides(texte)
     if retirees:
         relue = chess.pgn.read_game(io.StringIO(repare))
         lus = len(ligne_principale(partie))
+        constat = "ligne vide dans le corps de la partie"
         if relue is not None and len(ligne_principale(relue)) > lus:
-            b.noter("ECHEC", "ligne vide dans le corps de la partie : "
-                    "python-chess y arrête sa lecture et ne voit que %d "
-                    "demi-coup(s) sur %d"
-                    % (lus, len(ligne_principale(relue))),
-                    ["ligne %d" % n for n in retirees])
+            constat += (" : python-chess y arrête sa lecture et ne voit "
+                        "que %d demi-coup(s) sur %d"
+                        % (lus, len(ligne_principale(relue))))
+        else:
+            constat += (" : python-chess y arrête sa lecture, ce qui la "
+                        "suit n'est pas lu")
+        b.noter("ECHEC", constat, ["ligne %d" % n for n in retirees])
+        if relue is not None:
             b.noter("INFO", "les contrôles suivants portent sur le fichier "
                     "une fois ces lignes retirées")
             texte, partie = repare, relue
@@ -301,6 +313,52 @@ def commentaires(partie: chess.pgn.Game) -> list[tuple[str, str]]:
     return trouves
 
 
+def accolades_orphelines(texte: str) -> list[str]:
+    """
+    Lignes où une accolade fermante apparaît hors de tout commentaire.
+
+    Une accolade fermante écrite dans un commentaire le termine trop
+    tôt : la fin du commentaire tombe dans le corps de la partie, où
+    python-chess l'ignore mot après mot, sans erreur. Ce qui reste d'elle
+    est une seconde accolade fermante, que rien n'a ouverte : c'est elle
+    que l'on cherche, dans le texte brut.
+    """
+    trouvees = []
+    ouvert = False
+    for n, ligne in enumerate(texte.split("\n"), 1):
+        if not ouvert and ligne.startswith("["):
+            continue
+        for c in ligne:
+            if ouvert:
+                ouvert = c != "}"
+            elif c == "{":
+                ouvert = True
+            elif c == ";":
+                # Commentaire de fin de ligne.
+                break
+            elif c == "}":
+                trouvees.append("ligne %d : accolade fermante en trop" % n)
+    return trouvees
+
+
+def balises_du_texte(texte: str) -> list[str]:
+    """
+    Noms des balises dans l'ordre où le fichier les écrit.
+
+    python-chess range toujours les sept balises obligatoires en tête,
+    quel que soit l'ordre du fichier, et crée celles qui manquent : son
+    dictionnaire ne dit donc rien de ce que le LLM a écrit.
+    """
+    noms = []
+    for ligne in texte.split("\n"):
+        m = re.match(r'\[\s*([A-Za-z0-9_]+)\s+"', ligne)
+        if m:
+            noms.append(m.group(1))
+        elif ligne.strip():
+            break
+    return noms
+
+
 def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
                      origine: chess.pgn.Game, demi_coups: int) -> None:
     """Contraintes de format impératives du prompt."""
@@ -313,8 +371,9 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
 
     notes = commentaires(partie)
     # Une accolade ouvrante dans un commentaire reste dans son texte ; une
-    # fermante le termine trop tôt, et se voit alors aux erreurs de lecture.
+    # fermante le termine trop tôt, et ne se voit que dans le texte brut.
     accolades = [lieu for lieu, t in notes if "{" in t or "}" in t]
+    accolades += accolades_orphelines(texte)
     b.controle(not accolades, "aucune accolade dans un commentaire",
                accolades)
     pourcents = [lieu for lieu, t in notes if "%" in t]
@@ -338,10 +397,12 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
 
     # Balises : les sept obligatoires d'abord, les autres par ordre
     # alphabétique, et leurs valeurs reprises de la partie d'origine.
-    noms = list(partie.headers.keys())
+    noms = balises_du_texte(texte)
+    absentes = [n for n in SEPT_BALISES if n not in noms]
     b.controle(tuple(noms[:7]) == SEPT_BALISES,
                "les sept balises obligatoires, dans l'ordre",
-               ["ordre rendu : %s" % ", ".join(noms[:7])])
+               ["ordre rendu : %s" % ", ".join(noms[:7])]
+               + ["absente : %s" % n for n in absentes])
     autres = noms[7:]
     b.controle(autres == sorted(autres),
                "les autres balises par ordre alphabétique",

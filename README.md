@@ -990,7 +990,7 @@ Le script accepte le zip ou son dossier décompressé, et se relance tout seul d
 |---|---|
 | Lecture | fichier hors UTF-8, coup illégal dans la partie ou dans une variante, ligne vide dans le corps de la partie |
 | Ligne principale | différente de la partie d'origine |
-| Format | ligne de plus de 79 caractères, accolade ou `%` dans un commentaire, tiret cadratin, notation suffixe, balises, marqueur de fin |
+| Format | ligne de plus de 79 caractères, accolade ouvrante ou fermante dans un commentaire, `%`, tiret cadratin, notation suffixe, balises absentes ou dans le désordre, marqueur de fin |
 | Coups commentés | erreur ou gaffe de Stockfish laissée sans commentaire, NAG de position contraire à l'évaluation du moteur |
 | Évaluations | chiffre cité qui n'existe nulle part dans les données du moteur |
 | Variantes | variante écrite à l'intérieur d'un commentaire, donc non jouable, variante illégale ou trop longue |
@@ -998,7 +998,7 @@ Le script accepte le zip ou son dossier décompressé, et se relance tout seul d
 
 Deux de ces défauts viennent de vrais PGN de LLM et méritent une explication :
 
-- **La ligne vide dans le corps de la partie.** python-chess y voit la fin de la partie et n'en lit pas la suite. Le script nomme le défaut, puis poursuit ses contrôles sur le fichier une fois la ligne retirée.
+- **La ligne vide dans le corps de la partie.** python-chess y voit la fin de la partie et n'en lit pas la suite. Le script la relève où qu'elle soit, même si elle ne cache qu'une variante ou le marqueur de fin, puis poursuit ses contrôles sur le fichier une fois la ligne retirée.
 - **La variante écrite entre accolades.** Ce n'est que du texte, SCID ne la rejoue pas. Le script la rejoue lui-même pour dire si elle est légale et si elle vient d'une ligne du moteur.
 
 ### Lire le bilan
