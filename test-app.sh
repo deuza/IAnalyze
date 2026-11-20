@@ -526,6 +526,53 @@ egal "T45 pas d'erreur inattendue" 0 "$(grep -c 'Erreur inattendue' sortie-pty)"
 joindre sortie-pty
 rm -rf analyse-italienne-*
 
+titre "T79 : réponses refusées, trop longues ou porteuses de signes du PGN"
+# Le nom de l'adversaire part dans une balise du PGN : un guillemet ou un
+# crochet la fermerait trop tôt. Les deux premières réponses sont
+# refusées et la question reposée, la troisième est gardée.
+rm -rf analyse-italienne-*
+SCRIPT="$SCRIPT" VENV="$VENV" REGL="$REGL" python3 - > sortie-pty 2>&1 \
+    <<'EOF'
+import os
+import pty
+import time
+
+script = os.environ["SCRIPT"]
+pid, fd = pty.fork()
+if pid == 0:
+    os.execv(script, [script, "italienne.pgn", "--sans-explorateur",
+                      "--profondeur", "1", "--garder-dossier",
+                      "--venv", os.environ["VENV"],
+                      "--reglages", os.environ["REGL"]])
+recu = b""
+for reponse in (b"b", b'Ev"il] [White "Pirate"] {x}', b"a" * 300, b"Bob",
+                b"", b"", b"", b"", b""):
+    time.sleep(1)
+    os.write(fd, reponse + b"\n")
+time.sleep(3)
+try:
+    while True:
+        morceau = os.read(fd, 65536)
+        if not morceau:
+            break
+        recu += morceau
+except OSError:
+    pass
+os.waitpid(pid, 0)
+texte = recu.decode("utf-8", "replace")
+print(texte.count("Un nom ne peut contenir"),
+      texte.count("Réponse trop longue : 255"),
+      texte.count("Erreur inattendue"))
+EOF
+cat analyse-italienne-*/partie.pgn > extrait 2>/dev/null
+verifier "T79 nom gardé après deux refus" contient extrait '[Black "Bob"]'
+egal "T79 une seule balise White, aucun signe en trop" "1 0" \
+    "$(grep -c '^\[White ' extrait) $(grep -c 'Pirate' extrait)"
+egal "T79 un refus de signe, un refus de longueur, pas d'erreur" "1 1 0" \
+    "$(tail -n 1 sortie-pty)"
+joindre sortie-pty
+rm -rf analyse-italienne-*
+
 titre "T46, T47 : PGN sain et version"
 lancer italienne.pgn $O
 egal "T46 aucun avertissement" 0 "$(grep -c Attention journal)"

@@ -1186,29 +1186,55 @@ def questions_possibles(sans_questions: bool) -> bool:
             and sys.stdin.isatty() and sys.stderr.isatty())
 
 
-def demander(question: str, defaut: str | None = None) -> str | None:
+#: Longueur maximale d'une réponse à une question de démarrage. Aucune
+#: n'en demande autant : au delà, c'est un texte collé par mégarde.
+REPONSE_MAX = 255
+
+#: Signes qu'un nom de joueur ne peut pas porter : le nom part dans une
+#: balise du PGN, où un guillemet ou un crochet la fermerait trop tôt, et
+#: où une accolade ouvrirait un commentaire aux yeux d'un lecteur strict.
+SIGNES_INTERDITS_NOM = '"\\[]{}'
+
+
+def demander(question: str, defaut: str | None = None,
+             nom: bool = False) -> str | None:
     """
     Pose une question et renvoie la réponse nettoyée.
 
     Une réponse vide donne le défaut, ou une chaîne vide sans défaut. La
     fin de flux (Ctrl-D) renvoie None : l'appelant applique alors ses
     défauts sans insister.
+
+    Une réponse de plus de REPONSE_MAX caractères est refusée et la
+    question reposée, de même, avec `nom`, qu'une réponse portant l'un
+    des signes de SIGNES_INTERDITS_NOM.
     """
     invite = (question if defaut is None
               else "%s (Entrée : %s)" % (question, defaut))
-    sys.stderr.write(invite + " ")
-    sys.stderr.flush()
-    ligne = sys.stdin.readline()
-    if not ligne:
-        sys.stderr.write("\n")
-        return None
-    if RE_SUBSTITUTS.search(ligne):
-        # Saisie que l'encodage du terminal n'a pas su décoder : on
-        # retrouve les octets tapés et on leur applique le même repli que
-        # pour un fichier, cp1252 puis latin-1.
-        ligne = decoder_octets(
-            ligne.encode("utf-8", errors="surrogateescape"))[0]
-    return nettoyer_valeur(ligne).strip() or (defaut or "")
+    while True:
+        sys.stderr.write(invite + " ")
+        sys.stderr.flush()
+        ligne = sys.stdin.readline()
+        if not ligne:
+            sys.stderr.write("\n")
+            return None
+        if RE_SUBSTITUTS.search(ligne):
+            # Saisie que l'encodage du terminal n'a pas su décoder : on
+            # retrouve les octets tapés et on leur applique le même repli
+            # que pour un fichier, cp1252 puis latin-1.
+            ligne = decoder_octets(
+                ligne.encode("utf-8", errors="surrogateescape"))[0]
+        reponse = nettoyer_valeur(ligne).strip()
+        if len(reponse) > REPONSE_MAX:
+            sys.stderr.write("  Réponse trop longue : %d caractères au "
+                             "plus.\n" % REPONSE_MAX)
+            continue
+        if nom and any(c in SIGNES_INTERDITS_NOM for c in reponse):
+            sys.stderr.write("  Un nom ne peut contenir ni guillemet, ni "
+                             "barre oblique inversée, ni crochet, ni "
+                             "accolade.\n")
+            continue
+        return reponse or (defaut or "")
 
 
 # ---------------------------------------------------------------------------
@@ -1628,12 +1654,12 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
         else:
             # Aucun pseudo connu : pseudos[0] levait IndexError. On demande
             # le nom, comme pour l'adversaire, et "?" laisse la balise.
-            nom = demander("Votre nom de joueur ?", "?")
+            nom = demander("Votre nom de joueur ?", "?", nom=True)
             if nom and nom != "?":
                 partie.headers[mienne] = nom
                 modifiees.append(mienne)
     if partie.headers.get(autre, "?").strip() in ("", "?"):
-        nom = demander("Nom de l'adversaire ?", "?")
+        nom = demander("Nom de l'adversaire ?", "?", nom=True)
         if nom and nom != "?":
             partie.headers[autre] = nom
             modifiees.append(autre)
@@ -1866,11 +1892,11 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
             if pseudos_cli:
                 reponse = demander("Votre pseudo de joueur, ou plusieurs "
                                    "séparés par des virgules ?",
-                                   ", ".join(pseudos_cli))
+                                   ", ".join(pseudos_cli), nom=True)
             else:
                 reponse = demander("Votre pseudo de joueur, ou plusieurs "
                                    "séparés par des virgules ? (Entrée : "
-                                   "aucun)")
+                                   "aucun)", nom=True)
             if reponse is not None:
                 reponse = ", ".join(decouper_pseudos(reponse))
         elif clef == "niveau":

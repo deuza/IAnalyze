@@ -41,6 +41,11 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- Questions de démarrage : une réponse fait 255 caractères au plus, et
+  un nom de joueur ne peut plus contenir de guillemet, de barre oblique
+  inversée, de crochet ni d'accolade. Un tel nom donnait un
+  `partie.pgn` non conforme, où la balise se fermait trop tôt. La
+  question est reposée.
 - Un PGN dont l'encodage n'est ni UTF-8, ni UTF-16, ni cp1252 est
   refusé, avec le conseil de le convertir. Il était lu en latin-1, et
   ses lettres accentuées retirées comme des caractères de contrôle.

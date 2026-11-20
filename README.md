@@ -259,6 +259,8 @@ correspondance, capital de 5 jours + 36 heures par coup, plafonné à 20 jours
 
 Les réponses vont dans `contexte.md`, repris en tête de la synthèse sous le titre "Consignes d'analyse".
 
+Une réponse fait 255 caractères au plus. Un nom de joueur ou un pseudo ne peut contenir ni guillemet, ni barre oblique inversée, ni crochet, ni accolade : il part dans une balise du PGN, que ces signes rendraient illisible. Une réponse refusée est redemandée.
+
 ### Quand les questions ne sont pas posées
 
 Les questions s'affichent dans le terminal et attendent une réponse au clavier.
