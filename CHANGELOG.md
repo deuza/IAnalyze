@@ -41,6 +41,9 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- Un PGN dont l'encodage n'est ni UTF-8, ni UTF-16, ni cp1252 est
+  refusé, avec le conseil de le convertir. Il était lu en latin-1, et
+  ses lettres accentuées retirées comme des caractères de contrôle.
 - Un PGN qui ne part pas de la position initiale, donc qui porte une
   balise FEN, est refusé. Il était jusqu'ici analysé sans explorateur,
   avec un prompt qui lui demandait quand même de nommer l'ouverture.

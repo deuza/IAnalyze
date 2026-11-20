@@ -322,15 +322,26 @@ joindre journal
 
 # --- Encodages --------------------------------------------------------------
 
-titre "T34 : PGN en latin-1"
-printf '[White "Jos\351"]\n[Black "M\374ller"]\n[Site "\201"]\n\n' > t-latin1.pgn
+titre "T34 : PGN en latin-1, puis dans un encodage non reconnu"
+# Un texte latin-1 se lit comme du cp1252 : les deux ne diffèrent que sur
+# des octets qu'aucun texte n'emploie.
+printf '[White "Jos\351"]\n[Black "M\374ller"]\n\n' > t-latin1.pgn
 printf '1. e4 e5 *\n' >> t-latin1.pgn
 lancer t-latin1.pgn $O
 egal "T34 code de retour" 0 "$RC"
-verifier "T34 encodage retenu : latin-1" \
-    contient journal "encodage retenu : latin-1"
-verifier "T34 un caractère de contrôle retiré" \
-    contient journal "1 caractère(s) de contrôle retiré(s), dont 0 NUL"
+verifier "T34 encodage retenu : cp1252" \
+    contient journal "encodage retenu : cp1252"
+# Le même en cp850 : "é" y vaut l'octet 0x82 et "ü" l'octet 0x81, que
+# cp1252 ne définit pas. Le script s'arrête au lieu de retirer les
+# lettres accentuées comme des caractères de contrôle.
+printf '[White "Jos\202"]\n[Black "M\201ller"]\n\n1. e4 e5 *\n' > t-cp850.pgn
+lancer t-cp850.pgn $O
+egal "T34 cp850, code de retour" 1 "$RC"
+verifier "T34 cp850, encodage non reconnu" \
+    contient journal "Encodage du PGN non reconnu"
+egal "T34 cp850, rien n'est écrit" 0 \
+    "$(ls -d analyse-t-cp850* 2>/dev/null | wc -l)"
+lancer t-latin1.pgn $O
 extraire '*/synthese.md'
 verifier "T34 White José" contient extrait "| White | José |"
 verifier "T34 Black Müller" contient extrait "| Black | Müller |"

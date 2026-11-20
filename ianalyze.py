@@ -4078,6 +4078,17 @@ def main(argv: list[str]) -> int:
         journal("Lecture du PGN local : %s" % chemin_local)
         texte_pgn, encodage_pgn, remarques_pgn = lire_fichier_texte(
             chemin_local, "PGN")
+        if encodage_pgn == "latin-1":
+            # Le repli sur latin-1 n'a lieu que si le fichier contient un
+            # octet que cp1252 ne définit pas : c'est le signe d'un autre
+            # encodage, cp850 ou MacRoman par exemple, dont les lettres
+            # accentuées seraient retirées comme des caractères de
+            # contrôle. Plutôt que d'abîmer les noms en silence, le
+            # script s'arrête.
+            raise SystemExit(
+                "Encodage du PGN non reconnu : ni UTF-8, ni UTF-16, ni "
+                "cp1252. Convertissez le fichier en UTF-8, par exemple "
+                "avec iconv, puis relancez.")
         etiquette = etiquette_sure(chemin_local.stem)
         if etiquette != chemin_local.stem:
             journal("Nom du dossier assaini : %s" % etiquette)
