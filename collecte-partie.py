@@ -27,7 +27,9 @@ modifier à la main.
 
 À côté de l'archive, le script écrit le prompt d'analyse de la partie,
 tiré du modèle prompt-modele.txt : vous le collez dans la conversation,
-l'archive en pièce jointe.
+l'archive en pièce jointe. Avec --prompt-seul, c'est un prompt court,
+tiré de prompt-seul-modele.txt, qui porte la partie et les évaluations
+de Stockfish : il se colle seul, sans pièce jointe.
 
 Le résultat est une archive zip contenant les données brutes ainsi qu'un
 fichier de synthèse unique, destiné à être joint à une conversation
@@ -348,6 +350,14 @@ NIVEAU_MIN, NIVEAU_MAX = 100, 3500
 PROMPT_MODELE = "prompt-modele.txt"
 PROMPT_SUFFIXE = ".prompt.txt"
 
+#: Modèle du prompt court de --prompt-seul : quelques consignes, la partie
+#: et les évaluations du moteur, à coller seul, sans pièce jointe.
+PROMPT_SEUL_MODELE = "prompt-seul-modele.txt"
+
+#: Valeur par laquelle un modèle place la partie. Avec --prompt-seul, un
+#: modèle qui ne la placerait pas ne donnerait rien à analyser.
+PROMPT_DONNEES = "{{PARTIE_PGN}}"
+
 #: Repères du modèle. Une ligne commençant par PROMPT_DIRECTIVE est une
 #: directive, jamais recopiée ; une valeur s'écrit entre doubles accolades.
 PROMPT_DIRECTIVE = "#!"
@@ -357,10 +367,14 @@ RE_VALEUR_MODELE = re.compile(r"\{\{([A-Za-z_]+)\}\}")
 #: nom absent de ces listes arrête le script avant la collecte.
 PROMPT_CONDITIONS = ("STOCKFISH", "EXPLORATEUR", "BASE_LICHESS",
                      "BASE_MAITRES", "REPONSES", "CONSIGNES_LIBRES",
-                     "CAMP_CONNU", "PSEUDO_CONNU", "NIVEAU_DECLARE")
+                     "CAMP_CONNU", "PSEUDO_CONNU", "NIVEAU_DECLARE",
+                     "RESULTAT_CONTREDIT", "CONSIGNES_DONNEES",
+                     "OUVERTURE_CONNUE")
 PROMPT_VALEURS = ("VERSION", "DEPOT", "ARCHIVE", "PSEUDOS", "CAMP", "NIVEAU",
                   "CADENCE", "ANNOTATEUR", "BASE", "SEUIL_IMPRECISION",
-                  "SEUIL_ERREUR", "SEUIL_GAFFE", "PROFONDEUR", "MULTIPV")
+                  "SEUIL_ERREUR", "SEUIL_GAFFE", "PROFONDEUR", "MULTIPV",
+                  "PARTIE_PGN", "TABLEAU_MOTEUR", "ALERTE_RESULTAT",
+                  "CONSIGNES_JOUEUR", "OUVERTURE")
 
 #: Valeur de la balise Annotator quand les réglages n'en donnent pas : le
 #: script ignore quel modèle rédigera l'analyse.
@@ -1735,15 +1749,17 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
 # Les "si" peuvent s'emboîter.
 # ===========================================================================
 
-def chemin_modele(option: str | None) -> pathlib.Path:
+def chemin_modele(option: str | None, seul: bool = False) -> pathlib.Path:
     """
-    Chemin du modèle de prompt : celui de --prompt, sinon prompt-modele.txt
-    à côté du script. Le chemin réel du script est suivi, afin qu'un lien
-    symbolique posé ailleurs retrouve le modèle du dépôt.
+    Chemin du modèle de prompt : celui de --prompt, sinon, à côté du
+    script, prompt-modele.txt ou, avec --prompt-seul, le modèle court
+    prompt-seul-modele.txt. Le chemin réel du script est suivi, afin qu'un
+    lien symbolique posé ailleurs retrouve le modèle du dépôt.
     """
     if option:
         return pathlib.Path(os.path.expanduser(option))
-    return pathlib.Path(os.path.realpath(__file__)).parent / PROMPT_MODELE
+    return (pathlib.Path(os.path.realpath(__file__)).parent
+            / (PROMPT_SEUL_MODELE if seul else PROMPT_MODELE))
 
 
 def lire_directive(ligne: str) -> list[str] | None:
@@ -2835,6 +2851,73 @@ def tronquer_variante(plateau: chess.Board, pv_uci: list[str],
         return " ".join(pv_uci)
 
 
+def tableau_compact(partie: chess.pgn.Game, resultats: list[dict],
+                    longueur_pv: int) -> str:
+    """
+    Évaluations du moteur pour le prompt court : une ligne par demi-coup,
+    le coup joué et son évaluation. Derrière un coup faible viennent sa
+    nature, son écart, puis le meilleur coup, sa suite et son évaluation.
+
+    Le tableau de la synthèse compte onze colonnes et trois variantes par
+    coup : celui-ci tient en quelques kilo-octets, pour un LLM à qui tout
+    est collé dans un seul message.
+    """
+    lignes = []
+    plateau = partie.board()
+    for r, coup in zip(resultats, partie.mainline_moves(), strict=False):
+        tete = "%d%s %s" % (r["numero"],
+                            "." if r["trait"] == "Blancs" else "...",
+                            r["joue"]["san"])
+        ligne = "%-13s %7s" % (tete, r["joue"]["score"])
+        if r.get("nature") and r["meilleurs"]:
+            meilleur = r["meilleurs"][0]
+            ligne += "   %s (%s) : mieux %s (%s)" % (
+                r["nature"], _ecart(r["ecart_cp"]),
+                tronquer_variante(plateau, meilleur["pv_uci"], longueur_pv),
+                meilleur["score"])
+        lignes.append(ligne.rstrip())
+        plateau.push(coup)
+    return "\n".join(lignes)
+
+
+def phrase_ouverture(explorateur: dict | None, libelle_base: str) -> str:
+    """
+    Pour le prompt court, l'ouverture et la sortie de théorie en une
+    phrase, tirées de l'explorateur. Chaîne vide s'il n'a rien donné.
+    """
+    if explorateur is None:
+        return ""
+    sortie = explorateur["premiere_sortie"]
+    limite = sortie["demicoup"] if sortie else len(explorateur["lignes"]) + 1
+    nommees = [lg["ouverture"] for lg in explorateur["lignes"]
+               if lg["demicoup"] < limite and lg.get("ouverture")]
+    phrases = []
+    if nommees:
+        phrases.append("Ouverture : %s." % nommees[-1])
+    if sortie:
+        phrases.append(
+            "La théorie est quittée au coup %d par les %s, avec %s, joué "
+            "dans %s %% des parties de la base %s."
+            % (sortie["numero"], sortie["trait"], sortie["san"],
+               _cellule(sortie["frequence"]), libelle_base))
+    return " ".join(phrases)
+
+
+def consignes_joueur(contexte: str | None, consignes: str | None) -> str:
+    """
+    Pour le prompt court, ce que le joueur a réellement précisé : son
+    fichier de consignes, ou celles de ses réponses aux questions de
+    démarrage qu'il n'a pas laissées à leur valeur par défaut. Le camp,
+    dit ailleurs dans le prompt, n'est pas repris.
+    """
+    if contexte is None:
+        return (consignes or "").strip()
+    return "\n".join(
+        ligne for ligne in contexte.split("\n")
+        if ligne.startswith("- ") and not ligne.endswith("(défaut)")
+        and not ligne.startswith("- Camp du joueur"))
+
+
 def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
                     source: str, consignes: str | None,
                     explorateur: dict | None, motif_sans_explorateur: str | None,
@@ -3361,6 +3444,11 @@ exemples d'utilisation
 
       ./collecte-partie.py ma-partie.pgn --garder-dossier
 
+  Pour un LLM qui n'ouvre pas les zip ou n'exécute pas de code : un
+  prompt court qui porte la partie et les évaluations, à coller seul :
+
+      ./collecte-partie.py ma-partie.pgn --prompt-seul
+
   Utiliser votre propre modèle de prompt, ou ne pas écrire de prompt :
 
       ./collecte-partie.py ma-partie.pgn --prompt ~/mon-modele.txt
@@ -3518,6 +3606,13 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                         "côté du script)" % (PROMPT_SUFFIXE, PROMPT_MODELE))
     g.add_argument("--sans-prompt", action="store_true",
                    help="n'écrit pas le prompt d'analyse")
+    g.add_argument("--prompt-seul", action="store_true",
+                   help="écrit un prompt court qui porte la partie et les "
+                        "évaluations de Stockfish, à coller seul dans la "
+                        "conversation, sans pièce jointe : pour un LLM qui "
+                        "n'ouvre pas les zip ou n'exécute pas de code. Son "
+                        "modèle est %s. L'archive est écrite quand même"
+                        % PROMPT_SEUL_MODELE)
 
     g = p.add_argument_group("explorateur")
     g.add_argument("--base", choices=sorted(BASES_EXPLORATEUR),
@@ -3606,6 +3701,8 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
         p.error("il faut un fichier PGN, une URL ou un identifiant de partie")
     if options.prompt and options.sans_prompt:
         p.error("--prompt et --sans-prompt s'excluent")
+    if options.prompt_seul and options.sans_prompt:
+        p.error("--prompt-seul et --sans-prompt s'excluent")
     # nan et inf sont des flottants valides pour argparse, mais nan échappe
     # à toute comparaison et time.sleep() refuse l'un comme l'autre : on
     # les écarte ici, avant toute création de dossier.
@@ -3698,11 +3795,20 @@ def main(argv: list[str]) -> int:
     # fait alors sans prompt, et le journal le dit.
     modele_prompt = None
     if not options.sans_prompt:
-        fichier_modele = chemin_modele(options.prompt)
+        fichier_modele = chemin_modele(options.prompt, options.prompt_seul)
         if fichier_modele.is_file():
             modele_prompt = lire_texte(fichier_modele, "modèle de prompt")
             verifier_modele(modele_prompt, str(fichier_modele))
-        elif options.prompt:
+            # Un prompt à coller seul doit porter la partie : un modèle
+            # personnel qui ne la place pas est refusé avant la collecte.
+            if options.prompt_seul and PROMPT_DONNEES not in modele_prompt:
+                raise SystemExit(
+                    "--prompt-seul : le modèle %s ne contient pas %s, le "
+                    "prompt ne porterait pas la partie. Partez de %s."
+                    % (fichier_modele, PROMPT_DONNEES, PROMPT_SEUL_MODELE))
+        elif options.prompt or options.prompt_seul:
+            # --prompt-seul demande un prompt : sans modèle, mieux vaut
+            # s'arrêter ici qu'après la collecte.
             raise SystemExit("Modèle de prompt introuvable : %s"
                              % fichier_modele)
         else:
@@ -3910,6 +4016,12 @@ def main(argv: list[str]) -> int:
                     bool(camp and camp["modifiees"]))
     journal("Synthèse écrite : %s" % synthese)
 
+    # Le prompt peut reprendre le PGN : il est relu ici, avant l'archivage
+    # qui supprime le dossier de travail.
+    texte_partie = ""
+    if modele_prompt is not None:
+        texte_partie = (dossier / "partie.pgn").read_text(encoding="utf-8")
+
     # -- Archive et nettoyage -----------------------------------------------
     archive = archiver(dossier, options.garder_dossier)
 
@@ -3922,6 +4034,12 @@ def main(argv: list[str]) -> int:
         niveau = analyser_niveau(reglage(reglages, "niveau")) or 0
         habituelle = (analyser_cadence(reglage(reglages, "cadence"))
                       or dict(CADENCE_INCONNUE))
+        # Données du prompt court : calculées dans tous les cas, un modèle
+        # personnel pouvant les placer lui aussi.
+        alerte = (resultat_contredit(partie, resume_stockfish["resultats"])
+                  or "").replace("**", "")
+        precisions = consignes_joueur(contexte, consignes)
+        ouverture = phrase_ouverture(resume_explorateur, base["libelle"])
         conditions = {
             # Toujours vraie depuis la version 4.0.0, gardée pour les
             # modèles personnels qui l'emploient.
@@ -3934,6 +4052,9 @@ def main(argv: list[str]) -> int:
             "CAMP_CONNU": camp_joueur is not None,
             "PSEUDO_CONNU": bool(options.pseudos),
             "NIVEAU_DECLARE": bool(niveau),
+            "RESULTAT_CONTREDIT": bool(alerte),
+            "CONSIGNES_DONNEES": bool(precisions),
+            "OUVERTURE_CONNUE": bool(ouverture),
         }
         valeurs = {
             "VERSION": VERSION,
@@ -3951,14 +4072,26 @@ def main(argv: list[str]) -> int:
             "SEUIL_GAFFE": str(SEUIL_GAFFE),
             "PROFONDEUR": str(options.profondeur),
             "MULTIPV": str(options.multipv),
+            "PARTIE_PGN": texte_partie.strip("\n"),
+            "TABLEAU_MOTEUR": tableau_compact(
+                partie, resume_stockfish["resultats"], options.longueur_pv),
+            "ALERTE_RESULTAT": alerte,
+            "CONSIGNES_JOUEUR": precisions,
+            "OUVERTURE": ouverture,
         }
         prompt = archive.with_name(dossier.name + PROMPT_SUFFIXE)
         try:
             ecrire_texte(prompt, rendre_modele(
                 modele_prompt, conditions, valeurs,
-                str(chemin_modele(options.prompt))))
-            journal("Prompt d'analyse écrit : %s, à coller dans la "
-                    "conversation, l'archive en pièce jointe." % prompt)
+                str(chemin_modele(options.prompt, options.prompt_seul))))
+            if options.prompt_seul:
+                journal("Prompt d'analyse écrit : %s, à coller seul dans "
+                        "la conversation : il porte la partie et les "
+                        "évaluations, aucune pièce jointe n'est "
+                        "nécessaire." % prompt)
+            else:
+                journal("Prompt d'analyse écrit : %s, à coller dans la "
+                        "conversation, l'archive en pièce jointe." % prompt)
         except OSError as err:
             # L'archive est faite : un prompt impossible à écrire ne doit
             # pas faire échouer la collecte.

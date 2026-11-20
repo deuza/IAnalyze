@@ -10,6 +10,15 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Added
 
+- Option `--prompt-seul` : un prompt court, à coller seul dans la
+  conversation, sans pièce jointe. Il tient en quelques consignes, la
+  partie et les évaluations de Stockfish, une ligne par demi-coup, le
+  meilleur coup et sa suite derrière chaque coup faible. C'est le repli
+  pour un LLM qui n'ouvre pas les zip ou n'exécute pas de code, sur le
+  modèle du prompt d'analyse de Lucas Chess, avec les chiffres du
+  moteur en plus. Il est tiré d'un modèle à part,
+  `prompt-seul-modele.txt`. L'archive est écrite quand même, pour
+  `verifier-analyse.py`. Test T74.
 - `verifier-analyse.py`, qui contrôle le PGN annoté rendu par un LLM en
   le comparant à l'archive qu'il a reçue : lecture, ligne principale,
   format, erreurs et gaffes commentées, évaluations citées, variantes,

@@ -24,7 +24,7 @@ Depuis le dépôt, après l'installation décrite dans le README :
 Le script se termine par un bilan :
 
 ```text
-Réussis : 303, échecs : 0, sautés : 0
+Réussis : 334, échecs : 0, sautés : 0
 Rapport : /chemin/du/depot/rapport-tests-Linux-20261120-002933.txt
 ```
 
@@ -72,7 +72,7 @@ GARDER=1 ./test-app.sh
 | URL | T54 | adresses qui ne sont pas des parties, refusées sans rien envoyer |
 | Explorateur simulé | T49, T56 | réponses inattendues, arrêt au coup nul |
 | Réglages | T57 à T63, T68, T69 | premier lancement, priorité de `--pseudos`, fichier mal formé, cadence et niveau vérifiés, correspondance, purge |
-| Prompt | T64 à T67 | écrit à côté de l'archive, passages gardés ou retirés, modèle fautif refusé, script copié sans son modèle |
+| Prompt | T64 à T67, T74 | écrit à côté de l'archive, passages gardés ou retirés, modèle fautif refusé, script copié sans son modèle, prompt court de `--prompt-seul` |
 | Moteur | T25, T26, T51, T52, T55, M2 | moteur introuvable, analyse limitée aux premiers coups, mat manqué, coup nul, options hors bornes, analyse complète |
 | Partie d'essai | T70 | `test.pgn` : commentaires, variantes, prise en passant, promotion, roques, coup nul |
 | Résultat contraire | T72 | partie notée gagnée dans une position perdue : la synthèse et le prompt le disent |

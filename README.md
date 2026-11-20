@@ -30,6 +30,7 @@ Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec le
 |---|---|
 | `collecte-partie.py` | le script, en un seul fichier |
 | `prompt-modele.txt` | le modèle dont est tiré le prompt de chaque partie (section 9) |
+| `prompt-seul-modele.txt` | le modèle du prompt court de `--prompt-seul` (section 9) |
 | `verifier-analyse.py` | le contrôle du PGN rendu par le LLM (section 10) |
 | `test.pgn` | une partie d'essai qui réunit les cas tordus d'un PGN |
 | `test-app.sh` | la suite de tests, pour Linux et macOS |
@@ -441,10 +442,24 @@ Si le modèle par défaut manque, parce que le script a été copié seul, la co
 
 #### `--sans-prompt`
 
-N'écrit pas le prompt d'analyse. S'exclut avec `--prompt`.
+N'écrit pas le prompt d'analyse. S'exclut avec `--prompt` et avec `--prompt-seul`.
 
 ```bash
 ./collecte-partie.py ma-partie.pgn --sans-prompt
+```
+
+#### `--prompt-seul`
+
+Écrit un prompt court, à coller seul dans la conversation, sans pièce jointe : quelques consignes, la partie, puis les évaluations de Stockfish.
+
+C'est le repli pour un LLM qui n'ouvre pas les zip ou n'exécute pas de code (voir section 10). Le PGN annoté lui est demandé dans un bloc de code.
+
+Ce prompt est tiré de `prompt-seul-modele.txt`, et non de `prompt-modele.txt`. L'archive est écrite quand même : `verifier-analyse.py` en a besoin.
+
+S'exclut avec `--sans-prompt`. Avec `--prompt`, le modèle désigné doit placer `{{PARTIE_PGN}}`, sans quoi le script s'arrête avant la collecte.
+
+```bash
+./collecte-partie.py ma-partie.pgn --prompt-seul
 ```
 
 ### Explorateur
@@ -826,6 +841,11 @@ Valeurs :
 | `BASE` | base interrogée : "Lichess (tous joueurs)" ou "maîtres" |
 | `SEUIL_IMPRECISION`, `SEUIL_ERREUR`, `SEUIL_GAFFE` | seuils de nature du coup, en centipions : 50, 100 et 300 |
 | `PROFONDEUR`, `MULTIPV` | valeurs de `--profondeur` et de `--multipv` |
+| `PARTIE_PGN` | le PGN de la partie, tel que l'archive le contient |
+| `TABLEAU_MOTEUR` | les évaluations de Stockfish, une ligne par demi-coup. Derrière un coup faible : sa nature, son écart, le meilleur coup, sa suite sur `--longueur-pv` demi-coups et son évaluation |
+| `ALERTE_RESULTAT` | la phrase qui signale un résultat contraire à l'évaluation finale, vide sinon |
+| `CONSIGNES_JOUEUR` | votre fichier de `--consignes`, ou celles de vos réponses aux questions de démarrage que vous n'avez pas laissées par défaut |
+| `OUVERTURE` | l'ouverture et la sortie de théorie en une phrase, d'après l'explorateur |
 
 Conditions :
 
@@ -840,6 +860,11 @@ Conditions :
 | `CAMP_CONNU` | votre camp est connu |
 | `PSEUDO_CONNU` | au moins un pseudo est connu |
 | `NIVEAU_DECLARE` | votre niveau figure dans les réglages |
+| `RESULTAT_CONTREDIT` | le résultat de la partie contredit l'évaluation finale |
+| `CONSIGNES_DONNEES` | `CONSIGNES_JOUEUR` n'est pas vide |
+| `OUVERTURE_CONNUE` | `OUVERTURE` n'est pas vide |
+
+Les deux modèles, `prompt-modele.txt` et `prompt-seul-modele.txt`, partagent ces repères. Les cinq dernières valeurs et les trois dernières conditions servent au prompt court.
 
 Sans terminal, le camp se déduit de vos pseudos sans poser de question.
 

@@ -1123,6 +1123,104 @@ verifier "T68 sans niveau déclaré, Elo de la balise" \
     contient extrait "- niveau : 1500 Elo, d'après la balise BlackElo de la partie"
 rm -rf analyse-t-pr-*
 
+titre "T74 : prompt seul, court, à coller sans pièce jointe"
+
+# Avec --prompt-seul, le prompt est tiré d'un modèle court : quelques
+# consignes, la partie, puis les évaluations du moteur. Il se colle seul
+# dans la conversation. L'archive est écrite quand même,
+# verifier-analyse.py en a besoin.
+printf '[White "Alice"]\n[Black "Bob"]\n[Result "1-0"]\n\n' > t-seul.pgn
+printf '1. e4 e5 2. Qh5 Nc6 3. Qxf7+ Kxf7 1-0\n' >> t-seul.pgn
+S74="--sans-explorateur --sans-questions --venv $VENV --reglages t-pr.ini"
+S74="$S74 --profondeur 8 --fils 2 --hachage 32"
+"$SCRIPT" t-seul.pgn $S74 --prompt-seul > sortie 2> journal
+egal "T74 code de retour" 0 $?
+ARCH="$(head -n 1 sortie)"
+PR="${ARCH%.zip}.prompt.txt"
+verifier "T74 l'archive est écrite quand même" test -f "$ARCH"
+verifier "T74 le journal dit de le coller seul" \
+    contient journal "à coller seul dans la conversation"
+egal "T74 aucun repère du modèle ne reste" 0 "$(grep -c -E '^#!|\{\{' "$PR")"
+verifier "T74 prompt court, moins de cent lignes" \
+    test "$(lignes "$PR")" -lt 100
+while IFS= read -r present; do
+    verifier "T74 présent : $present" contient "$PR" "$present"
+done <<'FIN'
+Vous êtes Maître International d'échecs.
+Le joueur avait les Blancs.
+dans un seul bloc de code
+hors des accolades
+La partie :
+[White "Alice"]
+Évaluations de Stockfish, profondeur 8
+FIN
+while IFS= read -r absent; do
+    egal "T74 absent : $absent" 0 "$(grep -c -F "$absent" "$PR")"
+done <<'FIN'
+IAnalyze
+archive
+synthese.md
+Données brutes
+CAS A
+FIN
+# Le tableau compte une ligne par demi-coup, et la dame donnée au coup 3
+# y est une gaffe, suivie du meilleur coup et de sa suite.
+egal "T74 tableau : une ligne par demi-coup" 6 \
+    "$(grep -c -E '^[1-3]\.(\.\.)? [A-Za-z0-9+#x=-]+ +[+#-]' "$PR")"
+egal "T74 tableau : gaffe, écart et meilleur coup" 1 \
+    "$(grep -c -E '^3\. Qxf7\+ .* gaffe \([0-9a-z]+\) : mieux 3\. ' "$PR")"
+# Notée 1-0, la partie finit avec une dame de moins pour les Blancs.
+egal "T74 résultat contraire à l'évaluation, dit au LLM" 1 \
+    "$(grep -c '^Attention : Résultat et évaluation finale' "$PR")"
+unzip -p "$ARCH" '*/partie.pgn' > t-partie.pgn
+verifier "T74 PGN de l'archive repris tel quel" \
+    "$PYVENV" -c '
+import sys
+prompt = open(sys.argv[1], encoding="utf-8").read()
+partie = open(sys.argv[2], encoding="utf-8").read().strip("\n")
+sys.exit(0 if partie in prompt else 1)
+' "$PR" t-partie.pgn
+egal "T74 sans consignes, rien n'est précisé" 0 \
+    "$(grep -c 'Ce que le joueur a précisé' "$PR")"
+noter "  note   taille du prompt seul : $(wc -c < "$PR") octets, $(lignes "$PR") lignes"
+head -n 6 "$PR" > ligne
+joindre ligne
+rm -f analyse-t-seul-*
+echo "Insiste sur la sortie de la dame." > t-consignes-74.md
+"$SCRIPT" t-seul.pgn $S74 --prompt-seul --consignes t-consignes-74.md \
+    > sortie 2> journal
+PR="$(head -n 1 sortie)"
+PR="${PR%.zip}.prompt.txt"
+verifier "T74 consignes du joueur reprises" \
+    contient "$PR" "Insiste sur la sortie de la dame."
+rm -f analyse-t-seul-*
+"$SCRIPT" t-seul.pgn $S74 > sortie 2> journal
+PR="$(head -n 1 sortie)"
+PR="${PR%.zip}.prompt.txt"
+egal "T74 sans l'option, le prompt complet" "0 1" \
+    "$(grep -c '^La partie :' "$PR") $(grep -c 'PIÈCES JOINTES ATTENDUES' "$PR")"
+rm -f analyse-t-seul-*
+"$SCRIPT" t-seul.pgn $S74 --prompt-seul --sans-prompt > sortie 2> journal
+egal "T74 options exclusives, code de retour" 2 $?
+verifier "T74 options exclusives, message" \
+    contient journal "--prompt-seul et --sans-prompt s'excluent"
+# Un modèle personnel qui ne place pas la partie est refusé avant la
+# collecte : le prompt n'aurait rien à faire analyser.
+printf 'Bonjour {{PSEUDOS}}.\n' > t-modele.txt
+"$SCRIPT" t-seul.pgn $S74 --prompt t-modele.txt --prompt-seul \
+    > sortie 2> journal
+egal "T74 modèle sans la partie, code de retour" 1 $?
+verifier "T74 modèle sans la partie, message" \
+    contient journal "ne contient pas {{PARTIE_PGN}}"
+mkdir -p t-seul-74 && cp "$SCRIPT" t-seul-74/
+t-seul-74/collecte-partie.py t-seul.pgn $S74 --prompt-seul \
+    > sortie 2> journal
+egal "T74 script copié sans son modèle, code de retour" 1 $?
+verifier "T74 script copié sans son modèle, message" \
+    contient journal "Modèle de prompt introuvable"
+egal "T74 aucun dossier ni archive créés par ces refus" 0 \
+    "$(find . -maxdepth 1 -name 'analyse-t-seul-*' | wc -l)"
+
 titre "T03 : options refusées"
 
 # Une option sans effet ou hors bornes est refusée, code 2, avant toute
