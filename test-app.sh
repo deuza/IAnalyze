@@ -2,8 +2,8 @@
 # ===========================================================================
 # test-app.sh : tests de collecte-partie.py, sous macOS et sous Debian
 #
-# Ce script rejoue les tests de TESTS.md qui peuvent l'être sans vous, puis
-# écrit un rapport que vous pouvez renvoyer tel quel.
+# Ce script joue tous les tests du projet, décrits famille par famille
+# dans TESTS.md, puis écrit un rapport que vous pouvez renvoyer tel quel.
 #
 #     sh test-app.sh             tests hors réseau : encodages, archive,
 #                                réglages, cadence, moteur. Ni jeton ni
@@ -1110,6 +1110,68 @@ verifier "T68 sans niveau déclaré, Elo de la balise" \
     contient extrait "- niveau : 1500 Elo, d'après la balise BlackElo de la partie"
 rm -rf analyse-t-pr-*
 
+titre "T03 : options refusées"
+
+# Une option sans effet ou hors bornes est refusée, code 2, avant toute
+# lecture de la partie. Chaque ligne donne les options, puis le message.
+while IFS='|' read -r refusees message; do
+    # Les options sont découpées en mots, d'où l'absence de guillemets.
+    # shellcheck disable=SC2086
+    "$SCRIPT" italienne.pgn $refusees --venv "$VENV" > sortie 2> journal
+    egal "T03 $refusees, code de retour" 2 "$?"
+    verifier "T03 $refusees, message" contient journal "$message"
+done <<'FIN'
+--base maitres --cadences rapid|--cadences n'a d'effet qu'avec --base lichess
+--base lichess --cadences rapide|--cadences : valeur inconnue "rapide"
+--base lichess --classements 1100|--classements : valeur inconnue "1100"
+--coups-min -1|--coups-min doit valoir 0 ou plus
+--pause 1|--pause ne doit pas descendre sous 2 secondes
+--seuil-frequence 150|--seuil-frequence doit être compris entre 0 et 100
+--base plebe|argument --base: invalid choice: 'plebe'
+FIN
+
+titre "T04 : fichier PGN introuvable"
+
+lancer "$TRAVAIL/inexistant.pgn" $O
+egal "T04 chemin absolu, code de retour" 1 "$RC"
+verifier "T04 chemin absolu, message" \
+    contient journal "Fichier PGN introuvable"
+lancer inexistant.pgn $O
+egal "T04 nom relatif, code de retour" 1 "$RC"
+verifier "T04 nom relatif, pris pour un fichier et non pour un identifiant" \
+    contient journal "Fichier PGN introuvable"
+
+titre "T06, T07, T08 : dossier gardé, consignes, répertoire de sortie"
+
+rm -rf analyse-italienne-*
+lancer italienne.pgn $O --garder-dossier
+egal "T06 code de retour" 0 "$RC"
+verifier "T06 le dossier reste à côté de l'archive" test -d "${ARCH%.zip}"
+rm -rf analyse-italienne-*
+echo "Annotez en français." > t-consignes.md
+lancer italienne.pgn $O --consignes t-consignes.md
+egal "T07 code de retour" 0 "$RC"
+extraire '*/synthese.md'
+verifier "T07 section Consignes d'analyse" \
+    contient extrait "## Consignes d'analyse"
+verifier "T07 texte des consignes repris" \
+    contient extrait "Annotez en français."
+lancer italienne.pgn $O --sortie "$TRAVAIL/t-sortie/neuf"
+egal "T08 code de retour" 0 "$RC"
+verifier "T08 répertoire de sortie créé au besoin" \
+    test -d "$TRAVAIL/t-sortie/neuf"
+verifier "T08 archive écrite dans ce répertoire" test -f "$ARCH"
+rm -rf analyse-italienne-*
+
+titre "T27 : fichier de jeton absent"
+
+lancer italienne.pgn --sans-questions --profondeur 1 \
+    --jeton-fichier /nulle/part
+egal "T27 code de retour" 1 "$RC"
+verifier "T27 message" contient journal "Jeton absent : /nulle/part"
+egal "T27 aucun dossier de travail créé" 0 \
+    "$(find . -maxdepth 1 -type d -name 'analyse-italienne-*' | wc -l)"
+
 titre "T69 : purge des réglages"
 
 printf '[joueur]\npseudos = Alice\n' > t-purge.ini
@@ -1190,6 +1252,19 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
 
     egal "T52 pas d'avis répété de python-chess" 0 \
         "$(grep -c 'Not transmitting' journal)"
+
+    titre "T25 : moteur limité aux premiers coups"
+    lancer italienne.pgn $MOTEUR --coups-stockfish 3 --profondeur 10 \
+        --multipv 2 --longueur-pv 4 --fils 2 --hachage 128
+    egal "T25 code de retour" 0 "$RC"
+    extraire '*/synthese.md'
+    verifier "T25 six demi-coups couverts sur neuf" contient extrait \
+        "profondeur 10, multipv 2, 6 demi-coups couverts sur 9"
+    egal "T25 six lignes au tableau" 6 \
+        "$(grep -c -E '^\| [1-9] \| [1-5] \| (Blancs|Noirs) \| [A-Za-z]' extrait)"
+    extraire '*/collecte.json'
+    verifier "T25 fils dans collecte.json" contient extrait '"fils": 2'
+    verifier "T25 hachage dans collecte.json" contient extrait '"hachage": 128'
 
     titre "T55 : options moteur hors bornes"
     for option in "--fils 100000" "--hachage 99999999999" "--multipv 9999"; do
@@ -1321,7 +1396,7 @@ compte_jeton() {
 
 # --- Parties d'essai --------------------------------------------------------
 
-# Une ligne italienne entièrement cataloguée, celle de TESTS.md.
+# Une ligne italienne entièrement cataloguée, celle des tests hors réseau.
 printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 *\n' > italienne.pgn
 # La Polonaise suivie de g6, coup rare et hors catalogue, comme votre
 # partie 1 ; elle est courte, pour borner le nombre de requêtes.

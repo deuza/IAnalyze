@@ -8,6 +8,12 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- `test-app.sh` joue les tests qui se faisaient encore à la main :
+  options refusées, fichier introuvable, dossier gardé, consignes,
+  répertoire de sortie, moteur limité aux premiers coups, jeton absent.
+
 ### Fixed
 
 - Sur une partie qui contient un coup nul, le journal répétait à
