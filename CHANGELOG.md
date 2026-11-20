@@ -103,6 +103,15 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   et la clef `avec_stockfish` de `collecte.json`, qui valait toujours
   vrai.
 
+### Security
+
+- Le jeton Lichess ne suit plus une redirection HTTP. Si l'explorateur
+  répondait 301, 302, 303, 307 ou 308, l'en-tête Authorization partait
+  avec la requête vers la nouvelle adresse, quel qu'en soit l'hôte. La
+  redirection est maintenant refusée et l'interrogation s'arrête.
+- Le jeton est retiré de la réponse de l'explorateur avant qu'elle soit
+  gardée dans l'archive, au cas où un serveur renverrait l'en-tête reçu.
+
 ## [4.0.0] - 2026-11-19
 
 ### Changed

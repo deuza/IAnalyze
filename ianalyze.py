@@ -2190,6 +2190,21 @@ def lire_catalogue(repertoire: str) -> Catalogue:
 # Explorateur : accès réseau
 # ===========================================================================
 
+class SansRedirection(urllib.request.HTTPRedirectHandler):
+    """
+    Refuse toute redirection HTTP.
+
+    L'ouvreur par défaut d'urllib suit les redirections en recopiant les
+    en-têtes de la requête, Authorization compris, vers la nouvelle
+    adresse, même sur un autre hôte. Le jeton ne doit partir que vers
+    l'explorateur : une réponse 301, 302, 303, 307 ou 308 est donc rendue
+    telle quelle, comme une erreur HTTP, et rien n'est envoyé ailleurs.
+    """
+
+    def redirect_request(self, *_arguments, **_options):
+        return None
+
+
 class Explorateur:
     """
     Client minimal de l'explorateur Lichess, base maîtres ou base Lichess.
@@ -2217,6 +2232,9 @@ class Explorateur:
         # ne doit pas changer les requêtes en cours de collecte.
         self.filtres = dict(filtres or {})
         self._premiere = True
+        # Ouvreur propre à l'explorateur, qui ne suit aucune redirection :
+        # voir SansRedirection.
+        self._ouvreur = urllib.request.build_opener(SansRedirection)
 
     def interroger(self, coups_uci: list[str]) -> tuple[int, dict]:
         """
@@ -2257,14 +2275,21 @@ class Explorateur:
         # s'arrêter que de se faire bannir.
         for tentative in (1, 2):
             try:
-                with urllib.request.urlopen(requete, timeout=self.delai) as r:
+                with self._ouvreur.open(requete, timeout=self.delai) as r:
                     corps = r.read().decode("utf-8-sig", errors="replace")
-                    donnees = json.loads(corps)
+                    # La réponse est recopiée telle quelle dans l'archive :
+                    # si un serveur renvoyait un jour l'en-tête reçu, le
+                    # jeton n'y entrerait pas.
+                    donnees = json.loads(expurger(corps, self.jeton))
                     if not isinstance(donnees, dict):
                         return 0, {"_erreur": "réponse JSON inattendue, "
                                               "objet attendu"}
                     return r.status, donnees
             except urllib.error.HTTPError as err:
+                if 300 <= err.code < 400:
+                    return err.code, {"_erreur": "redirection refusée : le "
+                                      "jeton n'est envoyé qu'à l'adresse "
+                                      "de l'explorateur"}
                 corps = err.read().decode("utf-8-sig", errors="replace")
                 if err.code == 429 and tentative == 1:
                     journal("429 reçu, pause de 60 secondes.")

@@ -636,6 +636,91 @@ verifier "T49 deux lignes attendues" cmp -s attendu-t49 sortie-t49
 joindre sortie-t49
 rm -rf "$DEPOT/__pycache__"
 
+titre "T76 : le jeton ne quitte pas l'explorateur, serveurs simulés"
+# Deux serveurs locaux. Le premier tient lieu d'explorateur : il redirige
+# vers le second, puis renvoie dans sa réponse l'en-tête Authorization
+# qu'il a reçu. Le jeton, factice, ne doit ni suivre la redirection ni
+# entrer dans la réponse gardée.
+SCRIPT="$SCRIPT" no_proxy='*' NO_PROXY='*' "$PYVENV" - > sortie-t76 2> journal-t76 <<'EOF'
+import http.server
+import importlib.util
+import json
+import os
+import threading
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+JETON = "lip_factice"
+recu = []
+
+
+class Tiers(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        recu.append(self.headers.get("Authorization"))
+        corps = b'{"white": 1, "draws": 1, "black": 1, "moves": []}'
+        self.send_response(200)
+        self.send_header("Content-Length", str(len(corps)))
+        self.end_headers()
+        self.wfile.write(corps)
+
+    def log_message(self, *args):
+        pass
+
+
+class Faux(http.server.BaseHTTPRequestHandler):
+    code = 302
+
+    def do_GET(self):
+        if self.path.startswith("/echo"):
+            corps = json.dumps({
+                "white": 1, "draws": 1, "black": 1, "moves": [],
+                "vu": self.headers.get("Authorization")}).encode()
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(corps)))
+            self.end_headers()
+            self.wfile.write(corps)
+            return
+        self.send_response(Faux.code)
+        self.send_header("Location",
+                         "http://localhost:%d/vol" % tiers.server_port)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def log_message(self, *args):
+        pass
+
+
+tiers = http.server.HTTPServer(("127.0.0.1", 0), Tiers)
+faux = http.server.HTTPServer(("127.0.0.1", 0), Faux)
+for serveur in (tiers, faux):
+    threading.Thread(target=serveur.serve_forever, daemon=True).start()
+base = "http://127.0.0.1:%d" % faux.server_port
+for code in (301, 302, 303, 307, 308):
+    Faux.code = code
+    statut, donnees = cp.Explorateur(
+        JETON, 2.0, 5, base + "/lichess", {}).interroger(["e2e4"])
+    print(code, statut, "redirection" in donnees.get("_erreur", ""))
+print("tiers", len(recu))
+statut, donnees = cp.Explorateur(
+    JETON, 2.0, 5, base + "/echo", {}).interroger(["e2e4"])
+print(statut, JETON in json.dumps(donnees), donnees.get("vu"))
+EOF
+cat > attendu-t76 <<'EOF'
+301 301 True
+302 302 True
+303 303 True
+307 307 True
+308 308 True
+tiers 0
+200 False Bearer <JETON-EXPURGE>
+EOF
+verifier "T76 aucune redirection suivie, réponse expurgée" \
+    cmp -s attendu-t76 sortie-t76
+joindre sortie-t76
+joindre journal-t76 5
+rm -rf "$DEPOT/__pycache__"
+
 titre "T50 : valeurs non finies"
 for option in "--pause nan" "--pause inf" "--seuil-frequence nan"; do
     lancer italienne.pgn $option
