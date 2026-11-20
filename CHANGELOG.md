@@ -35,6 +35,9 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- README : IAnalyze est présenté comme fait pour Claude, avec le zip et
+  le prompt, et `--prompt-seul` comme le repli pour un autre LLM. La
+  section 10 dit que ce repli n'a pas encore été essayé.
 - README : une section "Choisir un LLM et vérifier son travail". Elle
   dit ce qu'il faut au LLM, ouverture du zip, exécution de code et
   rendu d'un fichier, déconseille les LLM sans exécution de code, et

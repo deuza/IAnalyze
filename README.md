@@ -24,7 +24,9 @@ analyse-ma-partie-20261119-164140.zip
 analyse-ma-partie-20261119-164140.prompt.txt
 ```
 
-Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec le LLM de votre choix, vous joignez le fichier zip et vous recevez un PGN annoté et une synthèse.
+Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec Claude, vous joignez le fichier zip et vous recevez un PGN annoté et une synthèse.
+
+**IAnalyze est fait pour Claude.** Pour un autre LLM, l'option `--prompt-seul` écrit un prompt court qui porte la partie et les évaluations de Stockfish, à coller seul, sans pièce jointe : voir la section 10.
 
 | Fichier | Rôle |
 |---|---|
@@ -36,8 +38,6 @@ Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec le
 | `test-app.sh` | la suite de tests, pour Linux et macOS |
 | [`TESTS.md`](TESTS.md) | comment lancer les tests et ce qu'ils vérifient |
 | [`CHANGELOG.md`](CHANGELOG.md) | l'historique des versions |
-
-Tous les LLM ne se valent pas pour ce travail : la section 10 dit ce qu'il leur faut et ce que des essais ont donné.
 
 Plateformes : Debian et macOS (Homebrew). Python 3 et python-chess, que le script installe lui-même dans un environnement virtuel dédié.
 
@@ -892,26 +892,47 @@ Le prompt prévoit les deux cas :
 
 ## 10. Choisir un LLM et vérifier son travail
 
-### Ce qu'il faut au LLM
+### Avec Claude : le zip et le prompt
 
-La chaîne complète demande un LLM qui sait :
+**IAnalyze est fait pour Claude.** C'est avec lui que la chaîne a été mise au point, et le seul avec lequel elle a rendu un PGN utilisable tel quel dans les essais ci-dessous.
 
-- ouvrir une archive zip, ou à défaut recevoir ses fichiers un par un
+Vous joignez le zip, vous collez le prompt, il rend un fichier PGN.
+
+Cette chaîne complète demande en effet un LLM qui sait :
+
+- ouvrir une archive zip
 - exécuter du code et y installer python-chess, pour construire le PGN et en prouver la légalité
 - rendre un fichier à télécharger
 
-Sans cela, le prompt prévoit un repli : le LLM écrit le PGN lui-même et le dit. Les essais ci-dessous montrent que ce repli donne un PGN à corriger.
+### Avec un autre LLM : `--prompt-seul`
 
-**Un LLM sans exécution de code n'est donc pas recommandé.** Si vous en essayez un, c'est votre choix : passez alors toujours son PGN à `verifier-analyse.py`, décrit plus bas.
+Pour un LLM qui n'ouvre pas les zip, refuse certaines pièces jointes ou n'exécute pas de code, le script écrit un prompt court :
 
-Deux conseils tirés de ces essais :
+```bash
+./collecte-partie.py ma-partie.pgn --prompt-seul
+```
 
-- certains LLM refusent un fichier `.pgn` en pièce jointe : renommez-le en `.txt`
+Vous collez ce seul texte dans la conversation, sans rien joindre. Le LLM rend le PGN annoté dans un bloc de code, que vous enregistrez vous-même dans un fichier `.pgn`.
+
+L'idée vient de Lucas Chess, dont le prompt d'analyse tient en quelques lignes suivies de la partie. Celui-ci y ajoute les évaluations de Stockfish : une ligne par demi-coup, et derrière chaque coup faible le meilleur coup et sa suite.
+
+Ce qu'il faut savoir de ce mode :
+
+- le prompt pèse environ 5 Ko pour une partie de 25 coups
+- il ne porte ni la synthèse ni les fichiers `.json` : le LLM n'a que la partie, le tableau du moteur et, avec l'explorateur, une phrase sur l'ouverture
+- l'archive est écrite quand même, gardez-la : `verifier-analyse.py` en a besoin
+- **c'est un repli, et il n'a pas encore été essayé** : les essais ci-dessous lui sont antérieurs
+
+La qualité de l'analyse dépend alors du LLM que vous choisissez. Passez toujours son PGN à `verifier-analyse.py`, décrit plus bas.
+
+Deux conseils tirés des essais :
+
+- certains LLM refusent un fichier `.pgn` en pièce jointe : renommez-le en `.txt`, ou passez à `--prompt-seul`
 - si le LLM annonce un fichier que vous ne trouvez pas, demandez-lui le PGN dans un bloc de code
 
 ### Essais menés
 
-Un seul essai par LLM, le 20 novembre 2026, sur la même partie de 49 demi-coups, avec le même zip et le même prompt, celui de la version 4.0.0 avant les consignes que ces essais ont fait ajouter.
+Un seul essai par LLM, le 20 novembre 2026, sur la même partie de 49 demi-coups, avec le même zip et le même prompt, celui de la version 4.0.0 avant les consignes et l'option `--prompt-seul` que ces essais ont fait ajouter.
 
 **Ce n'est pas un classement.** Un essai ne dit rien de la régularité d'un modèle, et les offres ne sont pas comparables : un abonnement d'un côté, trois offres gratuites de l'autre.
 
