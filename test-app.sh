@@ -1598,6 +1598,39 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
         "$(grep -c '| mat | gaffe |' lignes)"
     verifier "T51 Qh4# en premier choix" contient lignes "Qh4# (#-1)"
     verifier "T51 phrase d'explication" contient extrait "Écart \`mat\`"
+    verifier "T51 écart négatif expliqué" contient extrait \
+        "Négatif, il ne signale aucune faute"
+    egal "T51 titre d'une partie sans balise Site" 1 \
+        "$(grep -c "^# Dossier d'analyse : partie locale" extrait)"
+    egal "T51 sans explorateur, son dossier n'est pas annoncé" 0 \
+        "$(grep -c 'explorateur/NNN' extrait)"
+    # Écart entre le premier choix et le coup joué, calculé à part : deux
+    # mats de même sens ne donnent pas un écart d'un centipion.
+    SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t51 2> journal-t51 <<'EOF'
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+for meilleur, joue in ((99999, 99998), (-99998, -99999), (99999, 300),
+                       (50, 80), (120, -40), (300, -99999)):
+    ecart = cp.ecart_au_meilleur(float(meilleur), float(joue))
+    print(meilleur, joue, cp._ecart(ecart), cp.nature_coup(ecart))
+EOF
+    cat > attendu-t51 <<'EOF'
+99999 99998 0 None
+-99998 -99999 0 None
+99999 300 mat gaffe
+50 80 -30 None
+120 -40 160 erreur
+300 -99999 mat gaffe
+EOF
+    verifier "T51 écarts : deux mats, mat manqué, écart négatif" \
+        cmp -s attendu-t51 sortie-t51
+    joindre sortie-t51
+    joindre journal-t51 5
+    rm -rf "$DEPOT/__pycache__"
     joindre lignes
     joindre journal
 

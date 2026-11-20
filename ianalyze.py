@@ -486,6 +486,10 @@ SEUIL_GAFFE = 300
 #: affiché.
 SEUIL_ECART_MAT = 10000
 
+#: Valeur à partir de laquelle une évaluation bornée est celle d'un mat :
+#: valeur_pour_trait ramène un mat en n coups à 100000 - n.
+SEUIL_MAT = 90000
+
 #: Erreurs et gaffes reprises au plus, par camp, dans le palmarès.
 PALMARES_MAX = 5
 
@@ -2637,6 +2641,22 @@ def valeur_pour_trait(score: chess.engine.PovScore, trait: bool) -> float:
     return float(score.pov(trait).score(mate_score=100000))
 
 
+def ecart_au_meilleur(meilleur: float, joue: float) -> float:
+    """
+    Ce que le coup joué perd par rapport au premier choix du moteur, les
+    deux valeurs étant prises du point de vue du joueur au trait.
+
+    Deux mats de même sens ne se comparent pas en centipions : mater en
+    deux coups au lieu d'un, ou se faire mater un coup plus tard, ne
+    change pas l'issue. Leurs valeurs bornées, 99999 et 99998, donnaient
+    un écart de 1, lu à tort comme un centipion : il vaut zéro.
+    """
+    if min(abs(meilleur), abs(joue)) >= SEUIL_MAT and (meilleur > 0) == (
+            joue > 0):
+        return 0.0
+    return meilleur - joue
+
+
 def wdl_blancs(info: dict) -> dict | None:
     """Chances de gain, nulle et perte des Blancs, en pour mille."""
     wdl = info.get("wdl")
@@ -2866,7 +2886,8 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
 
             ecart = None
             if meilleurs and eval_joue["valeur_trait"] is not None:
-                ecart = meilleurs[0]["valeur_trait"] - eval_joue["valeur_trait"]
+                ecart = ecart_au_meilleur(meilleurs[0]["valeur_trait"],
+                                          eval_joue["valeur_trait"])
 
             resultats.append({
                 "demicoup": indice + 1,
@@ -3152,6 +3173,9 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     a = out.append
 
     identifiant = partie.headers.get("Site", "").rstrip("/").split("/")[-1]
+    if identifiant == "?":
+        # python-chess donne "?" à une balise Site absente.
+        identifiant = ""
     a("# Dossier d'analyse : %s"
       % (nettoyer_valeur(identifiant) or "partie locale"))
     a("")
@@ -3322,7 +3346,10 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
       "couverts sur %d. Les évaluations sont exprimées **du point de "
       "vue des Blancs**. L'écart est exprimé en centipions **du point "
       "de vue du joueur au trait** : positif, il mesure ce que le coup "
-      "joué perd par rapport au premier choix du moteur."
+      "joué perd par rapport au premier choix du moteur. Négatif, il ne "
+      "signale aucune faute : le coup joué, évalué à part quand il n'est "
+      "pas parmi les premiers choix, sort un peu au-dessus du premier, "
+      "et les deux se valent."
       % (stockfish["binaire"], stockfish["profondeur"],
          stockfish["multipv"], len(stockfish["resultats"]),
          len(list(partie.mainline_moves()))))
@@ -3334,7 +3361,7 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
         a("Coup nul `--` : le trait passe sans qu'une pièce ne bouge. Ce "
           "n'est pas un coup des échecs, le moteur ne l'évalue pas : "
           "ses colonnes Éval, G/N/P, Écart et Nature portent `-`, les "
-          "trois meilleurs coups de la position restant donnés.")
+          "meilleurs coups de la position restant donnés.")
     a("Écart `mat` : l'un des deux scores comparés est un mat, que le "
       "coup joué manque un mat ou qu'il en concède un ; l'écart ne se "
       "chiffre pas en centipions, comparez les colonnes Éval et 1er.")
@@ -3488,8 +3515,11 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
         a("- `partie.pgn` : le PGN source, avec ses commentaires d'origine.")
     for annexe in annexes or []:
         a(annexe)
-    a("- `explorateur/NNN-<uci>.json` : une réponse brute par demi-coup "
-      "interrogé, numérotée dans l'ordre de la partie.")
+    if explorateur is not None:
+        # Sans explorateur, l'archive n'a pas ce dossier : l'annoncer
+        # ferait chercher à l'analyste des fichiers qui n'existent pas.
+        a("- `explorateur/NNN-<uci>.json` : une réponse brute par "
+          "demi-coup interrogé, numérotée dans l'ordre de la partie.")
     a("- `stockfish/evaluations.json` : les évaluations moteur "
       "complètes, avec la variante principale entière de chaque coup, "
       "en UCI et en notation algébrique.")

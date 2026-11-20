@@ -80,6 +80,12 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- Synthèse : entre deux mats de même sens, mater en deux coups au lieu
+  d'un par exemple, la colonne "Écart cp" affichait 1, lu comme un
+  centipion. Elle affiche 0. La légende dit ce que vaut un écart
+  négatif. La section 5 n'annonce plus le dossier `explorateur/` quand
+  l'archive n'en a pas, et le titre d'une partie sans balise Site est
+  "partie locale" et non "?".
 - Les deux prompts affirmaient des choses que la collecte n'avait pas
   faites. Avec `--coups-stockfish`, ils promettaient une évaluation
   "après chaque coup joué". Sans explorateur, le prompt complet

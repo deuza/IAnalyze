@@ -729,6 +729,7 @@ Sections de `synthese.md` :
 | 3. Évaluations Stockfish | nature et G/N/P de chaque coup |
 | 3 bis | variantes principales du moteur |
 | 3 ter | erreurs et gaffes par camp, avec la FEN |
+| 5 | fichiers de l'archive. Le dossier `explorateur/` n'y figure que s'il existe |
 | 4. Positions non exploitables | là où la base ne dit plus rien, ou le demi-coup d'un coup nul |
 | 5. Données brutes de l'archive | le contenu du zip, et l'encodage du PGN s'il a été converti |
 
