@@ -932,7 +932,11 @@ def lire_jeton(chemin: str) -> str:
                 % (p, mode & 0o777))
 
     jeton = contenu.strip()
-    if not jeton or any(c.isspace() for c in jeton):
+    # Une affectation, LICHESS_TOKEN=lip_..., ou des guillemets autour du
+    # jeton tiennent en un seul mot : sans ce contrôle, ils passaient, et
+    # Lichess répondait 401 sans que rien ne désigne le fichier.
+    if (not jeton or any(c.isspace() for c in jeton)
+            or any(c in jeton for c in "=\"'")):
         raise SystemExit("Le fichier %s doit contenir le jeton seul, sans "
                          "espace ni affectation de variable." % p)
     # Le jeton part dans un en-tête HTTP : hors de l'ASCII imprimable, il
@@ -4012,6 +4016,16 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
 
     options = p.parse_args(argv)
 
+    if options.purge_reglages and (options.installer_venv
+                                   or options.installer_catalogue
+                                   or options.source):
+        # La purge se fait seule : combinée, elle était ignorée sans un
+        # mot au profit de l'autre action.
+        p.error("--purge-reglages s'emploie seule, sans partie ni autre "
+                "action")
+    if options.prompt is not None and not options.prompt.strip():
+        # Cas d'une variable vide dans un script : --prompt "$MODELE".
+        p.error("--prompt : chemin vide")
     if (options.installer_venv or options.installer_catalogue
             or options.purge_reglages):
         return options

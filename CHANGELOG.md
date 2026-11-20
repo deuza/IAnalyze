@@ -91,6 +91,11 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- `--purge-reglages` combinée à une autre action était ignorée sans un
+  mot, et `--prompt ""` reprenait le modèle par défaut : les deux sont
+  refusés. Un fichier de jeton écrit `LICHESS_TOKEN=...` ou entre
+  guillemets passait la lecture, et Lichess répondait 401 : il est
+  refusé avec le message qui existait déjà.
 - Chemins : `--sortie='~/analyses'` créait un répertoire nommé `~`, et
   `--stockfish` ne développait pas le tilde. Un moteur désigné par son
   nom nu était contrôlé dans le répertoire courant, puis lancé depuis

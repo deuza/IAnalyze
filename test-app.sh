@@ -1654,6 +1654,31 @@ verifier "T08 répertoire de sortie créé au besoin" \
 verifier "T08 archive écrite dans ce répertoire" test -f "$ARCH"
 rm -rf analyse-italienne-*
 
+titre "T81 : purge combinée, modèle vide, jeton mal écrit"
+cp "$REGL" t-purge.ini
+"$SCRIPT" --purge-reglages --installer-venv --venv "$VENV" \
+    --reglages t-purge.ini > sortie 2> journal
+egal "T81 purge avec une autre action, code de retour" 2 "$?"
+verifier "T81 purge avec une autre action, message" \
+    contient journal "--purge-reglages s'emploie seule"
+verifier "T81 purge avec une autre action, fichier intact" test -f t-purge.ini
+lancer italienne.pgn $O --prompt ""
+egal "T81 --prompt vide, code de retour" 2 "$RC"
+verifier "T81 --prompt vide, message" contient journal "--prompt : chemin vide"
+# Le jeton est factice. Les collectes s'arrêtent à sa lecture, avant le
+# catalogue et avant toute requête.
+for contenu in 'LICHESS_TOKEN=lip_factice' '"lip_factice"' "'lip_factice'"; do
+    printf '%s\n' "$contenu" > t-jeton-faux
+    chmod 600 t-jeton-faux
+    lancer italienne.pgn --sans-questions --profondeur 1 \
+        --jeton-fichier t-jeton-faux --catalogue "$TRAVAIL/nulle-part"
+    egal "T81 jeton écrit $contenu, code de retour" 1 "$RC"
+    verifier "T81 jeton écrit $contenu, refusé" \
+        contient journal "doit contenir le jeton seul"
+    egal "T81 jeton écrit $contenu, non affiché" 0 \
+        "$(grep -c 'lip_factice' journal)"
+done
+
 titre "T27 : fichier de jeton absent"
 
 lancer italienne.pgn --sans-questions --profondeur 1 \
