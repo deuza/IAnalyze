@@ -1430,22 +1430,22 @@ verifier "T77 nom trop long, fichier introuvable" \
 lancer 'https://[lichess.org]/abcdefgh' $O
 egal "T77 URL mal formée, code de retour" 1 "$RC"
 verifier "T77 URL mal formée, refusée" contient journal "URL non reconnue"
-# Une position de départ sans roi noir, puis une où le camp qui n'a pas
-# le trait est en échec.
-printf '[SetUp "1"]\n[FEN "8/8/8/8/8/8/4P3/4K3 w - - 0 1"]\n\n1. e4 *\n' > t-sans-roi.pgn
-lancer t-sans-roi.pgn $O
-egal "T77 position sans roi, code de retour" 1 "$RC"
-verifier "T77 position sans roi, cause nommée" \
-    contient journal "Position de départ illégale, balise FEN : pas de roi noir"
-printf '[SetUp "1"]\n[FEN "4k3/4R3/8/8/8/8/8/4K3 w - - 0 1"]\n\n1. Rxe8 *\n' > t-roi-en-prise.pgn
-lancer t-roi-en-prise.pgn $O
-egal "T77 roi en prise, code de retour" 1 "$RC"
-verifier "T77 roi en prise, cause nommée" \
-    contient journal "le camp qui n'a pas le trait est en échec"
-# Une FEN écrite à la main, aux droits de roque faux, reste acceptée.
-printf '[SetUp "1"]\n[FEN "4k3/8/8/8/8/8/4P3/4K3 w KQkq - 0 1"]\n\n1. e4 *\n' > t-roques-faux.pgn
-lancer t-roques-faux.pgn $O
-egal "T77 droits de roque faux, acceptés" 0 "$RC"
+# Une partie qui part d'une balise FEN n'est pas une partie entière :
+# elle est refusée, quelle que soit la position. La position initiale
+# écrite en toutes lettres, elle, reste une partie entière.
+printf '[SetUp "1"]\n[FEN "6k1/5ppp/8/8/8/8/5PPP/3Q2K1 b - - 0 30"]\n\n' > t-depuis-fen.pgn
+printf '30... h6 31. Qd8+ Kh7 *\n' >> t-depuis-fen.pgn
+lancer t-depuis-fen.pgn $O
+egal "T77 partie depuis une FEN, code de retour" 1 "$RC"
+verifier "T77 partie depuis une FEN, refusée" \
+    contient journal "ne commence pas à la position initiale"
+egal "T77 partie depuis une FEN, rien n'est écrit" 0 \
+    "$(ls -d analyse-t-depuis-fen* 2>/dev/null | wc -l)"
+printf '[SetUp "1"]\n' > t-fen-initiale.pgn
+printf '[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]\n\n' >> t-fen-initiale.pgn
+printf '1. e4 e5 *\n' >> t-fen-initiale.pgn
+lancer t-fen-initiale.pgn $O
+egal "T77 FEN de la position initiale, acceptée" 0 "$RC"
 cat journal > journal-t77
 egal "T77 aucune erreur inattendue" 0 \
     "$(cat journal-t77 journal | grep -c 'Erreur inattendue')"
@@ -1571,21 +1571,6 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
     extraire '*/synthese.md'
     egal "T72 résultat cohérent, rien n'est signalé" 0 \
         "$(grep -c 'se contredisent' extrait)"
-
-    # La même contradiction dans une partie qui part d'une balise FEN,
-    # trait aux Noirs au trentième coup, et gagnée cette fois par les
-    # Noirs sur le papier : le numéro de coup de la FEN ne doit pas faire
-    # taire l'alerte.
-    printf '[Result "0-1"]\n[SetUp "1"]\n' > t-contre-fen.pgn
-    printf '[FEN "6k1/5ppp/8/8/8/8/5PPP/3Q2K1 b - - 0 30"]\n\n' >> t-contre-fen.pgn
-    printf '30... h6 31. Qd8+ Kh7 32. Qd3+ g6 0-1\n' >> t-contre-fen.pgn
-    lancer t-contre-fen.pgn $MOTEUR $RAPIDE
-    egal "T72 depuis une FEN, code de retour" 0 "$RC"
-    extraire '*/synthese.md'
-    egal "T72 depuis une FEN, contradiction signalée" 1 \
-        "$(grep -c 'Résultat et évaluation finale se contredisent' extrait)"
-    verifier "T72 depuis une FEN, dernier coup numéroté d'après la FEN" \
-        contient extrait "32... g6, soit un net avantage aux Blancs"
 
     titre "T52 : coup nul"
     printf '1. e4 e5 2. -- Nc6 3. Nf3 *\n' > t-nul-coup.pgn

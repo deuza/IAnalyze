@@ -1021,26 +1021,6 @@ RE_JETON_PGN = re.compile(
     r"|[!?]{1,2}")
 
 
-#: Défauts d'une position de départ, dans l'ordre où ils sont annoncés.
-#: Les drapeaux sont nommés et non lus dans le module chess, qui n'est
-#: pas encore chargé quand le script s'amorce hors de son environnement
-#: virtuel.
-POSITIONS_ILLEGALES = (
-    ("STATUS_NO_WHITE_KING", "pas de roi blanc"),
-    ("STATUS_NO_BLACK_KING", "pas de roi noir"),
-    ("STATUS_TOO_MANY_KINGS", "plus d'un roi par camp"),
-    ("STATUS_OPPOSITE_CHECK",
-     "le camp qui n'a pas le trait est en échec"),
-    ("STATUS_PAWNS_ON_BACKRANK",
-     "un pion sur la première ou la huitième rangée"),
-    ("STATUS_TOO_MANY_WHITE_PIECES", "trop de pièces blanches"),
-    ("STATUS_TOO_MANY_BLACK_PIECES", "trop de pièces noires"),
-    ("STATUS_TOO_MANY_WHITE_PAWNS", "trop de pions blancs"),
-    ("STATUS_TOO_MANY_BLACK_PAWNS", "trop de pions noirs"),
-    ("STATUS_EMPTY", "échiquier vide"),
-)
-
-
 def controler_lexique(texte_pgn: str) -> None:
     """
     Refuse un PGN dont le corps contient autre chose que des coups.
@@ -1139,20 +1119,17 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
                                      for e in partie.errors))
     if not list(partie.mainline_moves()):
         raise SystemExit("PGN sans aucun coup dans la ligne principale.")
-    # Une balise FEN peut décrire une position qui n'existe pas aux
-    # échecs. python-chess la joue quand même, et le moteur s'arrête sur
-    # une erreur qui ne dit rien de la cause. Les droits de roque et la
-    # case de prise en passant mal renseignés ne sont pas retenus : ils
-    # sont fréquents dans une FEN écrite à la main, et python-chess les
-    # corrige de lui-même.
-    etat = partie.board().status() & ~(chess.STATUS_BAD_CASTLING_RIGHTS
-                                       | chess.STATUS_INVALID_EP_SQUARE)
-    if etat != chess.STATUS_VALID:
-        defauts = [texte for drapeau, texte in POSITIONS_ILLEGALES
-                   if etat & getattr(chess, drapeau)
-                   ] or ["position impossible"]
-        raise SystemExit("Position de départ illégale, balise FEN : %s."
-                         % ", ".join(defauts))
+    # IAnalyze analyse une partie entière, du premier coup au dernier :
+    # l'explorateur, le catalogue des ouvertures et les consignes du
+    # prompt supposent tous la position initiale. Une partie reprise d'une
+    # position, donnée par une balise FEN, est donc refusée ici, plutôt
+    # qu'analysée à moitié avec un prompt qui ne lui correspond pas.
+    if partie.board().fen() != chess.STARTING_FEN:
+        raise SystemExit(
+            "La partie ne commence pas à la position initiale, elle part "
+            "d'une balise FEN. IAnalyze analyse une partie entière, du "
+            "premier coup au dernier : pour étudier une position, "
+            "chargez-la dans un échiquier d'analyse.")
 
     # Les valeurs des balises partent dans les en-têtes de la synthèse et
     # dans le journal : on en retire tabulations et caractères de contrôle
@@ -2960,10 +2937,8 @@ def resultat_contredit(partie: chess.pgn.Game,
         return None
     dernier = resultats[-1]
     valeur = dernier["joue"].get("valeur_trait")
-    # Le rang du demi-coup se compare au nombre de coups joués, et non à
-    # partie.end().ply() : ce dernier part du numéro de coup de la balise
-    # FEN, et vaut 64 pour une partie de cinq demi-coups commencée au
-    # trentième coup.
+    # Le rang du demi-coup se compare au nombre de coups joués, compté
+    # ici même, et non à une numérotation tirée du PGN.
     joues = sum(1 for _ in partie.mainline_moves())
     if valeur is None or dernier["demicoup"] != joues:
         return None
@@ -4095,12 +4070,6 @@ def main(argv: list[str]) -> int:
     motif_sans_explorateur = None
     if options.sans_explorateur:
         motif_sans_explorateur = "désactivée par --sans-explorateur"
-    elif partie.board().fen() != chess.STARTING_FEN:
-        # La base maîtres n'est interrogeable qu'à partir de la position
-        # initiale ; une partie "from position" n'a pas de sens ici.
-        motif_sans_explorateur = ("la partie ne commence pas à la position "
-                                  "initiale, l'explorateur est inapplicable")
-        journal("Explorateur ignoré : %s." % motif_sans_explorateur)
     else:
         # Le jeton n'est lu qu'ici et n'est ni écrit ni journalisé.
         JETON_COURANT = lire_jeton(options.jeton_fichier)

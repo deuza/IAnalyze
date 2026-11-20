@@ -39,6 +39,10 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- Un PGN qui ne part pas de la position initiale, donc qui porte une
+  balise FEN, est refusé. Il était jusqu'ici analysé sans explorateur,
+  avec un prompt qui lui demandait quand même de nommer l'ouverture.
+  IAnalyze analyse une partie entière, du premier coup au dernier.
 - `--profondeur` est bornée à 60. Une valeur démesurée, par faute de
   frappe, occupait le moteur sans jamais rendre la main.
 - Un PGN qui contient plusieurs parties est refusé, avec leur nombre.
@@ -83,11 +87,10 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   l'interrogation s'arrête maintenant, comme pour les autres réponses
   inexploitables, et Stockfish fait son travail. Un compte de parties
   négatif ou démesuré est tenu pour absent.
-- Quatre entrées finissaient en "Erreur inattendue" au lieu du message
+- Trois entrées finissaient en "Erreur inattendue" au lieu du message
   prévu : l'entrée standard fermée par l'appelant, un nom de fichier
-  trop long ou dans un répertoire interdit, une URL aux crochets mal
-  placés, et une balise FEN décrivant une position illégale, où le
-  moteur s'arrêtait sans dire pourquoi.
+  trop long ou dans un répertoire interdit, et une URL aux crochets mal
+  placés.
 - `verifier-analyse.py` : un PGN aux fins de ligne CRLF voyait chacune
   de ses lignes de 79 caractères comptée 80. Certains PGN abîmés, et
   une archive incomplète ou altérée, finissaient en trace Python ou en
@@ -104,10 +107,6 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   passait, et la variante n'était jamais lue. Une accolade fermante
   dans un commentaire n'était pas vue. L'ordre des sept balises ne
   pouvait pas être trouvé fautif, python-chess les rangeant toujours.
-- Partie partant d'une balise FEN : la ligne "Résultat et évaluation
-  finale se contredisent" n'était jamais écrite, ni dans la synthèse ni
-  dans le prompt, dès que la FEN ne valait pas "coup 1, trait aux
-  Blancs".
 - Une partie notée en français, en figurines ou en minuscules était
   analysée de travers sans aucun message : python-chess écarte la lettre
   qu'il ne connaît pas, et "Cf3" devenait "f3", un coup de pion. Le
