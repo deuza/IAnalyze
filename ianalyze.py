@@ -17,7 +17,7 @@ Ce programme ne produit aucune analyse. Il rassemble et met en forme :
 
 Avant la collecte, sur un terminal interactif, le script demande votre
 camp si les en-têtes ne le donnent pas, puis vos réponses aux questions
-de démarrage du projet d'analyse, rangées dans contexte.md et reprises en
+de démarrage, rangées dans contexte.md et reprises en
 tête de la synthèse.
 
 Votre pseudo, votre cadence habituelle et votre niveau ne sont pas dans
@@ -462,7 +462,7 @@ RE_TIMECONTROL = re.compile(r"([0-9]{1,6})(?:\+([0-9]{1,5}))?")
 #: Cadence inconnue, valeur de repli.
 CADENCE_INCONNUE = {"type": "inconnue"}
 
-#: Questions de démarrage du projet d'analyse, avec le défaut que retient
+#: Questions de démarrage, avec le défaut que retient
 #: une réponse vide : libellé dans contexte.md, question, défaut.
 QUESTIONS_CONTEXTE = (
     ("a. Périmètre",
@@ -3723,6 +3723,7 @@ exemples d'utilisation
   Première installation, une seule fois :
 
       %s
+      %s
       ./ianalyze.py --installer-venv
       ./ianalyze.py --installer-catalogue
 
@@ -3738,7 +3739,7 @@ exemples d'utilisation
       ./ianalyze.py https://lichess.org/<identifiant>
       ./ianalyze.py <identifiant>
 
-  Usage hors du projet d'analyse, sans aucune question, ou avec tous vos
+  Sans aucune question, par exemple depuis un autre script, ou avec tous vos
   noms de joueur pour que le camp soit déduit des en-têtes :
 
       ./ianalyze.py ma-partie.pgn --sans-questions
@@ -3806,17 +3807,19 @@ prérequis
   %s
 
   python-chess n'est pas empaqueté par Debian. L'option --installer-venv
-  crée un environnement virtuel dédié (%s par défaut) et y installe le
-  module. Le script s'y relance ensuite tout seul, vous pouvez continuer à
+  crée un environnement virtuel dédié et y installe le module. Par défaut :
+  %s
+  Le script s'y relance ensuite tout seul, vous pouvez continuer à
   l'appeler avec le python du système.
 
   Le catalogue des ouvertures nommées de Lichess (domaine public, CC0)
-  est gardé en local dans %s, installé et mis à jour par
-  --installer-catalogue. Il n'est pas requis avec --sans-explorateur.
+  est gardé en local dans %s,
+  installé et mis à jour par --installer-catalogue. Il n'est pas requis
+  avec --sans-explorateur.
 
-  Le jeton personnel Lichess est lu dans %s, en mode 600, ce fichier ne
-  contenant que le jeton. Il n'apparaît jamais dans la sortie, ni dans les
-  fichiers produits, ni dans la ligne de commande.
+  Le jeton personnel Lichess est lu dans %s, en mode 600,
+  ce fichier ne contenant que le jeton. Il n'apparaît jamais dans la
+  sortie, ni dans les fichiers produits, ni dans la ligne de commande.
 
   Votre pseudo, votre cadence habituelle et votre niveau sont demandés
   une seule fois, au premier lancement sur un terminal, puis gardés dans
@@ -3825,7 +3828,8 @@ prérequis
   Aucune autre dépendance : le HTTP passe par urllib de la bibliothèque
   standard, l'archive par zipfile. Le paquet stockfish est obligatoire,
   le moteur est piloté en UCI.
-""" % (CMD_PAQUET_VENV, CMD_PAQUET_VENV, CMD_PAQUET_STOCKFISH,
+""" % (CMD_PAQUET_VENV, CMD_PAQUET_STOCKFISH,
+       CMD_PAQUET_VENV, CMD_PAQUET_STOCKFISH,
        VENV_DEFAUT, CATALOGUE_DEFAUT, JETON_DEFAUT, REGLAGES_DEFAUT)
 
 
@@ -3876,7 +3880,7 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
 
     p.add_argument("source", nargs="?",
                    help="fichier PGN local, URL Lichess, ou identifiant de "
-                        "partie à huit caractères")
+                        "partie à huit ou douze caractères")
 
     g = p.add_argument_group("environnement virtuel")
     g.add_argument("--installer-venv", action="store_true",
@@ -3888,9 +3892,8 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
 
     g = p.add_argument_group("questions de démarrage")
     g.add_argument("--sans-questions", action="store_true",
-                   help="ne pose aucune question, ni camp ni contexte, pour "
-                        "un usage hors du projet d'analyse ; implicite hors "
-                        "terminal interactif")
+                   help="ne pose aucune question, ni camp ni contexte ; "
+                        "implicite hors terminal interactif")
     g.add_argument("--pseudos", default=None, metavar="LISTE",
                    help="vos noms de joueur, séparés par des virgules, "
                         "cherchés sans tenir compte de la casse dans White "
@@ -3962,13 +3965,15 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                         "(défaut : %(default)s)")
     g.add_argument("--seuil-frequence", type=float, default=10.0, metavar="P",
                    help="arrêt dès que le coup joué tombe sous P pour cent "
-                        "de fréquence, 0 pour désactiver ce critère "
+                        "de fréquence et sort du catalogue des ouvertures, "
+                        "0 pour désactiver ce critère "
                         "(défaut : %(default)s)")
     g.add_argument("--jusqu-a-epuisement", action="store_true",
                    help="ignore les deux seuils et interroge la base tant "
                         "qu'elle répond, l'arrêt n'ayant alors lieu que sur "
-                        "une erreur HTTP ou sur une position absente de la "
-                        "base")
+                        "une erreur HTTP, sur une position absente de la "
+                        "base, sur un coup nul, au plafond "
+                        "--max-demicoups ou à la fin de la partie")
     g.add_argument("--coups-min", type=int, default=6, metavar="N",
                    help="aucun arrêt sur la fréquence avant la fin du coup "
                         "N, le seuil de parties restant actif ; la table "

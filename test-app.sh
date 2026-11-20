@@ -341,11 +341,11 @@ egal "T02 --coups-min cité 4 fois" 4 "$(grep -c -- --coups-min aide)"
 
 titre "T31, T32 : commandes d'installation selon la plateforme"
 if [ "$SYSTEME" = "Darwin" ]; then
-    egal "T31 brew install cité 3 fois" 3 "$(grep -c 'brew install' aide)"
+    egal "T31 brew install cité 4 fois" 4 "$(grep -c 'brew install' aide)"
     egal "T32 apt install absent" 0 "$(grep -c 'apt install' aide)"
 else
     egal "T31 brew install absent" 0 "$(grep -c 'brew install' aide)"
-    egal "T32 apt install cité 3 fois" 3 "$(grep -c 'apt install' aide)"
+    egal "T32 apt install cité 4 fois" 4 "$(grep -c 'apt install' aide)"
 fi
 verifier "défaut de --venv sous le répertoire utilisateur" \
     contient aide ".local/share/IAnalyze/venv"
