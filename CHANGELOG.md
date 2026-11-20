@@ -8,6 +8,13 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Sur une partie qui contient un coup nul, le journal répétait à
+  chaque position suivante un avis de python-chess, "Not transmitting
+  history with null moves to UCI engine". Sans conséquence sur les
+  évaluations, il est écarté.
+
 ## [4.0.0] - 2026-11-19
 
 ### Changed

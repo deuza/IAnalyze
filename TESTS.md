@@ -690,6 +690,8 @@ version 3.5.4, la ligne 3 portait une évaluation "+0.00", un écart
 et la nature "imprécision", tous inventés.
 ```
 
+Le journal de T52 ne porte pas "Not transmitting history with null moves to UCI engine", avis que python-chess répétait à chaque position suivant un coup nul et que le script écarte : `grep -c 'Not transmitting'` sur ce journal donne 0.
+
 ## Q. Interruption (sans réseau ni jeton)
 
 ### T53

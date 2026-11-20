@@ -1188,6 +1188,9 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
         contient extrait "joué : coup nul, non évalué par le moteur"
     joindre lignes
 
+    egal "T52 pas d'avis répété de python-chess" 0 \
+        "$(grep -c 'Not transmitting' journal)"
+
     titre "T55 : options moteur hors bornes"
     for option in "--fils 100000" "--hachage 99999999999" "--multipv 9999"; do
             lancer italienne.pgn $MOTEUR $option

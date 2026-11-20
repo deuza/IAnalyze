@@ -49,6 +49,7 @@ import datetime
 import http.client
 import io
 import json
+import logging
 import math
 import os
 import pathlib
@@ -120,6 +121,16 @@ try:
     CHESS_DISPONIBLE = True
 except ImportError:
     CHESS_DISPONIBLE = False
+
+#: Sur une partie qui contient un coup nul, python-chess écrit à chaque
+#: position suivante "Not transmitting history with null moves to UCI
+#: engine" : il prévient qu'il donne au moteur la position seule, sans
+#: l'historique des coups. Les évaluations n'en dépendent pas, et le coup
+#: nul est déjà signalé dans le journal et dans la synthèse : ce message,
+#: en anglais et répété, est écarté. Les autres avis de la bibliothèque
+#: continuent de s'afficher.
+logging.getLogger("chess.engine").addFilter(
+    lambda avis: "null moves" not in avis.getMessage())
 
 
 def python_du_venv(venv: str) -> pathlib.Path:
