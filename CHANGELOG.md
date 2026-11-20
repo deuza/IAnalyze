@@ -10,6 +10,10 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- `TESTS.md` tient en une page : comment lancer `test-app.sh`, ce que
+  vérifie chaque famille de tests, où ils ont été joués. Le détail,
+  commande par commande, n'y est plus : il faisait doublon avec le
+  script, qui fait foi.
 - `test-app.sh` joue les tests qui se faisaient encore à la main :
   options refusées, fichier introuvable, dossier gardé, consignes,
   répertoire de sortie, moteur limité aux premiers coups, jeton absent.

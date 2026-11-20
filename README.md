@@ -32,7 +32,7 @@ Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec le
 | `prompt-modele.txt` | le modèle dont est tiré le prompt de chaque partie (section 9) |
 | `test.pgn` | une partie d'essai qui réunit les cas tordus d'un PGN |
 | `test-app.sh` | la suite de tests, pour Linux et macOS |
-| [`TESTS.md`](TESTS.md) | le plan de tests, commande par commande |
+| [`TESTS.md`](TESTS.md) | comment lancer les tests et ce qu'ils vérifient |
 | [`CHANGELOG.md`](CHANGELOG.md) | l'historique des versions |
 
 Plateformes : Debian et macOS (Homebrew). Python 3 et python-chess, que le script installe lui-même dans un environnement virtuel dédié.
