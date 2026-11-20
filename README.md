@@ -38,8 +38,9 @@ Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec Cl
 | `test-app.sh` | la suite de tests, pour Linux et macOS |
 | [`TESTS.md`](TESTS.md) | comment lancer les tests et ce qu'ils vérifient |
 | [`CHANGELOG.md`](CHANGELOG.md) | l'historique des versions |
+| [`LICENSE`](LICENSE) | la licence du code (voir Licences) |
 
-Plateformes : Debian et macOS (Homebrew). Python 3 et python-chess, que le script installe lui-même dans un environnement virtuel dédié.
+Plateformes : Debian et macOS (Homebrew). Python 3.10 ou plus récent et python-chess, que le script installe lui-même dans un environnement virtuel dédié.
 
 ---
 
@@ -140,7 +141,7 @@ Les mêmes sur les deux plateformes, sauf pour le moteur :
 
 L'explorateur de Lichess demande un jeton d'accès personnel.
 
-Une fois connecté à Lichess, créez-le sur https://lichess.org/account/oauth/token, sans cocher aucun droit.
+Une fois connecté à Lichess, créez-le sur <https://lichess.org/account/oauth/token>, sans cocher aucun droit.
 
 Le script le lit dans `~/.lichess_token`, un fichier en mode 600 qui ne contient que le jeton :
 
@@ -156,7 +157,11 @@ Votre pseudo, votre cadence habituelle et votre niveau sont gardés dans `~/.con
 
 Le script les demande une seule fois, au premier lancement dans un terminal.
 
-Vous pouvez ensuite modifier le fichier à la main, ou le supprimer avec `--purge-reglages` :
+Vous pouvez ensuite modifier le fichier à la main, ou le supprimer avec `--purge-reglages`.
+
+Le script réécrit ce fichier quand il y ajoute une réponse : vos clefs et vos sections sont gardées, vos lignes de commentaire sont perdues.
+
+Pour le supprimer :
 
 ```ini
 [joueur]
@@ -265,10 +270,10 @@ Une réponse fait 255 caractères au plus. Un nom de joueur ou un pseudo ne peut
 
 Les questions s'affichent dans le terminal et attendent une réponse au clavier.
 
-Le script ne les pose donc que s'il est lancé à la main, dans un terminal. Il ne demande rien, et retient les valeurs par défaut, dans ces quatre cas :
+Le script ne les pose donc que s'il est lancé à la main, dans un terminal. Il ne demande rien dans ces quatre cas :
 
 - vous passez `--sans-questions`
-- un autre programme le lance : cron, un script, un service
+- un autre programme le lance sans terminal : cron, un service
 - son entrée ne vient pas du clavier : `./ianalyze.py ma-partie.pgn < /dev/null`
 - son journal ne va pas à l'écran : `./ianalyze.py ma-partie.pgn 2> journal.log`
 
@@ -327,15 +332,17 @@ Crée l'environnement virtuel s'il manque, y installe ou met à jour python-ches
 Emplacement de l'environnement virtuel, à l'installation comme à l'usage.
 
 ```bash
-./ianalyze.py --installer-venv --venv /opt/venv/echecs
-./ianalyze.py ma-partie.pgn --venv /opt/venv/echecs
+./ianalyze.py --installer-venv --venv ~/venv/echecs
+./ianalyze.py ma-partie.pgn --venv ~/venv/echecs
 ```
 
 ### Questions de démarrage
 
 #### `--sans-questions`
 
-Ne pose aucune question, ni camp ni contexte. Les valeurs par défaut sont retenues.
+Ne pose aucune question, ni camp ni contexte.
+
+Rien n'est retenu à votre place : le prompt dit alors au LLM que vos réponses n'ont pas été recueillies, et c'est lui qui vous pose les questions avant d'analyser.
 
 ```bash
 ./ianalyze.py ma-partie.pgn --sans-questions
@@ -404,8 +411,8 @@ Le remplacement est atomique : un échec laisse l'ancien index en place. Relance
 Répertoire du catalogue local, à l'installation comme à l'usage.
 
 ```bash
-./ianalyze.py --installer-catalogue --catalogue /srv/cat
-./ianalyze.py ma-partie.pgn --catalogue /srv/cat
+./ianalyze.py --installer-catalogue --catalogue ~/echecs/catalogue
+./ianalyze.py ma-partie.pgn --catalogue ~/echecs/catalogue
 ```
 
 ### Sortie
@@ -436,7 +443,7 @@ Modèle du prompt d'analyse, écrit à côté de l'archive sous le nom `<archive
 
 Le modèle est contrôlé avant la collecte : un repère inconnu arrête le script en donnant le numéro de la ligne. Un fichier désigné par l'option doit exister.
 
-Si le modèle par défaut manque, parce que le script a été copié seul, la collecte se fait sans prompt et le journal le signale.
+Si le modèle par défaut manque, parce que le script a été copié seul, la collecte se fait sans prompt et le journal le signale. Avec `--prompt-seul`, dont le prompt est le but, le script s'arrête.
 
 ```bash
 ./ianalyze.py ma-partie.pgn --prompt ~/mon-modele.txt
@@ -472,7 +479,7 @@ S'exclut avec `--sans-prompt`. Avec `--prompt`, le modèle désigné doit placer
 
 Base interrogée :
 
-- `lichess` : les parties classées de tous les joueurs du site, la base de https://lichess.org/opening
+- `lichess` : les parties classées de tous les joueurs du site, la base de <https://lichess.org/opening>
 - `maitres` : les parties de maîtres
 
 ```bash
@@ -505,7 +512,7 @@ Une partie est rangée selon la moyenne des classements de ses deux joueurs.
 ./ianalyze.py ma-partie.pgn --classements 0,1000
 ```
 
-Les filtres par défaut, plus la date de début fixée à janvier 2017, reprennent ceux de https://lichess.org/opening : vous y retrouvez les mêmes pourcentages.
+Les filtres par défaut, plus la date de début fixée à janvier 2017, reprennent ceux de <https://lichess.org/opening> : vous y retrouvez les mêmes pourcentages.
 
 #### `--jeton-fichier FICHIER`
 
@@ -671,12 +678,12 @@ Les variantes complètes restent dans `stockfish/evaluations.json`.
 
 ## 5. Règles de cohérence
 
-Une option sans effet est refusée plutôt qu'ignorée en silence :
+Une option sans effet, ou une valeur hors bornes, est refusée plutôt qu'ignorée en silence :
 
 - `--cadences` et `--classements` exigent `--base lichess`.
 - `--pause` ne descend pas sous 2, `--seuil-frequence` reste entre 0 et 100, `--coups-min`, `--coups-stockfish` et `--longueur-pv` valent 0 ou plus, `--profondeur` va de 1 à 60, les autres valeurs numériques valent au moins 1.
 - `--pause` et `--seuil-frequence` refusent nan et inf.
-- `--fils`, `--hachage` et `--multipv` sont contrôlés auprès du moteur, qui annonce ses bornes : une valeur qu'il n'admet pas est refusée avant toute requête et avant la création du dossier de travail.
+- `--fils`, `--hachage` et `--multipv` sont contrôlés auprès du moteur, qui annonce ses bornes : une valeur qu'il n'admet pas est refusée avant toute requête à l'explorateur et avant la création du dossier de travail.
 
 ## 6. Explorateur : critères d'arrêt
 
@@ -771,8 +778,8 @@ Codes de retour :
 | Code | Signification |
 |---|---|
 | 0 | succès |
-| 1 | erreur signalée par un message, ou erreur inattendue |
-| 2 | option invalide |
+| 1 | erreur signalée par un message, dont une valeur que le moteur n'admet pas, ou erreur inattendue |
+| 2 | option inconnue, ou valeur refusée avant toute lecture de la partie |
 | 130 | interruption (Ctrl-C) |
 
 ## 8. Encodages et caractères
@@ -1008,6 +1015,8 @@ Le prompt court demande moins que le prompt complet. Avec cette option, les cont
 
 Le script accepte le zip ou son dossier décompressé, et se relance tout seul dans l'environnement virtuel d'IAnalyze, à son emplacement par défaut.
 
+Il n'a pas d'option `--venv`. Si votre environnement est ailleurs, lancez-le avec le Python de cet environnement : `~/venv/echecs/bin/python3 verifier-analyse.py ...`
+
 ### Ce qui est contrôlé
 
 | Contrôle | Défauts relevés |
@@ -1060,7 +1069,7 @@ Le fichier peut porter une marque d'ordre des octets ou être en UTF-16, comme e
 
 Ce que le script interroge :
 
-- Jeton d'accès personnel : https://lichess.org/account/oauth/token, une fois connecté à Lichess
+- Jeton d'accès personnel : <https://lichess.org/account/oauth/token>, une fois connecté à Lichess
 
 - Explorateur, base de tous les joueurs : `https://explorer.lichess.org/lichess`
 - Explorateur, base des maîtres : `https://explorer.lichess.org/masters`
