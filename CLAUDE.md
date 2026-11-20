@@ -17,8 +17,7 @@ README.md, TESTS.md, CHANGELOG.md.
 - Poste : macOS M1 (Homebrew).
 - Sur les deux : venv dans ~/.local/share/IAnalyze/venv, catalogue dans
   ~/.local/share/IAnalyze, réglages dans ~/.config/IAnalyze.
-- Le comportement doit rester identique sur les deux. Toute option de
-  la ligne de commande existante doit continuer à fonctionner.
+- Le comportement doit rester identique sur les deux.
 - Python : modules hors apt installés dans un venv dédié, jamais dans
   l'environnement système. Signale tout nouveau module requis.
 
