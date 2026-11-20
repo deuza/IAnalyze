@@ -681,6 +681,20 @@ class Faux(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(corps)
             return
+        if self.path.startswith("/coupe"):
+            # Erreur 500 dont le corps annoncé n'arrive jamais en entier.
+            self.send_response(500)
+            self.send_header("Content-Length", "1000")
+            self.end_headers()
+            self.wfile.write(b"abc")
+            return
+        if self.path.startswith("/profond"):
+            corps = b"[" * 100000
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(corps)))
+            self.end_headers()
+            self.wfile.write(corps)
+            return
         self.send_response(Faux.code)
         self.send_header("Location",
                          "http://localhost:%d/vol" % tiers.server_port)
@@ -705,6 +719,13 @@ print("tiers", len(recu))
 statut, donnees = cp.Explorateur(
     JETON, 2.0, 5, base + "/echo", {}).interroger(["e2e4"])
 print(statut, JETON in json.dumps(donnees), donnees.get("vu"))
+# Réponses qui faisaient avorter toute la collecte : erreur HTTP au corps
+# coupé, JSON imbriqué à l'excès. Puis les comptes aberrants.
+for chemin in ("/coupe", "/profond"):
+    statut, donnees = cp.Explorateur(
+        JETON, 2.0, 5, base + chemin, {}).interroger(["e2e4"])
+    print(chemin, statut, sorted(donnees))
+print(cp.entier(10 ** 400), cp.entier(-5), cp.entier("12"), cp.entier(7.9))
 EOF
 cat > attendu-t76 <<'EOF'
 301 301 True
@@ -714,8 +735,11 @@ cat > attendu-t76 <<'EOF'
 308 308 True
 tiers 0
 200 False Bearer <JETON-EXPURGE>
+/coupe 500 ['_erreur']
+/profond 0 ['_erreur']
+0 0 12 7
 EOF
-verifier "T76 aucune redirection suivie, réponse expurgée" \
+verifier "T76 redirections, réponse expurgée, réponses abîmées" \
     cmp -s attendu-t76 sortie-t76
 joindre sortie-t76
 joindre journal-t76 5

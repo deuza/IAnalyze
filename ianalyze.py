@@ -620,6 +620,11 @@ def expurger(texte: str, jeton: str | None) -> str:
     return texte
 
 
+#: Plus grand compte de parties tenu pour plausible dans une réponse de
+#: l'explorateur. La base Lichess en compte quelques milliards.
+COMPTE_MAX = 10 ** 15
+
+
 def entier(valeur) -> int:
     """
     Convertit prudemment une valeur venue d'un JSON externe en entier.
@@ -630,9 +635,14 @@ def entier(valeur) -> int:
     que int() refuse par une OverflowError.
     """
     try:
-        return int(valeur)
+        nombre = int(valeur)
     except (TypeError, ValueError, OverflowError):
         return 0
+    # Un compte de parties est positif, et aucune base n'en tient plus de
+    # quelques milliards. Hors de ces bornes la valeur est tenue pour
+    # absente : négative, elle donnerait une fréquence de -5 %, énorme,
+    # elle ferait échouer la division qui suit.
+    return nombre if 0 <= nombre <= COMPTE_MAX else 0
 
 
 #: Marques d'ordre des octets reconnues en tête de fichier. Celles de
@@ -2353,7 +2363,13 @@ class Explorateur:
                     return err.code, {"_erreur": "redirection refusée : le "
                                       "jeton n'est envoyé qu'à l'adresse "
                                       "de l'explorateur"}
-                corps = err.read().decode("utf-8-sig", errors="replace")
+                # Le corps de l'erreur n'est lu que pour le message : s'il
+                # est coupé ou trop lent, l'erreur HTTP reste ce qu'elle
+                # est, et seule l'interrogation s'arrête.
+                try:
+                    corps = err.read().decode("utf-8-sig", errors="replace")
+                except (OSError, http.client.HTTPException):
+                    corps = ""
                 if err.code == 429 and tentative == 1:
                     journal("429 reçu, pause de 60 secondes.")
                     time.sleep(60)
@@ -2364,6 +2380,10 @@ class Explorateur:
                     str(getattr(err, "reason", err)), self.jeton)}
             except ValueError as err:
                 return 0, {"_erreur": "réponse non JSON : %s" % err}
+            except RecursionError:
+                # Un JSON imbriqué sur des milliers de niveaux.
+                return 0, {"_erreur": "réponse non JSON : imbrication "
+                                      "démesurée"}
         return 0, {"_erreur": "échec après reprise"}
 
 

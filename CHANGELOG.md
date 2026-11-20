@@ -72,6 +72,11 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- Explorateur : une erreur HTTP dont le corps arrive coupé, ou une
+  réponse imbriquée à l'excès, faisait avorter toute la collecte. Seule
+  l'interrogation s'arrête maintenant, comme pour les autres réponses
+  inexploitables, et Stockfish fait son travail. Un compte de parties
+  négatif ou démesuré est tenu pour absent.
 - Quatre entrées finissaient en "Erreur inattendue" au lieu du message
   prévu : l'entrée standard fermée par l'appelant, un nom de fichier
   trop long ou dans un répertoire interdit, une URL aux crochets mal
