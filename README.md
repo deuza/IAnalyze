@@ -9,7 +9,7 @@
 
 # IAnalyze - Le dossier d'une partie d'échecs pour un analyste LLM
 
-IAnalyze prépare l'analyse d'une partie d'échecs par un LLM. 
+IAnalyze prépare l'analyse d'une partie d'échecs par un LLM.
 
 Son script, `ianalyze.py`, rassemble le PGN, les statistiques de l'explorateur Lichess, le catalogue des ouvertures et les évaluations de Stockfish, puis écrit deux fichiers : une archive zip et le prompt qui va avec.
 
@@ -302,7 +302,8 @@ Délai réseau maximal par requête, en secondes : export PGN,  explorateur, té
 
 #### `--debug`
 
-Laisse remonter la trace complète d'une erreur inattendue, expurgée du jeton.    
+Laisse remonter la trace complète d'une erreur inattendue, expurgée du jeton.
+
 Sans cette option, seul un message d'une ligne s'affiche.
 
 ```bash
@@ -344,7 +345,8 @@ Ne pose aucune question, ni camp ni contexte. Les valeurs par défaut sont reten
 
 *Défaut : ceux de vos réglages*
 
-Vos noms de joueur, séparés par des virgules, cherchés sans tenir compte de la casse dans White et Black pour déduire votre camp.    
+Vos noms de joueur, séparés par des virgules, cherchés sans tenir compte de la casse dans White et Black pour déduire votre camp.
+
 Le premier sert à compléter une balise vide. L'option remplace, le temps d'un lancement, les pseudos du fichier de réglages.
 
 ```bash
@@ -387,7 +389,7 @@ Un fichier absent n'est pas une erreur, un répertoire est refusé.
 
 #### `--installer-catalogue`
 
-Télécharge les cinq fichiers du catalogue (`a.tsv` à `e.tsv`), rejoue chaque ligne pour la valider, écrit l'index puis quitte. 
+Télécharge les cinq fichiers du catalogue (`a.tsv` à `e.tsv`), rejoue chaque ligne pour la valider, écrit l'index puis quitte.
 
 Le remplacement est atomique : un échec laisse l'ancien index en place. Relancer l'option fait la mise à jour.
 
@@ -430,7 +432,7 @@ Conserve le dossier de travail à côté de l'archive. Sans cette option, il est
 
 *Défaut : `prompt-modele.txt` à côté du script*
 
-Modèle du prompt d'analyse, écrit à côté de l'archive sous le nom `<archive>.prompt.txt` (voir section 9). 
+Modèle du prompt d'analyse, écrit à côté de l'archive sous le nom `<archive>.prompt.txt` (voir section 9).
 
 Le modèle est contrôlé avant la collecte : un repère inconnu arrête le script en donnant le numéro de la ligne. Un fichier désigné par l'option doit exister.
 
@@ -659,7 +661,8 @@ Binaire du moteur.
 
 *Défaut : `5`*
 
-Demi-coups de variante principale reproduits dans la synthèse, 0 pour la variante entière.   
+Demi-coups de variante principale reproduits dans la synthèse, 0 pour la variante entière.
+
 Les variantes complètes restent dans `stockfish/evaluations.json`.
 
 ```bash
@@ -677,7 +680,8 @@ Une option sans effet est refusée plutôt qu'ignorée en silence :
 
 ## 6. Explorateur : critères d'arrêt
 
-Pour chaque demi-coup, la position AVANT le coup est interrogée, ce qui donne le rang et la fréquence du coup réellement joué.   
+Pour chaque demi-coup, la position AVANT le coup est interrogée, ce qui donne le rang et la fréquence du coup réellement joué.
+
 L'interrogation s'arrête, dans cet ordre de test :
 
 1. sur une erreur HTTP ou une position absente de la base.
@@ -685,20 +689,24 @@ L'interrogation s'arrête, dans cet ordre de test :
 3. sur une sortie de théorie, hors de la fenêtre `--coups-min`.
 4. au plafond `--max-demicoups`, ou à la fin de la partie.
 
-Un coup nul, "--" dans le PGN, arrête aussi l'interrogation, avant toute requête pour ce demi-coup et quel que soit le mode : ce n'est pas un coup des échecs, la base ne peut pas suivre la partie au delà.    
+Un coup nul, "--" dans le PGN, arrête aussi l'interrogation, avant toute requête pour ce demi-coup et quel que soit le mode : ce n'est pas un coup des échecs, la base ne peut pas suivre la partie au delà.
+
 Il n'est pas compté comme une sortie de théorie, et la section 4 de la synthèse le signale.
 
-Le catalogue dit "connu", jamais "bon" : "Barnes Opening: Fool's Mate" y figure.    
+Le catalogue dit "connu", jamais "bon" : "Barnes Opening: Fool's Mate" y figure.
+
 Il compte aussi les positions intermédiaires des lignes nommées, que l'explorateur ne nomme pas lui-même.
 
 ## 7. Résultat
 
-Archive : `analyse-<étiquette>-<AAAAMMJJ-HHMMSS>.zip`, l'étiquette étant le nom du PGN sans extension ou l'identifiant Lichess. Un dossier ou une archive homonyme fait ajouter un suffixe -2, -3...     
+Archive : `analyse-<étiquette>-<AAAAMMJJ-HHMMSS>.zip`, l'étiquette étant le nom du PGN sans extension ou l'identifiant Lichess. Un dossier ou une archive homonyme fait ajouter un suffixe -2, -3...
+
 En cas d'échec, le dossier de travail est conservé tel quel pour diagnostic.
 
 L'étiquette est assainie (voir section 8) : le journal l'annonce alors par "Nom du dossier assaini : ..."
 
-Une archive présente sous son nom définitif est toujours complète et vérifiée : elle est écrite sous le nom provisoire `.<dossier>.partiel.zip`, puis renommée.   
+Une archive présente sous son nom définitif est toujours complète et vérifiée : elle est écrite sous le nom provisoire `.<dossier>.partiel.zip`, puis renommée.
+
 Il en va de même de chaque fichier du dossier de travail, écrit sous `.<nom>.partiel`. Après une interruption (Ctrl-C) ou un échec, ces fichiers provisoires sont retirés et le dossier de travail reste, sans archive.
 
 Contenu :
@@ -773,10 +781,10 @@ Aucune entrée mal encodée ne doit arrêter le script sur une trace Python : au
 
 PGN, modèle de prompt et fichier de jeton, essais dans cet ordre :
 
-1. marque d'ordre des octets (BOM) UTF-8, UTF-16 ou UTF-32 
-2. UTF-16 sans marque, reconnu à son octet nul sur deux 
-3. UTF-8 
-4. UTF-8 abîmé : au moins un caractère accentué correctement codé et au plus quatre octets invalides pour chacun d'eux, ces octets deviennent U+FFFD 
+1. marque d'ordre des octets (BOM) UTF-8, UTF-16 ou UTF-32
+2. UTF-16 sans marque, reconnu à son octet nul sur deux
+3. UTF-8
+4. UTF-8 abîmé : au moins un caractère accentué correctement codé et au plus quatre octets invalides pour chacun d'eux, ces octets deviennent U+FFFD
 5. cp1252, puis latin-1, qui accepte n'importe quel octet
 
 Hors UTF-8 sans défaut, le journal nomme l'encodage retenu :
@@ -785,7 +793,8 @@ Hors UTF-8 sans défaut, le journal nomme l'encodage retenu :
 Attention, PGN : le contenu n'est pas en UTF-8, encodage retenu : cp1252.
 ```
 
-Les fins de ligne CRLF et CR sont ramenées à LF. Les caractères de contrôle, NUL compris, sont retirés et comptés dans le journal, la tabulation et le saut de ligne sont conservés.   
+Les fins de ligne CRLF et CR sont ramenées à LF. Les caractères de contrôle, NUL compris, sont retirés et comptés dans le journal, la tabulation et le saut de ligne sont conservés.
+
 Le fichier `partie.pgn` est donc toujours de l'UTF-8 propre : si le fichier fourni a dû être converti, la section 5 de la synthèse le dit, et `collecte.json` garde le détail.
 
 Un texte latin-1 se décode aussi sans erreur en cp1252, les deux ne différant que sur les octets 0x80 à 0x9F : c'est cp1252 qui est annoncé.
@@ -804,18 +813,22 @@ Autres lectures :
 
 Rien ne dépend de la locale.
 
-Écritures : tous les fichiers de l'archive sont en UTF-8, fins de ligne LF.    
-Dans l'étiquette de l'archive, les caractères de contrôle, les caractères `/ \ : * ? " < > |` et les octets non décodables du nom du PGN deviennent "\_", et les espaces des tirets : `partie contre machin.pgn` donne `analyse-partie-contre-machin-...`. L'étiquette est bornée à 80 octets.   
+Écritures : tous les fichiers de l'archive sont en UTF-8, fins de ligne LF.
+
+Dans l'étiquette de l'archive, les caractères de contrôle, les caractères `/ \ : * ? " < > |` et les octets non décodables du nom du PGN deviennent "\_", et les espaces des tirets : `partie contre machin.pgn` donne `analyse-partie-contre-machin-...`. L'étiquette est bornée à 80 octets.
+
 Espaces et lettres accentuées sont conservés.
 
-Console : un caractère que le terminal ne sait pas afficher devient "?" au lieu d'arrêter le script, sous LANG=C comme avec PYTHONIOENCODING=ascii.    
+Console : un caractère que le terminal ne sait pas afficher devient "?" au lieu d'arrêter le script, sous LANG=C comme avec PYTHONIOENCODING=ascii.
+
 Le chemin de l'archive est écrit en octets sur la sortie standard : ARCHIVE=$(...) reste exact dans tous les cas.
 
 Questions de démarrage : une réponse saisie dans un autre encodage que celui du terminal est redécodée, cp1252 puis latin-1.
 
 ## 9. Prompt d'analyse
 
-Les données ne suffisent pas : il faut dire à l'analyste ce qu'il doit en faire. Ce texte vit dans le modèle `prompt-modele.txt`, que vous pouvez modifier librement, sans toucher au script.    
+Les données ne suffisent pas : il faut dire à l'analyste ce qu'il doit en faire. Ce texte vit dans le modèle `prompt-modele.txt`, que vous pouvez modifier librement, sans toucher au script.
+
 À chaque collecte, le script en tire le prompt de la partie : il remplit les valeurs et ne garde que les passages qui s'appliquent.
 
 Deux sortes de repères sont interprétés :
@@ -886,7 +899,8 @@ Modèle de prompt prompt-modele.txt, ligne 12 : condition inconnue MOTEUR, condi
 
 Le prompt se colle comme un message, dans une conversation neuve, l'archive en pièce jointe. Il vaut pour une partie : c'est le coller à chaque conversation qui garantit qu'il correspond à l'archive.
 
-Tous les LLM n'ouvrent pas un zip, et tous n'exécutent pas de code.    
+Tous les LLM n'ouvrent pas un zip, et tous n'exécutent pas de code.
+
 Le prompt prévoit les deux cas :
 
 - **Le LLM n'accepte pas l'archive** : décompressez-la et envoyez-lui **tous** ses fichiers, joints ou collés.
@@ -1034,7 +1048,7 @@ Trois limites à connaître :
 
 ## 11. Jeton
 
-Le jeton n'est transmis que dans l'en-tête Authorization, jamais dans l'URL. Il n'apparaît ni dans le journal, ni dans l'archive, où `collecte.json` note seulement sa présence.    
+Le jeton n'est transmis que dans l'en-tête Authorization, jamais dans l'URL. Il n'apparaît ni dans le journal, ni dans l'archive, où `collecte.json` note seulement sa présence.
 
 Il n'est envoyé qu'à l'adresse de l'explorateur : si celui-ci répondait par une redirection, elle ne serait pas suivie, et l'interrogation s'arrêterait là.
 
