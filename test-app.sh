@@ -1437,7 +1437,7 @@ open("t-fautif.pgn", "w", encoding="utf-8").write(construire(True))
 open("t-conversation.txt", "w", encoding="utf-8").write(
     "Position 1 : %s\n"
     "Position 2 : 8/8/8/8/8/8/8/8 w - - 0 1\n"
-    "Evaluation +9.99 sortie de nulle part — avec un tiret cadratin.\n"
+    "Evaluation +9.99 sortie de nulle part \u2014 avec un tiret cadratin.\n"
     % evals[2]["fen"])
 EOF
         "$PYVENV" "$VERIF" "$ARCH" t-conforme.pgn > bilan 2>&1
