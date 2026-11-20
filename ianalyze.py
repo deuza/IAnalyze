@@ -1056,7 +1056,7 @@ def controler_lexique(texte_pgn: str) -> None:
 
 def charger_partie(texte_pgn: str) -> chess.pgn.Game:
     """
-    Analyse le PGN et renvoie la première partie qu'il contient.
+    Analyse le PGN et renvoie la partie qu'il contient, qui doit être seule.
 
     Le parseur de python-chess est tolérant : sur un coup illégal il
     s'arrête sans lever d'exception et consigne l'erreur dans la partie. On
@@ -1094,9 +1094,18 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
         raise SystemExit("Variante non prise en charge : %s. Ce script ne "
                          "traite que les échecs standard." % variante)
 
-    if chess.pgn.read_game(flux) is not None:
-        journal("Attention : le PGN contient plusieurs parties, seule la "
-                "première est traitée.")
+    # Une seule partie par fichier. Analyser la première d'une série
+    # n'aurait pas de sens : rien ne dit que c'est celle que vous vouliez,
+    # et partie.pgn, recopié dans l'archive, les porterait toutes.
+    autres = 0
+    try:
+        while chess.pgn.read_game(flux) is not None:
+            autres += 1
+    except (IndexError, ValueError):
+        autres += 1
+    if autres:
+        raise SystemExit("Le PGN contient %d parties : isolez celle à "
+                         "analyser dans un fichier à part." % (autres + 1))
     return partie
 
 

@@ -35,6 +35,9 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- Un PGN qui contient plusieurs parties est refusé, avec leur nombre.
+  Jusqu'ici la première était analysée après un simple avertissement,
+  et `partie.pgn` les recopiait toutes dans l'archive.
 - Le script s'appelle désormais `ianalyze.py`, du nom du projet, au lieu
   de `collecte-partie.py`. La commande devient
   `./ianalyze.py ma-partie.pgn`. Rien n'est à réinstaller :

@@ -1285,6 +1285,15 @@ FIN
 joindre journal 3
 egal "T75 aucun dossier ni archive créés par ces refus" 0 \
     "$(ls -d analyse-t-francais* analyse-t-accolade* analyse-t-queue* 2>/dev/null | wc -l)"
+# Un fichier à plusieurs parties est refusé lui aussi, avec leur nombre.
+printf '[Event "a"]\n\n1. e4 e5 1-0\n\n[Event "b"]\n\n1. d4 d5 0-1\n' > t-deux.pgn
+printf '\n[Event "c"]\n\n1. c4 *\n' >> t-deux.pgn
+lancer t-deux.pgn $O
+egal "T75 plusieurs parties, code de retour" 1 "$RC"
+verifier "T75 plusieurs parties, nombre annoncé" \
+    contient journal "Le PGN contient 3 parties"
+egal "T75 plusieurs parties, rien n'est écrit" 0 \
+    "$(ls -d analyse-t-deux* 2>/dev/null | wc -l)"
 # Ce qui doit continuer à passer : coups collés au numéro, signes
 # d'appréciation, NAG, roque écrit avec des zéros, commentaire de fin de
 # ligne.

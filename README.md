@@ -216,7 +216,7 @@ Un autre hôte, ou une autre page du site (étude, analyse, exercices), est refu
 
 Une source qui ressemble à un chemin (point, barre oblique ou tilde) et qui n'existe pas est signalée comme fichier introuvable.
 
-**Un PGN** n'est traité que pour sa première partie, en échecs standard uniquement.
+**Un PGN** doit contenir une seule partie, en échecs standard. Un fichier qui en réunit plusieurs est refusé : isolez celle à analyser dans un fichier à part.
 
 Un PGN corrompu est refusé plutôt qu'analysé tronqué. Une partie qui ne part pas de la position initiale est traitée sans explorateur.
 
