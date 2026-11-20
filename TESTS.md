@@ -16,10 +16,17 @@ Depuis le dépôt, après l'installation décrite dans le README :
 ./test-app.sh --reseau
 ```
 
+```bash
+./test-app.sh --reseau <identifiant ou adresse d'une partie de Lichess>
+```
+
 | Commande | Ce qu'elle joue | Durée |
 |---|---|---|
 | `./test-app.sh` | les tests hors réseau, sans jeton | environ 3 minutes sur un Mac récent, 6 sur un Raspberry Pi |
-| `./test-app.sh --reseau` | les mêmes, puis ceux qui demandent le réseau et votre jeton Lichess | environ 3 minutes de plus |
+| `./test-app.sh --reseau` | les mêmes, puis ceux qui demandent le réseau et votre jeton Lichess, sauf T24 | environ 3 minutes de plus |
+| `./test-app.sh --reseau PARTIE` | de même, avec T24 : le téléchargement de la partie que vous désignez | quelques secondes de plus |
+
+**La partie de T24 est à vous de la choisir.** Le dépôt ne désigne aucune partie réelle : T24 télécharge celle que vous donnez après `--reseau`, par son identifiant ou par son adresse. N'importe quelle partie de Lichess convient, la vôtre ou une autre. Sans elle, T24 est compté "sauté", et le script rappelle au départ la commande à lancer. L'identifiant donné n'est pas écrit dans le rapport.
 
 Le script se termine par un bilan :
 
@@ -36,7 +43,7 @@ Le rapport reprend l'environnement (système, Python, python-chess, Stockfish), 
 - **Le dépôt** : rien n'y est écrit, sauf le rapport.
 - **Votre jeton** : il n'est ni affiché, ni copié, ni passé dans une ligne de commande. Le script vérifie au contraire qu'il n'apparaît dans aucune archive ni dans le rapport.
 
-Avec `--reseau`, comptez environ 70 requêtes à l'explorateur de Lichess, espacées de 2 secondes, 2 exports de partie et 10 fichiers du catalogue.
+Avec `--reseau`, comptez environ 70 requêtes à l'explorateur de Lichess, espacées de 2 secondes, 10 fichiers du catalogue et, si vous donnez une partie, 2 exports de cette partie.
 
 ## Ce qu'il faut pour les jouer
 
@@ -53,7 +60,6 @@ Les tests qui ne portent pas sur le moteur le règlent au plus court, `--profond
 | `VENV` | environnement virtuel de python-chess | `~/.local/share/IAnalyze/venv` |
 | `STOCKFISH` | moteur employé par les tests du moteur | celui du script |
 | `JETON` | fichier du jeton | `~/.lichess_token` |
-| `PARTIE` | identifiant Lichess téléchargé par T24 | `xvoiNy2C` |
 | `GARDER` | `1` conserve le répertoire temporaire | supprimé |
 
 ```bash
@@ -85,7 +91,7 @@ GARDER=1 ./test-app.sh
 | Catalogue | T09 à T13 | téléchargement, réinstallation identique, catalogue absent ou tronqué |
 | Explorateur | T14 à T23, T33 | base maîtres, base Lichess, filtres, seuils, modes d'arrêt, pause entre deux requêtes, roque retrouvé dans la base |
 | Jeton | T28, T29 | fichier lisible par d'autres signalé, jeton absent de l'archive et du journal |
-| Source Lichess | T24 | partie téléchargée par URL et par identifiant |
+| Source Lichess | T24 | partie téléchargée par URL et par identifiant, si vous en donnez une |
 | Coup nul | N1 | arrêt sur le vrai explorateur, sans requête refusée |
 | Collecte complète | N2 | explorateur et moteur ensemble |
 

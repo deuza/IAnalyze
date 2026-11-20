@@ -41,6 +41,12 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- `test-app.sh --reseau PARTIE` : le test de téléchargement, T24, joue
+  la partie de Lichess que vous désignez, par son identifiant ou par son
+  adresse. Le dépôt ne cite plus aucune partie réelle, ni dans les
+  tests, ni dans l'aide, ni dans le README : sans partie, T24 est
+  sauté et le script dit comment le jouer. La variable `PARTIE`
+  disparaît.
 - Nom de l'archive : les espaces du nom du PGN y deviennent des tirets,
   `partie contre machin.pgn` donne `analyse-partie-contre-machin-...`.
   Le nom se manipule ainsi sans guillemets.

@@ -971,7 +971,8 @@ def extraire_id(source: str) -> str | None:
     """
     Extrait l'identifiant de partie d'une URL ou d'une chaîne brute.
 
-    Accepte https://lichess.org/xvoiNy2C, /xvoiNy2C/black, l'identifiant
+    Accepte https://lichess.org/<identifiant>, la même adresse suivie de
+    /black, l'identifiant
     seul, ainsi que les identifiants de coup à douze caractères dont seuls
     les huit premiers sont conservés. L'identifiant, seul ou dans l'URL,
     doit faire exactement 8 ou 12 caractères alphanumériques.
@@ -3734,8 +3735,8 @@ exemples d'utilisation
 
   Sur une partie Lichess, par URL ou par identifiant :
 
-      ./ianalyze.py https://lichess.org/xvoiNy2C
-      ./ianalyze.py xvoiNy2C
+      ./ianalyze.py https://lichess.org/<identifiant>
+      ./ianalyze.py <identifiant>
 
   Usage hors du projet d'analyse, sans aucune question, ou avec tous vos
   noms de joueur pour que le camp soit déduit des en-têtes :

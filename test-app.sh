@@ -12,8 +12,13 @@
 #                                sur un Raspberry Pi.
 #     sh test-app.sh --reseau    les mêmes, puis les tests qui demandent le
 #                                réseau et votre jeton : catalogue,
-#                                explorateur, téléchargement d'une partie.
-#                                Environ 3 minutes de plus.
+#                                explorateur. Environ 3 minutes de plus.
+#     sh test-app.sh --reseau PARTIE
+#                                de même, avec en plus T24, qui télécharge
+#                                une partie depuis Lichess. PARTIE est
+#                                l'identifiant ou l'adresse de n'importe
+#                                quelle partie du site. Le dépôt n'en
+#                                fournit aucune : sans elle, T24 est sauté.
 #
 # Rien n'est modifié dans le dépôt ni dans vos répertoires : tout se passe
 # dans un répertoire temporaire, supprimé à la fin. Les tests désignent
@@ -28,15 +33,14 @@
 # ne serait pas écrit.
 #
 # Charge sur Lichess, avec --reseau : environ 70 requêtes à l'explorateur,
-# espacées de 2 secondes par ianalyze.py, 2 exports de partie, et
-# 10 fichiers du catalogue chez GitHub.
+# espacées de 2 secondes par ianalyze.py, 10 fichiers du catalogue chez
+# GitHub et, si vous donnez une partie, 2 exports de cette partie.
 #
 # Variables facultatives :
 #
 #     VENV=/chemin/du/venv       environnement virtuel de python-chess
 #     STOCKFISH=/chemin/binaire  moteur utilisé par les tests du moteur
 #     JETON=/chemin/du/fichier   fichier du jeton (défaut : ~/.lichess_token)
-#     PARTIE=xvoiNy2C            identifiant Lichess utilisé par T24
 #     GARDER=1                   conserve le répertoire temporaire
 #
 # Le script est écrit en shell POSIX : pas de tableau, pas de [[ ]], pas de
@@ -56,10 +60,25 @@ set -u
 # --- Arguments --------------------------------------------------------------
 
 RESEAU=0
+PARTIE=""
+# Vrai juste après --reseau : l'argument suivant, s'il n'est pas une
+# option, est la partie de T24.
+APRES_RESEAU=0
 for argument in "$@"; do
+    if [ "$APRES_RESEAU" = 1 ]; then
+        APRES_RESEAU=0
+        case $argument in
+            -*) ;;
+            *)
+                PARTIE=$argument
+                continue
+                ;;
+        esac
+    fi
     case $argument in
         --reseau)
             RESEAU=1
+            APRES_RESEAU=1
             ;;
         -h | --help)
             sed -n '2,/^# =====.*=$/p' "$0" | sed -n '2,$p' | sed 's/^# \{0,1\}//'
@@ -67,7 +86,7 @@ for argument in "$@"; do
             ;;
         *)
             echo "Argument inconnu : $argument" >&2
-            echo "Usage : sh test-app.sh [--reseau]" >&2
+            echo "Usage : sh test-app.sh [--reseau [PARTIE]]" >&2
             exit 2
             ;;
     esac
@@ -114,11 +133,35 @@ if [ -z "${STOCKFISH:-}" ]; then
 fi
 
 JETON=${JETON:-$HOME/.lichess_token}
-PARTIE=${PARTIE:-xvoiNy2C}
 if [ "$RESEAU" = 1 ] && [ ! -f "$JETON" ]; then
     echo "Fichier de jeton introuvable : $JETON" >&2
     echo "Indiquez-le : JETON=/chemin sh test-app.sh --reseau" >&2
     exit 2
+fi
+# Identifiant de la partie de T24, tiré de ce que vous avez donné par la
+# fonction même du script : une adresse et un identifiant sont admis.
+ID_PARTIE=""
+if [ -n "$PARTIE" ]; then
+    ID_PARTIE=$(SCRIPT="$SCRIPT" PARTIE="$PARTIE" "$PYVENV" -c '
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+print(cp.extraire_id(os.environ["PARTIE"]) or "")
+' 2>/dev/null)
+    rm -rf "$DEPOT/__pycache__"
+    if [ -z "$ID_PARTIE" ]; then
+        echo "Ce n'est pas une partie de Lichess : $PARTIE" >&2
+        echo "Donnez son identifiant, 8 caractères, ou son adresse :" >&2
+        echo "    sh test-app.sh --reseau https://lichess.org/<identifiant>" >&2
+        exit 2
+    fi
+elif [ "$RESEAU" = 1 ]; then
+    echo "Aucune partie donnée : T24, le téléchargement d'une partie, sera sauté." >&2
+    echo "Pour le jouer, donnez n'importe quelle partie de Lichess :" >&2
+    echo "    sh test-app.sh --reseau <identifiant ou adresse de la partie>" >&2
 fi
 
 RAPPORT="$DEPOT/rapport-tests-$SYSTEME-$(date +%Y%m%d-%H%M%S).txt"
@@ -266,7 +309,11 @@ noter "  version script  : $(sed -n 's/^VERSION = //p' "$SCRIPT")"
 if [ "$RESEAU" = 1 ]; then
     noter "  mode            : hors réseau, puis réseau et jeton (--reseau)"
     noter "  fichier du jeton: $JETON, droits $(ls -l "$JETON" | cut -c1-10)"
-    noter "  partie de T24   : $PARTIE"
+    if [ -n "$ID_PARTIE" ]; then
+        noter "  partie de T24   : donnée, masquée dans ce rapport"
+    else
+        noter "  partie de T24   : aucune, T24 sera sauté"
+    fi
 else
     noter "  mode            : hors réseau seulement"
 fi
@@ -857,14 +904,14 @@ import os
 spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
 cp = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cp)
-for u in ("https://lichess.org/xvoiNy2C/black",
-          "https://www.lichess.org/xvoiNy2CabcD#12",
-          "https://lichess.org/embed/game/xvoiNy2C",
-          "https://lichess.org/game/export/xvoiNy2C",
-          "xvoiNy2C", "https://lichess.org/practice", "analysis"):
+for u in ("https://lichess.org/AbCd1234/black",
+          "https://www.lichess.org/AbCd1234efGh#12",
+          "https://lichess.org/embed/game/AbCd1234",
+          "https://lichess.org/game/export/AbCd1234",
+          "AbCd1234", "https://lichess.org/practice", "analysis"):
     print(cp.extraire_id(u))
 EOF
-printf 'xvoiNy2C\nxvoiNy2C\nxvoiNy2C\nxvoiNy2C\nxvoiNy2C\nNone\nNone\n' > attendu-t54
+printf 'AbCd1234\nAbCd1234\nAbCd1234\nAbCd1234\nAbCd1234\nNone\nNone\n' > attendu-t54
 verifier "T54 identifiants extraits" cmp -s attendu-t54 sortie-t54
 joindre sortie-t54
 rm -rf "$DEPOT/__pycache__"
@@ -2522,22 +2569,24 @@ verifier "T29 collecte.json note seulement sa présence" \
 # --- F. Source Lichess ------------------------------------------------------
 
 titre "T24 : partie téléchargée depuis Lichess"
-"$SCRIPT" "https://lichess.org/$PARTIE" $EXPL --sans-explorateur \
-    --venv "$VENV" --reglages "$REGL" > sortie 2> journal
-egal "T24 par URL, code de retour" 0 $?
-verifier "T24 par URL, export demandé" \
-    contient journal "https://lichess.org/game/export/$PARTIE"
-ARCH=$(head -n 1 sortie)
-case $ARCH in
-    analyse-"$PARTIE"-*.zip) NOM_OK=oui ;;
-    *) NOM_OK=non ;;
-esac
-egal "T24 par URL, nom de l'archive" oui "$NOM_OK"
-"$SCRIPT" "$PARTIE" $EXPL --sans-explorateur --venv "$VENV" \
-    --reglages "$REGL" > sortie 2> journal
-egal "T24 par identifiant, code de retour" 0 $?
-tail -n 3 journal > ligne
-joindre ligne
+if [ -n "$ID_PARTIE" ]; then
+    "$SCRIPT" "https://lichess.org/$ID_PARTIE" $EXPL --sans-explorateur \
+        --venv "$VENV" --reglages "$REGL" > sortie 2> journal
+    egal "T24 par URL, code de retour" 0 $?
+    verifier "T24 par URL, export demandé" \
+        contient journal "https://lichess.org/game/export/$ID_PARTIE"
+    ARCH=$(head -n 1 sortie)
+    case $ARCH in
+        analyse-"$ID_PARTIE"-*.zip) NOM_OK=oui ;;
+        *) NOM_OK=non ;;
+    esac
+    egal "T24 par URL, nom de l'archive" oui "$NOM_OK"
+    "$SCRIPT" "$ID_PARTIE" $EXPL --sans-explorateur --venv "$VENV" \
+        --reglages "$REGL" > sortie 2> journal
+    egal "T24 par identifiant, code de retour" 0 $?
+else
+    sauter "T24 : aucune partie donnée. Pour le jouer : sh test-app.sh --reseau <identifiant ou adresse d'une partie de Lichess>"
+fi
 
 # --- Coup nul et collecte complète -----------------------------------------------------------
 
@@ -2606,7 +2655,8 @@ if [ "$RESEAU" = 1 ] &&
     exit 3
 fi
 
-LC_ALL=C sed -e "s#$TRAVAIL#<TMP>#g" -e "s#$HOME#~#g" "$BRUT" > "$RAPPORT"
+LC_ALL=C sed -e "s#$TRAVAIL#<TMP>#g" -e "s#$HOME#~#g" \
+    -e "s#${ID_PARTIE:-aucune-partie-donnee}#<PARTIE>#g" "$BRUT" > "$RAPPORT"
 
 printf '\nRéussis : %d, échecs : %d, sautés : %d\n' \
     "$NB_OK" "$NB_ECHEC" "$NB_SAUTE" >&2

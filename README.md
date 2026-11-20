@@ -202,13 +202,13 @@ SOURCE accepte trois formes :
 
 ```bash
 ./ianalyze.py ma-partie.pgn                 # PGN local
-./ianalyze.py https://lichess.org/xvoiNy2C  # URL Lichess
-./ianalyze.py xvoiNy2C                      # identifiant
+./ianalyze.py https://lichess.org/<identifiant>  # URL Lichess
+./ianalyze.py <identifiant>                      # identifiant
 ```
 
 **Une URL** doit viser lichess.org et porter l'identifiant en tête de chemin.
 
-Les formes `/xvoiNy2C/black`, `/embed/game/<id>`, `/embed/<id>` et `/game/export/<id>` sont acceptées.
+L'identifiant est la suite de 8 caractères qui suit `lichess.org/` dans l'adresse de la partie. Les formes `/<id>/black`, `/embed/game/<id>`, `/embed/<id>` et `/game/export/<id>` sont acceptées.
 
 Un autre hôte, ou une autre page du site (étude, analyse, exercices), est refusé sans rien envoyer à Lichess.
 
