@@ -253,7 +253,7 @@ def relancer_dans_venv(venv: str, argv: list[str]) -> None:
             % (venv, script, venv))
 
     if est_fichier(interpreteur):
-        journal("Module chess absent, relance via %s" % interpreteur)
+        journal("Environnement virtuel : relance via %s" % interpreteur)
         os.environ[MARQUEUR_RELANCE] = "1"
         try:
             os.execv(str(interpreteur), [str(interpreteur), script] + argv)
