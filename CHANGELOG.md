@@ -10,6 +10,8 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Added
 
+- Modèle de prompt : valeurs `DEMI_COUPS` et `DEMI_COUPS_EVALUES`,
+  conditions `COUVERTURE_PARTIELLE` et `COUP_NUL`.
 - `verifier-analyse.py --prompt-seul` : contrôle d'un PGN rendu d'après
   le prompt court. Ce prompt ne demande ni résumé, ni lignes de 79
   caractères, ni NAG : sans l'option, un PGN qui le suivait à la lettre
@@ -78,6 +80,19 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- Les deux prompts affirmaient des choses que la collecte n'avait pas
+  faites. Avec `--coups-stockfish`, ils promettaient une évaluation
+  "après chaque coup joué". Sans explorateur, le prompt complet
+  demandait quand même le coup majoritaire de "la base interrogée".
+  Avec `--multipv 1`, il annonçait "les trois meilleurs coups". Chacun
+  de ces passages dépend maintenant de la collecte.
+- Prompt complet : il disait à la fois que la colonne Nature désigne
+  les coups à commenter obligatoirement, et que seules erreurs et
+  gaffes le sont. Il dit aussi ce que valent un écart négatif et un
+  `ecart_cp` de 10000 ou plus dans `evaluations.json`.
+- Prompt court : un coup nul y sortait sans explication, et "ce que le
+  joueur a précisé" reprenait la cadence de la balise TimeControl, que
+  le joueur n'avait pas saisie.
 - Moteur qui s'arrête hors d'une recherche, quand le système lui refuse
   la mémoire demandée par `--hachage` par exemple : le script affichait
   "Erreur inattendue (CancelledError)" suivi d'un message vide. Il dit

@@ -1133,16 +1133,51 @@ for consigne in "9. LIGNES VIDES" \
 done
 egal "T65 sans explorateur, dit dans le prompt" 1 \
     "$(grep -c "collecte de l'explorateur n'a pas" "$PR")"
-egal "T65 base Lichess" 1 \
-    "$(grep -c 'celle de tous les joueurs de Lichess' "$PR")"
+egal "T65 sans explorateur, dit dans la tâche" 1 \
+    "$(grep -c 'Aucune base n.a été interrogée' "$PR")"
+egal "T65 sans explorateur, aucune base annoncée" 0 \
+    "$(grep -c 'La base interrogée' "$PR")"
+egal "T65 sans explorateur, pas de coups théoriques demandés" 0 \
+    "$(grep -c 'trois coups théoriques' "$PR")"
+egal "T65 sans explorateur, seule la section 3 fait foi" 1 \
+    "$(grep -c 'Seuls les chiffres de la section 3 font foi' "$PR")"
+egal "T65 sans explorateur, la section 2 ne fait pas foi" 0 \
+    "$(grep -c 'Les chiffres des sections 2 et 3 font foi' "$PR")"
 egal "T65 hors terminal, réponses non recueillies" 1 \
     "$(grep -c "n'a pas recueilli les réponses" "$PR")"
 "$SCRIPT" t-pr.pgn $R --profondeur 1 --base maitres > sortie 2> journal
 PR="$(head -n 1 sortie)"
 PR="${PR%.zip}.prompt.txt"
-egal "T65 base maîtres" 1 "$(grep -c 'celle des maîtres' "$PR")"
-egal "T65 base maîtres, pas la branche Lichess" 0 \
-    "$(grep -c 'celle de tous les joueurs de Lichess' "$PR")"
+egal "T65 base maîtres nommée en section 2" 1 \
+    "$(grep -c 'Section 2, "Explorateur maîtres"' "$PR")"
+# Les branches propres à chaque base ne s'écrivent qu'avec l'explorateur :
+# le modèle est rendu ici sans collecte, base par base.
+SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t65 2> journal-t65 <<'EOF'
+import importlib.util
+import os
+import pathlib
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+modele = pathlib.Path(os.environ["SCRIPT"]).with_name(
+    cp.PROMPT_MODELE).read_text(encoding="utf-8")
+for base in ("BASE_LICHESS", "BASE_MAITRES"):
+    conditions = dict.fromkeys(cp.PROMPT_CONDITIONS, False)
+    conditions.update({"EXPLORATEUR": True, base: True})
+    rendu = cp.rendre_modele(modele, conditions,
+                             dict.fromkeys(cp.PROMPT_VALEURS, "x"), "essai")
+    print(base, rendu.count("celle de tous les joueurs de Lichess"),
+          rendu.count("celle des maîtres"),
+          rendu.count("trois coups théoriques"),
+          rendu.count("Aucune base n'a été interrogée"))
+EOF
+printf 'BASE_LICHESS 1 0 1 0\nBASE_MAITRES 0 1 1 0\n' > attendu-t65
+verifier "T65 avec explorateur, une seule branche de base" \
+    cmp -s attendu-t65 sortie-t65
+joindre sortie-t65
+joindre journal-t65 5
+rm -rf "$DEPOT/__pycache__"
 
 titre "T66 : modèle fautif refusé avant la collecte"
 rm -f analyse-t-pr-*
@@ -1311,9 +1346,12 @@ print(cp.consignes_joueur(
     "- Objectif : la sortie de la dame\n"
     "- Contexte particulier : rien (défaut)\n"))
 print("[%s]" % cp.consignes_joueur(None))
+print("[%s]" % cp.consignes_joueur(
+    "- Cadence : balise TimeControl `600+5`, soit rapide\n"
+    "- Cadence : non précisée\n"))
 EOF
-printf '%s\n' "- Objectif : la sortie de la dame" "[]" > attendu-t74
-verifier "T74 réponses du joueur reprises, défauts et camp écartés" \
+printf '%s\n' "- Objectif : la sortie de la dame" "[]" "[]" > attendu-t74
+verifier "T74 réponses du joueur reprises, défauts, camp et balise écartés" \
     cmp -s attendu-t74 sortie-t74
 joindre journal-t74 5
 rm -rf "$DEPOT/__pycache__"
@@ -1602,6 +1640,16 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
 
     egal "T52 pas d'avis répété de python-chess" 0 \
         "$(grep -c 'Not transmitting' journal)"
+    lancer t-nul-coup.pgn $MOTEUR $RAPIDE --prompt-seul
+    PR="${ARCH%.zip}.prompt.txt"
+    verifier "T52 prompt court : le coup nul est expliqué" \
+        contient "$PR" 'Un coup noté "--" est un coup nul'
+    lancer italienne.pgn $MOTEUR --profondeur 4 --prompt-seul
+    PR="${ARCH%.zip}.prompt.txt"
+    egal "T52 prompt court : rien sur le coup nul sans coup nul" 0 \
+        "$(grep -c 'coup nul' "$PR")"
+    verifier "T52 prompt court : chaque coup joué, sans limite" \
+        contient "$PR" "après chaque coup joué."
 
     titre "T25 : moteur limité aux premiers coups"
     lancer italienne.pgn $MOTEUR --coups-stockfish 3 --profondeur 10 \
@@ -1612,6 +1660,20 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
         "profondeur 10, multipv 2, 6 demi-coups couverts sur 9"
     egal "T25 six lignes au tableau" 6 \
         "$(grep -c -E '^\| [1-9] \| [1-5] \| (Blancs|Noirs) \| [A-Za-z]' extrait)"
+    PR="${ARCH%.zip}.prompt.txt"
+    verifier "T25 prompt : couverture partielle dite" contient "$PR" \
+        "que les 6 premiers demi-coups sur 9"
+    verifier "T25 prompt : deux coups par position, pas trois" \
+        contient "$PR" "meilleurs coups du moteur, 2 par position"
+    lancer italienne.pgn $MOTEUR --coups-stockfish 3 --profondeur 4 \
+        --prompt-seul
+    PR="${ARCH%.zip}.prompt.txt"
+    verifier "T25 prompt court : couverture partielle dite" contient "$PR" \
+        "après chacun des 6 premiers demi-coups sur 9"
+    egal "T25 prompt court : plus de chaque coup joué" 0 \
+        "$(grep -c 'après chaque coup joué' "$PR")"
+    lancer italienne.pgn $MOTEUR --coups-stockfish 3 --profondeur 10 \
+        --multipv 2 --longueur-pv 4 --fils 2 --hachage 128
     extraire '*/collecte.json'
     verifier "T25 fils dans collecte.json" contient extrait '"fils": 2'
     verifier "T25 hachage dans collecte.json" contient extrait '"hachage": 128'

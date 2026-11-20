@@ -844,6 +844,8 @@ Valeurs :
 | `ALERTE_RESULTAT` | la phrase qui signale un résultat contraire à l'évaluation finale, vide sinon |
 | `CONSIGNES_JOUEUR` | celles de vos réponses aux questions de démarrage que vous n'avez pas laissées par défaut |
 | `OUVERTURE` | l'ouverture et la sortie de théorie en une phrase, d'après l'explorateur |
+| `DEMI_COUPS` | nombre de demi-coups de la partie |
+| `DEMI_COUPS_EVALUES` | nombre de demi-coups que le moteur a évalués, plus petit avec `--coups-stockfish` |
 
 Conditions :
 
@@ -860,8 +862,12 @@ Conditions :
 | `RESULTAT_CONTREDIT` | le résultat de la partie contredit l'évaluation finale |
 | `CONSIGNES_DONNEES` | `CONSIGNES_JOUEUR` n'est pas vide |
 | `OUVERTURE_CONNUE` | `OUVERTURE` n'est pas vide |
+| `COUVERTURE_PARTIELLE` | `--coups-stockfish` a limité le moteur aux premiers coups |
+| `COUP_NUL` | la partie contient un coup nul, noté `--` |
 
-Les deux modèles, `prompt-modele.txt` et `prompt-seul-modele.txt`, partagent ces repères. Les cinq dernières valeurs et les trois dernières conditions servent au prompt court.
+Les deux modèles, `prompt-modele.txt` et `prompt-seul-modele.txt`, partagent ces repères. `PARTIE_PGN`, `TABLEAU_MOTEUR`, `ALERTE_RESULTAT`, `CONSIGNES_JOUEUR`, `OUVERTURE` et les conditions `RESULTAT_CONTREDIT`, `CONSIGNES_DONNEES`, `OUVERTURE_CONNUE`, `COUP_NUL` servent au prompt court.
+
+Le prompt suit ce que la collecte a réellement fait. Sans explorateur, il ne demande ni fréquence ni coup majoritaire. Avec `--coups-stockfish`, il dit jusqu'où le moteur a évalué. Avec `--multipv 1`, il n'annonce pas trois coups par position.
 
 Sans terminal, le camp se déduit de vos pseudos sans poser de question.
 

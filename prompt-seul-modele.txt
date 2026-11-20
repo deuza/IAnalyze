@@ -19,7 +19,8 @@ Analysez la partie ci-dessous coup par coup, pour un joueur qui cherche
 à progresser. Le style est instructif et détaillé, en français, et vous
 tutoyez le joueur.
 #! si CAMP_CONNU
-Le joueur avait les {{CAMP}}. Son niveau : {{NIVEAU}}.
+Le joueur avait les {{CAMP}}.
+Son niveau : {{NIVEAU}}.
 #! sinon
 Niveau du joueur : {{NIVEAU}}.
 #! fin
@@ -66,9 +67,19 @@ La partie :
 {{PARTIE_PGN}}
 
 Évaluations de Stockfish, profondeur {{PROFONDEUR}}, du point de vue des Blancs,
-après chaque coup joué. Derrière un coup faible viennent sa nature, ce
-qu'il perd en centipions par rapport au meilleur coup, puis ce meilleur
-coup, sa suite et son évaluation. "mat" à la place du nombre : le coup
-manque un mat ou en concède un.
+#! si COUVERTURE_PARTIELLE
+après chacun des {{DEMI_COUPS_EVALUES}} premiers demi-coups sur {{DEMI_COUPS}}. Le moteur n'a pas
+évalué la suite de la partie : n'y avancez aucun chiffre.
+#! sinon
+après chaque coup joué.
+#! fin
+Derrière un coup faible viennent sa nature, ce qu'il perd en centipions
+par rapport au meilleur coup, puis ce meilleur coup, sa suite et son
+évaluation. "mat" à la place du nombre : le coup manque un mat ou en
+concède un.
+#! si COUP_NUL
+Un coup noté "--" est un coup nul : le trait passe sans qu'une pièce
+bouge. Le moteur ne l'évalue pas, et sa ligne porte un tiret.
+#! fin
 
 {{TABLEAU_MOTEUR}}

@@ -387,12 +387,13 @@ PROMPT_CONDITIONS = ("STOCKFISH", "EXPLORATEUR", "BASE_LICHESS",
                      "BASE_MAITRES", "REPONSES",
                      "CAMP_CONNU", "PSEUDO_CONNU", "NIVEAU_DECLARE",
                      "RESULTAT_CONTREDIT", "CONSIGNES_DONNEES",
-                     "OUVERTURE_CONNUE")
+                     "OUVERTURE_CONNUE", "COUVERTURE_PARTIELLE", "COUP_NUL")
 PROMPT_VALEURS = ("VERSION", "DEPOT", "ARCHIVE", "PSEUDOS", "CAMP", "NIVEAU",
                   "CADENCE", "ANNOTATEUR", "BASE", "SEUIL_IMPRECISION",
                   "SEUIL_ERREUR", "SEUIL_GAFFE", "PROFONDEUR", "MULTIPV",
                   "PARTIE_PGN", "TABLEAU_MOTEUR", "ALERTE_RESULTAT",
-                  "CONSIGNES_JOUEUR", "OUVERTURE")
+                  "CONSIGNES_JOUEUR", "OUVERTURE", "DEMI_COUPS",
+                  "DEMI_COUPS_EVALUES")
 
 #: Valeur de la balise Annotator quand les réglages n'en donnent pas : le
 #: script ignore quel modèle rédigera l'analyse.
@@ -3115,14 +3116,17 @@ def consignes_joueur(contexte: str | None) -> str:
     Pour le prompt court, ce que le joueur a réellement précisé : celles
     de ses réponses aux questions de démarrage qu'il n'a pas laissées à
     leur valeur par défaut. Le camp, dit ailleurs dans le prompt, n'est
-    pas repris.
+    pas repris, ni la cadence quand elle vient de la balise TimeControl
+    ou reste inconnue : le joueur n'a alors rien précisé.
     """
     if contexte is None:
         return ""
     return "\n".join(
         ligne for ligne in contexte.split("\n")
         if ligne.startswith("- ") and not ligne.endswith("(défaut)")
-        and not ligne.startswith("- Camp du joueur"))
+        and not ligne.startswith(("- Camp du joueur",
+                                  "- Cadence : balise TimeControl",
+                                  "- Cadence : non précisée")))
 
 
 def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
@@ -4229,6 +4233,8 @@ def main(argv: list[str]) -> int:
                   or "").replace("**", "")
         precisions = consignes_joueur(contexte)
         ouverture = phrase_ouverture(resume_explorateur, base["libelle"])
+        coups_partie = list(partie.mainline_moves())
+        evalues = len(resume_stockfish["resultats"])
         conditions = {
             # Toujours vraie depuis la version 4.0.0, gardée pour les
             # modèles personnels qui l'emploient.
@@ -4243,6 +4249,11 @@ def main(argv: list[str]) -> int:
             "RESULTAT_CONTREDIT": bool(alerte),
             "CONSIGNES_DONNEES": bool(precisions),
             "OUVERTURE_CONNUE": bool(ouverture),
+            # --coups-stockfish a limité le moteur aux premiers coups : le
+            # prompt doit le dire, sans quoi il promet un chiffre pour
+            # chaque coup.
+            "COUVERTURE_PARTIELLE": evalues < len(coups_partie),
+            "COUP_NUL": any(not coup for coup in coups_partie),
         }
         valeurs = {
             "VERSION": VERSION,
@@ -4266,6 +4277,8 @@ def main(argv: list[str]) -> int:
             "ALERTE_RESULTAT": alerte,
             "CONSIGNES_JOUEUR": precisions,
             "OUVERTURE": ouverture,
+            "DEMI_COUPS": str(len(coups_partie)),
+            "DEMI_COUPS_EVALUES": str(evalues),
         }
         prompt = archive.with_name(dossier.name + PROMPT_SUFFIXE)
         try:

@@ -72,8 +72,11 @@ Aucun ne contient d'analyse, uniquement des données :
   vue des Blancs), profondeur, wdl (gain, nulle et perte des Blancs,
   pour mille) et surtout pv_san, sa variante ENTIÈRE, que la synthèse
   coupe après quelques demi-coups. "fen" est la position avant le
-  coup, "ecart_cp" et "nature" reprennent la section 3. Allez-y
-  chercher la suite d'une variante avant de l'écrire.
+  coup, "ecart_cp" et "nature" reprennent la section 3. Un "ecart_cp"
+  de 10000 ou plus n'est pas un nombre de centipions : c'est un mat
+  manqué ou concédé, que la section 3 écrit "mat". Ne le citez jamais
+  comme un chiffre. Allez-y chercher la suite d'une variante avant de
+  l'écrire.
 #! si EXPLORATEUR
 - explorateur/NNN-<coup>.json : la réponse brute de l'explorateur pour
   la position d'avant le demi-coup NNN. "white", "draws" et "black"
@@ -136,24 +139,38 @@ Section 3, "Évaluations Stockfish" : pour chaque demi-coup,
    nulle, perte des Blancs selon le modèle du moteur), l'écart en
    centipions du point de vue du joueur au trait, la nature du coup
    (imprécision dès {{SEUIL_IMPRECISION}} cp, erreur dès {{SEUIL_ERREUR}}, gaffe dès {{SEUIL_GAFFE}}) et les
-   trois meilleurs coups. Section 3 bis : les variantes principales du
-   moteur. Section 3 ter : les erreurs et gaffes par camp, avec le meilleur
-   coup, sa ligne et la FEN de la position. Deux cas particuliers.
+   meilleurs coups du moteur, {{MULTIPV}} par position. Section 3 bis : les
+   variantes principales du moteur. Section 3 ter : les erreurs et
+   gaffes par camp, avec le meilleur coup, sa ligne et la FEN de la
+   position. Deux cas particuliers.
    L'écart porte "mat" quand le coup joué manque un mat ou en concède
    un : il ne se chiffre pas en centipions, comparez les colonnes Éval
    et 1er. Un coup nul, noté "--", n'est pas un coup des échecs : le
    moteur ne l'évalue pas, ses colonnes Éval, G/N/P, Écart et Nature
-   portent "-", les trois meilleurs coups de la position restant
-   donnés. Sous le tableau, une ligne "Résultat et évaluation finale se
-   contredisent" apparaît quand le camp déclaré vainqueur est nettement
-   moins bien après le dernier coup.
+   portent "-", les meilleurs coups de la position restant donnés.
+   Un écart négatif n'est pas une faute : le coup joué, que le moteur
+   évalue à part quand il n'est pas dans ses premiers choix, sort alors
+   un peu au-dessus du premier, et les deux se valent. Sous le tableau,
+   une ligne "Résultat et évaluation finale se contredisent" apparaît
+   quand le camp déclaré vainqueur est nettement moins bien après le
+   dernier coup.
+#! si COUVERTURE_PARTIELLE
+   Le moteur n'a évalué que les {{DEMI_COUPS_EVALUES}} premiers demi-coups sur {{DEMI_COUPS}} : la
+   collecte a été limitée par --coups-stockfish. Au delà, vous n'avez
+   aucun chiffre : dites-le, et n'en avancez aucun.
+#! fin
 Section 4, "Positions à échantillon non exploitable" : là où la base
    interrogée ne dit plus rien, ou le demi-coup d'un coup nul.
 Section 5, "Données brutes de l'archive" : la liste des fichiers du
    zip, décrits plus haut. Une ligne "Encodage" signale un PGN qui
    n'était pas en UTF-8 et que le script a converti.
 
+#! si EXPLORATEUR
 Les chiffres des sections 2 et 3 font foi et priment sur votre mémoire.
+#! sinon
+Seuls les chiffres de la section 3 font foi, et ils priment sur votre
+mémoire.
+#! fin
 
 === DÉMARRAGE ===
 
@@ -197,6 +214,7 @@ un fichier PGN commenté, conforme au standard PGN, ouvrable sans erreur
 dans SCID vs. PC. Le PGN contient toujours la partie entière : seuls
 les commentaires se limitent au périmètre.
 
+#! si EXPLORATEUR
 Identifiez l'ouverture et sa variante, d'après les balises ECO et
 Opening si elles existent, sinon d'après la dernière position nommée de
 la section 2. Situez le premier écart par rapport à la théorie, de quel
@@ -220,6 +238,13 @@ Deux distinctions à respecter :
 
 Indiquez, selon ces règles, les trois coups théoriques que le joueur
 aurait dû connaître, et le plan typique associé à la structure obtenue.
+#! sinon
+Identifiez l'ouverture et sa variante d'après les balises ECO et
+Opening si elles existent, sinon de mémoire, en l'annonçant comme tel.
+Aucune base n'a été interrogée pour cette partie : ne citez ni
+fréquence, ni coup majoritaire, ni sortie de théorie chiffrée. Donnez
+le plan typique associé à la structure obtenue.
+#! fin
 
 === OUTILS ===
 
@@ -272,7 +297,8 @@ CONTRAINTES DE FORMAT. Rien ne vérifie alors vos coups à votre place :
 === ÉVALUATION MOTEUR ===
 
 Les chiffres de la section 3 font foi : ne réévaluez aucun coup. La
-colonne Nature désigne les coups à commenter obligatoirement. La
+colonne Nature classe les coups : erreur et gaffe sont à commenter
+obligatoirement, l'imprécision quand elle éclaire la partie. La
 section 3 ter fournit pour chaque erreur et gaffe le meilleur coup, sa
 ligne et la FEN. Vos variantes entre parenthèses partent des lignes de
 la section 3 bis, ou des variantes entières de
