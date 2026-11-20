@@ -20,6 +20,10 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- Prompt : la coupe des commentaires à 76 colonnes donnait des lignes
+  de 80 caractères, une de trop, quand un commentaire tenait sur une
+  seule ligne pleine : l'export de python-chess ajoute une accolade et
+  une espace de chaque côté. La coupe demandée passe à 75 colonnes.
 - Sur une partie qui contient un coup nul, le journal répétait à
   chaque position suivante un avis de python-chess, "Not transmitting
   history with null moves to UCI engine". Sans conséquence sur les

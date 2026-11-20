@@ -1009,6 +1009,8 @@ egal "T65 evaluations.json décrit" 1 \
     "$(grep -c '^- stockfish/evaluations.json :' "$PR")"
 egal "T65 sans explorateur, ses fichiers ne sont pas annoncés" 0 \
     "$(grep -c '^- explorateur/NNN' "$PR")"
+egal "T65 commentaires coupés à 75 colonnes, pas à 76" "2 0" \
+    "$(grep -c 'à 75' "$PR") $(grep -c 'à 76' "$PR")"
 egal "T65 sans explorateur, dit dans le prompt" 1 \
     "$(grep -c "collecte de l'explorateur n'a pas" "$PR")"
 egal "T65 base Lichess" 1 \

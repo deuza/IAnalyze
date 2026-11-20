@@ -239,9 +239,11 @@ l'écrire à la main : la légalité de chaque coup, variantes comprises,
 et la structure sont ainsi garanties. Trois particularités vérifiées de
 python-chess :
 - StringExporter coupe les lignes de coups, mais jamais l'intérieur
-  d'un commentaire. Coupez donc chaque commentaire vous-même à 76
+  d'un commentaire. Coupez donc chaque commentaire vous-même à 75
   colonnes (textwrap.fill) avant de l'affecter : les retours à la ligne
-  internes sont conservés.
+  internes sont conservés. Pas davantage : l'export ajoute une accolade
+  et une espace de chaque côté, et un commentaire d'une seule ligne
+  pleine atteint alors 79 caractères.
 - Le commentaire placé avant le coup 1 est game.comment.
 - Les balises autres que les sept obligatoires sortent dans leur ordre
   d'insertion : insérez-les dans l'ordre alphabétique.
@@ -392,7 +394,7 @@ décroche.
    fermante, ce qui mutilerait le texte.
 2. POINT-VIRGULE : évitez-le à l'intérieur d'un commentaire.
 3. LONGUEUR DE LIGNE : moins de 80 caractères par ligne, commentaires
-   compris, d'où la coupe à 76 colonnes décrite dans OUTILS.
+   compris, d'où la coupe à 75 colonnes décrite dans OUTILS.
 4. POURCENT : aucun caractère % dans les commentaires, écrivez "pour
    cent". Une coupe de ligne pourrait le placer en première colonne, où
    le standard lui donne un rôle d'échappement.
