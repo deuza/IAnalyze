@@ -41,6 +41,9 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- Nom de l'archive : les espaces du nom du PGN y deviennent des tirets,
+  `partie contre machin.pgn` donne `analyse-partie-contre-machin-...`.
+  Le nom se manipule ainsi sans guillemets.
 - Questions de démarrage : une réponse fait 255 caractères au plus, et
   un nom de joueur ne peut plus contenir de guillemet, de barre oblique
   inversée, de crochet ni d'accolade. Un tel nom donnait un
@@ -88,6 +91,9 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- Un PGN au nom long, écrit en caractères de plusieurs octets, faisait
+  échouer l'écriture de l'archive après toute l'analyse : la longueur
+  du nom était bornée en caractères, et non en octets.
 - Modèle de prompt : un repère mal écrit, `{{ NIVEAU }}` ou
   `{{CAMP1}}`, partait tel quel dans le prompt, et un modèle sans une
   ligne de texte donnait un prompt vide annoncé comme écrit. Les deux

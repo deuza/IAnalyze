@@ -805,7 +805,7 @@ Autres lectures :
 Rien ne dépend de la locale.
 
 Écritures : tous les fichiers de l'archive sont en UTF-8, fins de ligne LF.    
-Dans l'étiquette de l'archive, les caractères de contrôle, les caractères `/ \ : * ? " < > |` et les octets non décodables du nom du PGN deviennent "\_". L'étiquette est bornée à 80 caractères.   
+Dans l'étiquette de l'archive, les caractères de contrôle, les caractères `/ \ : * ? " < > |` et les octets non décodables du nom du PGN deviennent "\_", et les espaces des tirets : `partie contre machin.pgn` donne `analyse-partie-contre-machin-...`. L'étiquette est bornée à 80 octets.   
 Espaces et lettres accentuées sont conservés.
 
 Console : un caractère que le terminal ne sait pas afficher devient "?" au lieu d'arrêter le script, sous LANG=C comme avec PYTHONIOENCODING=ascii.    

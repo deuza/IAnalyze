@@ -847,7 +847,8 @@ def ecrire_texte(chemin: pathlib.Path, texte: str) -> None:
 RE_NOM_RISQUE = re.compile(
     r'[\x00-\x1f\x7f-\x9f/\\:*?"<>|\ud800-\udfff\ufffd]')
 
-#: Longueur maximale de l'étiquette reprise dans le nom du dossier.
+#: Longueur maximale, en octets, de l'étiquette reprise dans le nom du
+#: dossier.
 ETIQUETTE_MAX = 80
 
 
@@ -856,11 +857,22 @@ def etiquette_sure(nom: str) -> str:
     Tire d'un nom de fichier une étiquette sûre pour le dossier de
     travail et pour les chemins de l'archive.
 
-    Chaque caractère à risque devient "_". Les points et les espaces de
-    bord sont retirés, la longueur est bornée, et une étiquette vide
-    devient "partie".
+    Chaque caractère à risque devient "_", chaque suite d'espaces un
+    tiret : un nom d'archive sans espace se passe de guillemets dans une
+    ligne de commande. Les points et les tirets de bord sont retirés, et
+    une étiquette vide devient "partie".
+
+    La longueur est bornée en octets, non en caractères : c'est en
+    octets que le système de fichiers compte, et quatre-vingts
+    idéogrammes en font deux cent quarante. Bornée en caractères,
+    l'étiquette laissait passer des noms que l'archive, une fois
+    l'horodatage ajouté, ne pouvait plus porter.
     """
-    sure = RE_NOM_RISQUE.sub("_", nom)[:ETIQUETTE_MAX].strip(" .")
+    sure = RE_NOM_RISQUE.sub("_", re.sub(r"\s+", "-", nom.strip()))
+    sure = sure.encode("utf-8", errors="surrogateescape")[:ETIQUETTE_MAX]
+    # Une coupe en plein caractère laisse des octets orphelins : ils sont
+    # écartés au décodage.
+    sure = sure.decode("utf-8", errors="ignore").strip("-.")
     return sure or "partie"
 
 

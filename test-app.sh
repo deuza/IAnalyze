@@ -488,6 +488,13 @@ cp italienne.pgn "t-été à Paris.pgn"
 lancer "t-été à Paris.pgn" $O --sortie "$TRAVAIL/sorties d'été"
 egal "M1 code de retour" 0 "$RC"
 verifier "M1 le chemin affiché désigne bien l'archive" test -f "$ARCH"
+# Les espaces du nom du PGN deviennent des tirets dans celui de l'archive,
+# ceux du répertoire de sortie sont gardés : il est à vous.
+case "$ARCH" in
+    "$TRAVAIL/sorties d'été/analyse-t-été-à-Paris-"*.zip) vu=oui ;;
+    *) vu=non ;;
+esac
+egal "M1 espaces du nom devenus des tirets" oui "$vu"
 noter "  note   chemin affiché : $ARCH"
 PYTHONIOENCODING=ascii "$SCRIPT" "t-été à Paris.pgn" $O \
     --sortie "$TRAVAIL/sorties d'été" --venv "$VENV" --reglages "$REGL" \
@@ -572,6 +579,28 @@ egal "T79 un refus de signe, un refus de longueur, pas d'erreur" "1 1 0" \
     "$(tail -n 1 sortie-pty)"
 joindre sortie-pty
 rm -rf analyse-italienne-*
+
+titre "T80 : nom de PGN long, en caractères de plusieurs octets"
+# Cent idéogrammes, trois cents octets : l'étiquette est bornée en octets,
+# faute de quoi l'archive échouait sur un nom trop long après l'analyse.
+SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t80 2> journal-t80 <<'EOF'
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+longue = cp.etiquette_sure("日" * 100)
+print(len(longue.encode("utf-8")) <= cp.ETIQUETTE_MAX, len(longue))
+print(cp.etiquette_sure("  partie  contre\tmachin  "))
+print(cp.etiquette_sure(" . "), cp.etiquette_sure("a:b?"))
+EOF
+printf 'True 26\npartie-contre-machin\npartie a_b_\n' > attendu-t80
+verifier "T80 étiquette bornée en octets, espaces en tirets" \
+    cmp -s attendu-t80 sortie-t80
+joindre sortie-t80
+joindre journal-t80 5
+rm -rf "$DEPOT/__pycache__"
 
 titre "T46, T47 : PGN sain et version"
 lancer italienne.pgn $O
