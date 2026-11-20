@@ -1011,6 +1011,15 @@ egal "T65 sans explorateur, ses fichiers ne sont pas annoncés" 0 \
     "$(grep -c '^- explorateur/NNN' "$PR")"
 egal "T65 commentaires coupés à 75 colonnes, pas à 76" "2 0" \
     "$(grep -c 'à 75' "$PR") $(grep -c 'à 76' "$PR")"
+# Consignes ajoutées après les essais sur quatre LLM : chacune répond à
+# un défaut relevé sur un PGN réellement rendu.
+for consigne in "9. LIGNES VIDES" \
+    "N'écrivez jamais la variante à l'intérieur des accolades" \
+    "vous êtes en cas B" \
+    "N'annoncez un fichier que si vous l'avez réellement créé" \
+    "ne rendez jamais un PGN sans commentaires"; do
+    egal "T65 consigne : $consigne" 1 "$(grep -c -F "$consigne" "$PR")"
+done
 egal "T65 sans explorateur, dit dans le prompt" 1 \
     "$(grep -c "collecte de l'explorateur n'a pas" "$PR")"
 egal "T65 base Lichess" 1 \

@@ -10,6 +10,13 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- Prompt : cinq consignes ajoutées après des essais sur quatre LLM,
+  chacune répondant à un défaut relevé sur un PGN réellement rendu :
+  aucune ligne vide dans le corps de la partie, où un lecteur de PGN
+  voit la fin de la partie ; variantes écrites hors des accolades, avec
+  un exemple complet ; une installation de python-chess qui échoue vaut
+  cas B ; ne jamais annoncer un fichier qui n'a pas été créé ; ne jamais
+  rendre un PGN sans commentaires au motif qu'un fichier manque.
 - `TESTS.md` tient en une page : comment lancer `test-app.sh`, ce que
   vérifie chaque famille de tests, où ils ont été joués. Le détail,
   commande par commande, n'y est plus : il faisait doublon avec le
