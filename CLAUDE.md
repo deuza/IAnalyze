@@ -12,7 +12,8 @@ Fichiers : ianalyze.py, prompt-modele.txt (modèle du prompt),
 prompt-seul-modele.txt (modèle du prompt court de --prompt-seul),
 verifier-analyse.py (contrôle du PGN rendu par le LLM),
 test.pgn (partie d'essai), test-app.sh (suite de tests),
-README.md, TESTS.md, CHANGELOG.md.
+README.md (usage courant), TECHNIQUE.md (documentation technique et
+tests), CHANGELOG.md.
 
 ## Plateformes
 
@@ -49,8 +50,9 @@ README.md, TESTS.md, CHANGELOG.md.
 - Modification d'un fichier existant : changement ciblé, pas de
   réécriture complète non demandée.
 - Chaque ajout de comportement s'accompagne d'un test dans test-app.sh
-  et d'une mise à jour de README.md. TESTS.md ne décrit que les
-  familles de tests : il ne change que si une famille apparaît ou si
+  et d'une mise à jour de README.md, ou de TECHNIQUE.md si le sujet
+  est technique. La section Tests de TECHNIQUE.md ne décrit que les
+  familles de tests : elle ne change que si une famille apparaît ou si
   la façon de lancer les tests change.
 
 ## Vérifications avant livraison

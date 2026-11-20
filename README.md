@@ -26,17 +26,15 @@ analyse-ma-partie-20261119-164140.prompt.txt
 
 Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec Claude, vous joignez le fichier zip et vous recevez un PGN annoté et une synthèse.
 
-**IAnalyze est fait pour Claude.** Pour un autre LLM, l'option `--prompt-seul` écrit un prompt court qui porte la partie et les évaluations de Stockfish, à coller seul, sans pièce jointe : voir la section 10.
+**IAnalyze est fait pour Claude.** Pour un autre LLM, l'option `--prompt-seul` écrit un prompt court qui porte la partie et les évaluations de Stockfish, à coller seul, sans pièce jointe : voir la section 7.
 
 | Fichier | Rôle |
 |---|---|
 | `ianalyze.py` | le script, en un seul fichier |
-| `prompt-modele.txt` | le modèle dont est tiré le prompt de chaque partie (section 9) |
-| `prompt-seul-modele.txt` | le modèle du prompt court de `--prompt-seul` (section 9) |
-| `verifier-analyse.py` | le contrôle du PGN rendu par le LLM (section 10) |
-| `test.pgn` | une partie d'essai qui réunit les cas tordus d'un PGN |
-| `test-app.sh` | la suite de tests, pour Linux et macOS |
-| [`TESTS.md`](TESTS.md) | comment lancer les tests et ce qu'ils vérifient |
+| `prompt-modele.txt` | le modèle dont est tiré le prompt de chaque partie (section 6) |
+| `prompt-seul-modele.txt` | le modèle du prompt court de `--prompt-seul` (section 6) |
+| `verifier-analyse.py` | le contrôle du PGN rendu par le LLM (section 7) |
+| [`TECHNIQUE.md`](TECHNIQUE.md) | la documentation technique : règles de cohérence, format des fichiers, encodages, modèle de prompt, tests |
 | [`CHANGELOG.md`](CHANGELOG.md) | l'historique des versions |
 | [`LICENSE`](LICENSE) | la licence du code (voir Licences) |
 
@@ -60,7 +58,7 @@ La chaîne complète tient en trois temps :
 
 2. Dans une conversation neuve avec un LLM, vous collez le contenu du prompt et vous joignez l'archive.
 
-   Si le LLM n'ouvre pas les zip, décompressez l'archive et envoyez-lui tous ses fichiers (voir section 9).
+   Si le LLM n'ouvre pas les zip, décompressez l'archive et envoyez-lui tous ses fichiers (voir section 6).
 
 3. Le LLM rend un PGN annoté et une synthèse.
 
@@ -439,7 +437,7 @@ Conserve le dossier de travail à côté de l'archive. Sans cette option, il est
 
 *Défaut : `prompt-modele.txt` à côté du script*
 
-Modèle du prompt d'analyse, écrit à côté de l'archive sous le nom `<archive>.prompt.txt` (voir section 9).
+Modèle du prompt d'analyse, écrit à côté de l'archive sous le nom `<archive>.prompt.txt` (voir section 6).
 
 Le modèle est contrôlé avant la collecte : un repère inconnu arrête le script en donnant le numéro de la ligne. Un fichier désigné par l'option doit exister.
 
@@ -461,7 +459,7 @@ N'écrit pas le prompt d'analyse. S'exclut avec `--prompt` et avec `--prompt-seu
 
 Écrit un prompt court, à coller seul dans la conversation, sans pièce jointe : quelques consignes, la partie, puis les évaluations de Stockfish.
 
-C'est le repli pour un LLM qui n'ouvre pas les zip ou n'exécute pas de code (voir section 10). Le PGN annoté lui est demandé dans un bloc de code.
+C'est le repli pour un LLM qui n'ouvre pas les zip ou n'exécute pas de code (voir section 7). Le PGN annoté lui est demandé dans un bloc de code.
 
 Ce prompt est tiré de `prompt-seul-modele.txt`, et non de `prompt-modele.txt`.
 
@@ -680,45 +678,13 @@ Les variantes complètes restent dans `stockfish/evaluations.json`.
 ./ianalyze.py ma-partie.pgn --longueur-pv 0
 ```
 
-## 5. Règles de cohérence
-
-Une option sans effet, ou une valeur hors bornes, est refusée plutôt qu'ignorée en silence :
-
-- `--cadences` et `--classements` exigent `--base lichess`.
-- `--pause` ne descend pas sous 2, `--seuil-frequence` reste entre 0 et 100, `--coups-min`, `--coups-stockfish` et `--longueur-pv` valent 0 ou plus, `--profondeur` va de 1 à 60, les autres valeurs numériques valent au moins 1.
-- `--pause` et `--seuil-frequence` refusent nan et inf.
-- `--fils`, `--hachage` et `--multipv` sont contrôlés auprès du moteur, qui annonce ses bornes : une valeur qu'il n'admet pas est refusée avant toute requête à l'explorateur et avant la création du dossier de travail.
-
-## 6. Explorateur : critères d'arrêt
-
-Pour chaque demi-coup, la position AVANT le coup est interrogée, ce qui donne le rang et la fréquence du coup réellement joué.
-
-L'interrogation s'arrête, dans cet ordre de test :
-
-1. sur une erreur HTTP ou une position absente de la base.
-2. sur un échantillon inférieur à `--seuil-parties`.
-3. sur une sortie de théorie, hors de la fenêtre `--coups-min`.
-4. au plafond `--max-demicoups`, ou à la fin de la partie.
-
-Un coup nul, "--" dans le PGN, arrête aussi l'interrogation, avant toute requête pour ce demi-coup et quel que soit le mode : ce n'est pas un coup des échecs, la base ne peut pas suivre la partie au delà.
-
-Il n'est pas compté comme une sortie de théorie, et la section 4 de la synthèse le signale.
-
-Le catalogue dit "connu", jamais "bon" : "Barnes Opening: Fool's Mate" y figure.
-
-Il compte aussi les positions intermédiaires des lignes nommées, que l'explorateur ne nomme pas lui-même.
-
-## 7. Résultat
+## 5. Résultat
 
 Archive : `analyse-<étiquette>-<AAAAMMJJ-HHMMSS>.zip`, l'étiquette étant le nom du PGN sans extension ou l'identifiant Lichess. Un dossier ou une archive homonyme fait ajouter un suffixe -2, -3...
 
 En cas d'échec, le dossier de travail est conservé tel quel pour diagnostic.
 
-L'étiquette est assainie (voir section 8) : le journal l'annonce alors par "Nom du dossier assaini : ..."
-
-Une archive présente sous son nom définitif est toujours complète et vérifiée : elle est écrite sous le nom provisoire `.<dossier>.partiel.zip`, puis renommée.
-
-Il en va de même de chaque fichier du dossier de travail, écrit sous `.<nom>.partiel`. Après une interruption (Ctrl-C) ou un échec, ces fichiers provisoires sont retirés et le dossier de travail reste, sans archive.
+L'étiquette est assainie (voir [TECHNIQUE.md](TECHNIQUE.md), section 5) : le journal l'annonce alors par "Nom du dossier assaini : ..."
 
 Contenu :
 
@@ -740,173 +706,21 @@ le prompt d'analyse de cette partie, à coller dans la conversation.
 Son chemin est donné par le journal, la sortie standard ne porte que celui de l'archive.
 ```
 
-Sections de `synthese.md` :
+Avec `--prompt-seul`, il n'y a pas d'archive : la sortie standard porte le chemin du prompt.
 
-| Section | Contenu |
-|---|---|
-| Consignes d'analyse | `contexte.md`, vos réponses aux questions de démarrage. Absente quand elles ne sont pas posées |
-| 1. En-têtes et coups | en-têtes, ligne principale, repères de phase (roques, dames, entrée en finale) |
-| 2. Explorateur | filtres, seuils, table, première sortie |
-| 3. Évaluations Stockfish | nature et G/N/P de chaque coup |
-| 3 bis | variantes principales du moteur |
-| 3 ter | erreurs et gaffes par camp, avec la FEN |
-| 5 | fichiers de l'archive. Le dossier `explorateur/` n'y figure que s'il existe |
-| 4. Positions non exploitables | là où la base ne dit plus rien, ou le demi-coup d'un coup nul |
-| 5. Données brutes de l'archive | le contenu du zip, et l'encodage du PGN s'il a été converti |
+Le détail de la synthèse, les codes de retour et les règles suivies par le script sont dans [TECHNIQUE.md](TECHNIQUE.md).
 
-**Table de l'explorateur**, une ligne par demi-coup :
-
-- demi-coup, numéro du coup, trait
-- parties de la position
-- coup joué, son rang, sa fréquence, le score des Blancs sur ce coup
-- coup majoritaire, sa fréquence et son score
-- Ouverture : nom ECO de la position atteinte, "(intermédiaire)" pour une position de passage d'une ligne nommée, "-" hors catalogue
-
-**Table Stockfish**, une ligne par demi-coup :
-
-- demi-coup, numéro du coup, trait, coup joué
-- évaluation, du point de vue des Blancs
-- G/N/P : chances de gain, de nulle et de perte des Blancs selon le modèle de Stockfish, à lire comme une tendance plutôt que comme une probabilité entre joueurs humains
-- écart au premier choix du moteur, du point de vue du joueur au trait
-- nature : imprécision à partir de 50 cp d'écart, erreur à partir de 100, gaffe à partir de 300
-- les trois meilleurs coups
-
-Trois cas particuliers :
-
-- l'écart porte "mat" quand le coup joué manque un mat ou en concède un : il ne se chiffre pas en centipions
-- sous le tableau, une ligne "Résultat et évaluation finale se contredisent" apparaît quand le camp déclaré vainqueur est nettement moins bien après le dernier coup, d'au moins 300 cp : la partie ne s'est pas décidée sur l'échiquier, et l'analyste doit le dire au lieu de raconter une victoire méritée
-- un coup nul, "--" dans le PGN, n'est pas évalué : sa ligne garde les trois meilleurs coups de la position, ses autres colonnes portent "-"
-
-Codes de retour :
-
-| Code | Signification |
-|---|---|
-| 0 | succès |
-| 1 | erreur signalée par un message, dont une valeur que le moteur n'admet pas, ou erreur inattendue |
-| 2 | option inconnue, ou valeur refusée avant toute lecture de la partie |
-| 130 | interruption (Ctrl-C) |
-
-## 8. Encodages et caractères
-
-Aucune entrée mal encodée ne doit arrêter le script sur une trace Python : au pire, une ligne "Attention" du journal et une dégradation propre.
-
-PGN, modèle de prompt et fichier de jeton, essais dans cet ordre :
-
-1. marque d'ordre des octets (BOM) UTF-8, UTF-16 ou UTF-32
-2. UTF-16 sans marque, reconnu à son octet nul sur deux
-3. UTF-8
-4. UTF-8 abîmé : au moins un caractère accentué correctement codé et au plus quatre octets invalides pour chacun d'eux, ces octets deviennent U+FFFD
-5. cp1252, puis latin-1, qui accepte n'importe quel octet
-
-Hors UTF-8 sans défaut, le journal nomme l'encodage retenu :
-
-```text
-Attention, PGN : le contenu n'est pas en UTF-8, encodage retenu : cp1252.
-```
-
-Les fins de ligne CRLF et CR sont ramenées à LF. Les caractères de contrôle, NUL compris, sont retirés et comptés dans le journal, la tabulation et le saut de ligne sont conservés.
-
-Le fichier `partie.pgn` est donc toujours de l'UTF-8 propre : si le fichier fourni a dû être converti, la section 5 de la synthèse le dit, et `collecte.json` garde le détail.
-
-Un texte latin-1 se décode aussi sans erreur en cp1252, les deux ne différant que sur les octets 0x80 à 0x9F : c'est cp1252 qui est annoncé.
-
-Un PGN qui n'est ni en UTF-8, ni en UTF-16, ni en cp1252 est refusé, avec le conseil de le convertir. Le script le reconnaît à l'un des cinq octets que cp1252 ne définit pas.
-
-Limite : un fichier en cp850 ou en MacRoman qui ne contient aucun de ces cinq octets passe pour du cp1252. Ses lettres accentuées sortent fausses dans les noms et les commentaires, et rien ne permet de le voir. Les coups, écrits en ASCII, restent justes.
-
-Balises du PGN (White, Black, Event, Site et les autres) : tabulations et caractères de contrôle en sont retirés avant l'écriture des en-têtes de la synthèse et avant tout affichage.
-
-Autres lectures :
-
-- le fichier de jeton suit la même détection que le PGN, et un jeton hors de l'ASCII imprimable est refusé avant toute requête
-- le catalogue et les réponses de l'explorateur sont lus en UTF-8, marque d'ordre des octets tolérée
-- la sortie du moteur est décodée en UTF-8 par python-chess, qui écarte une ligne illisible sans s'arrêter
-
-Rien ne dépend de la locale.
-
-Écritures : tous les fichiers de l'archive sont en UTF-8, fins de ligne LF.
-
-Dans l'étiquette de l'archive, les caractères de contrôle, les caractères `/ \ : * ? " < > |` et les octets non décodables du nom du PGN deviennent "\_", et les espaces des tirets : `partie contre machin.pgn` donne `analyse-partie-contre-machin-...`. L'étiquette est bornée à 80 octets.
-
-Espaces et lettres accentuées sont conservés.
-
-Console : un caractère que le terminal ne sait pas afficher devient "?" au lieu d'arrêter le script, sous LANG=C comme avec PYTHONIOENCODING=ascii.
-
-Le chemin de l'archive est écrit en octets sur la sortie standard : ARCHIVE=$(...) reste exact dans tous les cas.
-
-Questions de démarrage : une réponse saisie dans un autre encodage que celui du terminal est redécodée, cp1252 puis latin-1.
-
-## 9. Prompt d'analyse
+## 6. Prompt d'analyse
 
 Les données ne suffisent pas : il faut dire à l'analyste ce qu'il doit en faire. Ce texte vit dans le modèle `prompt-modele.txt`, que vous pouvez modifier librement, sans toucher au script.
 
 À chaque collecte, le script en tire le prompt de la partie : il remplit les valeurs et ne garde que les passages qui s'appliquent.
 
-Deux sortes de repères sont interprétés :
-
-| Repère | Effet |
-|---|---|
-| `{{NOM}}` | une valeur, remplacée |
-| `#! si CONDITION` | garde ce qui suit si la condition est vraie |
-| `#! si non CONDITION` | garde ce qui suit si elle est fausse |
-| `#! sinon` | bascule |
-| `#! fin` | ferme le dernier "si" ouvert |
-| `#! note ...` | commentaire du modèle, jamais recopié |
-
-Une directive occupe une ligne entière, et les "si" peuvent s'emboîter. Les lignes vides laissées par un passage retiré sont resserrées.
-
-Valeurs :
-
-| Valeur | Contenu |
-|---|---|
-| `VERSION` | version du script |
-| `DEPOT` | adresse du dépôt d'IAnalyze |
-| `ARCHIVE` | nom du fichier de l'archive |
-| `PSEUDOS` | vos pseudos, séparés par des virgules |
-| `CAMP` | Blancs, Noirs ou inconnu |
-| `NIVEAU` | votre niveau, rédigé : "environ 1300 Elo, déclaré par le joueur", sinon l'Elo de votre balise, sinon "non précisé" |
-| `CADENCE` | votre cadence habituelle, rédigée |
-| `ANNOTATEUR` | valeur de la balise Annotator |
-| `BASE` | base interrogée : "Lichess (tous joueurs)" ou "maîtres" |
-| `SEUIL_IMPRECISION`, `SEUIL_ERREUR`, `SEUIL_GAFFE` | seuils de nature du coup, en centipions : 50, 100 et 300 |
-| `PROFONDEUR`, `MULTIPV` | valeurs de `--profondeur` et de `--multipv` |
-| `PARTIE_PGN` | le PGN de la partie, tel que l'archive le contient |
-| `TABLEAU_MOTEUR` | les évaluations de Stockfish, une ligne par demi-coup. Derrière un coup faible : sa nature, son écart, le meilleur coup, sa suite sur `--longueur-pv` demi-coups et son évaluation |
-| `ALERTE_RESULTAT` | la phrase qui signale un résultat contraire à l'évaluation finale, vide sinon |
-| `CONSIGNES_JOUEUR` | celles de vos réponses aux questions de démarrage que vous n'avez pas laissées par défaut |
-| `OUVERTURE` | l'ouverture et la sortie de théorie en une phrase, d'après l'explorateur |
-| `DEMI_COUPS` | nombre de demi-coups de la partie |
-| `DEMI_COUPS_EVALUES` | nombre de demi-coups que le moteur a évalués, plus petit avec `--coups-stockfish` |
-
-Conditions :
-
-| Condition | Vraie quand |
-|---|---|
-| `STOCKFISH` | toujours, depuis la version 4.0.0. Gardée pour les modèles personnels qui l'emploient |
-| `EXPLORATEUR` | la section 2 a été collectée |
-| `BASE_LICHESS` | base de tous les joueurs |
-| `BASE_MAITRES` | base des maîtres |
-| `REPONSES` | le script a recueilli vos réponses aux questions de démarrage |
-| `CAMP_CONNU` | votre camp est connu |
-| `PSEUDO_CONNU` | au moins un pseudo est connu |
-| `NIVEAU_DECLARE` | votre niveau figure dans les réglages |
-| `RESULTAT_CONTREDIT` | le résultat de la partie contredit l'évaluation finale |
-| `CONSIGNES_DONNEES` | `CONSIGNES_JOUEUR` n'est pas vide |
-| `OUVERTURE_CONNUE` | `OUVERTURE` n'est pas vide |
-| `COUVERTURE_PARTIELLE` | `--coups-stockfish` a limité le moteur aux premiers coups |
-| `COUP_NUL` | la partie contient un coup nul, noté `--` |
-
-Les deux modèles, `prompt-modele.txt` et `prompt-seul-modele.txt`, partagent ces repères. `PARTIE_PGN`, `TABLEAU_MOTEUR`, `ALERTE_RESULTAT`, `CONSIGNES_JOUEUR`, `OUVERTURE` et les conditions `RESULTAT_CONTREDIT`, `CONSIGNES_DONNEES`, `OUVERTURE_CONNUE`, `COUP_NUL` servent au prompt court.
+Pour écrire votre propre modèle, la liste des repères, des valeurs et des conditions est dans [TECHNIQUE.md](TECHNIQUE.md), section 6.
 
 Le prompt suit ce que la collecte a réellement fait. Sans explorateur, il ne demande ni fréquence ni coup majoritaire. Avec `--coups-stockfish`, il dit jusqu'où le moteur a évalué. Avec `--multipv 1`, il n'annonce pas trois coups par position.
 
 Sans terminal, le camp se déduit de vos pseudos sans poser de question.
-
-Un repère inconnu ou mal écrit, comme `{{ NIVEAU }}`, un "si" jamais fermé, une directive mal formée ou un modèle sans une ligne de texte arrêtent le script avant la collecte :
-
-```text
-Modèle de prompt prompt-modele.txt, ligne 12 : condition inconnue MOTEUR, conditions admises : STOCKFISH, EXPLORATEUR, ...
-```
 
 Le prompt se colle comme un message, dans une conversation neuve, l'archive en pièce jointe. Il vaut pour une partie : c'est le coller à chaque conversation qui garantit qu'il correspond à l'archive.
 
@@ -925,7 +739,7 @@ Le prompt prévoit les deux cas :
 - **Le LLM exécute du code** : il construit le PGN avec python-chess et en prouve la légalité.
 - **Le LLM n'exécute pas de code** : il écrit le PGN lui-même, le dit, et vous laisse ouvrir le fichier pour confirmer.
 
-## 10. Choisir un LLM et vérifier son travail
+## 7. Choisir un LLM et vérifier son travail
 
 ### Avec Claude : le zip et le prompt
 
@@ -983,7 +797,7 @@ Ce que ces essais montrent :
 - **Les données tiennent partout.** Aucun des quatre n'a inventé une évaluation, et tous donnent les trois mêmes erreurs principales, avec les bons écarts.
 - **C'est la fabrication du PGN qui les sépare.** Seul le LLM qui a construit son fichier avec python-chess a rendu un PGN utilisable tel quel.
 - **Le fond peut être bon sous une forme fautive.** Les 25 variantes écrites à la main par GPT-6 étaient toutes légales et tirées des lignes du moteur.
-- **La partie était notée gagnée dans une position perdue.** Deux LLM sur quatre ont raconté une victoire méritée, d'où la ligne ajoutée à la synthèse (section 7).
+- **La partie était notée gagnée dans une position perdue.** Deux LLM sur quatre ont raconté une victoire méritée, d'où la ligne ajoutée à la synthèse (voir [TECHNIQUE.md](TECHNIQUE.md), section 4).
 
 L'offre gratuite de Claude annonce elle aussi la création de fichiers et l'exécution de code, sur d'autres modèles que celui de l'essai, d'après [sa page de tarifs](https://claude.com/pricing) lue le 20 novembre 2026. Elle n'a pas été essayée.
 
@@ -1063,7 +877,7 @@ Trois limites à connaître :
 - un nombre écrit sans signe, "7.77", n'est pas pris pour une évaluation : le script le confondrait avec une durée ou un classement. Un chiffre inventé écrit ainsi passe donc
 - le script repère un chiffre qui n'existe nulle part, pas un vrai chiffre attribué au mauvais coup
 
-## 11. Jeton
+## 8. Jeton
 
 Le jeton n'est transmis que dans l'en-tête Authorization, jamais dans l'URL. Il n'apparaît ni dans le journal, ni dans l'archive, où `collecte.json` note seulement sa présence.
 
@@ -1073,7 +887,7 @@ Un fichier de jeton lisible par d'autres déclenche un avertissement. Le fichier
 
 Le fichier peut porter une marque d'ordre des octets ou être en UTF-16, comme en produisent certains éditeurs Windows : le journal le signale et le jeton est lu normalement.
 
-## 12. Sources et liens
+## 9. Sources et liens
 
 Ce que le script interroge :
 

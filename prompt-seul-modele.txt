@@ -9,7 +9,7 @@
 #! note Les repères sont les mêmes que dans prompt-modele.txt : une valeur
 #! note entre doubles accolades est remplacée, une ligne commençant par
 #! note "#!" est une directive ("si CONDITION", "si non CONDITION",
-#! note "sinon", "fin", "note"). Leur liste est dans README.md.
+#! note "sinon", "fin", "note"). Leur liste est dans TECHNIQUE.md.
 #! note
 #! note Gardez-le court : c'est sa raison d'être.
 #! note ===============================================================

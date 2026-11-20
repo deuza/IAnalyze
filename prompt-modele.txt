@@ -14,7 +14,7 @@
 #! note     recopiée : "si CONDITION", "si non CONDITION", "sinon", "fin"
 #! note     gardent ou retirent un passage, "note" est un commentaire.
 #! note
-#! note La liste des valeurs et des conditions est dans README.md. Un
+#! note La liste des valeurs et des conditions est dans TECHNIQUE.md. Un
 #! note repère inconnu arrête le script avant la collecte, en donnant le
 #! note numéro de la ligne.
 #! note ===============================================================
