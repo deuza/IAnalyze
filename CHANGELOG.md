@@ -12,12 +12,7 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 Première version publiée depuis la 3.5.8. Elle réunit le travail des
 versions 3.5.9 à 3.8.0, restées sur la branche de développement et
-jamais publiées : ce bloc décrit donc tout ce qui change pour qui
-vient de la 3.5.8.
-
-Avant de l'utiliser : relancez `--installer-venv` et
-`--installer-catalogue`, les emplacements ont changé, et retirez de
-vos commandes `--avec-stockfish`, `--sans-stockfish` et `--consignes`.
+jamais publiées.
 
 ### Added
 
@@ -109,10 +104,10 @@ vos commandes `--avec-stockfish`, `--sans-stockfish` et `--consignes`.
   dans le répertoire personnel : environnement virtuel dans
   `~/.local/share/IAnalyze/venv`, catalogue dans
   `~/.local/share/IAnalyze`, réglages dans `~/.config/IAnalyze`. Sous
-  Debian, seuls les paquets demandent encore les droits root. Rien
-  n'est repris des anciens emplacements, `/opt/venv/lichess`,
-  `/usr/local/share/collecte-partie` et `~/.local/share/collecte-partie`,
-  que vous pouvez supprimer.
+  Debian, seuls les paquets demandent encore les droits root. Les
+  anciens emplacements étaient `/opt/venv/lichess`,
+  `/usr/local/share/collecte-partie` et
+  `~/.local/share/collecte-partie`.
 - En-tête d'agent HTTP : `IAnalyze/4.0.0`, suivi de l'adresse du dépôt.
 - `--pseudos` n'a plus de valeur par défaut dans le code : sans
   l'option, les pseudos viennent du fichier de réglages. Donnée, elle
@@ -157,9 +152,8 @@ vos commandes `--avec-stockfish`, `--sans-stockfish` et `--consignes`.
 ### Removed
 
 - Options `--avec-stockfish` et `--sans-stockfish` : le moteur est
-  toujours appelé. Une commande qui les porte encore est refusée, avec
-  le code 2. La clef `avec_stockfish` de `collecte.json` disparaît
-  aussi.
+  toujours appelé. La clef `avec_stockfish` de `collecte.json`
+  disparaît aussi.
 - Option `--consignes`, qui insérait un fichier de votre main en tête
   de la synthèse. Elle datait d'avant le prompt, quand la synthèse était
   le seul fichier remis au LLM. Le prompt porte désormais les consignes
