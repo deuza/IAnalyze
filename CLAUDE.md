@@ -27,9 +27,14 @@ README.md, TESTS.md, CHANGELOG.md.
 - Commits atomiques, un par sujet, message en français.
 - CHANGELOG.md : https://keepachangelog.com/en/1.1.0/ (section
   Unreleased pendant le travail).
-- Versions : https://semver.org/. Annonce le niveau de bump choisi et
-  sa raison avant de l'appliquer. La version figure dans le script et
+- Versions : https://semver.org/. La version figure dans le script et
   dans le User-Agent : les deux changent ensemble.
+- La 4.0.0 est la version qui sera fusionnée dans main, étiquetée et
+  publiée sur GitHub. D'ici là, aucun bump : tout s'accumule sous
+  Unreleased sur dev.
+- Ensuite, un seul bump par fusion dans main, jamais par fournée de
+  travail sur dev. Annonce le niveau choisi et sa raison avant de
+  l'appliquer.
 
 ## Règles de modification
 - Aucun correctif à l'aveugle : reproduis ou démontre le défaut, ou
@@ -38,8 +43,9 @@ README.md, TESTS.md, CHANGELOG.md.
   nécessaire est listée à la fin de la livraison.
 - Modification d'un fichier existant : changement ciblé, pas de
   réécriture complète non demandée.
-- Chaque ajout de comportement s'accompagne d'un test dans TESTS.md
-  et d'une mise à jour de README.md.
+- Chaque ajout de comportement s'accompagne d'un test dans test-app.sh
+  et d'une mise à jour de README.md. TESTS.md ne décrit que les
+  familles de tests : il ne change que si une famille apparaît.
 
 ## Vérifications avant livraison
 Lance ce qui est disponible : python3 -m py_compile, flake8, ruff check,
