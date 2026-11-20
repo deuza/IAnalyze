@@ -54,6 +54,7 @@ l'environnement virtuel d'IAnalyze, ~/.local/share/IAnalyze/venv.
 from __future__ import annotations
 
 import argparse
+import decimal
 import io
 import json
 import logging
@@ -93,7 +94,12 @@ VARIANTE_MAX = 5
 COMMENTES_MIN, COMMENTES_MAX = 15, 25
 
 #: Une évaluation écrite dans un commentaire : "+0.35", "-1,20", "#-3".
-RE_EVALUATION = re.compile(r"(?<![\w.,])([+-]\d+[.,]\d{1,2}|#-?\d+)(?![\d])")
+#: Sont reconnus aussi le signe suivi d'une espace, "+ 0.35", le signe
+#: moins typographique, et une troisième décimale. Un nombre sans signe
+#: n'est pas pris pour une évaluation : ce serait confondre "7.5 minutes"
+#: avec un score.
+RE_EVALUATION = re.compile(
+    r"(?<![\w.,])([+\-\u2212\u2013][ \u00a0]?\d+[.,]\d{1,3}|#-?\d+)(?![\d])")
 
 #: Une variante écrite dans un commentaire : "(12... Nd4 13. Qd2 Nxe2)". Ce
 #: n'est alors que du texte, que SCID ne permet pas de rejouer.
@@ -516,17 +522,23 @@ def controler_chiffres(b: Bilan, textes: list[tuple[str, str]],
             score = coup.get("score") or ""
             connues.add(score)
             # Un LLM arrondit volontiers à une décimale : "+0.35" cité
-            # "+0.4" ou "+0.3" reste fidèle au dossier.
-            m = re.fullmatch(r"([+-])(\d+)\.(\d\d)", score)
+            # "+0.4" ou "+0.3" reste fidèle au dossier. Le calcul se fait
+            # en décimal : en flottant, round(0.35, 1) rend 0.3.
+            m = re.fullmatch(r"([+-])(\d+\.\d\d)", score)
             if m:
-                valeur = float(m.group(2) + "." + m.group(3))
-                for arrondi in (round(valeur, 1), int(valeur * 10) / 10):
-                    connues.add("%s%.1f" % (m.group(1), arrondi))
+                valeur = decimal.Decimal(m.group(2))
+                for mode in (decimal.ROUND_HALF_UP, decimal.ROUND_DOWN):
+                    connues.add("%s%s" % (m.group(1), valeur.quantize(
+                        decimal.Decimal("0.1"), rounding=mode)))
     citees, inconnues = 0, []
     for lieu, texte in textes:
         for brut in RE_EVALUATION.findall(texte):
             citees += 1
-            if brut.replace(",", ".") not in connues:
+            # Même écriture que le dossier avant de comparer : signe
+            # ASCII collé au nombre, point décimal.
+            lu = re.sub(r"[ \u00a0]", "", brut.replace(",", "."))
+            lu = lu.replace("\u2212", "-").replace("\u2013", "-")
+            if lu not in connues:
                 inconnues.append("%s : %s" % (lieu, brut))
     b.noter("INFO", "%d évaluation(s) citée(s)" % citees)
     b.controle(not inconnues, "toutes se retrouvent dans les données du "

@@ -68,6 +68,11 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- `verifier-analyse.py` refusait un arrondi courant : "+0.35" cité
+  "+0.4" était compté comme un chiffre inventé, à l'inverse de ce que
+  dit le README. À l'opposé, un chiffre inventé écrit avec une espace
+  après le signe, avec le signe moins typographique ou avec trois
+  décimales n'était pas relevé.
 - `verifier-analyse.py` déclarait conformes trois défauts qu'il dit
   contrôler. Une ligne vide dans le corps n'était relevée que si elle
   raccourcissait la ligne principale : placée avant une variante, elle

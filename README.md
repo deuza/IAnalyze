@@ -1016,9 +1016,10 @@ Code de retour : 0 sans `ECHEC`, 1 avec au moins un `ECHEC`, 2 si un fichier ne 
 
 Il ne juge pas la qualité du commentaire. Une explication fausse mais bien formée passe : un LLM peut placer une dame sur la mauvaise case dans une phrase sans qu'aucun contrôle ne le voie. Cette lecture reste la vôtre.
 
-Deux limites à connaître :
+Trois limites à connaître :
 
-- une évaluation arrondie à une décimale est acceptée : "+0.35" cité "+0.4" ne compte pas comme inventé
+- une évaluation arrondie à une décimale est acceptée : "+0.35" cité "+0.4" ou "+0.3" ne compte pas comme inventé
+- un nombre écrit sans signe, "7.77", n'est pas pris pour une évaluation : le script le confondrait avec une durée ou un classement. Un chiffre inventé écrit ainsi passe donc
 - le script repère un chiffre qui n'existe nulle part, pas un vrai chiffre attribué au mauvais coup
 
 ## 11. Jeton

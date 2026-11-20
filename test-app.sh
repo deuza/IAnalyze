@@ -1750,6 +1750,43 @@ FIN
         egal "T73 aucun PGN rendu, code de retour" 1 "$?"
         verifier "T73 aucun PGN rendu, dit dans le bilan" \
             contient bilan "aucun PGN rendu"
+        # Évaluations citées : le contrôle est appelé seul, sur un dossier
+        # d'une seule évaluation, +0.35, dont l'arrondi se trompe en
+        # flottant. Chaque ligne donne le texte cité et le nombre
+        # d'échecs attendu.
+        VERIF="$VERIF" "$PYVENV" - > sortie-t73c 2> journal-t73c <<'EOF'
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location("va", os.environ["VERIF"])
+va = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(va)
+dossier = [{"joue": {"score": "+0.35"}, "meilleurs": [{"score": "-1.25"}]}]
+for cite in ("+0.35 et -1.25", "+0.4 et +0.3", "-1.3 et -1.2", "+0,35",
+             "+ 0.35", "\u22121.25", "+0.5", "+ 7.77", "\u22127.77",
+             "+7.777", "7.77 minutes"):
+    b = va.Bilan()
+    va.controler_chiffres(b, [("essai", cite)], dossier, "essai")
+    print(cite.encode("ascii", "backslashreplace").decode(), b.echecs)
+EOF
+        cat > attendu-t73c <<'EOF'
++0.35 et -1.25 0
++0.4 et +0.3 0
+-1.3 et -1.2 0
++0,35 0
++ 0.35 0
+\u22121.25 0
++0.5 1
++ 7.77 1
+\u22127.77 1
++7.777 1
+7.77 minutes 0
+EOF
+        verifier "T73 évaluations : arrondis admis, chiffres inventés relevés" \
+            cmp -s attendu-t73c sortie-t73c
+        joindre sortie-t73c 12
+        joindre journal-t73c 5
+        rm -rf "$DEPOT/__pycache__"
         "$PYVENV" "$VERIF" /nulle/part.zip t-conforme.pgn > bilan 2>&1
         egal "T73 archive illisible, code de retour" 2 "$?"
     else
