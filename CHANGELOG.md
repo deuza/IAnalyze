@@ -8,6 +8,15 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Synthèse : sous le tableau de Stockfish, une ligne "Résultat et
+  évaluation finale se contredisent" quand le camp déclaré vainqueur
+  est moins bien d'au moins 300 cp après le dernier coup. La partie ne
+  s'est alors pas décidée sur l'échiquier, et le prompt demande à
+  l'analyste de le dire. Sur quatre LLM essayés, deux racontaient une
+  victoire méritée. Test T72.
+
 ### Changed
 
 - Prompt : cinq consignes ajoutées après des essais sur quatre LLM,

@@ -2698,6 +2698,48 @@ def _cellule(valeur, gabarit="%.1f") -> str:
     return "-" if valeur is None else gabarit % valeur
 
 
+def resultat_contredit(partie: chess.pgn.Game,
+                       resultats: list[dict]) -> str | None:
+    """
+    Phrase à écrire quand le résultat de la partie contredit l'évaluation
+    du moteur après le dernier coup, ou None.
+
+    Une partie notée 1-0 alors que les Noirs sont nettement mieux ne
+    s'est pas décidée sur l'échiquier : abandon, temps écoulé, ou autre
+    cause que le PGN ne dit pas. Sans cette phrase, un analyste pressé
+    raconte une victoire méritée : sur quatre LLM essayés, deux l'ont
+    fait. Le seuil est celui de la gaffe, pour ne signaler que les cas
+    nets, et rien n'est dit si le moteur n'a pas évalué le dernier coup.
+    """
+    vainqueur = {"1-0": "Blancs", "0-1": "Noirs"}.get(
+        partie.headers.get("Result", ""))
+    if vainqueur is None or not resultats:
+        return None
+    dernier = resultats[-1]
+    valeur = dernier["joue"].get("valeur_trait")
+    if valeur is None or dernier["demicoup"] != partie.end().ply():
+        return None
+    # valeur_trait se lit du côté de celui qui vient de jouer.
+    pour_blancs = valeur if dernier["trait"] == "Blancs" else -valeur
+    pour_vainqueur = pour_blancs if vainqueur == "Blancs" else -pour_blancs
+    if pour_vainqueur > -SEUIL_GAFFE:
+        return None
+    perdant = "Noirs" if vainqueur == "Blancs" else "Blancs"
+    phrase = (
+        "**Résultat et évaluation finale se contredisent.** La partie est "
+        "notée `%s`, victoire des %s, alors que Stockfish donne %s après "
+        "le dernier coup, %d%s %s, soit un net avantage aux %s. Le "
+        "résultat ne vient donc pas de la position sur l'échiquier : "
+        "abandon, temps écoulé, ou autre cause que le PGN ne dit pas."
+        % (partie.headers["Result"], vainqueur, dernier["joue"]["score"],
+           dernier["numero"], "." if dernier["trait"] == "Blancs" else "...",
+           dernier["joue"]["san"], perdant))
+    fin = nettoyer_valeur(partie.headers.get("Termination", ""))
+    if fin and fin != "?":
+        phrase += " La balise Termination vaut `%s`." % fin
+    return phrase
+
+
 def _ecart(ecart: float | None) -> str:
     """
     Cellule "Écart cp" du tableau Stockfish.
@@ -3025,6 +3067,13 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
              r.get("nature") or "-",
              colonnes[0], colonnes[1], colonnes[2]))
     a("")
+
+    # Résultat contraire à l'évaluation finale : dit ici, sous le tableau,
+    # pour que l'analyste ne raconte pas une victoire méritée.
+    contradiction = resultat_contredit(partie, stockfish["resultats"])
+    if contradiction:
+        a(contradiction)
+        a("")
 
     # Les variantes principales, rejouées depuis chaque position, pour
     # que l'analyste dispose de lignes concrètes calculées par le

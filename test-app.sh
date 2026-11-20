@@ -1249,6 +1249,31 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
     joindre lignes
     joindre journal
 
+    titre "T72 : résultat contraire à l'évaluation finale"
+    # Les Blancs donnent leur dame et la partie est pourtant notée 1-0 :
+    # la synthèse doit le dire. Notée 0-1, la même partie est cohérente.
+    printf '[Result "1-0"]\n[Termination "Normal"]\n\n' > t-contre.pgn
+    printf '1. e4 e5 2. Qh5 Nc6 3. Qxf7+ Kxf7 1-0\n' >> t-contre.pgn
+    lancer t-contre.pgn $MOTEUR $RAPIDE
+    egal "T72 code de retour" 0 "$RC"
+    extraire '*/synthese.md'
+    egal "T72 contradiction signalée" 1 \
+        "$(grep -c 'Résultat et évaluation finale se contredisent' extrait)"
+    verifier "T72 vainqueur déclaré et camp réellement mieux" \
+        contient extrait "victoire des Blancs, alors que Stockfish donne"
+    verifier "T72 dernier coup et balise Termination cités" \
+        contient extrait "3... Kxf7, soit un net avantage aux Noirs"
+    verifier "T72 balise Termination citée" \
+        contient extrait 'La balise Termination vaut `Normal`.'
+    PR="${ARCH%.zip}.prompt.txt"
+    egal "T72 prompt : consigne de le dire au joueur" 1 \
+        "$(grep -c 'le résultat contredit' "$PR")"
+    sed 's/1-0/0-1/g' t-contre.pgn > t-coherent.pgn
+    lancer t-coherent.pgn $MOTEUR $RAPIDE
+    extraire '*/synthese.md'
+    egal "T72 résultat cohérent, rien n'est signalé" 0 \
+        "$(grep -c 'se contredisent' extrait)"
+
     titre "T52 : coup nul"
     printf '1. e4 e5 2. -- Nc6 3. Nf3 *\n' > t-nul-coup.pgn
     lancer t-nul-coup.pgn $MOTEUR $RAPIDE

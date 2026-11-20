@@ -733,9 +733,10 @@ Sections de `synthese.md` :
 - nature : imprécision à partir de 50 cp d'écart, erreur à partir de 100, gaffe à partir de 300
 - les trois meilleurs coups
 
-Deux cas particuliers :
+Trois cas particuliers :
 
 - l'écart porte "mat" quand le coup joué manque un mat ou en concède un : il ne se chiffre pas en centipions
+- sous le tableau, une ligne "Résultat et évaluation finale se contredisent" apparaît quand le camp déclaré vainqueur est nettement moins bien après le dernier coup, d'au moins 300 cp : la partie ne s'est pas décidée sur l'échiquier, et l'analyste doit le dire au lieu de raconter une victoire méritée
 - un coup nul, "--" dans le PGN, n'est pas évalué : sa ligne garde les trois meilleurs coups de la position, ses autres colonnes portent "-"
 
 Codes de retour :
