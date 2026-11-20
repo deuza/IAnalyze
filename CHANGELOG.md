@@ -68,6 +68,10 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- Partie partant d'une balise FEN : la ligne "Résultat et évaluation
+  finale se contredisent" n'était jamais écrite, ni dans la synthèse ni
+  dans le prompt, dès que la FEN ne valait pas "coup 1, trait aux
+  Blancs".
 - Une partie notée en français, en figurines ou en minuscules était
   analysée de travers sans aucun message : python-chess écarte la lettre
   qu'il ne connaît pas, et "Cf3" devenait "f3", un coup de pion. Le

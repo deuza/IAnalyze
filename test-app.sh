@@ -1424,6 +1424,21 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
     egal "T72 résultat cohérent, rien n'est signalé" 0 \
         "$(grep -c 'se contredisent' extrait)"
 
+    # La même contradiction dans une partie qui part d'une balise FEN,
+    # trait aux Noirs au trentième coup, et gagnée cette fois par les
+    # Noirs sur le papier : le numéro de coup de la FEN ne doit pas faire
+    # taire l'alerte.
+    printf '[Result "0-1"]\n[SetUp "1"]\n' > t-contre-fen.pgn
+    printf '[FEN "6k1/5ppp/8/8/8/8/5PPP/3Q2K1 b - - 0 30"]\n\n' >> t-contre-fen.pgn
+    printf '30... h6 31. Qd8+ Kh7 32. Qd3+ g6 0-1\n' >> t-contre-fen.pgn
+    lancer t-contre-fen.pgn $MOTEUR $RAPIDE
+    egal "T72 depuis une FEN, code de retour" 0 "$RC"
+    extraire '*/synthese.md'
+    egal "T72 depuis une FEN, contradiction signalée" 1 \
+        "$(grep -c 'Résultat et évaluation finale se contredisent' extrait)"
+    verifier "T72 depuis une FEN, dernier coup numéroté d'après la FEN" \
+        contient extrait "32... g6, soit un net avantage aux Blancs"
+
     titre "T52 : coup nul"
     printf '1. e4 e5 2. -- Nc6 3. Nf3 *\n' > t-nul-coup.pgn
     lancer t-nul-coup.pgn $MOTEUR $RAPIDE

@@ -2837,7 +2837,12 @@ def resultat_contredit(partie: chess.pgn.Game,
         return None
     dernier = resultats[-1]
     valeur = dernier["joue"].get("valeur_trait")
-    if valeur is None or dernier["demicoup"] != partie.end().ply():
+    # Le rang du demi-coup se compare au nombre de coups joués, et non à
+    # partie.end().ply() : ce dernier part du numéro de coup de la balise
+    # FEN, et vaut 64 pour une partie de cinq demi-coups commencée au
+    # trentième coup.
+    joues = sum(1 for _ in partie.mainline_moves())
+    if valeur is None or dernier["demicoup"] != joues:
         return None
     # valeur_trait se lit du côté de celui qui vient de jouer.
     pour_blancs = valeur if dernier["trait"] == "Blancs" else -valeur
