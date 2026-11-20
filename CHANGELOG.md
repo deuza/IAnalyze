@@ -10,6 +10,10 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Added
 
+- `verifier-analyse.py --prompt-seul` : contrôle d'un PGN rendu d'après
+  le prompt court. Ce prompt ne demande ni résumé, ni lignes de 79
+  caractères, ni NAG : sans l'option, un PGN qui le suivait à la lettre
+  recevait deux échecs.
 - Option `--prompt-seul` : un prompt court, à coller seul dans la
   conversation, sans pièce jointe. Il tient en quelques consignes, la
   partie et les évaluations de Stockfish, une ligne par demi-coup, le

@@ -1696,6 +1696,22 @@ noirs = '[Black "%s"]\n' % source.headers["Black"]
 open("t-balises.pgn", "w", encoding="utf-8").write(
     conforme.replace(blancs + noirs, noirs + blancs, 1))
 open("t-fautif.pgn", "w", encoding="utf-8").write(construire(True))
+# Ce que rend un LLM d'après le prompt court de --prompt-seul : les
+# balises et les coups recopiés, un commentaire sur chaque erreur ou
+# gaffe, sur une seule ligne, sans résumé, sans NAG, sans balise
+# ajoutée.
+court = chess.pgn.Game()
+for b in ("Event", "Site", "Date", "Round", "White", "Black", "Result"):
+    court.headers[b] = source.headers[b]
+noeud = court
+for e, coup in zip(evals, source.mainline_moves()):
+    noeud = noeud.add_main_variation(coup)
+    if e["nature"] in ("erreur", "gaffe"):
+        noeud.comment = ("Ici tu devais jouer %s, bien meilleur d'après "
+                         "le tableau : prends le temps de chercher ce coup "
+                         "avant de pousser un pion." % e["meilleurs"][0]["san"])
+open("t-court.pgn", "w", encoding="utf-8").write(
+    court.accept(chess.pgn.StringExporter(columns=None)) + "\n")
 open("t-conversation.txt", "w", encoding="utf-8").write(
     "Position 1 : %s\n"
     "Position 2 : 8/8/8/8/8/8/8/8 w - - 0 1\n"
@@ -1745,6 +1761,18 @@ t-vide-fin.pgn|ligne vide dans le corps de la partie
 t-fermante.pgn|aucune accolade dans un commentaire
 t-balises.pgn|les sept balises obligatoires, dans l'ordre
 FIN
+        # Un PGN conforme au prompt court n'a ni résumé ni lignes de 79
+        # caractères : avec --prompt-seul il passe, sans l'option il
+        # échoue sur ces deux points, qui viennent du prompt complet.
+        "$PYVENV" "$VERIF" "$ARCH" t-court.pgn --prompt-seul > bilan 2>&1
+        egal "T73 --prompt-seul, code de retour" 0 "$?"
+        egal "T73 --prompt-seul, aucun échec" 0 "$(grep -c '^  ECHEC' bilan)"
+        verifier "T73 --prompt-seul, dit en tête du bilan" \
+            contient bilan "prompt  : court"
+        "$PYVENV" "$VERIF" "$ARCH" t-court.pgn > bilan 2>&1
+        egal "T73 le même sans l'option, code de retour" 1 "$?"
+        egal "T73 le même sans l'option, deux échecs" 2 \
+            "$(grep -c '^  ECHEC' bilan)"
         "$PYVENV" "$VERIF" "$ARCH" - --synthese t-conversation.txt \
             > bilan 2>&1
         egal "T73 aucun PGN rendu, code de retour" 1 "$?"

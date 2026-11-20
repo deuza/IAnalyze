@@ -7,6 +7,7 @@ reçue, et sort le même bilan pour chaque LLM essayé. Il ne juge pas la
 qualité du commentaire : il vérifie ce qui se vérifie à la machine.
 
     ./verifier-analyse.py ARCHIVE PGN [--synthese FICHIER] [--nom NOM]
+                          [--prompt-seul]
 
     ARCHIVE     le zip produit par ianalyze.py, ou son dossier
                 décompressé
@@ -17,6 +18,11 @@ qualité du commentaire : il vérifie ce qui se vérifie à la machine.
                 conversation dans un fichier texte. Les FEN et les
                 évaluations qu'elle cite sont alors contrôlées aussi
     --nom       facultatif : nom du modèle essayé, repris en tête du bilan
+    --prompt-seul
+                le PGN répond au prompt court de ianalyze.py --prompt-seul.
+                Ce prompt demande moins : les contrôles qu'il ne fonde pas
+                sont sautés (lignes de 79 caractères, résumé avant le coup
+                1, NAG, pour cent, balises Annotator et PlyCount)
 
 Ce qui est contrôlé :
 
@@ -404,14 +410,22 @@ def balises_du_texte(texte: str) -> list[str]:
 
 
 def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
-                     origine: chess.pgn.Game, demi_coups: int) -> None:
-    """Contraintes de format impératives du prompt."""
+                     origine: chess.pgn.Game, demi_coups: int,
+                     court: bool = False) -> None:
+    """
+    Contraintes de format impératives du prompt.
+
+    `court` vaut vrai pour un PGN rendu d'après le prompt court de
+    --prompt-seul : seuls restent les contrôles que ce prompt fonde, les
+    accolades, les balises recopiées et le marqueur de fin.
+    """
     b.titre("3. Format")
     lignes = texte.split("\n")
-    longues = ["ligne %d : %d caractères" % (n + 1, len(x))
-               for n, x in enumerate(lignes) if len(x) > LONGUEUR_MAX]
-    b.controle(not longues, "aucune ligne de plus de %d caractères"
-               % LONGUEUR_MAX, longues)
+    if not court:
+        longues = ["ligne %d : %d caractères" % (n + 1, len(x))
+                   for n, x in enumerate(lignes) if len(x) > LONGUEUR_MAX]
+        b.controle(not longues, "aucune ligne de plus de %d caractères"
+                   % LONGUEUR_MAX, longues)
 
     notes = commentaires(partie)
     # Une accolade ouvrante dans un commentaire reste dans son texte ; une
@@ -420,24 +434,25 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
     accolades += accolades_orphelines(texte)
     b.controle(not accolades, "aucune accolade dans un commentaire",
                accolades)
-    pourcents = [lieu for lieu, t in notes if "%" in t]
-    b.controle(not pourcents, "aucun caractère % dans un commentaire",
-               pourcents)
-    cadratins = [lieu for lieu, t in notes if "\u2014" in t]
-    b.controle(not cadratins, "aucun tiret cadratin", cadratins)
-    virgules = [lieu for lieu, t in notes if ";" in t]
-    b.controle(not virgules, "aucun point-virgule dans un commentaire",
-               virgules, grave=False)
-
-    # Notation suffixe (Qxa8?) : cherchée hors des commentaires, où un
-    # point d'interrogation est simplement de la ponctuation.
     corps = "\n".join(x for x in lignes if not x.startswith("["))
     hors_commentaires = re.sub(r"\{[^}]*\}", " ", corps)
-    suffixes = sorted(set(re.findall(
-        r"\b(?:[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?|O-O(?:-O)?)"
-        r"[+#]?[!?]+", hors_commentaires)))
-    b.controle(not suffixes, "pas de notation suffixe, les NAG seuls",
-               suffixes)
+    if not court:
+        pourcents = [lieu for lieu, t in notes if "%" in t]
+        b.controle(not pourcents, "aucun caractère % dans un commentaire",
+                   pourcents)
+        cadratins = [lieu for lieu, t in notes if "\u2014" in t]
+        b.controle(not cadratins, "aucun tiret cadratin", cadratins)
+        virgules = [lieu for lieu, t in notes if ";" in t]
+        b.controle(not virgules, "aucun point-virgule dans un commentaire",
+                   virgules, grave=False)
+
+        # Notation suffixe (Qxa8?) : cherchée hors des commentaires, où
+        # un point d'interrogation est simplement de la ponctuation.
+        suffixes = sorted(set(re.findall(
+            r"\b(?:[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?"
+            r"|O-O(?:-O)?)[+#]?[!?]+", hors_commentaires)))
+        b.controle(not suffixes, "pas de notation suffixe, les NAG seuls",
+                   suffixes)
 
     # Balises : les sept obligatoires d'abord, les autres par ordre
     # alphabétique, et leurs valeurs reprises de la partie d'origine.
@@ -448,9 +463,10 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
                ["ordre rendu : %s" % ", ".join(noms[:7])]
                + ["absente : %s" % n for n in absentes])
     autres = noms[7:]
-    b.controle(autres == sorted(autres),
-               "les autres balises par ordre alphabétique",
-               ["ordre rendu : %s" % ", ".join(autres)], grave=False)
+    if not court:
+        b.controle(autres == sorted(autres),
+                   "les autres balises par ordre alphabétique",
+                   ["ordre rendu : %s" % ", ".join(autres)], grave=False)
     differentes = [
         "%s : \"%s\" au lieu de \"%s\""
         % (n, partie.headers.get(n), origine.headers.get(n))
@@ -458,13 +474,14 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
         if partie.headers.get(n) != origine.headers.get(n)]
     b.controle(not differentes, "valeurs des sept balises reprises de la "
                "partie d'origine", differentes)
-    b.controle(bool(partie.headers.get("Annotator", "").strip("? ")),
-               "balise Annotator renseignée : \"%s\""
-               % partie.headers.get("Annotator", ""), grave=False)
-    compte = partie.headers.get("PlyCount", "")
-    b.controle(compte == str(demi_coups),
-               "balise PlyCount : \"%s\", attendu \"%d\""
-               % (compte, demi_coups), grave=False)
+    if not court:
+        b.controle(bool(partie.headers.get("Annotator", "").strip("? ")),
+                   "balise Annotator renseignée : \"%s\""
+                   % partie.headers.get("Annotator", ""), grave=False)
+        compte = partie.headers.get("PlyCount", "")
+        b.controle(compte == str(demi_coups),
+                   "balise PlyCount : \"%s\", attendu \"%d\""
+                   % (compte, demi_coups), grave=False)
 
     # Marqueur de fin : le dernier mot du fichier, hors commentaires.
     mots = hors_commentaires.split()
@@ -475,13 +492,20 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
 
 
 def controler_couverture(b: Bilan, partie: chess.pgn.Game,
-                         evaluations: list[dict]) -> None:
-    """Chaque erreur et chaque gaffe doit être commentée."""
+                         evaluations: list[dict],
+                         court: bool = False) -> None:
+    """
+    Chaque erreur et chaque gaffe doit être commentée.
+
+    Le prompt court ne demande ni résumé avant le premier coup ni NAG :
+    avec `court`, ces deux points ne sont pas contrôlés.
+    """
     b.titre("4. Coups commentés")
-    resume = partie.comment.strip()
-    b.controle(bool(resume), "résumé de la partie avant le coup 1 "
-               "(%d ligne(s), 6 à 10 demandées)"
-               % (resume.count("\n") + 1 if resume else 0))
+    if not court:
+        resume = partie.comment.strip()
+        b.controle(bool(resume), "résumé de la partie avant le coup 1 "
+                   "(%d ligne(s), 6 à 10 demandées)"
+                   % (resume.count("\n") + 1 if resume else 0))
 
     noeuds = list(partie.mainline())
     commentes = [n for n in noeuds if n.comment.strip()]
@@ -509,7 +533,7 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
     b.controle(not oublies, "les %d erreur(s) et gaffe(s) de Stockfish sont "
                "toutes commentées (%d oubliée(s))" % (fautes, len(oublies)),
                oublies)
-    if fautes > len(oublies):
+    if fautes > len(oublies) and not court:
         b.controle(not sans_nag, "chaque erreur ou gaffe commentée porte un "
                    "NAG", sans_nag, grave=False)
 
@@ -781,6 +805,10 @@ def main(argv: list[str]) -> int:
                    help="synthèse finale du LLM, copiée dans un fichier "
                         "texte")
     p.add_argument("--nom", default="", help="nom du modèle essayé")
+    p.add_argument("--prompt-seul", action="store_true",
+                   help="le PGN répond au prompt court de ianalyze.py "
+                        "--prompt-seul : les contrôles que ce prompt ne "
+                        "fonde pas sont sautés")
     options = p.parse_args(argv)
 
     try:
@@ -816,6 +844,9 @@ def main(argv: list[str]) -> int:
         b.lignes.append("  modèle  : %s" % options.nom)
     b.lignes.append("  archive : %s" % pathlib.Path(options.archive).name)
     b.lignes.append("  PGN     : %s" % pathlib.Path(options.pgn).name)
+    if options.prompt_seul:
+        b.lignes.append("  prompt  : court (--prompt-seul), contrôles "
+                        "réduits à ce qu'il demande")
 
     if brut is None:
         # Le LLM n'a rendu aucun fichier, ni aucun PGN dans la conversation.
@@ -833,9 +864,9 @@ def main(argv: list[str]) -> int:
     texte, partie = controler_lecture(b, brut)
     identique = controler_partie(b, partie, origine)
     controler_format(b, texte, partie, origine,
-                     len(ligne_principale(origine)))
+                     len(ligne_principale(origine)), options.prompt_seul)
     if identique:
-        controler_couverture(b, partie, evaluations)
+        controler_couverture(b, partie, evaluations, options.prompt_seul)
     else:
         # Sans la même ligne principale, les demi-coups ne se
         # correspondent plus : ces contrôles n'auraient aucun sens.

@@ -931,7 +931,7 @@ Ce qu'il faut savoir de ce mode :
 - l'archive est écrite quand même, gardez-la : `verifier-analyse.py` en a besoin
 - **c'est un repli, et il n'a pas encore été essayé** : les essais ci-dessous lui sont antérieurs
 
-La qualité de l'analyse dépend alors du LLM que vous choisissez. Passez toujours son PGN à `verifier-analyse.py`, décrit plus bas.
+La qualité de l'analyse dépend alors du LLM que vous choisissez. Passez toujours son PGN à `verifier-analyse.py --prompt-seul`, décrit plus bas.
 
 Deux conseils tirés des essais :
 
@@ -982,7 +982,15 @@ Si le LLM n'a rendu aucun PGN, mettez un tiret à la place du fichier :
 ./verifier-analyse.py analyse-ma-partie-20261119-164140.zip - --synthese conversation.txt
 ```
 
-Le script accepte le zip ou son dossier décompressé, et se relance tout seul dans l'environnement virtuel d'IAnalyze.
+Pour un PGN obtenu avec le prompt court de `--prompt-seul`, ajoutez la même option :
+
+```bash
+./verifier-analyse.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn --prompt-seul
+```
+
+Le prompt court demande moins que le prompt complet. Avec cette option, les contrôles qu'il ne fonde pas sont sautés : lignes de 79 caractères, résumé avant le premier coup, NAG, `%`, tiret cadratin, notation suffixe, balises Annotator et PlyCount. Restent la lecture, la ligne principale, les accolades, les balises recopiées, le marqueur de fin, les erreurs et gaffes commentées, les évaluations citées et les variantes.
+
+Le script accepte le zip ou son dossier décompressé, et se relance tout seul dans l'environnement virtuel d'IAnalyze, à son emplacement par défaut.
 
 ### Ce qui est contrôlé
 
