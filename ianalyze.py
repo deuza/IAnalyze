@@ -1963,6 +1963,13 @@ def rendre_modele(texte: str, conditions: dict[str, bool],
                     raise erreur(numero, "valeur inconnue {{%s}}, valeurs "
                                  "admises : %s"
                                  % (nom, ", ".join(PROMPT_VALEURS)))
+            # Des accolades doubles qui restent une fois les repères
+            # reconnus retirés : un repère mal écrit, {{ NIVEAU }} ou
+            # {{CAMP1}}, qui partirait tel quel dans le prompt.
+            reste = RE_VALEUR_MODELE.sub("", ligne)
+            if "{{" in reste or "}}" in reste:
+                raise erreur(numero, "repère mal formé, forme attendue : "
+                             "{{NOM}}, en majuscules et sans espace")
             if all(vrai for _, vrai, _ in pile):
                 sortie.append(RE_VALEUR_MODELE.sub(
                     lambda m: valeurs[m.group(1)], ligne).rstrip())
@@ -2002,6 +2009,12 @@ def rendre_modele(texte: str, conditions: dict[str, bool],
     return "\n".join(resserre).strip("\n") + "\n"
 
 
+def lignes_de_texte(modele: str) -> list[str]:
+    """Lignes du modèle qui iront dans le prompt : ni vides, ni directives."""
+    return [ligne for ligne in modele.split("\n")
+            if ligne.strip() and not ligne.lstrip().startswith("#!")]
+
+
 def verifier_modele(texte: str, source: str) -> None:
     """
     Contrôle le modèle avant la collecte, pour échouer tôt : un repère
@@ -2010,6 +2023,11 @@ def verifier_modele(texte: str, source: str) -> None:
     """
     rendre_modele(texte, dict.fromkeys(PROMPT_CONDITIONS, False),
                   dict.fromkeys(PROMPT_VALEURS, ""), source)
+    # Un modèle vide, ou fait de seules directives, donnerait un prompt
+    # sans une ligne, annoncé comme écrit.
+    if not lignes_de_texte(texte):
+        raise SystemExit("Modèle de prompt %s : il ne contient aucune "
+                         "ligne de texte." % source)
 
 
 def decrire_niveau(niveau: int, partie: chess.pgn.Game,
@@ -4031,7 +4049,11 @@ def main(argv: list[str]) -> int:
             verifier_modele(modele_prompt, str(fichier_modele))
             # Un prompt à coller seul doit porter la partie : un modèle
             # personnel qui ne la place pas est refusé avant la collecte.
-            if options.prompt_seul and PROMPT_DONNEES not in modele_prompt:
+            # Le repère est cherché dans les lignes de texte : placé
+            # dans une note, il ne mettrait rien dans le prompt.
+            if options.prompt_seul and not any(
+                    PROMPT_DONNEES in ligne
+                    for ligne in lignes_de_texte(modele_prompt)):
                 raise SystemExit(
                     "--prompt-seul : le modèle %s ne contient pas %s, le "
                     "prompt ne porterait pas la partie. Partez de %s."
@@ -4312,10 +4334,19 @@ def main(argv: list[str]) -> int:
         }
         prompt = archive.with_name(dossier.name + PROMPT_SUFFIXE)
         try:
-            ecrire_texte(prompt, rendre_modele(
+            rendu = rendre_modele(
                 modele_prompt, conditions, valeurs,
-                str(chemin_modele(options.prompt, options.prompt_seul))))
-            if options.prompt_seul:
+                str(chemin_modele(options.prompt, options.prompt_seul)))
+            ecrire_texte(prompt, rendu)
+            if options.prompt_seul and valeurs["PARTIE_PGN"] not in rendu:
+                # Le repère existe dans le modèle, mais sous une condition
+                # fausse pour cette partie : le dire plutôt que d'annoncer
+                # un prompt complet.
+                journal("Attention : le prompt %s ne porte pas la partie, "
+                        "le modèle la place sous une condition qui ne "
+                        "s'applique pas ici. Il ne peut pas être collé "
+                        "seul." % prompt)
+            elif options.prompt_seul:
                 journal("Prompt d'analyse écrit : %s, à coller seul dans "
                         "la conversation : il porte la partie et les "
                         "évaluations, aucune pièce jointe n'est "

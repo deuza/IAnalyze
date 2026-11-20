@@ -1226,6 +1226,35 @@ egal "T66 --sans-prompt, code de retour" 0 $?
 egal "T66 --sans-prompt, aucun prompt écrit" 0 \
     "$(find . -maxdepth 1 -name 'analyse-t-pr-*.prompt.txt' | wc -l)"
 
+# Trois modèles que le script acceptait à tort : un repère mal écrit, qui
+# partait tel quel dans le prompt, un modèle sans une ligne de texte, et
+# un modèle de prompt seul dont la partie n'est citée que dans une note.
+printf 'Camp : {{ CAMP }}\n' > t-modele-espace.txt
+printf 'Camp : {{CAMP1}}\n' > t-modele-chiffre.txt
+printf '#! note rien\n\n' > t-modele-vide.txt
+printf '#! note {{PARTIE_PGN}}\nAnalysez.\n' > t-modele-note.txt
+for cas in "t-modele-espace.txt|repère mal formé" \
+           "t-modele-chiffre.txt|repère mal formé" \
+           "t-modele-vide.txt|aucune ligne de texte"; do
+    lancer t-pr.pgn $R --profondeur 1 --prompt "${cas%%|*}"
+    egal "T66 ${cas%%|*}, code de retour" 1 "$RC"
+    verifier "T66 ${cas%%|*}, message" contient journal "${cas##*|}"
+done
+lancer t-pr.pgn $R --profondeur 1 --prompt-seul --prompt t-modele-note.txt
+egal "T66 partie citée dans une note, code de retour" 1 "$RC"
+verifier "T66 partie citée dans une note, message" \
+    contient journal "ne contient pas {{PARTIE_PGN}}"
+# La partie placée sous une condition fausse : le prompt est écrit, mais
+# le journal dit qu'il ne peut pas être collé seul.
+printf '#! si BASE_MAITRES\n{{PARTIE_PGN}}\n#! fin\nAnalysez.\n' > t-modele-branche.txt
+lancer t-pr.pgn $R --profondeur 1 --prompt-seul --prompt t-modele-branche.txt
+egal "T66 partie sous une condition fausse, code de retour" 0 "$RC"
+verifier "T66 partie sous une condition fausse, dit au journal" \
+    contient journal "ne porte pas la partie"
+egal "T66 partie sous une condition fausse, pas d'annonce contraire" 0 \
+    "$(grep -c 'il porte la partie' journal)"
+rm -f analyse-t-pr-*
+
 titre "T67 : script copié sans son modèle"
 mkdir t-seul
 cp "$SCRIPT" t-seul/

@@ -872,7 +872,7 @@ Le prompt suit ce que la collecte a réellement fait. Sans explorateur, il ne de
 
 Sans terminal, le camp se déduit de vos pseudos sans poser de question.
 
-Un repère inconnu, un "si" jamais fermé ou une directive mal formée arrêtent le script avant la collecte :
+Un repère inconnu ou mal écrit, comme `{{ NIVEAU }}`, un "si" jamais fermé, une directive mal formée ou un modèle sans une ligne de texte arrêtent le script avant la collecte :
 
 ```text
 Modèle de prompt prompt-modele.txt, ligne 12 : condition inconnue MOTEUR, conditions admises : STOCKFISH, EXPLORATEUR, ...

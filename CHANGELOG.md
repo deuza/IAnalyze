@@ -80,6 +80,12 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- Modèle de prompt : un repère mal écrit, `{{ NIVEAU }}` ou
+  `{{CAMP1}}`, partait tel quel dans le prompt, et un modèle sans une
+  ligne de texte donnait un prompt vide annoncé comme écrit. Les deux
+  arrêtent maintenant le script avant la collecte. Avec `--prompt-seul`,
+  la partie citée dans une note ne suffit plus, et le journal prévient
+  quand le prompt rendu ne la porte pas.
 - Synthèse : entre deux mats de même sens, mater en deux coups au lieu
   d'un par exemple, la colonne "Écart cp" affichait 1, lu comme un
   centipion. Elle affiche 0. La légende dit ce que vaut un écart
