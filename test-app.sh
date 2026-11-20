@@ -1252,6 +1252,47 @@ egal "T04 nom relatif, code de retour" 1 "$RC"
 verifier "T04 nom relatif, pris pour un fichier et non pour un identifiant" \
     contient journal "Fichier PGN introuvable"
 
+titre "T75 : PGN que python-chess lirait de travers, refusés"
+
+# Chacun de ces fichiers est lu sans erreur par python-chess, qui saute ce
+# qu'il ne reconnaît pas : notation française lue comme des coups de pion,
+# partie tronquée à l'accolade jamais fermée. Le script doit les refuser
+# avant la lecture, et nommer ce qui l'arrête.
+printf '1. e4 e5 2. Cf3 Cc6 3. Fc4 Fc5 *\n' > t-francais.pgn
+printf '1. e4 e5 2. \342\231\230f3 *\n' > t-figurines.pgn
+printf '1. e4 e5 2. nf3 nc6 *\n' > t-minuscules.pgn
+printf '1. e4 e5 2. Nf3 { bon coup Nc6 3. Bb5 a6 1-0\n' > t-accolade.pgn
+printf '1. e4 e5 ( 1... c5 ( 1... d5\n' > t-parenthese.pgn
+printf '1. e4 e5 2. Ke3 ) $2 *\n' > t-orpheline.pgn
+printf '1. e4 e5 2. Nf3 *\n\nLes Blancs gagnent (voir b5) !\n' > t-queue.pgn
+while read -r fichier attendu; do
+    lancer "$fichier" $O < /dev/null
+    egal "T75 $fichier, code de retour" 1 "$RC"
+    verifier "T75 $fichier, refusé comme PGN corrompu" \
+        contient journal "PGN corrompu"
+    verifier "T75 $fichier, cause nommée" contient journal "$attendu"
+    egal "T75 $fichier, pas d'erreur inattendue" 0 \
+        "$(grep -c 'Erreur inattendue' journal)"
+done <<'FIN'
+t-francais.pgn "Cf3"
+t-figurines.pgn notation anglaise
+t-minuscules.pgn "nf3"
+t-accolade.pgn jamais fermé
+t-parenthese.pgn jamais fermée
+t-orpheline.pgn sans variante ouverte
+t-queue.pgn "Les"
+FIN
+joindre journal 3
+egal "T75 aucun dossier ni archive créés par ces refus" 0 \
+    "$(ls -d analyse-t-francais* analyse-t-accolade* analyse-t-queue* 2>/dev/null | wc -l)"
+# Ce qui doit continuer à passer : coups collés au numéro, signes
+# d'appréciation, NAG, roque écrit avec des zéros, commentaire de fin de
+# ligne.
+printf '1.e4 e5 2.Nf3! Nc6?! 3.Bc4 $1 Bc5 { ok } 4. c3 ; fin\n' > t-formes.pgn
+printf '4... Nf6 5. 0-0 0-0 *\n' >> t-formes.pgn
+lancer t-formes.pgn $O
+egal "T75 formes admises, code de retour" 0 "$RC"
+
 titre "T06, T07, T08 : dossier gardé, consignes, répertoire de sortie"
 
 rm -rf analyse-italienne-*

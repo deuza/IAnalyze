@@ -966,6 +966,94 @@ def telecharger_pgn(identifiant: str, delai: int) -> str:
                          % getattr(err, "reason", err)) from err
 
 
+#: Ce que le corps d'une partie peut contenir hors des commentaires : un
+#: résultat, un numéro de coup, un NAG, un coup en notation anglaise ou un
+#: signe d'appréciation. L'ordre compte : le résultat puis le roque écrit
+#: avec des zéros passent avant le numéro de coup, qui commence lui aussi
+#: par un chiffre.
+RE_JETON_PGN = re.compile(
+    r"(?:1-0|0-1|1/2-1/2|\*)(?![\w/-])"
+    r"|(?:O-O-O|O-O|0-0-0|0-0|--|Z0|0000|@@@@"
+    r"|[KQRBN]?[a-h]?[1-8]?[-x]?[a-h][1-8](?:=?[QRBNKqrbnk])?)"
+    r"[+#]?[!?]{0,2}(?![\w=])"
+    r"|\d+\.*"
+    r"|\$\d+"
+    r"|[!?]{1,2}")
+
+
+def controler_lexique(texte_pgn: str) -> None:
+    """
+    Refuse un PGN dont le corps contient autre chose que des coups.
+
+    python-chess saute sans rien dire les caractères qu'il ne reconnaît
+    pas. Un coup écrit en notation française, "Cf3", est alors lu "f3",
+    un coup de pion : la partie analysée n'est plus celle qui a été
+    jouée, et rien ne le signale. De même, une accolade jamais fermée
+    avale toute la suite de la partie. Ce contrôle passe donc avant la
+    lecture : il ne joue aucun coup, il vérifie seulement que chaque mot
+    du corps a la forme d'un mot de PGN.
+
+    Sont admis hors des commentaires : les balises en début de ligne, les
+    numéros de coup, les coups en notation anglaise, les NAG, les signes
+    d'appréciation, les parenthèses de variante et le résultat.
+    """
+    i, n = 0, len(texte_pgn)
+    profondeur = 0
+    ligne = 1
+    debut_de_ligne = True
+    while i < n:
+        c = texte_pgn[i]
+        if c == "\n":
+            ligne += 1
+            debut_de_ligne = True
+            i += 1
+        elif c.isspace():
+            i += 1
+        elif c == "{":
+            fin = texte_pgn.find("}", i)
+            if fin < 0:
+                raise SystemExit(
+                    "PGN corrompu : le commentaire ouvert par une accolade "
+                    "à la ligne %d n'est jamais fermé." % ligne)
+            ligne += texte_pgn.count("\n", i, fin)
+            i = fin + 1
+            debut_de_ligne = False
+        elif c == ";" or (debut_de_ligne and c in "[%"):
+            # Commentaire de fin de ligne, balise, ou ligne d'échappement :
+            # tout va jusqu'au saut de ligne.
+            fin = texte_pgn.find("\n", i)
+            i = n if fin < 0 else fin
+        elif c == "(":
+            profondeur += 1
+            i += 1
+            debut_de_ligne = False
+        elif c == ")":
+            if profondeur == 0:
+                raise SystemExit(
+                    "PGN corrompu : parenthèse fermante sans variante "
+                    "ouverte, ligne %d." % ligne)
+            profondeur -= 1
+            i += 1
+            debut_de_ligne = False
+        else:
+            m = RE_JETON_PGN.match(texte_pgn, i)
+            if m is None:
+                mot = re.match(r"\S+", texte_pgn[i:i + 40])
+                raise SystemExit(
+                    "PGN corrompu : \"%s\", ligne %d, n'est ni un coup en "
+                    "notation anglaise (K, Q, R, B, N) ni un autre élément "
+                    "de PGN. Une partie notée en français ou en figurines "
+                    "doit être convertie, un texte libre placé entre "
+                    "accolades."
+                    % (nettoyer_valeur(mot.group(0) if mot else c)[:20],
+                       ligne))
+            i = m.end()
+            debut_de_ligne = False
+    if profondeur:
+        raise SystemExit("PGN corrompu : %d variante(s) ouverte(s) par une "
+                         "parenthèse et jamais fermée(s)." % profondeur)
+
+
 def charger_partie(texte_pgn: str) -> chess.pgn.Game:
     """
     Analyse le PGN et renvoie la première partie qu'il contient.
@@ -974,8 +1062,15 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
     s'arrête sans lever d'exception et consigne l'erreur dans la partie. On
     refuse un tel PGN plutôt que d'analyser une partie tronquée en silence.
     """
+    controler_lexique(texte_pgn)
     flux = io.StringIO(texte_pgn)
-    partie = chess.pgn.read_game(flux)
+    try:
+        partie = chess.pgn.read_game(flux)
+    except (IndexError, ValueError) as err:
+        # Filet : le contrôle lexical écarte les cas connus, mais aucune
+        # entrée ne doit finir en erreur inattendue.
+        raise SystemExit("PGN corrompu : python-chess n'a pas pu le lire "
+                         "(%s)." % type(err).__name__) from err
     if partie is None:
         raise SystemExit("PGN illisible ou vide.")
     if partie.errors:

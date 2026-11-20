@@ -65,6 +65,17 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- Une partie notée en français, en figurines ou en minuscules était
+  analysée de travers sans aucun message : python-chess écarte la lettre
+  qu'il ne connaît pas, et "Cf3" devenait "f3", un coup de pion. Le
+  corps de la partie est maintenant contrôlé avant la lecture, et le
+  premier mot qui n'est pas un élément de PGN arrête le script.
+- Un commentaire dont l'accolade n'est jamais fermée tronquait la
+  partie en silence. Il est refusé, comme une parenthèse de variante
+  jamais fermée ou fermée en trop.
+- Du texte libre après la partie, ou un PGN abîmé d'une certaine forme,
+  donnait "Erreur inattendue (IndexError)". Le message est maintenant
+  "PGN corrompu", avec la cause.
 - Prompt : la coupe des commentaires à 76 colonnes donnait des lignes
   de 80 caractères, une de trop, quand un commentaire tenait sur une
   seule ligne pleine : l'export de python-chess ajoute une accolade et
