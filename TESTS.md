@@ -31,17 +31,19 @@ Depuis le dépôt, après l'installation décrite dans le README :
 Le script se termine par un bilan :
 
 ```text
-Réussis : 334, échecs : 0, sautés : 0
+Réussis : 556, échecs : 0, sautés : 0
 Rapport : /chemin/du/depot/rapport-tests-Linux-20261120-002933.txt
 ```
 
 Le rapport reprend l'environnement (système, Python, python-chess, Stockfish), le résultat de chaque contrôle et les extraits utiles au diagnostic. Vous pouvez le transmettre tel quel.
 
+Le nombre de contrôles dépend de la version et du mode choisi. Sous macOS, un test est toujours sauté : il crée un fichier au nom non UTF-8, ce que son système de fichiers refuse.
+
 ## Ce que les tests ne touchent pas
 
 - **Vos réglages et votre catalogue** : les tests désignent les leurs, dans un répertoire temporaire supprimé à la fin.
 - **Le dépôt** : rien n'y est écrit, sauf le rapport.
-- **Votre jeton** : il n'est ni affiché, ni copié, ni passé dans une ligne de commande. Le script vérifie au contraire qu'il n'apparaît dans aucune archive ni dans le rapport.
+- **Votre jeton** : il n'est ni affiché, ni copié, ni passé dans une ligne de commande. Le script vérifie au contraire qu'il n'apparaît ni dans les archives qu'il contrôle ni dans le rapport.
 
 Avec `--reseau`, comptez environ 70 requêtes à l'explorateur de Lichess, espacées de 2 secondes, 10 fichiers du catalogue et, si vous donnez une partie, 2 exports de cette partie.
 
@@ -122,17 +124,3 @@ Réinstaller l'environnement virtuel touche à votre installation : `test-app.sh
 ```
 
 Attendu, sur un environnement déjà présent : "Environnement virtuel déjà présent", puis "Installation de python-chess dans l'environnement virtuel." et "Environnement virtuel opérationnel".
-
-## Où les tests ont été joués
-
-Version 4.0.0, le 19 novembre 2026, après une installation neuve sur chaque machine :
-
-| | Debian 13 Trixie, Raspberry Pi | macOS 27.3, Apple Silicon |
-|---|---|---|
-| Python | 3.13.5 | 3.15.2 |
-| python-chess | 1.11.2 | 1.11.2 |
-| Stockfish | 17.1 | 19 |
-| `./test-app.sh` | 235 réussis | 234 réussis, 1 sauté |
-| `./test-app.sh --reseau` | 318 réussis | 317 réussis, 1 sauté |
-
-Le test sauté sous macOS crée un fichier au nom non UTF-8, ce que son système de fichiers refuse.

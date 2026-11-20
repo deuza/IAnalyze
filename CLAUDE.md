@@ -1,6 +1,7 @@
 # CLAUDE.md
 
 ## Projet
+
 IAnalyze collecte les données d'une partie d'échecs (PGN, stats de
 l'explorateur Lichess, catalogue d'ouvertures, évaluations Stockfish)
 et produit un zip avec synthese.md, plus le prompt d'analyse de la
@@ -14,6 +15,7 @@ test.pgn (partie d'essai), test-app.sh (suite de tests),
 README.md, TESTS.md, CHANGELOG.md.
 
 ## Plateformes
+
 - Serveurs : Debian Trixie, en root, pas de sudo. Stockfish dans
   /usr/games/stockfish.
 - Poste : macOS M1 (Homebrew).
@@ -24,11 +26,12 @@ README.md, TESTS.md, CHANGELOG.md.
   l'environnement système. Signale tout nouveau module requis.
 
 ## Git, versions, changelog
+
 - On travaille sur la branche dev. Ni push ni merge sans demande.
 - Commits atomiques, un par sujet, message en français.
-- CHANGELOG.md : https://keepachangelog.com/en/1.1.0/ (section
+- CHANGELOG.md : <https://keepachangelog.com/en/1.1.0/> (section
   Unreleased pendant le travail).
-- Versions : https://semver.org/. La version figure dans le script et
+- Versions : <https://semver.org/>. La version figure dans le script et
   dans le User-Agent : les deux changent ensemble.
 - La 4.0.0 est la version qui sera fusionnée dans main, étiquetée et
   publiée sur GitHub. D'ici là, aucun bump : tout s'accumule sous
@@ -38,6 +41,7 @@ README.md, TESTS.md, CHANGELOG.md.
   l'appliquer.
 
 ## Règles de modification
+
 - Aucun correctif à l'aveugle : reproduis ou démontre le défaut, ou
   demande les logs, la conf et la version.
 - Ne supprime aucun code pour "optimiser". Toute suppression
@@ -46,21 +50,27 @@ README.md, TESTS.md, CHANGELOG.md.
   réécriture complète non demandée.
 - Chaque ajout de comportement s'accompagne d'un test dans test-app.sh
   et d'une mise à jour de README.md. TESTS.md ne décrit que les
-  familles de tests : il ne change que si une famille apparaît.
+  familles de tests : il ne change que si une famille apparaît ou si
+  la façon de lancer les tests change.
 
 ## Vérifications avant livraison
+
 Lance ce qui est disponible : python3 -m py_compile, flake8, ruff check,
 mypy, bandit, codespell, vulture. Dis lesquels manquent et ne prétends
 jamais avoir vérifié ce que tu n'as pas lancé. Idem pour ce qui n'a pas
 pu être testé (par exemple un vrai jeton Lichess).
 
 ## Sécurité
+
 Le jeton Lichess est dans ~/.lichess_token (mode 600). Ne le lis pas
 pour l'afficher, ne le journalise pas, ne le copie dans aucun fichier
 du dépôt ni dans aucun test. Les tests utilisent un faux jeton ou un
-faux explorateur.
+faux explorateur, sauf ceux de test-app.sh --reseau, qui emploient le
+vrai jeton sans l'afficher ni le copier, et que seul l'utilisateur
+lance.
 
 ## Style
+
 - Commentaires abondants en français, au vouvoiement.
 - Pas de tiret cadratin, pas de guillemets chevrons, pas d'émoji dans
   les scripts.
@@ -68,6 +78,7 @@ faux explorateur.
   tutoiement à nos échanges.
 
 ## Façon de travailler
+
 - Réponses courtes, une étape à la fois.
 - Je distingue fait vérifié, probable, hypothèse. Pas de lien non
   vérifié.
