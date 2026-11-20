@@ -214,7 +214,7 @@ Un autre hôte, ou une autre page du site (étude, analyse, exercices), est refu
 
 **Un identifiant** fait exactement 8 ou 12 caractères alphanumériques.
 
-Une source qui ressemble à un chemin (point, barre oblique ou tilde) et qui n'existe pas est signalée comme fichier introuvable.
+Une source qui ressemble à un chemin (point, barre oblique ou tilde) et qui n'existe pas est signalée comme fichier introuvable. Un répertoire est refusé, même si son nom a la forme d'un identifiant.
 
 **Un PGN** doit contenir une seule partie, en échecs standard. Un fichier qui en réunit plusieurs est refusé : isolez celle à analyser dans un fichier à part.
 

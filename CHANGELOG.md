@@ -91,6 +91,14 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- Chemins : `--sortie='~/analyses'` créait un répertoire nommé `~`, et
+  `--stockfish` ne développait pas le tilde. Un moteur désigné par son
+  nom nu était contrôlé dans le répertoire courant, puis lancé depuis
+  le PATH.
+- Source : une adresse au schéma en majuscules, `HTTPS://`, était prise
+  pour un fichier. Une rubrique de Lichess de huit lettres, `Analysis`
+  ou `features`, et un répertoire local de huit lettres étaient pris
+  pour des identifiants de partie, et une requête partait.
 - Un PGN au nom long, écrit en caractères de plusieurs octets, faisait
   échouer l'écriture de l'archive après toute l'analyse : la longueur
   du nom était bornée en caractères, et non en octets.

@@ -1614,6 +1614,28 @@ printf '[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]\n\n' >>
 printf '1. e4 e5 *\n' >> t-fen-initiale.pgn
 lancer t-fen-initiale.pgn $O
 egal "T77 FEN de la position initiale, acceptée" 0 "$RC"
+# Chemins et sources mal reconnus : tilde non développé, adresse au
+# schéma en majuscules, rubrique de Lichess ou répertoire de huit lettres
+# pris pour une partie.
+HOME="$TRAVAIL/maison" "$SCRIPT" italienne.pgn $O --venv "$VENV" \
+    --reglages "$REGL" --sortie='~/analyses' > sortie 2> journal
+egal "T77 tilde de --sortie, code de retour" 0 "$?"
+verifier "T77 tilde de --sortie développé" \
+    test -f "$TRAVAIL/maison/analyses/$(basename "$(head -n 1 sortie)")"
+egal "T77 aucun répertoire nommé ~" 0 "$(ls -d ./~ 2>/dev/null | wc -l)"
+mkdir -p abcdefgh
+for source in abcdefgh 'HTTPS://lichess.org/Analysis' Features \
+              https://lichess.org/insights; do
+    lancer "$source" $O
+    egal "T77 $source, code de retour" 1 "$RC"
+    egal "T77 $source, aucun téléchargement" 0 \
+        "$(grep -c 'chargement du PGN' journal)"
+    cat journal >> journal-t77b
+done
+verifier "T77 répertoire nommé comme un identifiant" \
+    contient journal-t77b "est un répertoire, pas un fichier PGN"
+verifier "T77 schéma en majuscules reconnu comme une URL" \
+    contient journal-t77b "URL non reconnue"
 cat journal > journal-t77
 egal "T77 aucune erreur inattendue" 0 \
     "$(cat journal-t77 journal | grep -c 'Erreur inattendue')"
@@ -1856,6 +1878,21 @@ FIN
     egal "T78 pas d'erreur inattendue" 0 \
         "$(grep -c 'Erreur inattendue' journal)"
     joindre journal 6
+    rm -rf analyse-italienne-*
+
+    # Le moteur désigné par son nom nu, ou par un chemin à tilde : le
+    # contrôle et le lancement le cherchent maintenant au même endroit.
+    mkdir -p "$TRAVAIL/maison/bin"
+    ln -sf "$STOCKFISH" "$TRAVAIL/maison/bin/moteur-essai"
+    HOME="$TRAVAIL/maison" "$SCRIPT" italienne.pgn --sans-explorateur \
+        --sans-questions --profondeur 1 --venv "$VENV" --reglages "$REGL" \
+        --stockfish='~/bin/moteur-essai' > sortie 2> journal
+    egal "T55 --stockfish avec un tilde" 0 "$?"
+    PATH="$TRAVAIL/maison/bin:$PATH" "$SCRIPT" italienne.pgn \
+        --sans-explorateur --sans-questions --profondeur 1 \
+        --venv "$VENV" --reglages "$REGL" --stockfish moteur-essai \
+        > sortie 2> journal
+    egal "T55 --stockfish par son nom, cherché dans le PATH" 0 "$?"
     rm -rf analyse-italienne-*
 
     titre "T55 : options moteur hors bornes"

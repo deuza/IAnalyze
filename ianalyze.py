@@ -99,6 +99,14 @@ def est_fichier(candidat: pathlib.Path) -> bool:
         return False
 
 
+def est_repertoire(candidat: pathlib.Path) -> bool:
+    """Vrai si le chemin désigne un répertoire, faux dans les autres cas."""
+    try:
+        return candidat.is_dir()
+    except OSError:
+        return False
+
+
 #: Vrai sous macOS. Les commandes d'installation proposées dans les
 #: messages et l'emplacement du moteur en dépendent.
 EST_MACOS = sys.platform == "darwin"
@@ -943,7 +951,12 @@ HOTES_LICHESS = ("lichess.org", "www.lichess.org")
 #: Rubriques du site dont le nom fait huit lettres : elles ont la forme
 #: d'un identifiant de partie sans en être un. https://lichess.org/analysis
 #: était pris pour la partie "analysis" et demandé à Lichess.
-RUBRIQUES_LICHESS = ("analysis", "training", "practice", "streamer")
+RUBRIQUES_LICHESS = ("analysis", "training", "practice", "streamer",
+                     "features", "insights", "learning", "username",
+                     "patron", "calendar", "storm", "racer", "coach",
+                     "broadcast", "tournament", "simul", "swiss", "team",
+                     "forum", "player", "games", "editor", "variant",
+                     "paste", "contact", "mobile", "about", "account")
 
 #: Préfixes de chemin admis devant l'identifiant, en plus de la forme
 #: directe /<identifiant> : la partie embarquée et l'export PGN.
@@ -966,7 +979,7 @@ def extraire_id(source: str) -> str | None:
     à Lichess.
     """
     source = source.strip()
-    if source.startswith(("http://", "https://")):
+    if source.lower().startswith(("http://", "https://")):
         try:
             url = urllib.parse.urlparse(source)
             hote = (url.hostname or "").lower()
@@ -985,10 +998,11 @@ def extraire_id(source: str) -> str | None:
         # premier segment de huit caractères où qu'il soit, l'identifiant
         # d'une étude par exemple.
         if (morceaux and RE_ID_SOURCE.fullmatch(morceaux[0])
-                and morceaux[0] not in RUBRIQUES_LICHESS):
+                and morceaux[0].lower() not in RUBRIQUES_LICHESS):
             return morceaux[0][:8]
         return None
-    if RE_ID_SOURCE.fullmatch(source) and source not in RUBRIQUES_LICHESS:
+    if (RE_ID_SOURCE.fullmatch(source)
+            and source.lower() not in RUBRIQUES_LICHESS):
         return source[:8]
     return None
 
@@ -2755,6 +2769,21 @@ def reste_estime(ecoule: float, faits: int, total: int) -> str:
     return ", reste environ %d h %02d" % divmod(minutes, 60)
 
 
+def resoudre_moteur(binaire: str) -> str:
+    """
+    Chemin du moteur tel qu'il sera contrôlé puis lancé.
+
+    Le tilde est développé, comme pour les autres options de chemin. Un
+    nom nu, "stockfish", est cherché dans le PATH : le lancement l'y
+    cherchait déjà, alors que le contrôle regardait le répertoire
+    courant, et les deux pouvaient se contredire.
+    """
+    binaire = os.path.expanduser(binaire)
+    if os.sep not in binaire and not est_fichier(pathlib.Path(binaire)):
+        return shutil.which(binaire) or binaire
+    return binaire
+
+
 def verifier_moteur(binaire: str) -> None:
     """Vérifie l'existence du binaire avant d'avoir créé quoi que ce soit."""
     if not est_fichier(pathlib.Path(binaire)):
@@ -4005,6 +4034,10 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                 "fils", "hachage", "delai"):
         if getattr(options, nom) < 1:
             p.error("--%s doit valoir au moins 1" % nom.replace("_", "-"))
+    # Chemins : le tilde n'est développé par le shell que s'il ouvre le
+    # mot, pas dans la forme --sortie=~/analyses.
+    options.sortie = os.path.expanduser(options.sortie)
+    options.stockfish = resoudre_moteur(options.stockfish)
     if options.profondeur > PROFONDEUR_MAX:
         p.error("--profondeur ne doit pas dépasser %d" % PROFONDEUR_MAX)
     if options.coups_stockfish < 0:
@@ -4130,17 +4163,23 @@ def main(argv: list[str]) -> int:
         etiquette = etiquette_sure(chemin_local.stem)
         if etiquette != chemin_local.stem:
             journal("Nom du dossier assaini : %s" % etiquette)
+    elif options.source.strip() and est_repertoire(chemin_local):
+        # Un répertoire dont le nom fait huit lettres passerait sinon pour
+        # un identifiant, et une requête partirait vers Lichess.
+        raise SystemExit("%s est un répertoire, pas un fichier PGN."
+                         % chemin_local)
     else:
         identifiant = extraire_id(options.source)
         if identifiant is None:
             # Hors URL, un point, une barre oblique ou un tilde trahissent
             # un chemin : le fichier visé n'existe pas, autant le dire.
-            if (not options.source.strip().startswith(("http://",
-                                                        "https://"))
+            if (not options.source.strip().lower().startswith(
+                    ("http://", "https://"))
                     and any(c in options.source for c in "./~")):
                 raise SystemExit("Fichier PGN introuvable : %s"
                                  % chemin_local)
-            if options.source.strip().startswith(("http://", "https://")):
+            if options.source.strip().lower().startswith(
+                    ("http://", "https://")):
                 # Message propre aux URL : dire la forme attendue vaut
                 # mieux qu'un refus général.
                 raise SystemExit("URL non reconnue comme une partie Lichess "
