@@ -234,6 +234,11 @@ verifier() {
         NB_ECHEC=$((NB_ECHEC + 1))
         noter "  ECHEC  $libelle"
         printf '    ECHEC : %s\n' "$libelle" >&2
+        # Un texte attendu qui manque : le fichier fouillé est joint au
+        # rapport, pour que l'échec se lise sans rejouer le test.
+        if [ "$1" = contient ] && [ -f "$2" ]; then
+            joindre "$2" 8
+        fi
     fi
 }
 
