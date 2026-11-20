@@ -107,7 +107,7 @@ VENV_DEFAUT = DONNEES + "/venv"
 
 #: Variable d'environnement servant de garde-fou contre une relance en
 #: boucle si l'environnement virtuel existe mais reste incomplet.
-MARQUEUR_RELANCE = "COLLECTE_PARTIE_DEJA_RELANCE"
+MARQUEUR_RELANCE = "IANALYZE_DEJA_RELANCE"
 
 #: Jeton en cours d'utilisation, conservé uniquement pour que le gestionnaire
 #: d'erreurs de dernier recours puisse l'expurger d'un message inattendu.
@@ -509,7 +509,7 @@ VERSION = "4.0.0"
 DEPOT = "https://github.com/deuza/IAnalyze"
 
 #: En-tête d'agent, par politesse envers l'API.
-UA = "collecte-partie/%s (analyse personnelle)" % VERSION
+UA = "IAnalyze/%s (+%s)" % (VERSION, DEPOT)
 
 
 # ===========================================================================
@@ -1010,7 +1010,7 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
 #
 # Les questions passent par la sortie d'erreur et l'entrée standard, jamais
 # par la sortie standard, réservée au chemin de l'archive : la forme
-# ARCHIVE=$(./collecte-partie.py ...) continue de fonctionner, questions
+# ARCHIVE=$(./ianalyze.py ...) continue de fonctionner, questions
 # comprises. Elles ne sont posées que sur un terminal interactif.
 # ===========================================================================
 
@@ -1634,7 +1634,7 @@ def ecrire_reglages(chemin: str, reglages: configparser.ConfigParser) -> bool:
         valeur = valeur.replace("\n", "\n\t")
         return "%s = %s" % (clef, valeur) if valeur else "%s =" % clef
 
-    out = ["# Réglages de collecte-partie.py.",
+    out = ["# Réglages de ianalyze.py.",
            "# Vous pouvez modifier ce fichier à la main. Une clef supprimée",
            "# sera redemandée au prochain lancement sur un terminal.",
            "",
@@ -3392,72 +3392,72 @@ exemples d'utilisation
   Première installation, une seule fois :
 
       %s
-      ./collecte-partie.py --installer-venv
-      ./collecte-partie.py --installer-catalogue
+      ./ianalyze.py --installer-venv
+      ./ianalyze.py --installer-catalogue
 
   Relancer --installer-catalogue de temps en temps met le catalogue des
   ouvertures à jour.
 
   Usage courant, sur un PGN local :
 
-      ./collecte-partie.py ma-partie.pgn
+      ./ianalyze.py ma-partie.pgn
 
   Sur une partie Lichess, par URL ou par identifiant :
 
-      ./collecte-partie.py https://lichess.org/xvoiNy2C
-      ./collecte-partie.py xvoiNy2C
+      ./ianalyze.py https://lichess.org/xvoiNy2C
+      ./ianalyze.py xvoiNy2C
 
   Joindre vos consignes d'analyse en tête de la synthèse, pour n'avoir
   qu'un seul fichier à fournir :
 
-      ./collecte-partie.py ma-partie.pgn --consignes ~/prompt-annotation.md
+      ./ianalyze.py ma-partie.pgn --consignes ~/prompt-annotation.md
 
   Usage hors du projet d'analyse, sans aucune question, ou avec tous vos
   noms de joueur pour que le camp soit déduit des en-têtes :
 
-      ./collecte-partie.py ma-partie.pgn --sans-questions
-      ./collecte-partie.py ma-partie.pgn --pseudos MonPseudo,AutrePseudo
+      ./ianalyze.py ma-partie.pgn --sans-questions
+      ./ianalyze.py ma-partie.pgn --pseudos MonPseudo,AutrePseudo
 
   Descendre aussi loin que la base répond, sans aucun seuil :
 
-      ./collecte-partie.py ma-partie.pgn --jusqu-a-epuisement
+      ./ianalyze.py ma-partie.pgn --jusqu-a-epuisement
 
   La base de tous les joueurs Lichess est interrogée par défaut, avec les
   filtres de https://lichess.org/opening. La restreindre à certaines
   cadences et tranches de classement, ou interroger la base maîtres :
 
-      ./collecte-partie.py ma-partie.pgn \\
+      ./ianalyze.py ma-partie.pgn \\
           --cadences rapid,classical,correspondence --classements 0,1000
-      ./collecte-partie.py ma-partie.pgn --base maitres
+      ./ianalyze.py ma-partie.pgn --base maitres
 
   Couvrir les dix premiers coups quelle que soit la fréquence des coups
   joués, ou au contraire s'arrêter dès la première sortie de théorie :
 
-      ./collecte-partie.py ma-partie.pgn --coups-min 10
-      ./collecte-partie.py ma-partie.pgn --coups-min 0
+      ./ianalyze.py ma-partie.pgn --coups-min 10
+      ./ianalyze.py ma-partie.pgn --coups-min 0
 
   Moteur seul, sans réseau ni jeton :
 
-      ./collecte-partie.py ma-partie.pgn --sans-explorateur
+      ./ianalyze.py ma-partie.pgn --sans-explorateur
 
   Conserver le dossier de travail à côté de l'archive :
 
-      ./collecte-partie.py ma-partie.pgn --garder-dossier
+      ./ianalyze.py ma-partie.pgn --garder-dossier
 
   Pour un LLM qui n'ouvre pas les zip ou n'exécute pas de code : un
   prompt court qui porte la partie et les évaluations, à coller seul :
 
-      ./collecte-partie.py ma-partie.pgn --prompt-seul
+      ./ianalyze.py ma-partie.pgn --prompt-seul
 
   Utiliser votre propre modèle de prompt, ou ne pas écrire de prompt :
 
-      ./collecte-partie.py ma-partie.pgn --prompt ~/mon-modele.txt
-      ./collecte-partie.py ma-partie.pgn --sans-prompt
+      ./ianalyze.py ma-partie.pgn --prompt ~/mon-modele.txt
+      ./ianalyze.py ma-partie.pgn --sans-prompt
 
   Moteur plus profond, ou limité aux quinze premiers coups :
 
-      ./collecte-partie.py ma-partie.pgn --profondeur 22
-      ./collecte-partie.py ma-partie.pgn --coups-stockfish 15
+      ./ianalyze.py ma-partie.pgn --profondeur 22
+      ./ianalyze.py ma-partie.pgn --coups-stockfish 15
 
 résultat
 --------
@@ -3537,7 +3537,7 @@ def valider_liste(p: argparse.ArgumentParser, option: str, valeur: str,
 def analyser_arguments(argv: list[str]) -> argparse.Namespace:
     """Définit et lit les options de la ligne de commande."""
     p = argparse.ArgumentParser(
-        prog="collecte-partie.py",
+        prog="ianalyze.py",
         description="Collecte le matériel d'analyse d'une partie d'échecs : "
                     "PGN, statistiques de l'explorateur Lichess (base de "
                     "tous les joueurs, ou base maîtres avec --base "

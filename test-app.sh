@@ -1,6 +1,6 @@
 #!/bin/sh
 # ===========================================================================
-# test-app.sh : tests de collecte-partie.py, sous macOS et sous Debian
+# test-app.sh : tests de ianalyze.py, sous macOS et sous Debian
 #
 # Ce script joue tous les tests du projet, décrits famille par famille
 # dans TESTS.md, puis écrit un rapport que vous pouvez renvoyer tel quel.
@@ -21,14 +21,14 @@
 # les vôtres ne sont ni lus ni modifiés.
 #
 # Votre jeton, avec --reseau : ce script ne l'affiche pas, ne le copie pas
-# et ne le passe dans aucune ligne de commande. C'est collecte-partie.py
+# et ne le passe dans aucune ligne de commande. C'est ianalyze.py
 # qui le lit. Le script ne s'en sert lui-même que comme fichier de motifs
 # pour grep (option -f), afin de vérifier qu'il n'apparaît ni dans une
 # archive ni dans le rapport. S'il était trouvé dans le rapport, celui-ci
 # ne serait pas écrit.
 #
 # Charge sur Lichess, avec --reseau : environ 70 requêtes à l'explorateur,
-# espacées de 2 secondes par collecte-partie.py, 2 exports de partie, et
+# espacées de 2 secondes par ianalyze.py, 2 exports de partie, et
 # 10 fichiers du catalogue chez GitHub.
 #
 # Variables facultatives :
@@ -77,10 +77,10 @@ done
 # --- Emplacements -----------------------------------------------------------
 
 DEPOT=$(pwd)
-SCRIPT="$DEPOT/collecte-partie.py"
+SCRIPT="$DEPOT/ianalyze.py"
 
 if [ ! -f "$SCRIPT" ]; then
-    echo "collecte-partie.py introuvable dans $DEPOT." >&2
+    echo "ianalyze.py introuvable dans $DEPOT." >&2
     echo "Lancez ce script depuis le répertoire du dépôt." >&2
     exit 2
 fi
@@ -88,7 +88,7 @@ fi
 SYSTEME=$(uname -s)
 
 # Environnement virtuel par défaut, selon la plateforme : les mêmes valeurs
-# que dans collecte-partie.py.
+# que dans ianalyze.py.
 if [ -z "${VENV:-}" ]; then
     VENV="$HOME/.local/share/IAnalyze/venv"
 fi
@@ -96,7 +96,7 @@ PYVENV="$VENV/bin/python3"
 
 if ! "$PYVENV" -c "import chess" >/dev/null 2>&1; then
     echo "python-chess introuvable dans $VENV." >&2
-    echo "Créez l'environnement : ./collecte-partie.py --installer-venv" >&2
+    echo "Créez l'environnement : ./ianalyze.py --installer-venv" >&2
     echo "ou indiquez-le : VENV=/chemin sh test-app.sh" >&2
     exit 2
 fi
@@ -1086,7 +1086,7 @@ titre "T67 : script copié sans son modèle"
 mkdir t-seul
 cp "$SCRIPT" t-seul/
 rm -f analyse-t-pr-*
-t-seul/collecte-partie.py t-pr.pgn $R --profondeur 1 > sortie 2> journal
+t-seul/ianalyze.py t-pr.pgn $R --profondeur 1 > sortie 2> journal
 egal "T67 code de retour" 0 $?
 verifier "T67 l'archive est produite" test -f "$(head -n 1 sortie)"
 verifier "T67 avertissement du journal" \
@@ -1213,7 +1213,7 @@ egal "T74 modèle sans la partie, code de retour" 1 $?
 verifier "T74 modèle sans la partie, message" \
     contient journal "ne contient pas {{PARTIE_PGN}}"
 mkdir -p t-seul-74 && cp "$SCRIPT" t-seul-74/
-t-seul-74/collecte-partie.py t-seul.pgn $S74 --prompt-seul \
+t-seul-74/ianalyze.py t-seul.pgn $S74 --prompt-seul \
     > sortie 2> journal
 egal "T74 script copié sans son modèle, code de retour" 1 $?
 verifier "T74 script copié sans son modèle, message" \

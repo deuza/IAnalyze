@@ -7,7 +7,7 @@ et produit un zip avec synthese.md, plus le prompt d'analyse de la
 partie, écrit à côté. Les deux alimentent une conversation avec un LLM,
 où l'analyse est faite. Le script ne produit lui-même aucune analyse.
 
-Fichiers : collecte-partie.py, prompt-modele.txt (modèle du prompt),
+Fichiers : ianalyze.py, prompt-modele.txt (modèle du prompt),
 prompt-seul-modele.txt (modèle du prompt court de --prompt-seul),
 verifier-analyse.py (contrôle du PGN rendu par le LLM),
 test.pgn (partie d'essai), test-app.sh (suite de tests),

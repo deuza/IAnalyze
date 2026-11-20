@@ -104,7 +104,7 @@ Les chiffres de l'explorateur changent chaque mois : ces tests vérifient des fo
 La partie n'a aucun intérêt échiquéen. Elle sert aussi à un essai complet, à la main :
 
 ```bash
-./collecte-partie.py test.pgn --sans-questions
+./ianalyze.py test.pgn --sans-questions
 ```
 
 ## Le seul test à jouer à la main
@@ -112,7 +112,7 @@ La partie n'a aucun intérêt échiquéen. Elle sert aussi à un essai complet, 
 Réinstaller l'environnement virtuel touche à votre installation : `test-app.sh` ne le fait pas.
 
 ```bash
-./collecte-partie.py --installer-venv
+./ianalyze.py --installer-venv
 ```
 
 Attendu, sur un environnement déjà présent : "Environnement virtuel déjà présent", puis "Installation de python-chess dans l'environnement virtuel." et "Environnement virtuel opérationnel".

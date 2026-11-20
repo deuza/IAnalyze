@@ -1,5 +1,5 @@
 #! note ===============================================================
-#! note Modèle du prompt d'analyse d'IAnalyze, lu par collecte-partie.py.
+#! note Modèle du prompt d'analyse d'IAnalyze, lu par ianalyze.py.
 #! note
 #! note À chaque collecte, le script en tire un prompt propre à la
 #! note partie, écrit à côté de l'archive (fichier .prompt.txt) : vous le

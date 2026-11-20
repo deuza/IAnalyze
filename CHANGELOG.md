@@ -1,6 +1,6 @@
 # Changelog
 
-Toutes les modifications notables de collecte-partie.py sont consignées
+Toutes les modifications notables d'IAnalyze sont consignées
 dans ce fichier.
 
 Le format suit [Tenez un Changelog](https://keepachangelog.com/fr/1.1.0/)
@@ -35,6 +35,12 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- Le script s'appelle désormais `ianalyze.py`, du nom du projet, au lieu
+  de `collecte-partie.py`. La commande devient
+  `./ianalyze.py ma-partie.pgn`. Rien n'est à réinstaller :
+  l'environnement virtuel, le catalogue et les réglages ne dépendent
+  pas de ce nom.
+- En-tête d'agent HTTP : `IAnalyze/4.0.0`, suivi de l'adresse du dépôt.
 - README : IAnalyze est présenté comme fait pour Claude, avec le zip et
   le prompt, et `--prompt-seul` comme le repli pour un autre LLM. La
   section 10 dit que ce repli n'a pas encore été essayé.

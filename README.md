@@ -11,12 +11,12 @@
 
 IAnalyze prépare l'analyse d'une partie d'échecs par un LLM. 
 
-Son script, `collecte-partie.py`, rassemble le PGN, les statistiques de l'explorateur Lichess, le catalogue des ouvertures et les évaluations de Stockfish, puis écrit deux fichiers : une archive zip et le prompt qui va avec.
+Son script, `ianalyze.py`, rassemble le PGN, les statistiques de l'explorateur Lichess, le catalogue des ouvertures et les évaluations de Stockfish, puis écrit deux fichiers : une archive zip et le prompt qui va avec.
 
 *Le script ne produit aucune analyse : il donne à l'analyste des chiffres sûrs, et le prompt lui impose de s'y tenir.*
 
 ```bash
-./collecte-partie.py ma-partie.pgn
+./ianalyze.py ma-partie.pgn
 ```
 
 ```text
@@ -30,7 +30,7 @@ Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec Cl
 
 | Fichier | Rôle |
 |---|---|
-| `collecte-partie.py` | le script, en un seul fichier |
+| `ianalyze.py` | le script, en un seul fichier |
 | `prompt-modele.txt` | le modèle dont est tiré le prompt de chaque partie (section 9) |
 | `prompt-seul-modele.txt` | le modèle du prompt court de `--prompt-seul` (section 9) |
 | `verifier-analyse.py` | le contrôle du PGN rendu par le LLM (section 10) |
@@ -53,7 +53,7 @@ Le script rassemble et met en forme :
 
 La chaîne complète tient en trois temps :
 
-1. `./collecte-partie.py ma-partie.pgn`
+1. `./ianalyze.py ma-partie.pgn`
 
    Le script collecte, calcule, et écrit deux fichiers : `analyse-<partie>-<date>.zip` et `analyse-<partie>-<date>.prompt.txt`.
 
@@ -102,11 +102,11 @@ cd IAnalyze
 **3. L'environnement virtuel et le catalogue**, sous le même compte :
 
 ```bash
-./collecte-partie.py --installer-venv
+./ianalyze.py --installer-venv
 ```
 
 ```bash
-./collecte-partie.py --installer-catalogue
+./ianalyze.py --installer-catalogue
 ```
 
 Chaque joueur de la machine refait les étapes 2 et 3 sous son propre compte : rien n'est partagé, rien n'est à copier.
@@ -195,15 +195,15 @@ Le délai fixe par coup, lui, n'existe pas à l'ICCF.
 ## 3. Utilisation
 
 ```bash
-./collecte-partie.py SOURCE [options]
+./ianalyze.py SOURCE [options]
 ```
 
 SOURCE accepte trois formes :
 
 ```bash
-./collecte-partie.py ma-partie.pgn                 # PGN local
-./collecte-partie.py https://lichess.org/xvoiNy2C  # URL Lichess
-./collecte-partie.py xvoiNy2C                      # identifiant
+./ianalyze.py ma-partie.pgn                 # PGN local
+./ianalyze.py https://lichess.org/xvoiNy2C  # URL Lichess
+./ianalyze.py xvoiNy2C                      # identifiant
 ```
 
 **Une URL** doit viser lichess.org et porter l'identifiant en tête de chemin.
@@ -223,7 +223,7 @@ Un PGN corrompu est refusé plutôt qu'analysé tronqué. Une partie qui ne part
 Le chemin de l'archive est écrit seul sur la sortie standard, le journal horodaté va sur la sortie d'erreur :
 
 ```bash
-ARCHIVE=$(./collecte-partie.py ma-partie.pgn 2>/dev/null)
+ARCHIVE=$(./ianalyze.py ma-partie.pgn 2>/dev/null)
 ```
 
 ### Questions de démarrage
@@ -259,12 +259,12 @@ Le script ne les pose donc que s'il est lancé à la main, dans un terminal. Il 
 
 - vous passez `--sans-questions`
 - un autre programme le lance : cron, un script, un service
-- son entrée ne vient pas du clavier : `./collecte-partie.py ma-partie.pgn < /dev/null`
-- son journal ne va pas à l'écran : `./collecte-partie.py ma-partie.pgn 2> journal.log`
+- son entrée ne vient pas du clavier : `./ianalyze.py ma-partie.pgn < /dev/null`
+- son journal ne va pas à l'écran : `./ianalyze.py ma-partie.pgn 2> journal.log`
 
 Le dernier cas surprend : les questions s'écrivent au même endroit que le journal, la sortie d'erreur. Si vous la redirigez, vous ne les verriez pas.
 
-L'exemple plus haut, avec `2>/dev/null`, ne pose donc aucune question. Sans cette redirection, `ARCHIVE=$(./collecte-partie.py ma-partie.pgn)` les pose normalement.
+L'exemple plus haut, avec `2>/dev/null`, ne pose donc aucune question. Sans cette redirection, `ARCHIVE=$(./ianalyze.py ma-partie.pgn)` les pose normalement.
 
 Dans la suite, "sans terminal" désigne ces quatre cas.
 
@@ -277,7 +277,7 @@ Dans la suite, "sans terminal" désigne ces quatre cas.
 Affiche l'aide complète et les exemples.
 
 ```bash
-./collecte-partie.py --help
+./ianalyze.py --help
 ```
 
 #### `--delai S`
@@ -287,7 +287,7 @@ Affiche l'aide complète et les exemples.
 Délai réseau maximal par requête, en secondes : export PGN,  explorateur, téléchargement du catalogue.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --delai 60
+./ianalyze.py ma-partie.pgn --delai 60
 ```
 
 #### `--debug`
@@ -296,7 +296,7 @@ Laisse remonter la trace complète d'une erreur inattendue, expurgée du jeton.
 Sans cette option, seul un message d'une ligne s'affiche.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --debug
+./ianalyze.py ma-partie.pgn --debug
 ```
 
 ### Environnement virtuel
@@ -306,7 +306,7 @@ Sans cette option, seul un message d'une ligne s'affiche.
 Crée l'environnement virtuel s'il manque, y installe ou met à jour python-chess, puis quitte. Peut être relancé sans risque.
 
 ```bash
-./collecte-partie.py --installer-venv
+./ianalyze.py --installer-venv
 ```
 
 #### `--venv CHEMIN`
@@ -316,8 +316,8 @@ Crée l'environnement virtuel s'il manque, y installe ou met à jour python-ches
 Emplacement de l'environnement virtuel, à l'installation comme à l'usage.
 
 ```bash
-./collecte-partie.py --installer-venv --venv /opt/venv/echecs
-./collecte-partie.py ma-partie.pgn --venv /opt/venv/echecs
+./ianalyze.py --installer-venv --venv /opt/venv/echecs
+./ianalyze.py ma-partie.pgn --venv /opt/venv/echecs
 ```
 
 ### Questions de démarrage
@@ -327,7 +327,7 @@ Emplacement de l'environnement virtuel, à l'installation comme à l'usage.
 Ne pose aucune question, ni camp ni contexte. Les valeurs par défaut sont retenues.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --sans-questions
+./ianalyze.py ma-partie.pgn --sans-questions
 ```
 
 #### `--pseudos LISTE`
@@ -338,7 +338,7 @@ Vos noms de joueur, séparés par des virgules, cherchés sans tenir compte de l
 Le premier sert à compléter une balise vide. L'option remplace, le temps d'un lancement, les pseudos du fichier de réglages.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --pseudos MonPseudo,AutrePseudo
+./ianalyze.py ma-partie.pgn --pseudos MonPseudo,AutrePseudo
 ```
 
 #### `--reglages FICHIER`
@@ -356,7 +356,7 @@ Fichier de réglages, au format INI, section `[joueur]` : pseudos, cadence et ni
 Un fichier mal formé arrête le script avec un message.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --reglages ~/echecs.ini
+./ianalyze.py ma-partie.pgn --reglages ~/echecs.ini
 ```
 
 #### `--purge-reglages`
@@ -370,7 +370,7 @@ Avec `--reglages`, c'est le fichier désigné qui est supprimé. Son répertoire
 Un fichier absent n'est pas une erreur, un répertoire est refusé.
 
 ```bash
-./collecte-partie.py --purge-reglages
+./ianalyze.py --purge-reglages
 ```
 
 ### Catalogue des ouvertures
@@ -382,7 +382,7 @@ Télécharge les cinq fichiers du catalogue (`a.tsv` à `e.tsv`), rejoue chaque 
 Le remplacement est atomique : un échec laisse l'ancien index en place. Relancer l'option fait la mise à jour.
 
 ```bash
-./collecte-partie.py --installer-catalogue
+./ianalyze.py --installer-catalogue
 ```
 
 #### `--catalogue REP`
@@ -392,8 +392,8 @@ Le remplacement est atomique : un échec laisse l'ancien index en place. Relance
 Répertoire du catalogue local, à l'installation comme à l'usage.
 
 ```bash
-./collecte-partie.py --installer-catalogue --catalogue /srv/cat
-./collecte-partie.py ma-partie.pgn --catalogue /srv/cat
+./ianalyze.py --installer-catalogue --catalogue /srv/cat
+./ianalyze.py ma-partie.pgn --catalogue /srv/cat
 ```
 
 ### Sortie
@@ -405,7 +405,7 @@ Répertoire du catalogue local, à l'installation comme à l'usage.
 Répertoire où écrire l'archive, créé au besoin.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --sortie ~/analyses
+./ianalyze.py ma-partie.pgn --sortie ~/analyses
 ```
 
 #### `--consignes FICHIER`
@@ -415,7 +415,7 @@ Insère tel quel un fichier texte ou Markdown en tête de la synthèse, sous le 
 Il remplace alors les questions de contexte.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --consignes ~/annotation.md
+./ianalyze.py ma-partie.pgn --consignes ~/annotation.md
 ```
 
 #### `--garder-dossier`
@@ -423,7 +423,7 @@ Il remplace alors les questions de contexte.
 Conserve le dossier de travail à côté de l'archive. Sans cette option, il est supprimé une fois l'archive vérifiée.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --garder-dossier
+./ianalyze.py ma-partie.pgn --garder-dossier
 ```
 
 #### `--prompt FICHIER`
@@ -437,7 +437,7 @@ Le modèle est contrôlé avant la collecte : un repère inconnu arrête le scri
 Si le modèle par défaut manque, parce que le script a été copié seul, la collecte se fait sans prompt et le journal le signale.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --prompt ~/mon-modele.txt
+./ianalyze.py ma-partie.pgn --prompt ~/mon-modele.txt
 ```
 
 #### `--sans-prompt`
@@ -445,7 +445,7 @@ Si le modèle par défaut manque, parce que le script a été copié seul, la co
 N'écrit pas le prompt d'analyse. S'exclut avec `--prompt` et avec `--prompt-seul`.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --sans-prompt
+./ianalyze.py ma-partie.pgn --sans-prompt
 ```
 
 #### `--prompt-seul`
@@ -459,7 +459,7 @@ Ce prompt est tiré de `prompt-seul-modele.txt`, et non de `prompt-modele.txt`. 
 S'exclut avec `--sans-prompt`. Avec `--prompt`, le modèle désigné doit placer `{{PARTIE_PGN}}`, sans quoi le script s'arrête avant la collecte.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --prompt-seul
+./ianalyze.py ma-partie.pgn --prompt-seul
 ```
 
 ### Explorateur
@@ -474,7 +474,7 @@ Base interrogée :
 - `maitres` : les parties de maîtres
 
 ```bash
-./collecte-partie.py ma-partie.pgn --base maitres
+./ianalyze.py ma-partie.pgn --base maitres
 ```
 
 #### `--cadences LISTE`
@@ -486,7 +486,7 @@ Base `lichess` seulement. Cadences retenues, séparées par des virgules, parmi 
 La casse est tolérée, les doublons sont retirés.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --cadences rapid,classical,correspondence
+./ianalyze.py ma-partie.pgn --cadences rapid,classical,correspondence
 ```
 
 #### `--classements LISTE`
@@ -500,7 +500,7 @@ Chaque tranche court de sa valeur à la suivante : 0 couvre 0 à 999 (affichée 
 Une partie est rangée selon la moyenne des classements de ses deux joueurs.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --classements 0,1000
+./ianalyze.py ma-partie.pgn --classements 0,1000
 ```
 
 Les filtres par défaut, plus la date de début fixée à janvier 2017, reprennent ceux de https://lichess.org/opening : vous y retrouvez les mêmes pourcentages.
@@ -512,7 +512,7 @@ Les filtres par défaut, plus la date de début fixée à janvier 2017, reprenne
 Fichier contenant le jeton personnel, et rien d'autre.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --jeton-fichier ~/.jeton-test
+./ianalyze.py ma-partie.pgn --jeton-fichier ~/.jeton-test
 ```
 
 #### `--seuil-parties N`
@@ -522,7 +522,7 @@ Fichier contenant le jeton personnel, et rien d'autre.
 Arrêt quand la position compte moins de N parties dans la base.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --seuil-parties 200
+./ianalyze.py ma-partie.pgn --seuil-parties 200
 ```
 
 #### `--seuil-frequence P`
@@ -536,8 +536,8 @@ Un coup rare qui mène hors du catalogue des ouvertures est une sortie de théor
 0 désactive le critère.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --seuil-frequence 5
-./collecte-partie.py ma-partie.pgn --seuil-frequence 0
+./ianalyze.py ma-partie.pgn --seuil-frequence 5
+./ianalyze.py ma-partie.pgn --seuil-frequence 0
 ```
 
 #### `--coups-min N`
@@ -551,8 +551,8 @@ La table couvre ainsi le début de partie même après une sortie précoce.
 Le seuil de parties reste actif, et la première sortie est notée même dans la fenêtre. 0 arrête dès la première sortie.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --coups-min 10
-./collecte-partie.py ma-partie.pgn --coups-min 0
+./ianalyze.py ma-partie.pgn --coups-min 10
+./ianalyze.py ma-partie.pgn --coups-min 0
 ```
 
 #### `--jusqu-a-epuisement`
@@ -560,7 +560,7 @@ Le seuil de parties reste actif, et la première sortie est notée même dans la
 Ignore les deux seuils pour l'arrêt : l'interrogation descend tant que la base connaît la position. La première sortie reste notée.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --jusqu-a-epuisement
+./ianalyze.py ma-partie.pgn --jusqu-a-epuisement
 ```
 
 #### `--max-demicoups N`
@@ -570,7 +570,7 @@ Ignore les deux seuils pour l'arrêt : l'interrogation descend tant que la base 
 Plafond de demi-coups interrogés, garde-fou toujours actif.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --max-demicoups 30
+./ianalyze.py ma-partie.pgn --max-demicoups 30
 ```
 
 #### `--pause S`
@@ -580,7 +580,7 @@ Plafond de demi-coups interrogés, garde-fou toujours actif.
 Pause entre deux requêtes, minimum 2 secondes. Sur un HTTP 429, le script attend 60 secondes et retente une seule fois.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --pause 3
+./ianalyze.py ma-partie.pgn --pause 3
 ```
 
 #### `--sans-explorateur`
@@ -588,7 +588,7 @@ Pause entre deux requêtes, minimum 2 secondes. Sur un HTTP 429, le script atten
 Saute la collecte explorateur : ni réseau vers l'explorateur, ni jeton, ni catalogue requis.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --sans-explorateur
+./ianalyze.py ma-partie.pgn --sans-explorateur
 ```
 
 ### Moteur
@@ -602,7 +602,7 @@ L'évaluation Stockfish fait partie de toute collecte. Le binaire est vérifié 
 Limite le moteur aux N premiers coups entiers, soit 2N demi-coups. 0 analyse toute la partie.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --coups-stockfish 15
+./ianalyze.py ma-partie.pgn --coups-stockfish 15
 ```
 
 #### `--profondeur D`
@@ -612,7 +612,7 @@ Limite le moteur aux N premiers coups entiers, soit 2N demi-coups. 0 analyse tou
 Profondeur de recherche par position.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --profondeur 22
+./ianalyze.py ma-partie.pgn --profondeur 22
 ```
 
 #### `--multipv K`
@@ -622,7 +622,7 @@ Profondeur de recherche par position.
 Nombre de meilleurs coups demandés par position. Si le coup joué n'y figure pas, une seconde analyse fournit son évaluation et son écart.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --multipv 5
+./ianalyze.py ma-partie.pgn --multipv 5
 ```
 
 #### `--fils N`
@@ -632,7 +632,7 @@ Nombre de meilleurs coups demandés par position. Si le coup joué n'y figure pa
 Threads Stockfish.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --fils 2
+./ianalyze.py ma-partie.pgn --fils 2
 ```
 
 #### `--hachage MO`
@@ -642,7 +642,7 @@ Threads Stockfish.
 Table de hachage du moteur, en mégaoctets.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --hachage 512
+./ianalyze.py ma-partie.pgn --hachage 512
 ```
 
 #### `--stockfish CHEMIN`
@@ -652,7 +652,7 @@ Table de hachage du moteur, en mégaoctets.
 Binaire du moteur.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --stockfish /usr/local/bin/stockfish
+./ianalyze.py ma-partie.pgn --stockfish /usr/local/bin/stockfish
 ```
 
 #### `--longueur-pv N`
@@ -663,7 +663,7 @@ Demi-coups de variante principale reproduits dans la synthèse, 0 pour la varian
 Les variantes complètes restent dans `stockfish/evaluations.json`.
 
 ```bash
-./collecte-partie.py ma-partie.pgn --longueur-pv 0
+./ianalyze.py ma-partie.pgn --longueur-pv 0
 ```
 
 ## 5. Règles de cohérence
@@ -909,7 +909,7 @@ Cette chaîne complète demande en effet un LLM qui sait :
 Pour un LLM qui n'ouvre pas les zip, refuse certaines pièces jointes ou n'exécute pas de code, le script écrit un prompt court :
 
 ```bash
-./collecte-partie.py ma-partie.pgn --prompt-seul
+./ianalyze.py ma-partie.pgn --prompt-seul
 ```
 
 Vous collez ce seul texte dans la conversation, sans rien joindre. Le LLM rend le PGN annoté dans un bloc de code, que vous enregistrez vous-même dans un fichier `.pgn`.

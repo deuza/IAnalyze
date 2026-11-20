@@ -8,7 +8,7 @@ qualité du commentaire : il vérifie ce qui se vérifie à la machine.
 
     ./verifier-analyse.py ARCHIVE PGN [--synthese FICHIER] [--nom NOM]
 
-    ARCHIVE     le zip produit par collecte-partie.py, ou son dossier
+    ARCHIVE     le zip produit par ianalyze.py, ou son dossier
                 décompressé
     PGN         le fichier .pgn rendu par le LLM, ou un tiret, "-", si le
                 LLM n'a rendu aucun fichier : seule la synthèse est alors
@@ -66,14 +66,14 @@ try:
     import chess
     import chess.pgn
 except ImportError:
-    # Même principe que collecte-partie.py : python-chess vit dans un
+    # Même principe que ianalyze.py : python-chess vit dans un
     # environnement virtuel dédié, jamais dans le Python du système.
     interpreteur = os.path.expanduser(VENV_IANALYZE)
     if os.path.exists(interpreteur) and sys.executable != interpreteur:
         os.execv(interpreteur, [interpreteur] + sys.argv)
     raise SystemExit(
         "Module chess introuvable. Lancez d'abord, depuis le dépôt "
-        "IAnalyze : ./collecte-partie.py --installer-venv")
+        "IAnalyze : ./ianalyze.py --installer-venv")
 
 # python-chess écrit lui-même chaque coup illégal sur la sortie d'erreur,
 # en anglais. Le bilan les reprend tous : ces lignes feraient doublon.
@@ -662,7 +662,7 @@ def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(
         description="Contrôle le PGN annoté rendu par un LLM à partir "
                     "d'une archive d'IAnalyze.")
-    p.add_argument("archive", help="zip de collecte-partie.py, ou son "
+    p.add_argument("archive", help="zip de ianalyze.py, ou son "
                                    "dossier décompressé")
     p.add_argument("pgn", help="PGN annoté rendu par le LLM, ou - s'il "
                                "n'en a rendu aucun")
