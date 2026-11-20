@@ -26,6 +26,10 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- README : une section "Choisir un LLM et vérifier son travail". Elle
+  dit ce qu'il faut au LLM, ouverture du zip, exécution de code et
+  rendu d'un fichier, déconseille les LLM sans exécution de code, et
+  rapporte un essai sur quatre LLM, daté, sans en faire un classement.
 - Prompt : cinq consignes ajoutées après des essais sur quatre LLM,
   chacune répondant à un défaut relevé sur un PGN réellement rendu :
   aucune ligne vide dans le corps de la partie, où un lecteur de PGN

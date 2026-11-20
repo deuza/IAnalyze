@@ -36,6 +36,8 @@ Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec le
 | [`TESTS.md`](TESTS.md) | comment lancer les tests et ce qu'ils vérifient |
 | [`CHANGELOG.md`](CHANGELOG.md) | l'historique des versions |
 
+Tous les LLM ne se valent pas pour ce travail : la section 10 dit ce qu'il leur faut et ce que des essais ont donné.
+
 Plateformes : Debian et macOS (Homebrew). Python 3 et python-chess, que le script installe lui-même dans un environnement virtuel dédié.
 
 ---
@@ -863,7 +865,48 @@ Le prompt prévoit les deux cas :
 - **Le LLM exécute du code** : il construit le PGN avec python-chess et en prouve la légalité.
 - **Le LLM n'exécute pas de code** : il écrit le PGN lui-même, le dit, et vous laisse ouvrir le fichier pour confirmer.
 
-## 10. Vérifier le travail du LLM
+## 10. Choisir un LLM et vérifier son travail
+
+### Ce qu'il faut au LLM
+
+La chaîne complète demande un LLM qui sait :
+
+- ouvrir une archive zip, ou à défaut recevoir ses fichiers un par un
+- exécuter du code et y installer python-chess, pour construire le PGN et en prouver la légalité
+- rendre un fichier à télécharger
+
+Sans cela, le prompt prévoit un repli : le LLM écrit le PGN lui-même et le dit. Les essais ci-dessous montrent que ce repli donne un PGN à corriger.
+
+**Un LLM sans exécution de code n'est donc pas recommandé.** Si vous en essayez un, c'est votre choix : passez alors toujours son PGN à `verifier-analyse.py`, décrit plus bas.
+
+Deux conseils tirés de ces essais :
+
+- certains LLM refusent un fichier `.pgn` en pièce jointe : renommez-le en `.txt`
+- si le LLM annonce un fichier que vous ne trouvez pas, demandez-lui le PGN dans un bloc de code
+
+### Essais menés
+
+Un seul essai par LLM, le 20 novembre 2026, sur la même partie de 49 demi-coups, avec le même zip et le même prompt, celui de la version 4.0.0 avant les consignes que ces essais ont fait ajouter.
+
+**Ce n'est pas un classement.** Un essai ne dit rien de la régularité d'un modèle, et les offres ne sont pas comparables : un abonnement d'un côté, trois offres gratuites de l'autre.
+
+| LLM, tel qu'il se nomme lui-même | Offre | PGN rendu | Bilan de `verifier-analyse.py` |
+|---|---|---|---|
+| Claude Opus 5.5 (Anthropic) | abonnement | oui, construit avec python-chess | aucun échec : 24 erreurs et gaffes commentées sur 24, 27 variantes jouables |
+| GPT-6 (OpenAI) | gratuite | oui, écrit à la main, python-chess n'ayant pas pu être installé | 3 échecs : une ligne vide arrête la lecture, les 25 variantes sont dans les commentaires, un NAG contredit le moteur |
+| M365 Copilot (Microsoft) | gratuite | oui, la partie sans aucun commentaire | 3 échecs : il dit n'avoir trouvé que trois fichiers dans l'archive, et ne commente rien |
+| Gemini (Google), version non relevée | gratuite | non | il annonce un fichier qui n'existe pas, puis perd le fil de la conversation |
+
+Ce que ces essais montrent :
+
+- **Les données tiennent partout.** Aucun des quatre n'a inventé une évaluation, et tous donnent les trois mêmes erreurs principales, avec les bons écarts.
+- **C'est la fabrication du PGN qui les sépare.** Seul le LLM qui a construit son fichier avec python-chess a rendu un PGN utilisable tel quel.
+- **Le fond peut être bon sous une forme fautive.** Les 25 variantes écrites à la main par GPT-6 étaient toutes légales et tirées des lignes du moteur.
+- **La partie était notée gagnée dans une position perdue.** Deux LLM sur quatre ont raconté une victoire méritée, d'où la ligne ajoutée à la synthèse (section 7).
+
+L'offre gratuite de Claude annonce elle aussi la création de fichiers et l'exécution de code, sur d'autres modèles que celui de l'essai, d'après [sa page de tarifs](https://claude.com/pricing) lue le 20 novembre 2026. Elle n'a pas été essayée.
+
+### Vérifier le PGN rendu
 
 Un LLM peut rendre un PGN qui a l'air juste et ne l'est pas : un coup illégal dans une variante, un chiffre arrangé, une gaffe passée sous silence.
 
