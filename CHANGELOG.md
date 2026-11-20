@@ -41,6 +41,10 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- `test-app.sh` s'arrête au départ quand Stockfish est introuvable, au
+  lieu d'annoncer des tests "sautés" alors que toutes les collectes
+  échouaient. La variable `STOCKFISH` vaut maintenant pour tous les
+  tests, et plus seulement pour ceux du moteur.
 - `test-app.sh --reseau PARTIE` : le test de téléchargement, T24, joue
   la partie de Lichess que vous désignez, par son identifiant ou par son
   adresse. Le dépôt ne cite plus aucune partie réelle, ni dans les
@@ -97,6 +101,13 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- `test-app.sh` : deux contrôles du prompt cherchaient une phrase
+  retirée du modèle et ne pouvaient plus échouer, ils disparaissent. Le
+  test du résultat cohérent restait vert quand la collecte plantait, et
+  aucune partie notée 0-1 n'était jouée. Le contrôle des processus du
+  moteur comptait aussi les shells dont la commande citait son chemin.
+  T47, simple note, vérifie maintenant que la version et l'en-tête
+  d'agent vont ensemble.
 - `--purge-reglages` combinée à une autre action était ignorée sans un
   mot, et `--prompt ""` reprenait le modèle par défaut : les deux sont
   refusés. Un fichier de jeton écrit `LICHESS_TOKEN=...` ou entre

@@ -48,7 +48,7 @@ Avec `--reseau`, comptez environ 70 requêtes à l'explorateur de Lichess, espac
 ## Ce qu'il faut pour les jouer
 
 - l'environnement virtuel, installé par `--installer-venv`
-- Stockfish, obligatoire : chaque collecte l'emploie
+- Stockfish, obligatoire : chaque collecte l'emploie. Sans lui, le script s'arrête au départ
 - avec `--reseau` seulement, votre jeton dans `~/.lichess_token`
 
 Les tests qui ne portent pas sur le moteur le règlent au plus court, `--profondeur 1`.
@@ -58,7 +58,7 @@ Les tests qui ne portent pas sur le moteur le règlent au plus court, `--profond
 | Variable | Rôle | Défaut |
 |---|---|---|
 | `VENV` | environnement virtuel de python-chess | `~/.local/share/IAnalyze/venv` |
-| `STOCKFISH` | moteur employé par les tests du moteur | celui du script |
+| `STOCKFISH` | moteur employé par les tests | celui du PATH, sinon `/opt/homebrew/bin`, `/usr/local/bin` ou `/usr/games` |
 | `JETON` | fichier du jeton | `~/.lichess_token` |
 | `GARDER` | `1` conserve le répertoire temporaire | supprimé |
 

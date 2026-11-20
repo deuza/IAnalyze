@@ -20,8 +20,9 @@
 #                                quelle partie du site. Le dépôt n'en
 #                                fournit aucune : sans elle, T24 est sauté.
 #
-# Rien n'est modifié dans le dépôt ni dans vos répertoires : tout se passe
-# dans un répertoire temporaire, supprimé à la fin. Les tests désignent
+# Rien n'est écrit dans le dépôt, sauf le rapport, ni dans vos
+# répertoires : tout se passe dans un répertoire temporaire, supprimé à
+# la fin. Les tests désignent
 # leur propre fichier de réglages et, avec --reseau, leur propre catalogue :
 # les vôtres ne sont ni lus ni modifiés.
 #
@@ -132,6 +133,15 @@ if [ -z "${STOCKFISH:-}" ]; then
     done
 fi
 
+# Sans moteur, aucune collecte n'aboutit : le moteur est obligatoire depuis
+# la version 4.0.0. Mieux vaut s'arrêter ici que d'afficher des centaines
+# d'échecs qui ne disent rien du script.
+if [ -z "$STOCKFISH" ] || [ ! -x "$STOCKFISH" ]; then
+    echo "Stockfish introuvable : les tests ne peuvent pas tourner sans lui." >&2
+    echo "Installez-le, ou indiquez-le : STOCKFISH=/chemin sh test-app.sh" >&2
+    exit 2
+fi
+
 JETON=${JETON:-$HOME/.lichess_token}
 if [ "$RESEAU" = 1 ] && [ ! -f "$JETON" ]; then
     echo "Fichier de jeton introuvable : $JETON" >&2
@@ -165,7 +175,7 @@ elif [ "$RESEAU" = 1 ]; then
 fi
 
 RAPPORT="$DEPOT/rapport-tests-$SYSTEME-$(date +%Y%m%d-%H%M%S).txt"
-TRAVAIL=$(mktemp -d "${TMPDIR:-/tmp}/collecte-tests.XXXXXX") || exit 2
+TRAVAIL=$(mktemp -d "${TMPDIR:-/tmp}/ianalyze-tests.XXXXXX") || exit 2
 # Chemin remis au propre : sous macOS, TMPDIR se termine par une barre et
 # le chemin fabriqué en porte deux, ce qui empêchait de le masquer dans le
 # rapport.
@@ -185,7 +195,7 @@ cd "$TRAVAIL" || exit 2
 
 # Options communes aux tests qui ne portent ni sur l'explorateur ni sur le
 # moteur. La variable est volontairement développée sans guillemets.
-O="--sans-explorateur --profondeur 1 --sans-questions"
+O="--sans-explorateur --profondeur 1 --sans-questions --stockfish $STOCKFISH"
 
 # Fichier de réglages propre aux tests : le vôtre n'est ni lu ni modifié.
 # Il porte un pseudo, pour que les tests qui passent par un terminal ne
@@ -297,12 +307,8 @@ noter "  python3 système : $(python3 --version 2>&1) ($(command -v python3))"
 noter "  python du venv  : $("$PYVENV" --version 2>&1)"
 noter "  python-chess    : $("$PYVENV" -c 'import chess; print(chess.__version__)')"
 noter "  venv            : $VENV"
-if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
-    noter "  stockfish       : $STOCKFISH"
-    noter "                    $(printf 'quit\n' | "$STOCKFISH" 2>/dev/null | head -n 1)"
-else
-    noter "  stockfish       : introuvable, T51, T52 et T55 seront sautés"
-fi
+noter "  stockfish       : $STOCKFISH"
+noter "                    $(printf 'quit\n' | "$STOCKFISH" 2>/dev/null | head -n 1)"
 noter "  locale          : LANG=${LANG:-} LC_ALL=${LC_ALL:-} LC_CTYPE=${LC_CTYPE:-}"
 noter "  encodages Python: $("$PYVENV" -c 'import sys, locale; print(sys.stdout.encoding, sys.getfilesystemencoding(), locale.getpreferredencoding(False))')"
 noter "  version script  : $(sed -n 's/^VERSION = //p' "$SCRIPT")"
@@ -656,6 +662,21 @@ extraire '*/collecte.json'
 verifier "T46 pgn_encodage utf-8" contient extrait '"pgn_encodage": "utf-8"'
 verifier "T46 pgn_remarques vide" contient extrait '"pgn_remarques": []'
 noter "  note   T47 $(grep -n '^VERSION' "$SCRIPT")"
+SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t47 2> journal-t47 <<'EOF'
+import importlib.util
+import os
+import re
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+print(bool(re.fullmatch(r"\d+\.\d+\.\d+", cp.VERSION)),
+      cp.UA.startswith("IAnalyze/%s " % cp.VERSION))
+EOF
+egal "T47 version au format X.Y.Z, reprise dans l'en-tête d'agent" \
+    "True True" "$(cat sortie-t47)"
+joindre journal-t47 5
+rm -rf "$DEPOT/__pycache__"
 
 # --- Archive ----------------------------------------------------------------
 
@@ -1244,8 +1265,6 @@ noter "  note   lignes du prompt : $(lignes "$PR")"
 titre "T65 : le prompt ne garde que ce qui s'applique"
 egal "T65 les chiffres du moteur font foi" 1 \
     "$(grep -c 'Les chiffres de la section 3 font foi' "$PR")"
-egal "T65 l'analyste n'a pas à évaluer lui-même" 0 \
-    "$(grep -c 'La section 3 est absente' "$PR")"
 egal "T65 Stockfish inutile à l'analyste" 1 \
     "$(grep -c 'Stockfish est inutile' "$PR")"
 egal "T65 tous les fichiers de l'archive à utiliser" 1 \
@@ -1788,9 +1807,14 @@ egal "T71 --consignes, aide muette" 0 \
 # laissé par le script. Un moteur déjà lancé par un autre programme, une
 # interface d'échecs par exemple, ne fausse ainsi plus le contrôle.
 processus_moteur() {
-    pgrep -f "$STOCKFISH" 2>/dev/null | sort | tr '\n' ' '
+    # Par le nom du processus, et non par sa ligne de commande : pgrep -f
+    # retenait aussi tout shell dont la commande citait le chemin du
+    # moteur, d'où de faux échecs.
+    pgrep -x "$(basename "$STOCKFISH")" 2>/dev/null | sort | tr '\n' ' '
 }
 
+# La condition est toujours vraie depuis que le script s'arrête au départ
+# sans moteur. Elle est gardée pour ne pas réindenter tout le bloc.
 if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
     MOTEUR="--sans-explorateur --sans-questions --stockfish $STOCKFISH"
     MOTEURS_AVANT=$(processus_moteur)
@@ -1865,9 +1889,25 @@ EOF
         "$(grep -c 'le résultat contredit' "$PR")"
     sed 's/1-0/0-1/g' t-contre.pgn > t-coherent.pgn
     lancer t-coherent.pgn $MOTEUR $RAPIDE
+    egal "T72 résultat cohérent, code de retour" 0 "$RC"
+    : > extrait
     extraire '*/synthese.md'
+    verifier "T72 résultat cohérent, synthèse produite" \
+        contient extrait "## 3. Évaluations Stockfish"
     egal "T72 résultat cohérent, rien n'est signalé" 0 \
         "$(grep -c 'se contredisent' extrait)"
+
+    # Le cas symétrique : les Noirs donnent leur dame, la partie est
+    # notée 0-1.
+    printf '[Result "0-1"]\n\n1. e4 e5 2. Nf3 Qh4 3. Nxh4 0-1\n' > t-contre-noirs.pgn
+    lancer t-contre-noirs.pgn $MOTEUR $RAPIDE
+    egal "T72 victoire des Noirs contredite, code de retour" 0 "$RC"
+    : > extrait
+    extraire '*/synthese.md'
+    verifier "T72 victoire des Noirs contredite, signalée" contient extrait \
+        "victoire des Noirs, alors que Stockfish donne"
+    verifier "T72 victoire des Noirs contredite, avantage aux Blancs" \
+        contient extrait "3. Nxh4, soit un net avantage aux Blancs"
 
     titre "T52 : coup nul"
     printf '1. e4 e5 2. -- Nc6 3. Nf3 *\n' > t-nul-coup.pgn
@@ -2286,13 +2326,8 @@ EOF
         "$(grep -c 'Stockfish est inutile' "$PR")"
     egal "M2 prompt : la mention mat est expliquée" 1 \
         "$(grep -c 'porte .mat. quand le coup' "$PR")"
-    egal "M2 prompt : pas la branche sans moteur" 0 \
-        "$(grep -c 'La section 3 est absente' "$PR")"
     egal "M2 aucun processus du moteur laissé par les tests" \
         "[$MOTEURS_AVANT]" "[$(processus_moteur)]"
-else
-    titre "T51, T52, T55, T70, M2 : moteur"
-    sauter "T51, T52, T55, T70 et M2 : stockfish introuvable"
 fi
 
 # ===========================================================================
@@ -2351,8 +2386,8 @@ compte_jeton() {
 
 # Une ligne italienne entièrement cataloguée, celle des tests hors réseau.
 printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 *\n' > italienne.pgn
-# La Polonaise suivie de g6, coup rare et hors catalogue, comme votre
-# partie 1 ; elle est courte, pour borner le nombre de requêtes.
+# La Polonaise suivie de g6, coup rare et hors catalogue. Elle est
+# courte, pour borner le nombre de requêtes.
 printf '1. b4 g6 2. Bb2 Nf6 3. e3 Bg7 4. Nf3 O-O *\n' > polonaise.pgn
 # Une italienne où les deux camps roquent, pour T33.
 printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 d6 6. O-O O-O *\n' \
@@ -2360,7 +2395,7 @@ printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 d6 6. O-O O-O *\n' \
 # Un coup nul au troisième demi-coup.
 printf '1. e4 e5 2. -- Nc6 *\n' > nul.pgn
 
-# --- B. Catalogue -----------------------------------------------------------
+# --- Catalogue -----------------------------------------------------------
 
 titre "T09, T10 : installation du catalogue"
 "$SCRIPT" --installer-catalogue --catalogue "$CAT" --venv "$VENV" \
@@ -2409,7 +2444,7 @@ verifier "T13 catalogue tronqué signalé" contient journal "Catalogue tronqué 
 grep 'Catalogue tronqu' journal > ligne 2>/dev/null
 joindre ligne
 
-# --- H. Jeton, sans requête -------------------------------------------------
+# --- Jeton, sans requête -------------------------------------------------
 
 titre "T28 : fichier de jeton lisible par d'autres"
 # Un jeton factice : votre vrai jeton n'est pas recopié. Le catalogue
@@ -2422,7 +2457,7 @@ chmod 644 faux-jeton
 verifier "T28 avertissement sur le mode 644" \
     contient journal "est lisible par d'autres (mode 644)"
 
-# --- C. Base maîtres --------------------------------------------------------
+# --- Base maîtres --------------------------------------------------------
 
 titre "T14 : italienne, base maîtres"
 collecter italienne.pgn $EXPL --base maitres
@@ -2450,7 +2485,7 @@ joindre table
 grep 'Arrêt de l' section2 > ligne 2>/dev/null
 joindre ligne
 
-# --- D. Base Lichess --------------------------------------------------------
+# --- Base Lichess --------------------------------------------------------
 
 titre "T16 : Polonaise, base Lichess"
 collecter polonaise.pgn $EXPL --base lichess
@@ -2487,7 +2522,7 @@ verifier "T18 filtres repris dans la synthèse" \
 head -n 1 table > ligne
 joindre ligne
 
-# --- E. Seuils et modes -----------------------------------------------------
+# --- Seuils et modes -----------------------------------------------------
 
 titre "T19 : seuil de parties inatteignable"
 collecter italienne.pgn $EXPL --base lichess --seuil-parties 100000000000
@@ -2540,7 +2575,7 @@ fi
 grep 'Explorateur : demi-coup' journal > ligne 2>/dev/null
 joindre ligne
 
-# --- K. Roque ---------------------------------------------------------------
+# --- Roque ---------------------------------------------------------------
 
 titre "T33 : le roque retrouvé dans la base"
 collecter roques.pgn $EXPL --base lichess
@@ -2556,7 +2591,7 @@ noter "  note   lignes dans la table : $(lignes table)"
 grep 'Arrêt de l' section2 > ligne 2>/dev/null
 joindre ligne
 
-# --- H. Jeton dans l'archive ------------------------------------------------
+# --- Jeton dans l'archive ------------------------------------------------
 
 titre "T29 : le jeton n'est pas dans l'archive"
 unzip -p "$ARCH" > contenu 2>/dev/null
@@ -2566,7 +2601,7 @@ unzip -p "$ARCH" '*/collecte.json' > json 2>/dev/null
 verifier "T29 collecte.json note seulement sa présence" \
     contient json '"jeton_present": true'
 
-# --- F. Source Lichess ------------------------------------------------------
+# --- Source Lichess ------------------------------------------------------
 
 titre "T24 : partie téléchargée depuis Lichess"
 if [ -n "$ID_PARTIE" ]; then
@@ -2624,9 +2659,6 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
     grep -E 'Stockfish : termin' journal > ligne 2>/dev/null
     joindre ligne
     joindre table3 12
-else
-    titre "N2 : collecte complète"
-    sauter "N2 : stockfish introuvable"
 fi
 
 fi
