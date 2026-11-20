@@ -30,6 +30,7 @@ Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec le
 |---|---|
 | `collecte-partie.py` | le script, en un seul fichier |
 | `prompt-modele.txt` | le modèle dont est tiré le prompt de chaque partie (section 9) |
+| `verifier-analyse.py` | le contrôle du PGN rendu par le LLM (section 10) |
 | `test.pgn` | une partie d'essai qui réunit les cas tordus d'un PGN |
 | `test-app.sh` | la suite de tests, pour Linux et macOS |
 | [`TESTS.md`](TESTS.md) | comment lancer les tests et ce qu'ils vérifient |
@@ -862,7 +863,68 @@ Le prompt prévoit les deux cas :
 - **Le LLM exécute du code** : il construit le PGN avec python-chess et en prouve la légalité.
 - **Le LLM n'exécute pas de code** : il écrit le PGN lui-même, le dit, et vous laisse ouvrir le fichier pour confirmer.
 
-## 10. Jeton
+## 10. Vérifier le travail du LLM
+
+Un LLM peut rendre un PGN qui a l'air juste et ne l'est pas : un coup illégal dans une variante, un chiffre arrangé, une gaffe passée sous silence.
+
+`verifier-analyse.py` compare le PGN rendu à l'archive que le LLM a reçue, et sort le même bilan pour chaque LLM essayé.
+
+```bash
+./verifier-analyse.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn
+```
+
+Copiez la conversation dans un fichier texte pour faire contrôler aussi les positions et les évaluations qu'elle cite :
+
+```bash
+./verifier-analyse.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn --synthese conversation.txt --nom "Nom du modèle"
+```
+
+Si le LLM n'a rendu aucun PGN, mettez un tiret à la place du fichier :
+
+```bash
+./verifier-analyse.py analyse-ma-partie-20261119-164140.zip - --synthese conversation.txt
+```
+
+Le script accepte le zip ou son dossier décompressé, et se relance tout seul dans l'environnement virtuel d'IAnalyze.
+
+### Ce qui est contrôlé
+
+| Contrôle | Défauts relevés |
+|---|---|
+| Lecture | fichier hors UTF-8, coup illégal dans la partie ou dans une variante, ligne vide dans le corps de la partie |
+| Ligne principale | différente de la partie d'origine |
+| Format | ligne de plus de 79 caractères, accolade ou `%` dans un commentaire, tiret cadratin, notation suffixe, balises, marqueur de fin |
+| Coups commentés | erreur ou gaffe de Stockfish laissée sans commentaire, NAG de position contraire à l'évaluation du moteur |
+| Évaluations | chiffre cité qui n'existe nulle part dans les données du moteur |
+| Variantes | variante écrite à l'intérieur d'un commentaire, donc non jouable, variante illégale ou trop longue |
+| Conversation | FEN invalide ou étrangère à la partie, tiret cadratin |
+
+Deux de ces défauts viennent de vrais PGN de LLM et méritent une explication :
+
+- **La ligne vide dans le corps de la partie.** python-chess y voit la fin de la partie et n'en lit pas la suite. Le script nomme le défaut, puis poursuit ses contrôles sur le fichier une fois la ligne retirée.
+- **La variante écrite entre accolades.** Ce n'est que du texte, SCID ne la rejoue pas. Le script la rejoue lui-même pour dire si elle est légale et si elle vient d'une ligne du moteur.
+
+### Lire le bilan
+
+| Repère | Sens |
+|---|---|
+| `OK` | conforme |
+| `ECHEC` | contraire à une consigne impérative du prompt |
+| `ATTENTION` | à regarder de près, sans être forcément fautif |
+| `INFO` | mesure donnée pour comparer les LLM entre eux |
+
+Code de retour : 0 sans `ECHEC`, 1 avec au moins un `ECHEC`, 2 si un fichier ne peut pas être lu.
+
+### Ce que le script ne fait pas
+
+Il ne juge pas la qualité du commentaire. Une explication fausse mais bien formée passe : un LLM peut placer une dame sur la mauvaise case dans une phrase sans qu'aucun contrôle ne le voie. Cette lecture reste la vôtre.
+
+Deux limites à connaître :
+
+- une évaluation arrondie à une décimale est acceptée : "+0.35" cité "+0.4" ne compte pas comme inventé
+- le script repère un chiffre qui n'existe nulle part, pas un vrai chiffre attribué au mauvais coup
+
+## 11. Jeton
 
 Le jeton n'est transmis que dans l'en-tête Authorization, jamais dans l'URL. Il n'apparaît ni dans le journal, ni dans l'archive, où `collecte.json` note seulement sa présence.    
 
@@ -870,7 +932,7 @@ Un fichier de jeton lisible par d'autres déclenche un avertissement.
 
 Le fichier peut porter une marque d'ordre des octets ou être en UTF-16, comme en produisent certains éditeurs Windows : le journal le signale et le jeton est lu normalement.
 
-## 11. Sources et liens
+## 12. Sources et liens
 
 Ce que le script interroge :
 

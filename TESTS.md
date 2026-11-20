@@ -18,13 +18,13 @@ Depuis le dépôt, après l'installation décrite dans le README :
 
 | Commande | Ce qu'elle joue | Durée |
 |---|---|---|
-| `./test-app.sh` | les tests hors réseau, sans jeton | une à deux minutes, davantage sur une petite machine |
-| `./test-app.sh --reseau` | les mêmes, puis ceux qui demandent le réseau et votre jeton Lichess | quatre à six minutes de plus |
+| `./test-app.sh` | les tests hors réseau, sans jeton | environ 3 minutes sur un Mac récent, 6 sur un Raspberry Pi |
+| `./test-app.sh --reseau` | les mêmes, puis ceux qui demandent le réseau et votre jeton Lichess | environ 3 minutes de plus |
 
 Le script se termine par un bilan :
 
 ```text
-Réussis : 270, échecs : 0, sautés : 0
+Réussis : 303, échecs : 0, sautés : 0
 Rapport : /chemin/du/depot/rapport-tests-Linux-20261120-002933.txt
 ```
 
@@ -75,6 +75,8 @@ GARDER=1 ./test-app.sh
 | Prompt | T64 à T67 | écrit à côté de l'archive, passages gardés ou retirés, modèle fautif refusé, script copié sans son modèle |
 | Moteur | T25, T26, T51, T52, T55, M2 | moteur introuvable, analyse limitée aux premiers coups, mat manqué, coup nul, options hors bornes, analyse complète |
 | Partie d'essai | T70 | `test.pgn` : commentaires, variantes, prise en passant, promotion, roques, coup nul |
+| Résultat contraire | T72 | partie notée gagnée dans une position perdue : la synthèse et le prompt le disent |
+| Vérification | T73 | `verifier-analyse.py` : un PGN conforme passe, un PGN fautif voit chacun de ses défauts relevé, PGN absent, archive illisible |
 
 ## Tests avec `--reseau`
 

@@ -6,12 +6,14 @@
 # dans TESTS.md, puis écrit un rapport que vous pouvez renvoyer tel quel.
 #
 #     sh test-app.sh             tests hors réseau : encodages, archive,
-#                                réglages, cadence, moteur. Ni jeton ni
-#                                Lichess. Une à deux minutes.
+#                                réglages, cadence, moteur, vérification
+#                                du PGN rendu. Ni jeton ni Lichess.
+#                                Environ 3 minutes sur un Mac récent, 6
+#                                sur un Raspberry Pi.
 #     sh test-app.sh --reseau    les mêmes, puis les tests qui demandent le
 #                                réseau et votre jeton : catalogue,
 #                                explorateur, téléchargement d'une partie.
-#                                Quatre à six minutes de plus.
+#                                Environ 3 minutes de plus.
 #
 # Rien n'est modifié dans le dépôt ni dans vos répertoires : tout se passe
 # dans un répertoire temporaire, supprimé à la fin. Les tests désignent
@@ -1350,6 +1352,133 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
         joindre lignes
     else
         sauter "T70 : test.pgn absent du dépôt"
+    fi
+
+    titre "T73 : verifier-analyse.py, contrôle du PGN rendu par un LLM"
+    if [ -f "$DEPOT/test.pgn" ] && [ -f "$DEPOT/verifier-analyse.py" ]; then
+        VERIF="$DEPOT/verifier-analyse.py"
+        cp "$DEPOT/test.pgn" test.pgn
+        lancer test.pgn $MOTEUR $RAPIDE
+        # Deux PGN sont fabriqués à partir de l'archive, comme le ferait un
+        # LLM : un conforme, construit avec python-chess, et un fautif, où
+        # sont injectés les défauts relevés sur de vrais PGN de LLM.
+        ARCHIVE="$ARCH" "$PYVENV" - > sortie-t73 2> journal-t73 <<'EOF'
+import io
+import json
+import os
+import textwrap
+import zipfile
+
+import chess
+import chess.pgn
+
+with zipfile.ZipFile(os.environ["ARCHIVE"]) as z:
+    nom = [n for n in z.namelist() if n.endswith("partie.pgn")][0]
+    racine = nom[:-len("partie.pgn")]
+    source = chess.pgn.read_game(io.StringIO(z.read(nom).decode("utf-8")))
+    evals = json.loads(z.read(racine + "stockfish/evaluations.json"))
+
+
+def construire(fautif):
+    jeu = chess.pgn.Game()
+    for b in ("Event", "Site", "Date", "Round", "White", "Black", "Result"):
+        jeu.headers[b] = source.headers[b]
+    autres = {"Annotator": "Essai (test-app.sh)", "BlackElo": "1500",
+              "PlyCount": str(len(evals)), "TimeControl": "600+5",
+              "WhiteElo": "1450"}
+    for b in sorted(autres):
+        jeu.headers[b] = autres[b]
+    jeu.comment = textwrap.fill("Partie d'essai, ouverture Barnes. " * 12, 75)
+    noeud = jeu
+    for e, coup in zip(evals, source.mainline_moves()):
+        suivant = noeud.add_main_variation(coup)
+        # Le demi-coup 4, mat manqué, est une gaffe pour tout moteur : le
+        # PGN fautif l'oublie.
+        if e["nature"] in ("erreur", "gaffe") and not (
+                fautif and e["demicoup"] == 4):
+            suivant.nags.add(chess.pgn.NAG_BLUNDER if e["nature"] == "gaffe"
+                             else chess.pgn.NAG_MISTAKE)
+            meilleur = e["meilleurs"][0]
+            texte = ("Il fallait %s, que le moteur donne à %s contre %s "
+                     "pour le coup joué." % (meilleur["san"],
+                                             meilleur["score"],
+                                             e["joue"]["score"]))
+            if fautif and e["demicoup"] == 3:
+                # Demi-coup 3, mat concédé : évaluation inventée, pour
+                # cent, variante écrite dans le commentaire, variante
+                # illégale, et NAG donnant les Blancs gagnants.
+                texte += (" Chiffre inventé : +7.77, soit 50 %% de gain. (%s)"
+                          " (2. Ke3 Nc6)"
+                          % " ".join(meilleur["pv_san"].split()[:4]))
+                suivant.nags.add(18)
+            suivant.comment = textwrap.fill(texte, 75)
+            # Variante tirée de la ligne du moteur, quatre demi-coups.
+            var = noeud
+            for uci in meilleur["pv_uci"][:4]:
+                m = chess.Move.from_uci(uci)
+                if m not in var.board().legal_moves:
+                    break
+                var = (var.add_variation(m) if var is noeud
+                       else var.add_main_variation(m))
+        noeud = suivant
+    texte = jeu.accept(chess.pgn.StringExporter(columns=79)) + "\n"
+    if fautif:
+        # Défauts de qui écrit le PGN à la main : ligne vide après le
+        # résumé, notation suffixe, marqueur de fin faux.
+        texte = texte.replace("\n1. f3", "\n\n1. f3", 1)
+        texte = texte.replace("2. g4 $4", "2. g4??", 1)
+        fin = source.headers["Result"]
+        texte = texte[:texte.rindex(fin)] + "1-0\n"
+    return texte
+
+
+open("t-conforme.pgn", "w", encoding="utf-8").write(construire(False))
+open("t-fautif.pgn", "w", encoding="utf-8").write(construire(True))
+open("t-conversation.txt", "w", encoding="utf-8").write(
+    "Position 1 : %s\n"
+    "Position 2 : 8/8/8/8/8/8/8/8 w - - 0 1\n"
+    "Evaluation +9.99 sortie de nulle part — avec un tiret cadratin.\n"
+    % evals[2]["fen"])
+EOF
+        "$PYVENV" "$VERIF" "$ARCH" t-conforme.pgn > bilan 2>&1
+        egal "T73 PGN conforme, code de retour" 0 "$?"
+        egal "T73 PGN conforme, aucun échec" 0 "$(grep -c '^  ECHEC' bilan)"
+        verifier "T73 PGN conforme, variantes appuyées sur le moteur" \
+            contient bilan "0 sont du cru du LLM"
+        "$PYVENV" "$VERIF" "$ARCH" t-fautif.pgn --nom "essai fautif" \
+            --synthese t-conversation.txt > bilan 2>&1
+        egal "T73 PGN fautif, code de retour" 1 "$?"
+        # Chaque ligne donne le défaut injecté, puis ce que le bilan en dit.
+        while IFS='|' read -r defaut constat; do
+            verifier "T73 défaut relevé : $defaut" \
+                grep -q -E "^  ECHEC .*$constat" bilan
+        done <<'FIN'
+ligne vide dans le corps|ligne vide dans le corps de la partie
+pour cent écrit %|aucun caractère % dans un commentaire
+notation suffixe|pas de notation suffixe
+marqueur de fin|marqueur de fin "1-0"
+gaffe non commentée|toutes commentées \(1 oubliée
+NAG contraire au moteur|aucun NAG de position contraire
+évaluation inventée dans le PGN|toutes se retrouvent dans les données du moteur \(1 introuvable
+variante illégale dans un commentaire|toutes légales \(1 illégale
+tiret cadratin dans la conversation|aucun tiret cadratin dans la conversation \(1 relevé
+FEN invalide|toutes les FEN sont des positions valides
+FIN
+        verifier "T73 variante écrite dans un commentaire" \
+            contient bilan "écrite(s) à l'intérieur d'un commentaire"
+        verifier "T73 coup illégal nommé" contient bilan "Ke3 est illégal"
+        verifier "T73 chiffre inventé nommé" contient bilan "+7.77"
+        grep -E '^  (ECHEC|ATTENTION)' bilan | cut -c1-110 > lignes
+        joindre lignes 20
+        "$PYVENV" "$VERIF" "$ARCH" - --synthese t-conversation.txt \
+            > bilan 2>&1
+        egal "T73 aucun PGN rendu, code de retour" 1 "$?"
+        verifier "T73 aucun PGN rendu, dit dans le bilan" \
+            contient bilan "aucun PGN rendu"
+        "$PYVENV" "$VERIF" /nulle/part.zip t-conforme.pgn > bilan 2>&1
+        egal "T73 archive illisible, code de retour" 2 "$?"
+    else
+        sauter "T73 : test.pgn ou verifier-analyse.py absent du dépôt"
     fi
 
     titre "M2 : analyse complète de l'italienne, moteur seul"

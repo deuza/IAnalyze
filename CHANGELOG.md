@@ -10,6 +10,13 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Added
 
+- `verifier-analyse.py`, qui contrôle le PGN annoté rendu par un LLM en
+  le comparant à l'archive qu'il a reçue : lecture, ligne principale,
+  format, erreurs et gaffes commentées, évaluations citées, variantes,
+  positions citées dans la conversation. Il nomme deux pièges relevés
+  sur de vrais PGN de LLM, la ligne vide dans le corps de la partie et
+  la variante écrite à l'intérieur d'un commentaire, qu'il rejoue
+  lui-même. Il ne juge pas la qualité du commentaire. Test T73.
 - Synthèse : sous le tableau de Stockfish, une ligne "Résultat et
   évaluation finale se contredisent" quand le camp déclaré vainqueur
   est moins bien d'au moins 300 cp après le dernier coup. La partie ne
