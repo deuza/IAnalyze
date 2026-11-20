@@ -1458,17 +1458,21 @@ titre "T74 : prompt seul, court, à coller sans pièce jointe"
 
 # Avec --prompt-seul, le prompt est tiré d'un modèle court : quelques
 # consignes, la partie, puis les évaluations du moteur. Il se colle seul
-# dans la conversation. L'archive est écrite quand même,
-# verifier-analyse.py en a besoin.
+# dans la conversation. Rien d'autre n'est écrit : ni archive, ni
+# dossier de travail, et la sortie standard donne le chemin du prompt.
 printf '[White "Alice"]\n[Black "Bob"]\n[Result "1-0"]\n\n' > t-seul.pgn
 printf '1. e4 e5 2. Qh5 Nc6 3. Qxf7+ Kxf7 1-0\n' >> t-seul.pgn
 S74="--sans-explorateur --sans-questions --venv $VENV --reglages t-pr.ini"
 S74="$S74 --profondeur 8 --fils 2 --hachage 32"
 "$SCRIPT" t-seul.pgn $S74 --prompt-seul > sortie 2> journal
 egal "T74 code de retour" 0 $?
-ARCH="$(head -n 1 sortie)"
-PR="${ARCH%.zip}.prompt.txt"
-verifier "T74 l'archive est écrite quand même" test -f "$ARCH"
+PR="$(head -n 1 sortie)"
+verifier "T74 la sortie standard donne le prompt" test -f "$PR"
+egal "T74 un seul fichier écrit, ni archive ni dossier" \
+    "analyse-t-seul-.prompt.txt" \
+    "$(ls -d analyse-t-seul-* | sed 's/[0-9]\{8\}-[0-9]\{6\}//')"
+verifier "T74 le journal dit qu'aucune archive n'est écrite" \
+    contient journal "aucune archive n'est écrite"
 verifier "T74 le journal dit de le coller seul" \
     contient journal "à coller seul dans la conversation"
 egal "T74 aucun repère du modèle ne reste" 0 "$(grep -c -E '^#!|\{\{' "$PR")"
@@ -1503,8 +1507,20 @@ egal "T74 tableau : gaffe, écart et meilleur coup" 1 \
 # Notée 1-0, la partie finit avec une dame de moins pour les Blancs.
 egal "T74 résultat contraire à l'évaluation, dit au LLM" 1 \
     "$(grep -c '^Attention : Résultat et évaluation finale' "$PR")"
-unzip -p "$ARCH" '*/partie.pgn' > t-partie.pgn
-verifier "T74 PGN de l'archive repris tel quel" \
+# Avec --garder-dossier, le dossier de travail reste, sans archive :
+# verifier-analyse.py peut le lire, avec les chiffres mêmes du prompt.
+rm -f analyse-t-seul-*
+"$SCRIPT" t-seul.pgn $S74 --prompt-seul --garder-dossier \
+    > sortie 2> journal
+PR="$(head -n 1 sortie)"
+DOSSIER74="${PR%.prompt.txt}"
+verifier "T74 --garder-dossier, les évaluations restent" \
+    test -f "$DOSSIER74/stockfish/evaluations.json"
+egal "T74 --garder-dossier, toujours aucune archive" 0 \
+    "$(find . -maxdepth 1 -name 'analyse-t-seul-*.zip' | wc -l)"
+cp "$DOSSIER74/partie.pgn" t-partie.pgn
+rm -rf "$DOSSIER74"
+verifier "T74 PGN de la collecte repris tel quel" \
     "$PYVENV" -c '
 import sys
 prompt = open(sys.argv[1], encoding="utf-8").read()
@@ -1929,11 +1945,11 @@ EOF
     egal "T52 pas d'avis répété de python-chess" 0 \
         "$(grep -c 'Not transmitting' journal)"
     lancer t-nul-coup.pgn $MOTEUR $RAPIDE --prompt-seul
-    PR="${ARCH%.zip}.prompt.txt"
+    PR="$ARCH"
     verifier "T52 prompt court : le coup nul est expliqué" \
         contient "$PR" 'Un coup noté "--" est un coup nul'
     lancer italienne.pgn $MOTEUR --profondeur 4 --prompt-seul
-    PR="${ARCH%.zip}.prompt.txt"
+    PR="$ARCH"
     egal "T52 prompt court : rien sur le coup nul sans coup nul" 0 \
         "$(grep -c 'coup nul' "$PR")"
     verifier "T52 prompt court : chaque coup joué, sans limite" \
@@ -1955,7 +1971,7 @@ EOF
         contient "$PR" "meilleurs coups du moteur, 2 par position"
     lancer italienne.pgn $MOTEUR --coups-stockfish 3 --profondeur 4 \
         --prompt-seul
-    PR="${ARCH%.zip}.prompt.txt"
+    PR="$ARCH"
     verifier "T25 prompt court : couverture partielle dite" contient "$PR" \
         "après chacun des 6 premiers demi-coups sur 9"
     egal "T25 prompt court : plus de chaque coup joué" 0 \

@@ -463,7 +463,11 @@ N'écrit pas le prompt d'analyse. S'exclut avec `--prompt` et avec `--prompt-seu
 
 C'est le repli pour un LLM qui n'ouvre pas les zip ou n'exécute pas de code (voir section 10). Le PGN annoté lui est demandé dans un bloc de code.
 
-Ce prompt est tiré de `prompt-seul-modele.txt`, et non de `prompt-modele.txt`. L'archive est écrite quand même : `verifier-analyse.py` en a besoin.
+Ce prompt est tiré de `prompt-seul-modele.txt`, et non de `prompt-modele.txt`.
+
+Aucune archive n'est écrite : le prompt est le seul fichier produit, et son chemin est écrit sur la sortie standard. Pour l'archive et ses données, lancez une collecte sans cette option.
+
+Avec `--garder-dossier`, le dossier de travail reste à côté du prompt : c'est lui que lit `verifier-analyse.py`.
 
 S'exclut avec `--sans-prompt`. Avec `--prompt`, le modèle désigné doit placer `{{PARTIE_PGN}}`, sans quoi le script s'arrête avant la collecte.
 
@@ -951,10 +955,10 @@ Ce qu'il faut savoir de ce mode :
 
 - le prompt pèse environ 5 Ko pour une partie de 25 coups
 - il ne porte ni la synthèse ni les fichiers `.json` : le LLM n'a que la partie, le tableau du moteur et, avec l'explorateur, une phrase sur l'ouverture
-- l'archive est écrite quand même, gardez-la : `verifier-analyse.py` en a besoin
+- aucune archive n'est écrite, le prompt est le seul fichier produit
 - **c'est un repli, et il n'a pas encore été essayé** : les essais ci-dessous lui sont antérieurs
 
-La qualité de l'analyse dépend alors du LLM que vous choisissez. Passez toujours son PGN à `verifier-analyse.py --prompt-seul`, décrit plus bas.
+La qualité de l'analyse dépend alors du LLM que vous choisissez. Pour contrôler son PGN avec `verifier-analyse.py --prompt-seul`, décrit plus bas, ajoutez `--garder-dossier` à la collecte : le vérificateur a besoin des évaluations qui ont servi au prompt.
 
 Deux conseils tirés des essais :
 
@@ -1005,10 +1009,14 @@ Si le LLM n'a rendu aucun PGN, mettez un tiret à la place du fichier :
 ./verifier-analyse.py analyse-ma-partie-20261119-164140.zip - --synthese conversation.txt
 ```
 
-Pour un PGN obtenu avec le prompt court de `--prompt-seul`, ajoutez la même option :
+Pour un PGN obtenu avec le prompt court de `--prompt-seul`, ajoutez la même option, et donnez le dossier de travail gardé par `--garder-dossier` :
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn --prompt-seul
+./ianalyze.py ma-partie.pgn --prompt-seul --garder-dossier
+```
+
+```bash
+./verifier-analyse.py analyse-ma-partie-20261119-164140 analyse-llm.pgn --prompt-seul
 ```
 
 Le prompt court demande moins que le prompt complet. Avec cette option, les contrôles qu'il ne fonde pas sont sautés : lignes de 79 caractères, résumé avant le premier coup, NAG, `%`, tiret cadratin, notation suffixe, balises Annotator et PlyCount. Restent la lecture, la ligne principale, les accolades, les balises recopiées, le marqueur de fin, les erreurs et gaffes commentées, les évaluations citées et les variantes.

@@ -29,7 +29,8 @@ modifier à la main.
 tiré du modèle prompt-modele.txt : vous le collez dans la conversation,
 l'archive en pièce jointe. Avec --prompt-seul, c'est un prompt court,
 tiré de prompt-seul-modele.txt, qui porte la partie et les évaluations
-de Stockfish : il se colle seul, sans pièce jointe.
+de Stockfish : il se colle seul, sans pièce jointe, et aucune archive
+n'est alors écrite.
 
 Le résultat est une archive zip contenant les données brutes ainsi qu'un
 fichier de synthèse unique, destiné à être joint à une conversation
@@ -3772,7 +3773,8 @@ exemples d'utilisation
       ./ianalyze.py ma-partie.pgn --garder-dossier
 
   Pour un LLM qui n'ouvre pas les zip ou n'exécute pas de code : un
-  prompt court qui porte la partie et les évaluations, à coller seul :
+  prompt court qui porte la partie et les évaluations, à coller seul.
+  Aucune archive n'est écrite :
 
       ./ianalyze.py ma-partie.pgn --prompt-seul
 
@@ -3924,7 +3926,8 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                         "(défaut : %(default)s)")
     g.add_argument("--garder-dossier", action="store_true",
                    help="ne supprime pas le dossier de travail après "
-                        "création de l'archive")
+                        "création de l'archive, ou du prompt avec "
+                        "--prompt-seul")
     g.add_argument("--prompt", metavar="FICHIER",
                    help="modèle du prompt d'analyse, écrit à côté de "
                         "l'archive sous le nom <archive>%s (défaut : %s à "
@@ -3936,8 +3939,9 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                         "évaluations de Stockfish, à coller seul dans la "
                         "conversation, sans pièce jointe : pour un LLM qui "
                         "n'ouvre pas les zip ou n'exécute pas de code. Son "
-                        "modèle est %s. L'archive est écrite quand même"
-                        % PROMPT_SEUL_MODELE)
+                        "modèle est %s. Aucune archive n'est écrite, et le "
+                        "dossier de travail est supprimé, sauf avec "
+                        "--garder-dossier" % PROMPT_SEUL_MODELE)
 
     g = p.add_argument_group("explorateur")
     g.add_argument("--base", choices=sorted(BASES_EXPLORATEUR),
@@ -4376,7 +4380,14 @@ def main(argv: list[str]) -> int:
         texte_partie = (dossier / "partie.pgn").read_text(encoding="utf-8")
 
     # -- Archive et nettoyage -----------------------------------------------
-    archive = archiver(dossier, options.garder_dossier)
+    # Avec --prompt-seul, le prompt est tout ce que le joueur demande :
+    # aucune archive n'est écrite, et le dossier de travail est supprimé
+    # plus bas, une fois le prompt sur le disque. Le nom que l'archive
+    # aurait porté sert encore à nommer le prompt.
+    if options.prompt_seul:
+        archive = chemin_archive(dossier)
+    else:
+        archive = archiver(dossier, options.garder_dossier)
 
     # -- Prompt d'analyse, écrit à côté de l'archive ------------------------
     # Après l'archivage : un échec ne laisse pas un prompt sans archive. Le
@@ -4463,9 +4474,33 @@ def main(argv: list[str]) -> int:
                 journal("Prompt d'analyse écrit : %s, à coller dans la "
                         "conversation, l'archive en pièce jointe." % prompt)
         except OSError as err:
+            if options.prompt_seul:
+                # Le prompt était le seul produit attendu : son échec est
+                # celui de la commande. Le dossier de travail reste.
+                raise SystemExit("Prompt non écrit (%s), dossier de travail "
+                                 "conservé : %s" % (prompt, err)) from err
             # L'archive est faite : un prompt impossible à écrire ne doit
             # pas faire échouer la collecte.
             journal("Attention : prompt non écrit (%s) : %s" % (prompt, err))
+
+    if options.prompt_seul:
+        # Le prompt est écrit : le dossier de travail n'a plus d'emploi,
+        # sauf si le joueur a demandé à le garder, par exemple pour le
+        # passer à verifier-analyse.py.
+        prompt = archive.with_name(dossier.name + PROMPT_SUFFIXE)
+        if options.garder_dossier:
+            journal("Dossier conservé sur demande : %s" % dossier)
+        else:
+            try:
+                shutil.rmtree(dossier)
+            except OSError as err:
+                raise SystemExit("Prompt écrit mais suppression du dossier "
+                                 "impossible : %s" % err) from err
+            journal("Dossier de travail supprimé, aucune archive n'est "
+                    "écrite avec --prompt-seul.")
+        # Le chemin écrit seul sur la sortie standard est celui du prompt.
+        annoncer_archive(prompt)
+        return 0
 
     annoncer_archive(archive)
     return 0

@@ -43,8 +43,9 @@ vos commandes `--avec-stockfish`, `--sans-stockfish` et `--consignes`.
   pour un LLM qui n'ouvre pas les zip ou n'exécute pas de code, sur le
   modèle du prompt d'analyse de Lucas Chess, avec les chiffres du
   moteur en plus. Il est tiré d'un modèle à part,
-  `prompt-seul-modele.txt`. L'archive est écrite quand même, pour
-  `verifier-analyse.py`.
+  `prompt-seul-modele.txt`. Aucune archive n'est alors écrite : le
+  prompt est le seul fichier produit, sauf avec `--garder-dossier`, qui
+  laisse le dossier de travail à `verifier-analyse.py`.
 - `verifier-analyse.py`, qui contrôle le PGN annoté rendu par un LLM en
   le comparant à l'archive qu'il a reçue : lecture, ligne principale,
   format, erreurs et gaffes commentées, évaluations citées, variantes,
