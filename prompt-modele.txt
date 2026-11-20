@@ -77,8 +77,10 @@ Aucun ne contient d'analyse, uniquement des données :
 #! si EXPLORATEUR
 - explorateur/NNN-<coup>.json : la réponse brute de l'explorateur pour
   la position d'avant le demi-coup NNN. "white", "draws" et "black"
-  comptent les parties de la position, "moves" liste TOUS les coups
-  connus dans cette position, chacun avec ses propres compteurs. La
+  comptent les parties de la position, "opening" la nomme quand elle
+  est cataloguée. "moves" liste TOUS les coups connus dans cette
+  position, chacun avec ses propres compteurs, le classement moyen de
+  ceux qui l'ont joué ("averageRating") et l'ouverture où il mène. La
   section 2 n'en garde que le coup joué et le coup majoritaire :
   allez-y chercher les autres coups quand vous proposez une
   alternative théorique.
@@ -134,8 +136,7 @@ Section 3, "Évaluations Stockfish" : pour chaque demi-coup,
    centipions du point de vue du joueur au trait, la nature du coup
    (imprécision dès {{SEUIL_IMPRECISION}} cp, erreur dès {{SEUIL_ERREUR}}, gaffe dès {{SEUIL_GAFFE}}) et les
    trois meilleurs coups. Section 3 bis : les variantes principales du
-   moteur.
-   Section 3 ter : les erreurs et gaffes par camp, avec le meilleur
+   moteur. Section 3 ter : les erreurs et gaffes par camp, avec le meilleur
    coup, sa ligne et la FEN de la position. Deux cas particuliers.
    L'écart porte "mat" quand le coup joué manque un mat ou en concède
    un : il ne se chiffre pas en centipions, comparez les colonnes Éval
@@ -261,10 +262,11 @@ CONTRAINTES DE FORMAT. Rien ne vérifie alors vos coups à votre place :
 === ÉVALUATION MOTEUR ===
 
 Les chiffres de la section 3 font foi : ne réévaluez aucun coup. La
-colonne Nature désigne les coups à commenter
-obligatoirement. La section 3 ter fournit pour chaque erreur et gaffe
-le meilleur coup, sa ligne et la FEN, et vos variantes entre
-parenthèses partent des lignes de la section 3 bis. Les chances G/N/P
+colonne Nature désigne les coups à commenter obligatoirement. La
+section 3 ter fournit pour chaque erreur et gaffe le meilleur coup, sa
+ligne et la FEN. Vos variantes entre parenthèses partent des lignes de
+la section 3 bis, ou des variantes entières de
+stockfish/evaluations.json. Les chances G/N/P
 peuvent illustrer un basculement, présentées comme une tendance du
 modèle de Stockfish, jamais comme la probabilité réelle entre deux
 joueurs humains.
@@ -412,9 +414,8 @@ Après le fichier, dans la conversation et en texte simple :
 
 1. LES TROIS ERREURS LES PLUS COÛTEUSES, par ordre de gravité
    décroissante. Pour chacune : numéro de coup, coup joué, coup
-   correct, écart lu dans la section 3, et
-   nature de l'erreur (calcul, évaluation, plan, négligence tactique,
-   décision de structure).
+   correct, écart lu dans la section 3, et nature de l'erreur (calcul,
+   évaluation, plan, négligence tactique, décision de structure).
 2. LE THÈME À TRAVAILLER EN PRIORITÉ, un seul, celui dont la correction
    rapporterait le plus de points, justifié par ce qui s'est passé dans
    CETTE partie.
@@ -430,8 +431,9 @@ Après le fichier, dans la conversation et en texte simple :
   Une variante que vous n'avez pas calculée jusqu'au bout est annoncée
   comme telle.
 - Les chiffres des sections 2 et 3 priment sur votre mémoire. Quand
-  ils manquent, dites que vous estimez. Si la table de la section 2 s'arrête avant le point que
-  vous voulez commenter, dites-le au lieu d'affirmer.
+  ils manquent, dites que vous estimez. Si la table de la section 2
+  s'arrête avant le point que vous voulez commenter, dites-le au lieu
+  d'affirmer.
 - Une position trop complexe se tranche avec le moteur, si vous en
   avez un. Sinon, dites qu'elle reste ouverte.
 - Les repères de phase et les chances G/N/P sont indicatifs.

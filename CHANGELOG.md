@@ -14,6 +14,11 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   chaque position suivante un avis de python-chess, "Not transmitting
   history with null moves to UCI engine". Sans conséquence sur les
   évaluations, il est écarté.
+- Prompt : plusieurs lignes mal coupées, dont une de plus de 80
+  colonnes. La description des réponses brutes de l'explorateur est
+  complétée d'après un vrai fichier : nom de la position, classement
+  moyen et ouverture de chaque coup.
+
 
 ## [4.0.0] - 2026-11-19
 
