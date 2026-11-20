@@ -39,6 +39,8 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Changed
 
+- `--profondeur` est bornée à 60. Une valeur démesurée, par faute de
+  frappe, occupait le moteur sans jamais rendre la main.
 - Un PGN qui contient plusieurs parties est refusé, avec leur nombre.
   Jusqu'ici la première était analysée après un simple avertissement,
   et `partie.pgn` les recopiait toutes dans l'archive.
@@ -72,6 +74,10 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- Moteur qui s'arrête hors d'une recherche, quand le système lui refuse
+  la mémoire demandée par `--hachage` par exemple : le script affichait
+  "Erreur inattendue (CancelledError)" suivi d'un message vide. Il dit
+  maintenant que le moteur a échoué, et pourquoi c'est probable.
 - Explorateur : une erreur HTTP dont le corps arrive coupé, ou une
   réponse imbriquée à l'excès, faisait avorter toute la collecte. Seule
   l'interrogation s'arrête maintenant, comme pour les autres réponses

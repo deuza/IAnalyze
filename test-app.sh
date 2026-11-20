@@ -1615,7 +1615,42 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
     verifier "T25 fils dans collecte.json" contient extrait '"fils": 2'
     verifier "T25 hachage dans collecte.json" contient extrait '"hachage": 128'
 
+    titre "T78 : moteur qui s'arrête hors d'une recherche"
+    # Faux moteur : il annonce ses options, puis meurt au premier
+    # réglage, comme Stockfish quand la mémoire de sa table de hachage
+    # lui est refusée.
+    cat > faux-moteur <<'FIN'
+#!/bin/sh
+while read -r ligne; do
+    case "$ligne" in
+        uci)
+            echo "id name Faux"
+            echo "option name Threads type spin default 1 min 1 max 8"
+            echo "option name Hash type spin default 16 min 1 max 1024"
+            echo "option name MultiPV type spin default 1 min 1 max 5"
+            echo "uciok" ;;
+        isready) echo "readyok" ;;
+        setoption*) exit 1 ;;
+        quit) exit 0 ;;
+    esac
+done
+FIN
+    chmod +x faux-moteur
+    lancer italienne.pgn --sans-explorateur --sans-questions \
+        --stockfish "$TRAVAIL/faux-moteur" --fils 2 --profondeur 4
+    egal "T78 code de retour" 1 "$RC"
+    verifier "T78 message du moteur, pas une erreur inattendue" \
+        contient journal "Le moteur a échoué en cours d'analyse"
+    egal "T78 pas d'erreur inattendue" 0 \
+        "$(grep -c 'Erreur inattendue' journal)"
+    joindre journal 6
+    rm -rf analyse-italienne-*
+
     titre "T55 : options moteur hors bornes"
+    lancer italienne.pgn $MOTEUR --profondeur 61
+    egal "T55 --profondeur 61, code de retour" 2 "$RC"
+    verifier "T55 --profondeur 61, message" \
+        contient journal "--profondeur ne doit pas dépasser 60"
     for option in "--fils 100000" "--hachage 99999999999" "--multipv 9999"; do
             lancer italienne.pgn $MOTEUR $option
         egal "T55 $option, code de retour" 1 "$RC"

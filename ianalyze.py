@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import codecs
+import concurrent.futures
 import configparser
 import contextlib
 import csv
@@ -619,6 +620,12 @@ def expurger(texte: str, jeton: str | None) -> str:
         texte = texte.replace(jeton, "<JETON-EXPURGE>")
     return texte
 
+
+#: Profondeur de recherche la plus grande admise. Au delà, une seule
+#: position occuperait le moteur des heures, sans rien apporter à
+#: l'analyse d'une partie : une faute de frappe, "180" pour "18", ne
+#: doit pas bloquer la machine.
+PROFONDEUR_MAX = 60
 
 #: Plus grand compte de parties tenu pour plausible dans une réponse de
 #: l'explorateur. La base Lichess en compte quelques milliards.
@@ -2899,6 +2906,14 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
     except chess.engine.EngineError as err:
         raise SystemExit("Le moteur a échoué en cours d'analyse : %s"
                          % (err or type(err).__name__)) from err
+    except concurrent.futures.CancelledError as err:
+        # Le moteur est mort hors d'une recherche, pendant un réglage par
+        # exemple : python-chess annule alors la commande en attente au
+        # lieu de lever une EngineError. La cause la plus courante est
+        # une table de hachage que le système refuse d'allouer.
+        raise SystemExit("Le moteur a échoué en cours d'analyse : il s'est "
+                         "arrêté sans répondre. Si --hachage ou --fils "
+                         "sont élevés, la mémoire a pu manquer.") from err
     finally:
         # Arrêt sûr dans tous les cas : voir fermer_moteur.
         fermer_moteur(moteur)
@@ -3885,7 +3900,8 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                         "entiers, soit 2N demi-coups ; 0 analyse toute la "
                         "partie (défaut : %(default)s)")
     g.add_argument("--profondeur", type=int, default=18, metavar="D",
-                   help="profondeur de recherche (défaut : %(default)s)")
+                   help="profondeur de recherche, de 1 à 60 "
+                        "(défaut : %(default)s)")
     g.add_argument("--multipv", type=int, default=3, metavar="K",
                    help="nombre de variantes demandées par position "
                         "(défaut : %(default)s)")
@@ -3933,6 +3949,8 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                 "fils", "hachage", "delai"):
         if getattr(options, nom) < 1:
             p.error("--%s doit valoir au moins 1" % nom.replace("_", "-"))
+    if options.profondeur > PROFONDEUR_MAX:
+        p.error("--profondeur ne doit pas dépasser %d" % PROFONDEUR_MAX)
     if options.coups_stockfish < 0:
         p.error("--coups-stockfish doit valoir 0 ou plus")
     if options.coups_min < 0:

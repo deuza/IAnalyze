@@ -617,7 +617,7 @@ Limite le moteur aux N premiers coups entiers, soit 2N demi-coups. 0 analyse tou
 
 *Défaut : `18`*
 
-Profondeur de recherche par position.
+Profondeur de recherche par position, de 1 à 60. Le temps de calcul croît très vite avec elle : au delà de 60, une seule position occuperait le moteur des heures.
 
 ```bash
 ./ianalyze.py ma-partie.pgn --profondeur 22
@@ -679,7 +679,7 @@ Les variantes complètes restent dans `stockfish/evaluations.json`.
 Une option sans effet est refusée plutôt qu'ignorée en silence :
 
 - `--cadences` et `--classements` exigent `--base lichess`.
-- `--pause` ne descend pas sous 2, `--seuil-frequence` reste entre 0 et 100, `--coups-min` et `--coups-stockfish` valent 0 ou plus, les autres valeurs numériques au moins 1.
+- `--pause` ne descend pas sous 2, `--seuil-frequence` reste entre 0 et 100, `--coups-min`, `--coups-stockfish` et `--longueur-pv` valent 0 ou plus, `--profondeur` va de 1 à 60, les autres valeurs numériques valent au moins 1.
 - `--pause` et `--seuil-frequence` refusent nan et inf.
 - `--fils`, `--hachage` et `--multipv` sont contrôlés auprès du moteur, qui annonce ses bornes : une valeur qu'il n'admet pas est refusée avant toute requête et avant la création du dossier de travail.
 
