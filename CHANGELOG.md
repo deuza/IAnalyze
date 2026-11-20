@@ -19,6 +19,12 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
   complétée d'après un vrai fichier : nom de la position, classement
   moyen et ouverture de chaque coup.
 
+### Removed
+
+- Code devenu inatteignable depuis que Stockfish est obligatoire : la
+  synthèse sans section 3, les tests "avec ou sans moteur" du script,
+  et la clef `avec_stockfish` de `collecte.json`, qui valait toujours
+  vrai.
 
 ## [4.0.0] - 2026-11-19
 

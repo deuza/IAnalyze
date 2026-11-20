@@ -2796,7 +2796,7 @@ def tronquer_variante(plateau: chess.Board, pv_uci: list[str],
 def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
                     source: str, consignes: str | None,
                     explorateur: dict | None, motif_sans_explorateur: str | None,
-                    stockfish: dict | None, longueur_pv: int,
+                    stockfish: dict, longueur_pv: int,
                     libelle_base: str = "maîtres",
                     filtres: dict[str, str] | None = None,
                     annexes: list[str] | None = None,
@@ -2982,143 +2982,138 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     # -- 3. Stockfish -------------------------------------------------------
     a("## 3. Évaluations Stockfish")
     a("")
-    if stockfish is None:
-        a("Aucune évaluation moteur dans ce dossier. L'évaluation de la "
-          "partie est à la charge de l'analyste.")
-        a("")
+    a("Moteur : `%s`, profondeur %d, multipv %d, %d demi-coups "
+      "couverts sur %d. Les évaluations sont exprimées **du point de "
+      "vue des Blancs**. L'écart est exprimé en centipions **du point "
+      "de vue du joueur au trait** : positif, il mesure ce que le coup "
+      "joué perd par rapport au premier choix du moteur."
+      % (stockfish["binaire"], stockfish["profondeur"],
+         stockfish["multipv"], len(stockfish["resultats"]),
+         len(list(partie.mainline_moves()))))
+    a("")
+    a("Nature : imprécision à partir de %d cp d'écart, erreur à partir "
+      "de %d, gaffe à partir de %d."
+      % (SEUIL_IMPRECISION, SEUIL_ERREUR, SEUIL_GAFFE))
+    if any(r["joue"].get("non_evalue") for r in stockfish["resultats"]):
+        a("Coup nul `--` : le trait passe sans qu'une pièce ne bouge. Ce "
+          "n'est pas un coup des échecs, le moteur ne l'évalue pas : "
+          "ses colonnes Éval, G/N/P, Écart et Nature portent `-`, les "
+          "trois meilleurs coups de la position restant donnés.")
+    a("Écart `mat` : l'un des deux scores comparés est un mat, que le "
+      "coup joué manque un mat ou qu'il en concède un ; l'écart ne se "
+      "chiffre pas en centipions, comparez les colonnes Éval et 1er.")
+    if stockfish.get("wdl"):
+        a("G/N/P : chances de gain, de nulle et de perte des Blancs "
+          "après le coup joué, en pour cent arrondi, selon le modèle de "
+          "Stockfish. Ce modèle reflète le jeu du moteur : lisez-le "
+          "comme une tendance, non comme la probabilité réelle entre "
+          "deux joueurs humains.")
+    a("")
+    a("| # | Coup | Trait | Joué | Éval | G/N/P | Écart cp | Nature "
+      "| 1er | 2e | 3e |")
+    a("|---:|---:|---|---|---:|---:|---:|---|---|---|---|")
+    for r in stockfish["resultats"]:
+        trois = list(r["meilleurs"][:3])
+        while len(trois) < 3:
+            trois.append(None)
+        colonnes = ["-" if m is None else "%s (%s)" % (m["san"], m["score"])
+                    for m in trois]
+        a("| %d | %d | %s | %s | %s | %s | %s | %s | %s | %s | %s |"
+          % (r["demicoup"], r["numero"], r["trait"], r["joue"]["san"],
+             r["joue"]["score"], _gnp(r["joue"].get("wdl")),
+             _ecart(r["ecart_cp"]),
+             r.get("nature") or "-",
+             colonnes[0], colonnes[1], colonnes[2]))
+    a("")
+
+    # Les variantes principales, rejouées depuis chaque position, pour
+    # que l'analyste dispose de lignes concrètes calculées par le
+    # moteur et n'ait pas à les inventer. Les variantes complètes sont
+    # dans stockfish/evaluations.json.
+    a("### 3 bis. Variantes principales du moteur")
+    a("")
+    if longueur_pv > 0:
+        a("Variantes tronquées à %d demi-coups ; les variantes complètes "
+          "sont dans `stockfish/evaluations.json`." % longueur_pv)
     else:
-        a("Moteur : `%s`, profondeur %d, multipv %d, %d demi-coups "
-          "couverts sur %d. Les évaluations sont exprimées **du point de "
-          "vue des Blancs**. L'écart est exprimé en centipions **du point "
-          "de vue du joueur au trait** : positif, il mesure ce que le coup "
-          "joué perd par rapport au premier choix du moteur."
-          % (stockfish["binaire"], stockfish["profondeur"],
-             stockfish["multipv"], len(stockfish["resultats"]),
-             len(list(partie.mainline_moves()))))
-        a("")
-        a("Nature : imprécision à partir de %d cp d'écart, erreur à partir "
-          "de %d, gaffe à partir de %d."
-          % (SEUIL_IMPRECISION, SEUIL_ERREUR, SEUIL_GAFFE))
-        if any(r["joue"].get("non_evalue") for r in stockfish["resultats"]):
-            a("Coup nul `--` : le trait passe sans qu'une pièce ne bouge. Ce "
-              "n'est pas un coup des échecs, le moteur ne l'évalue pas : "
-              "ses colonnes Éval, G/N/P, Écart et Nature portent `-`, les "
-              "trois meilleurs coups de la position restant donnés.")
-        a("Écart `mat` : l'un des deux scores comparés est un mat, que le "
-          "coup joué manque un mat ou qu'il en concède un ; l'écart ne se "
-          "chiffre pas en centipions, comparez les colonnes Éval et 1er.")
-        if stockfish.get("wdl"):
-            a("G/N/P : chances de gain, de nulle et de perte des Blancs "
-              "après le coup joué, en pour cent arrondi, selon le modèle de "
-              "Stockfish. Ce modèle reflète le jeu du moteur : lisez-le "
-              "comme une tendance, non comme la probabilité réelle entre "
-              "deux joueurs humains.")
-        a("")
-        a("| # | Coup | Trait | Joué | Éval | G/N/P | Écart cp | Nature "
-          "| 1er | 2e | 3e |")
-        a("|---:|---:|---|---|---:|---:|---:|---|---|---|---|")
-        for r in stockfish["resultats"]:
-            trois = list(r["meilleurs"][:3])
-            while len(trois) < 3:
-                trois.append(None)
-            colonnes = ["-" if m is None else "%s (%s)" % (m["san"], m["score"])
-                        for m in trois]
-            a("| %d | %d | %s | %s | %s | %s | %s | %s | %s | %s | %s |"
-              % (r["demicoup"], r["numero"], r["trait"], r["joue"]["san"],
-                 r["joue"]["score"], _gnp(r["joue"].get("wdl")),
-                 _ecart(r["ecart_cp"]),
-                 r.get("nature") or "-",
-                 colonnes[0], colonnes[1], colonnes[2]))
-        a("")
+        a("Variantes complètes, telles que renvoyées par le moteur.")
+    a("")
+    plateau = partie.board()
+    for r, coup in zip(stockfish["resultats"], partie.mainline_moves(),
+                       strict=False):
+        a("- Demi-coup %d, %s jouent %s (position avant le coup)"
+          % (r["demicoup"], r["trait"], r["joue"]["san"]))
+        rangs = ("1er", "2e", "3e", "4e", "5e")
+        joue_dans_liste = False
+        for k, m in enumerate(r["meilleurs"]):
+            etiquette = rangs[k] if k < len(rangs) else "%de" % (k + 1)
+            if m["uci"] == r["joue"]["uci"]:
+                etiquette += ", joué"
+                joue_dans_liste = True
+            a("    - %s (%s) : %s" % (etiquette, m["score"],
+                                      tronquer_variante(
+                                          plateau, m["pv_uci"],
+                                          longueur_pv)))
+        if r["joue"].get("non_evalue"):
+            a("    - joué : coup nul, non évalué par le moteur")
+        elif not joue_dans_liste:
+            a("    - joué (%s) : %s" % (r["joue"]["score"],
+                                        tronquer_variante(
+                                            plateau, r["joue"]["pv_uci"],
+                                            longueur_pv)))
+        plateau.push(coup)
+    a("")
 
-        # Les variantes principales, rejouées depuis chaque position, pour
-        # que l'analyste dispose de lignes concrètes calculées par le
-        # moteur et n'ait pas à les inventer. Les variantes complètes sont
-        # dans stockfish/evaluations.json.
-        a("### 3 bis. Variantes principales du moteur")
+    # Palmarès : les coups qui coûtent le plus, par camp, avec ce qu'il
+    # fallait jouer et la FEN, matière directe des commentaires
+    # obligatoires et des positions à revoir.
+    a("### 3 ter. Erreurs et gaffes par camp")
+    a("")
+    a("Coups dont l'écart atteint %d cp, du plus coûteux au moins "
+      "coûteux, %d au plus par camp ; les imprécisions restent dans le "
+      "tableau. Les chances G/N/P sont celles du camp au trait, la FEN "
+      "celle de la position avant le coup."
+      % (SEUIL_ERREUR, PALMARES_MAX))
+    a("")
+    for camp in ("Blancs", "Noirs"):
+        fautes = sorted((r for r in stockfish["resultats"]
+                         if r["trait"] == camp
+                         and r["ecart_cp"] is not None
+                         and r["ecart_cp"] >= SEUIL_ERREUR),
+                        key=lambda r: -r["ecart_cp"])
+        a("**%s**" % camp)
         a("")
-        if longueur_pv > 0:
-            a("Variantes tronquées à %d demi-coups ; les variantes complètes "
-              "sont dans `stockfish/evaluations.json`." % longueur_pv)
-        else:
-            a("Variantes complètes, telles que renvoyées par le moteur.")
+        if not fautes:
+            a("- Aucune erreur ni gaffe.")
+        pour_noirs = camp == "Noirs"
+        for r in fautes[:PALMARES_MAX]:
+            meilleur = r["meilleurs"][0] if r["meilleurs"] else None
+            # À partir de SEUIL_ECART_MAT, l'écart vient d'un mat ramené
+            # à une valeur bornée : le chiffre n'a plus de sens, les
+            # scores parlent d'eux-mêmes.
+            ecart = ("écart %.0f cp" % r["ecart_cp"]
+                     if r["ecart_cp"] < SEUIL_ECART_MAT else
+                     "écart lié à un mat, %s au lieu de %s"
+                     % (r["joue"]["score"],
+                        meilleur["score"] if meilleur else "?"))
+            a("- Coup %d, %s jouent %s (demi-coup %d) : %s, %s."
+              % (r["numero"], r["trait"], r["joue"]["san"],
+                 r["demicoup"], r["nature"], ecart))
+            if meilleur is not None:
+                a("  Meilleur coup : %s (%s), ligne %s."
+                  % (meilleur["san"], meilleur["score"],
+                     tronquer_variante(chess.Board(r["fen"]),
+                                       meilleur["pv_uci"], longueur_pv)))
+                if meilleur.get("wdl") and r["joue"].get("wdl"):
+                    a("  Chances G/N/P : %s avec le meilleur coup, %s "
+                      "après le coup joué."
+                      % (_gnp(meilleur["wdl"], pour_noirs),
+                         _gnp(r["joue"]["wdl"], pour_noirs)))
+            a("  FEN : `%s`" % r["fen"])
+        if len(fautes) > PALMARES_MAX:
+            a("- %d autres, voir le tableau."
+              % (len(fautes) - PALMARES_MAX))
         a("")
-        plateau = partie.board()
-        for r, coup in zip(stockfish["resultats"], partie.mainline_moves(),
-                           strict=False):
-            a("- Demi-coup %d, %s jouent %s (position avant le coup)"
-              % (r["demicoup"], r["trait"], r["joue"]["san"]))
-            rangs = ("1er", "2e", "3e", "4e", "5e")
-            joue_dans_liste = False
-            for k, m in enumerate(r["meilleurs"]):
-                etiquette = rangs[k] if k < len(rangs) else "%de" % (k + 1)
-                if m["uci"] == r["joue"]["uci"]:
-                    etiquette += ", joué"
-                    joue_dans_liste = True
-                a("    - %s (%s) : %s" % (etiquette, m["score"],
-                                          tronquer_variante(
-                                              plateau, m["pv_uci"],
-                                              longueur_pv)))
-            if r["joue"].get("non_evalue"):
-                a("    - joué : coup nul, non évalué par le moteur")
-            elif not joue_dans_liste:
-                a("    - joué (%s) : %s" % (r["joue"]["score"],
-                                            tronquer_variante(
-                                                plateau, r["joue"]["pv_uci"],
-                                                longueur_pv)))
-            plateau.push(coup)
-        a("")
-
-        # Palmarès : les coups qui coûtent le plus, par camp, avec ce qu'il
-        # fallait jouer et la FEN, matière directe des commentaires
-        # obligatoires et des positions à revoir.
-        a("### 3 ter. Erreurs et gaffes par camp")
-        a("")
-        a("Coups dont l'écart atteint %d cp, du plus coûteux au moins "
-          "coûteux, %d au plus par camp ; les imprécisions restent dans le "
-          "tableau. Les chances G/N/P sont celles du camp au trait, la FEN "
-          "celle de la position avant le coup."
-          % (SEUIL_ERREUR, PALMARES_MAX))
-        a("")
-        for camp in ("Blancs", "Noirs"):
-            fautes = sorted((r for r in stockfish["resultats"]
-                             if r["trait"] == camp
-                             and r["ecart_cp"] is not None
-                             and r["ecart_cp"] >= SEUIL_ERREUR),
-                            key=lambda r: -r["ecart_cp"])
-            a("**%s**" % camp)
-            a("")
-            if not fautes:
-                a("- Aucune erreur ni gaffe.")
-            pour_noirs = camp == "Noirs"
-            for r in fautes[:PALMARES_MAX]:
-                meilleur = r["meilleurs"][0] if r["meilleurs"] else None
-                # À partir de SEUIL_ECART_MAT, l'écart vient d'un mat ramené
-                # à une valeur bornée : le chiffre n'a plus de sens, les
-                # scores parlent d'eux-mêmes.
-                ecart = ("écart %.0f cp" % r["ecart_cp"]
-                         if r["ecart_cp"] < SEUIL_ECART_MAT else
-                         "écart lié à un mat, %s au lieu de %s"
-                         % (r["joue"]["score"],
-                            meilleur["score"] if meilleur else "?"))
-                a("- Coup %d, %s jouent %s (demi-coup %d) : %s, %s."
-                  % (r["numero"], r["trait"], r["joue"]["san"],
-                     r["demicoup"], r["nature"], ecart))
-                if meilleur is not None:
-                    a("  Meilleur coup : %s (%s), ligne %s."
-                      % (meilleur["san"], meilleur["score"],
-                         tronquer_variante(chess.Board(r["fen"]),
-                                           meilleur["pv_uci"], longueur_pv)))
-                    if meilleur.get("wdl") and r["joue"].get("wdl"):
-                        a("  Chances G/N/P : %s avec le meilleur coup, %s "
-                          "après le coup joué."
-                          % (_gnp(meilleur["wdl"], pour_noirs),
-                             _gnp(r["joue"]["wdl"], pour_noirs)))
-                a("  FEN : `%s`" % r["fen"])
-            if len(fautes) > PALMARES_MAX:
-                a("- %d autres, voir le tableau."
-                  % (len(fautes) - PALMARES_MAX))
-            a("")
 
     # -- 4. Positions non exploitables --------------------------------------
     a("## 4. Positions à échantillon non exploitable")
@@ -3152,10 +3147,9 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
         a(annexe)
     a("- `explorateur/NNN-<uci>.json` : une réponse brute par demi-coup "
       "interrogé, numérotée dans l'ordre de la partie.")
-    if stockfish is not None:
-        a("- `stockfish/evaluations.json` : les évaluations moteur "
-          "complètes, avec la variante principale entière de chaque coup, "
-          "en UCI et en notation algébrique.")
+    a("- `stockfish/evaluations.json` : les évaluations moteur "
+      "complètes, avec la variante principale entière de chaque coup, "
+      "en UCI et en notation algébrique.")
     a("- `collecte.json` : les paramètres exacts de cette collecte.")
     a("")
 
@@ -3586,11 +3580,6 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
         options.pseudos = decouper_pseudos(options.pseudos)
         if not options.pseudos:
             p.error("--pseudos : liste vide")
-    # L'évaluation du moteur fait partie de toute collecte depuis la
-    # version 4.0.0 : les options --avec-stockfish et --sans-stockfish ont
-    # été retirées. Le reste du script continue de lire avec_stockfish,
-    # désormais toujours vrai.
-    options.avec_stockfish = True
     if options.seuil_frequence < 0 or options.seuil_frequence > 100:
         p.error("--seuil-frequence doit être compris entre 0 et 100")
     if options.longueur_pv < 0:
@@ -3730,12 +3719,13 @@ def main(argv: list[str]) -> int:
         catalogue = lire_catalogue(options.catalogue)
         journal("Catalogue des ouvertures : %s positions connues, du %s"
                 % (catalogue.meta.get("connues"), catalogue.meta.get("date")))
-    if options.avec_stockfish:
-        verifier_moteur(options.stockfish)
-        # Les options moteur sont contrôlées ici, auprès du moteur, et non
-        # à sa configuration, qui n'a lieu qu'après la phase explorateur.
-        verifier_options_moteur(options.stockfish, options.fils,
-                                options.hachage, options.multipv)
+    # Le moteur est obligatoire depuis la version 4.0.0 : il est vérifié
+    # avant toute écriture et avant la moindre requête.
+    verifier_moteur(options.stockfish)
+    # Les options moteur sont contrôlées ici, auprès du moteur, et non
+    # à sa configuration, qui n'a lieu qu'après la phase explorateur.
+    verifier_options_moteur(options.stockfish, options.fils,
+                            options.hachage, options.multipv)
 
     # -- Questions de démarrage ---------------------------------------------
     # Posées après les vérifications, pour ne rien demander à qui va de
@@ -3841,12 +3831,10 @@ def main(argv: list[str]) -> int:
             options.jusqu_a_epuisement, catalogue, options.coups_min * 2)
 
     # -- Stockfish ----------------------------------------------------------
-    resume_stockfish = None
-    if options.avec_stockfish:
-        resume_stockfish = collecter_stockfish(
-            partie, dossier, options.stockfish,
-            options.coups_stockfish * 2, options.profondeur,
-            options.multipv, options.fils, options.hachage)
+    resume_stockfish = collecter_stockfish(
+        partie, dossier, options.stockfish,
+        options.coups_stockfish * 2, options.profondeur,
+        options.multipv, options.fils, options.hachage)
 
     # -- Trace des paramètres, expurgée de toute donnée sensible ------------
     parametres = dict(vars(options))
@@ -3886,7 +3874,9 @@ def main(argv: list[str]) -> int:
         habituelle = (analyser_cadence(reglage(reglages, "cadence"))
                       or dict(CADENCE_INCONNUE))
         conditions = {
-            "STOCKFISH": resume_stockfish is not None,
+            # Toujours vraie depuis la version 4.0.0, gardée pour les
+            # modèles personnels qui l'emploient.
+            "STOCKFISH": True,
             "EXPLORATEUR": resume_explorateur is not None,
             "BASE_LICHESS": options.base == "lichess",
             "BASE_MAITRES": options.base == "maitres",
