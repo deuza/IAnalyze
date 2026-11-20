@@ -45,7 +45,7 @@ Chaque ligne du bilan porte l'un de ces repères :
     INFO       mesure donnée pour comparer les LLM entre eux
 
 Code de retour : 0 sans ECHEC, 1 avec au moins un ECHEC, 2 si un fichier
-ne peut pas être lu.
+ne peut pas être lu ou si l'archive n'est pas celle d'IAnalyze.
 
 Le script demande python-chess. S'il ne le trouve pas, il se relance avec
 l'environnement virtuel d'IAnalyze, ~/.local/share/IAnalyze/venv.
@@ -62,6 +62,7 @@ import os
 import pathlib
 import re
 import sys
+import zlib
 import zipfile
 
 VENV_IANALYZE = "~/.local/share/IAnalyze/venv/bin/python3"
@@ -120,6 +121,10 @@ NAG_NATURE = {"imprécision": 6, "erreur": 2, "gaffe": 4}
 RE_FEN = re.compile(
     r"((?:[pnbrqkPNBRQK1-8]{1,8}/){7}[pnbrqkPNBRQK1-8]{1,8}"
     r" [wb] (?:-|[KQkq]{1,4}) (?:-|[a-h][36]) \d+ \d+)")
+
+
+class ArchiveInutilisable(Exception):
+    """L'archive se lit, mais son contenu n'est pas celui d'IAnalyze."""
 
 
 class Bilan:
@@ -184,8 +189,8 @@ def lire_archive(chemin: pathlib.Path) -> dict[str, str]:
                         trouves[nom] = z.read(membre).decode("utf-8")
     manquants = [n for n in voulus if n not in trouves]
     if manquants:
-        raise SystemExit("Archive incomplète, fichier(s) absent(s) : %s"
-                         % ", ".join(manquants))
+        raise ArchiveInutilisable("archive incomplète, fichier(s) "
+                                  "absent(s) : %s" % ", ".join(manquants))
     return trouves
 
 
@@ -218,6 +223,35 @@ def retirer_lignes_vides(texte: str) -> tuple[str, list[int]]:
     return "\n".join(lignes[:debut] + corps) + "\n", retirees
 
 
+def lire_partie(texte: str) -> chess.pgn.Game | None:
+    """
+    Lit la première partie du texte, ou rend None.
+
+    Sur certains PGN abîmés, un coup illégal suivi d'une parenthèse
+    fermante par exemple, python-chess ne consigne pas l'erreur : il
+    lève IndexError. Le fichier est alors tenu pour illisible, ce qui
+    donne un ECHEC au bilan et non une trace Python.
+    """
+    try:
+        return chess.pgn.read_game(io.StringIO(texte))
+    except (IndexError, ValueError):
+        return None
+
+
+def san_ou_uci(noeud: chess.pgn.ChildNode) -> str:
+    """
+    Le coup en notation algébrique, ou en UCI s'il n'est pas jouable.
+
+    Après une erreur de lecture, python-chess peut laisser dans l'arbre un
+    coup illégal dans sa position : san() s'arrête alors sur une
+    assertion.
+    """
+    try:
+        return noeud.san()
+    except (AssertionError, ValueError):
+        return noeud.move.uci()
+
+
 def controler_lecture(b: Bilan, brut: bytes) -> tuple[str, chess.pgn.Game]:
     """Encodage, puis lecture par python-chess."""
     b.titre("1. Lecture du PGN")
@@ -230,7 +264,11 @@ def controler_lecture(b: Bilan, brut: bytes) -> tuple[str, chess.pgn.Game]:
     if texte.startswith("\ufeff"):
         texte = texte[1:]
         b.noter("ATTENTION", "marque d'ordre des octets en tête de fichier")
-    partie = chess.pgn.read_game(io.StringIO(texte))
+    # Fins de ligne ramenées à LF : un fichier venu de Windows garderait
+    # sinon un retour chariot en bout de chaque ligne, compté comme un
+    # caractère de plus dans le contrôle des 79 colonnes.
+    texte = texte.replace("\r\n", "\n").replace("\r", "\n")
+    partie = lire_partie(texte)
     if partie is None:
         b.noter("ECHEC", "aucune partie lisible dans le fichier")
         raise SystemExit(afficher(b, 1))
@@ -246,7 +284,7 @@ def controler_lecture(b: Bilan, brut: bytes) -> tuple[str, chess.pgn.Game]:
     # coups, et ce qui la suit ne serait jamais contrôlé.
     repare, retirees = retirer_lignes_vides(texte)
     if retirees:
-        relue = chess.pgn.read_game(io.StringIO(repare))
+        relue = lire_partie(repare)
         lus = len(ligne_principale(partie))
         constat = "ligne vide dans le corps de la partie"
         if relue is not None and len(ligne_principale(relue)) > lus:
@@ -309,7 +347,7 @@ def commentaires(partie: chess.pgn.Game) -> list[tuple[str, str]]:
             lieu = "%d%s %s" % (
                 noeud.board().fullmove_number,
                 "." if noeud.board().turn == chess.WHITE else "...",
-                enfant.san())
+                san_ou_uci(enfant))
             for texte in (enfant.starting_comment, enfant.comment):
                 if texte:
                     trouves.append((lieu, texte))
@@ -649,7 +687,7 @@ def controler_variantes(b: Bilan, partie: chess.pgn.Game,
             lieu = "%d%s %s" % (
                 noeud.board().fullmove_number,
                 "." if noeud.board().turn == chess.WHITE else "...",
-                autre.san())
+                san_ou_uci(autre))
             # Appuyée : ses premiers coups, deux au plus, sont ceux d'une
             # ligne que le moteur donne pour ce demi-coup.
             debut = coups[:2]
@@ -753,12 +791,24 @@ def main(argv: list[str]) -> int:
         if options.synthese:
             synthese_llm = pathlib.Path(options.synthese).read_text(
                 encoding="utf-8", errors="replace")
-    except (OSError, zipfile.BadZipFile) as e:
+        origine = lire_partie(fichiers["partie.pgn"])
+        evaluations = json.loads(fichiers["stockfish/evaluations.json"])
+        if origine is None or not ligne_principale(origine):
+            raise ArchiveInutilisable("partie.pgn de l'archive ne "
+                                      "contient aucune partie")
+        if not (isinstance(evaluations, list) and all(
+                isinstance(e, dict) and isinstance(e.get("joue"), dict)
+                and isinstance(e.get("meilleurs"), list)
+                and "demicoup" in e for e in evaluations)):
+            raise ArchiveInutilisable("stockfish/evaluations.json n'a pas "
+                                      "la forme écrite par IAnalyze")
+    except (OSError, zipfile.BadZipFile, zlib.error, ValueError,
+            ArchiveInutilisable) as e:
+        # ValueError couvre un fichier qui n'est pas en UTF-8 et un JSON
+        # invalide. Dans tous ces cas aucun contrôle n'a pu commencer :
+        # le code 2 le distingue d'un bilan avec des échecs.
         print("Lecture impossible : %s" % e, file=sys.stderr)
         return 2
-
-    origine = chess.pgn.read_game(io.StringIO(fichiers["partie.pgn"]))
-    evaluations = json.loads(fichiers["stockfish/evaluations.json"])
 
     b = Bilan()
     b.lignes.append("Contrôle d'une analyse rendue par un LLM")

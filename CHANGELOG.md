@@ -68,6 +68,11 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Fixed
 
+- `verifier-analyse.py` : un PGN aux fins de ligne CRLF voyait chacune
+  de ses lignes de 79 caractères comptée 80. Certains PGN abîmés, et
+  une archive incomplète ou altérée, finissaient en trace Python ou en
+  code 1, celui d'un bilan avec des échecs : le PGN donne maintenant un
+  bilan, l'archive le code 2.
 - `verifier-analyse.py` refusait un arrondi courant : "+0.35" cité
   "+0.4" était compté comme un chiffre inventé, à l'inverse de ce que
   dit le README. À l'opposé, un chiffre inventé écrit avec une espace

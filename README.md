@@ -1010,7 +1010,7 @@ Deux de ces défauts viennent de vrais PGN de LLM et méritent une explication :
 | `ATTENTION` | à regarder de près, sans être forcément fautif |
 | `INFO` | mesure donnée pour comparer les LLM entre eux |
 
-Code de retour : 0 sans `ECHEC`, 1 avec au moins un `ECHEC`, 2 si un fichier ne peut pas être lu.
+Code de retour : 0 sans `ECHEC`, 1 avec au moins un `ECHEC`, 2 si un fichier ne peut pas être lu ou si l'archive n'est pas celle d'IAnalyze. Avec le code 2, aucun contrôle n'a eu lieu.
 
 ### Ce que le script ne fait pas
 

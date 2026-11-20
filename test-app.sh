@@ -1789,6 +1789,35 @@ EOF
         rm -rf "$DEPOT/__pycache__"
         "$PYVENV" "$VERIF" /nulle/part.zip t-conforme.pgn > bilan 2>&1
         egal "T73 archive illisible, code de retour" 2 "$?"
+        # Un PGN venu de Windows, aux lignes de 79 caractères terminées
+        # par CRLF, reste conforme.
+        awk '{ printf "%s\r\n", $0 }' t-conforme.pgn > t-crlf.pgn
+        "$PYVENV" "$VERIF" "$ARCH" t-crlf.pgn > bilan 2>&1
+        egal "T73 fins de ligne CRLF, code de retour" 0 "$?"
+        # Un PGN que python-chess ne sait pas lire donne un bilan, et une
+        # archive abîmée le code 2 : jamais une trace Python.
+        printf '1. e5 ) 1. e4 *\n' > t-illisible.pgn
+        "$PYVENV" "$VERIF" "$ARCH" t-illisible.pgn > bilan 2>&1
+        egal "T73 PGN illisible, code de retour" 1 "$?"
+        verifier "T73 PGN illisible, dit dans le bilan" \
+            contient bilan "aucune partie lisible"
+        printf '1. e4 ( 1. e5 ) 1... e4 *\n' > t-variante-folle.pgn
+        "$PYVENV" "$VERIF" "$ARCH" t-variante-folle.pgn > bilan2 2>&1
+        egal "T73 variante illégale en tête, code de retour" 1 "$?"
+        cat bilan2 >> bilan
+        mkdir -p t-abimee/stockfish
+        unzip -p "$ARCH" '*/partie.pgn' > t-abimee/partie.pgn
+        unzip -p "$ARCH" '*/synthese.md' > t-abimee/synthese.md
+        "$PYVENV" "$VERIF" t-abimee t-conforme.pgn >> bilan 2>&1
+        egal "T73 archive incomplète, code de retour" 2 "$?"
+        printf '{pas du JSON' > t-abimee/stockfish/evaluations.json
+        "$PYVENV" "$VERIF" t-abimee t-conforme.pgn >> bilan 2>&1
+        egal "T73 évaluations illisibles, code de retour" 2 "$?"
+        printf '{"autre": "forme"}' > t-abimee/stockfish/evaluations.json
+        "$PYVENV" "$VERIF" t-abimee t-conforme.pgn >> bilan 2>&1
+        egal "T73 évaluations d'une autre forme, code de retour" 2 "$?"
+        egal "T73 aucune trace Python dans ces cas" 0 \
+            "$(grep -c 'Traceback' bilan)"
     else
         sauter "T73 : test.pgn ou verifier-analyse.py absent du dépôt"
     fi
