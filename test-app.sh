@@ -1295,14 +1295,28 @@ noter "  note   taille du prompt seul : $(wc -c < "$PR") octets, $(lignes "$PR")
 head -n 6 "$PR" > ligne
 joindre ligne
 rm -f analyse-t-seul-*
-echo "Insiste sur la sortie de la dame." > t-consignes-74.md
-"$SCRIPT" t-seul.pgn $S74 --prompt-seul --consignes t-consignes-74.md \
-    > sortie 2> journal
-PR="$(head -n 1 sortie)"
-PR="${PR%.zip}.prompt.txt"
-verifier "T74 consignes du joueur reprises" \
-    contient "$PR" "Insiste sur la sortie de la dame."
-rm -f analyse-t-seul-*
+# Ce que le prompt court reprend des réponses du joueur : celles qu'il
+# n'a pas laissées par défaut, sans le camp, dit ailleurs.
+SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t74 2> journal-t74 <<'EOF'
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+print(cp.consignes_joueur(
+    "## Contexte\n"
+    "- Camp du joueur : Blancs\n"
+    "- Périmètre : la partie complète (défaut)\n"
+    "- Objectif : la sortie de la dame\n"
+    "- Contexte particulier : rien (défaut)\n"))
+print("[%s]" % cp.consignes_joueur(None))
+EOF
+printf '%s\n' "- Objectif : la sortie de la dame" "[]" > attendu-t74
+verifier "T74 réponses du joueur reprises, défauts et camp écartés" \
+    cmp -s attendu-t74 sortie-t74
+joindre journal-t74 5
+rm -rf "$DEPOT/__pycache__"
 "$SCRIPT" t-seul.pgn $S74 > sortie 2> journal
 PR="$(head -n 1 sortie)"
 PR="${PR%.zip}.prompt.txt"
@@ -1450,21 +1464,13 @@ cat journal > journal-t77
 egal "T77 aucune erreur inattendue" 0 \
     "$(cat journal-t77 journal | grep -c 'Erreur inattendue')"
 
-titre "T06, T07, T08 : dossier gardé, consignes, répertoire de sortie"
+titre "T06, T08 : dossier gardé, répertoire de sortie"
 
 rm -rf analyse-italienne-*
 lancer italienne.pgn $O --garder-dossier
 egal "T06 code de retour" 0 "$RC"
 verifier "T06 le dossier reste à côté de l'archive" test -d "${ARCH%.zip}"
 rm -rf analyse-italienne-*
-echo "Annotez en français." > t-consignes.md
-lancer italienne.pgn $O --consignes t-consignes.md
-egal "T07 code de retour" 0 "$RC"
-extraire '*/synthese.md'
-verifier "T07 section Consignes d'analyse" \
-    contient extrait "## Consignes d'analyse"
-verifier "T07 texte des consignes repris" \
-    contient extrait "Annotez en français."
 lancer italienne.pgn $O --sortie "$TRAVAIL/t-sortie/neuf"
 egal "T08 code de retour" 0 "$RC"
 verifier "T08 répertoire de sortie créé au besoin" \
@@ -1502,7 +1508,7 @@ verifier "T69 le répertoire est toujours là" test -d t-rep
 joindre journal
 
 
-titre "T71 : options --avec-stockfish et --sans-stockfish retirées"
+titre "T71 : options retirées"
 
 "$SCRIPT" italienne.pgn --sans-stockfish > sortie 2> journal
 egal "T71 --sans-stockfish, code de retour" 2 "$?"
@@ -1515,6 +1521,16 @@ verifier "T71 option inconnue" \
     contient journal "unrecognized arguments: --avec-stockfish"
 egal "T71 aide muette sur l'option" 0 \
     "$("$SCRIPT" --help 2>/dev/null | grep -c -- --avec-stockfish)"
+
+# --consignes, retirée à son tour : le prompt porte les consignes, et les
+# questions de démarrage le contexte.
+echo "Annotez en français." > t-consignes.md
+"$SCRIPT" italienne.pgn --consignes t-consignes.md > sortie 2> journal
+egal "T71 --consignes, code de retour" 2 "$?"
+verifier "T71 --consignes, option inconnue" \
+    contient journal "unrecognized arguments: --consignes"
+egal "T71 --consignes, aide muette" 0 \
+    "$("$SCRIPT" --help 2>/dev/null | grep -c -- --consignes)"
 
 
 # --- Moteur -----------------------------------------------------------------

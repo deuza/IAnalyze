@@ -66,7 +66,7 @@ GARDER=1 ./test-app.sh
 |---|---|---|
 | Ligne de commande | T01 à T04, T50, T71 | compilation, aide, options refusées avec le code 2, fichier introuvable, valeurs `nan` et `inf`, options retirées |
 | Plateforme | T31, T32 | commandes `apt` ou `brew` proposées selon le système, emplacements par défaut |
-| Archive | T05 à T08, T48, T53, M1 | contenu du zip, dossier gardé, consignes, répertoire de sortie, noms à point ou accentués, interruption pendant l'archivage |
+| Archive | T05, T06, T08, T48, T53, M1 | contenu du zip, dossier gardé, répertoire de sortie, noms à point ou accentués, interruption pendant l'archivage |
 | Encodages | T34 à T47 | latin-1, cp1252, UTF-16, UTF-8 abîmé, octets NUL, fins de ligne, caractères de contrôle, locale C, noms de fichiers |
 | Jeton | T27, T43 | fichier absent, marque d'ordre des octets, jeton non ASCII refusé, jeton jamais affiché |
 | URL | T54 | adresses qui ne sont pas des parties, refusées sans rien envoyer |

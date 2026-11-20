@@ -384,7 +384,7 @@ RE_VALEUR_MODELE = re.compile(r"\{\{([A-Za-z_]+)\}\}")
 #: Conditions que connaît une directive "si", et valeurs remplaçables. Un
 #: nom absent de ces listes arrête le script avant la collecte.
 PROMPT_CONDITIONS = ("STOCKFISH", "EXPLORATEUR", "BASE_LICHESS",
-                     "BASE_MAITRES", "REPONSES", "CONSIGNES_LIBRES",
+                     "BASE_MAITRES", "REPONSES",
                      "CAMP_CONNU", "PSEUDO_CONNU", "NIVEAU_DECLARE",
                      "RESULTAT_CONTREDIT", "CONSIGNES_DONNEES",
                      "OUVERTURE_CONNUE")
@@ -3110,15 +3110,15 @@ def phrase_ouverture(explorateur: dict | None, libelle_base: str) -> str:
     return " ".join(phrases)
 
 
-def consignes_joueur(contexte: str | None, consignes: str | None) -> str:
+def consignes_joueur(contexte: str | None) -> str:
     """
-    Pour le prompt court, ce que le joueur a réellement précisé : son
-    fichier de consignes, ou celles de ses réponses aux questions de
-    démarrage qu'il n'a pas laissées à leur valeur par défaut. Le camp,
-    dit ailleurs dans le prompt, n'est pas repris.
+    Pour le prompt court, ce que le joueur a réellement précisé : celles
+    de ses réponses aux questions de démarrage qu'il n'a pas laissées à
+    leur valeur par défaut. Le camp, dit ailleurs dans le prompt, n'est
+    pas repris.
     """
     if contexte is None:
-        return (consignes or "").strip()
+        return ""
     return "\n".join(
         ligne for ligne in contexte.split("\n")
         if ligne.startswith("- ") and not ligne.endswith("(défaut)")
@@ -3614,11 +3614,6 @@ exemples d'utilisation
       ./ianalyze.py https://lichess.org/xvoiNy2C
       ./ianalyze.py xvoiNy2C
 
-  Joindre vos consignes d'analyse en tête de la synthèse, pour n'avoir
-  qu'un seul fichier à fournir :
-
-      ./ianalyze.py ma-partie.pgn --consignes ~/prompt-annotation.md
-
   Usage hors du projet d'analyse, sans aucune question, ou avec tous vos
   noms de joueur pour que le camp soit déduit des en-têtes :
 
@@ -3800,10 +3795,6 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
     g.add_argument("--sortie", default=".", metavar="REP",
                    help="répertoire où écrire l'archive "
                         "(défaut : %(default)s)")
-    g.add_argument("--consignes", metavar="FICHIER",
-                   help="fichier texte ou markdown inséré tel quel en tête "
-                        "de la synthèse, sous le titre \"Consignes "
-                        "d'analyse\", à la place des questions de contexte")
     g.add_argument("--garder-dossier", action="store_true",
                    help="ne supprime pas le dossier de travail après "
                         "création de l'archive")
@@ -3987,14 +3978,9 @@ def main(argv: list[str]) -> int:
         installer_catalogue(options.catalogue, options.delai)
         return 0
 
-    # -- Consignes d'analyse, lues avant tout pour échouer tôt --------------
+    # Texte de la section "Consignes d'analyse" de la synthèse : les
+    # réponses aux questions de démarrage, quand elles sont posées.
     consignes = None
-    if options.consignes:
-        chemin_consignes = pathlib.Path(os.path.expanduser(options.consignes))
-        if not est_fichier(chemin_consignes):
-            raise SystemExit("Fichier de consignes introuvable : %s"
-                             % chemin_consignes)
-        consignes = lire_texte(chemin_consignes, "consignes")
 
     # -- Réglages de l'utilisateur, lus tôt eux aussi -----------------------
     reglages = lire_reglages(options.reglages)
@@ -4104,10 +4090,9 @@ def main(argv: list[str]) -> int:
     if interactif:
         journal("Questions de démarrage, Entrée retient la valeur proposée.")
         camp = completer_entetes(partie, options.pseudos)
-        if consignes is None:
-            contexte = recueillir_contexte(
-                partie, camp, analyser_cadence(reglage(reglages, "cadence")))
-            consignes = contexte
+        contexte = recueillir_contexte(
+            partie, camp, analyser_cadence(reglage(reglages, "cadence")))
+        consignes = contexte
     else:
         journal("Questions de démarrage sautées : %s."
                 % ("option --sans-questions" if options.sans_questions
@@ -4242,7 +4227,7 @@ def main(argv: list[str]) -> int:
         # personnel pouvant les placer lui aussi.
         alerte = (resultat_contredit(partie, resume_stockfish["resultats"])
                   or "").replace("**", "")
-        precisions = consignes_joueur(contexte, consignes)
+        precisions = consignes_joueur(contexte)
         ouverture = phrase_ouverture(resume_explorateur, base["libelle"])
         conditions = {
             # Toujours vraie depuis la version 4.0.0, gardée pour les
@@ -4252,7 +4237,6 @@ def main(argv: list[str]) -> int:
             "BASE_LICHESS": options.base == "lichess",
             "BASE_MAITRES": options.base == "maitres",
             "REPONSES": contexte is not None,
-            "CONSIGNES_LIBRES": bool(options.consignes),
             "CAMP_CONNU": camp_joueur is not None,
             "PSEUDO_CONNU": bool(options.pseudos),
             "NIVEAU_DECLARE": bool(niveau),

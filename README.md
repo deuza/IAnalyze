@@ -416,16 +416,6 @@ Répertoire où écrire l'archive, créé au besoin.
 ./ianalyze.py ma-partie.pgn --sortie ~/analyses
 ```
 
-#### `--consignes FICHIER`
-
-Insère tel quel un fichier texte ou Markdown en tête de la synthèse, sous le titre "Consignes d'analyse".
-
-Il remplace alors les questions de contexte.
-
-```bash
-./ianalyze.py ma-partie.pgn --consignes ~/annotation.md
-```
-
 #### `--garder-dossier`
 
 Conserve le dossier de travail à côté de l'archive. Sans cette option, il est supprimé une fois l'archive vérifiée.
@@ -733,7 +723,7 @@ Sections de `synthese.md` :
 
 | Section | Contenu |
 |---|---|
-| Consignes d'analyse | `contexte.md`, ou le fichier de `--consignes` |
+| Consignes d'analyse | `contexte.md`, vos réponses aux questions de démarrage. Absente quand elles ne sont pas posées |
 | 1. En-têtes et coups | en-têtes, ligne principale, repères de phase (roques, dames, entrée en finale) |
 | 2. Explorateur | filtres, seuils, table, première sortie |
 | 3. Évaluations Stockfish | nature et G/N/P de chaque coup |
@@ -778,7 +768,7 @@ Codes de retour :
 
 Aucune entrée mal encodée ne doit arrêter le script sur une trace Python : au pire, une ligne "Attention" du journal et une dégradation propre.
 
-PGN et fichier de consignes, essais dans cet ordre :
+PGN, modèle de prompt et fichier de jeton, essais dans cet ordre :
 
 1. marque d'ordre des octets (BOM) UTF-8, UTF-16 ou UTF-32 
 2. UTF-16 sans marque, reconnu à son octet nul sur deux 
@@ -852,7 +842,7 @@ Valeurs :
 | `PARTIE_PGN` | le PGN de la partie, tel que l'archive le contient |
 | `TABLEAU_MOTEUR` | les évaluations de Stockfish, une ligne par demi-coup. Derrière un coup faible : sa nature, son écart, le meilleur coup, sa suite sur `--longueur-pv` demi-coups et son évaluation |
 | `ALERTE_RESULTAT` | la phrase qui signale un résultat contraire à l'évaluation finale, vide sinon |
-| `CONSIGNES_JOUEUR` | votre fichier de `--consignes`, ou celles de vos réponses aux questions de démarrage que vous n'avez pas laissées par défaut |
+| `CONSIGNES_JOUEUR` | celles de vos réponses aux questions de démarrage que vous n'avez pas laissées par défaut |
 | `OUVERTURE` | l'ouverture et la sortie de théorie en une phrase, d'après l'explorateur |
 
 Conditions :
@@ -864,7 +854,6 @@ Conditions :
 | `BASE_LICHESS` | base de tous les joueurs |
 | `BASE_MAITRES` | base des maîtres |
 | `REPONSES` | le script a recueilli vos réponses aux questions de démarrage |
-| `CONSIGNES_LIBRES` | un fichier a été passé par `--consignes` |
 | `CAMP_CONNU` | votre camp est connu |
 | `PSEUDO_CONNU` | au moins un pseudo est connu |
 | `NIVEAU_DECLARE` | votre niveau figure dans les réglages |

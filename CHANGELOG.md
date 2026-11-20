@@ -133,6 +133,12 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ### Removed
 
+- Option `--consignes`, qui insérait un fichier de votre main en tête
+  de la synthèse. Elle datait d'avant le prompt, quand la synthèse était
+  le seul fichier remis au LLM. Le prompt porte désormais les consignes
+  d'analyse, et vos réponses aux questions de démarrage le contexte de
+  la partie. La condition `CONSIGNES_LIBRES` du modèle de prompt
+  disparaît avec elle.
 - Code devenu inatteignable depuis que Stockfish est obligatoire : la
   synthèse sans section 3, les tests "avec ou sans moteur" du script,
   et la clef `avec_stockfish` de `collecte.json`, qui valait toujours

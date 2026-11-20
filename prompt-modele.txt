@@ -99,8 +99,7 @@ Les sections de synthese.md, désignées ci-dessous par leur titre :
 "Consignes d'analyse", en tête, si présente : les réponses du joueur aux
    questions de démarrage, recueillies par le script (camp, cadence,
    a. périmètre, b. objectif, c. contexte particulier, d. commentaires à
-   inclure), "(défaut)" marquant une réponse par défaut. Ce peut être
-   aussi un texte libre de consignes fourni par le joueur. La cadence y
+   inclure), "(défaut)" marquant une réponse par défaut. La cadence y
    est rédigée par le script, toujours de la même façon : "rapide, 15
    minutes + 10 secondes par coup", "correspondance, 14 jours par
    coup", "correspondance, 10 coups en 50 jours", "correspondance,
@@ -169,10 +168,9 @@ joueur est "inconnu", demandez-le en une phrase et attendez.
 Le script n'a pas recueilli les réponses du joueur aux questions de
 démarrage. Ouvrez votre réponse par un récapitulatif de cinq lignes au
 plus (camp, cadence, résultat, Elo, ouverture et variante, première
-sortie de théorie), posez en un seul message celles des questions
-suivantes auxquelles la section "Consignes d'analyse", si elle existe,
-ne répond pas, numérotées, avec le défaut entre parenthèses, puis
-arrêtez-vous et attendez la réponse :
+sortie de théorie), posez en un seul message les questions suivantes,
+numérotées, avec le défaut entre parenthèses, puis arrêtez-vous et
+attendez la réponse :
    a. Périmètre : les N premiers coups, ou la partie complète ?
       (défaut : la partie complète)
    b. Ce que tu cherches à comprendre dans cette partie ?
