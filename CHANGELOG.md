@@ -8,6 +8,8 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [4.0.2] - 2026-11-21
+
 ### Added
 
 - `parties-exemples/partie-lichess-org.pgn` : une vraie partie
