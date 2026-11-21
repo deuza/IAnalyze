@@ -627,10 +627,9 @@ Conventions du dépôt :
 
 - Catalogue des ouvertures de Lichess (chess-openings) : CC0. Il est téléchargé à l'installation, pas distribué avec ce dépôt.
 - python-chess, installé dans l'environnement virtuel : GPL-3.0-or-later.
-- Stockfish, installé par votre système : GPL-3.0.
-- Tout le contenu de ce dépôt est en CC0 : faites-en ce que vous voulez :)
+- Stockfish, installé par votre système : GPL-3.0
+- Tout le contenu de ce dépôt est en licence [CC0](LICENSE) : faites-en ce que vous voulez :)
 
-[![CC0](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/cc-zero.svg)](https://creativecommons.org/publicdomain/zero/1.0/) - [LICENSE](LICENSE).
-
+[![CC0](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/cc-zero.svg)](https://creativecommons.org/publicdomain/zero/1.0/)
 
 <p align="center">With ❤️ by <a href="https://github.com/deuza">DeuZa</a></p>
