@@ -28,17 +28,28 @@ Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec Cl
 
 **IAnalyze est fait pour Claude.** Pour un autre LLM, l'option `--prompt-seul` écrit un prompt court qui porte la partie et les évaluations de Stockfish, à coller seul, sans pièce jointe : voir la section 7.
 
-| Fichier | Rôle |
-|---|---|
-| `ianalyze.py` | le script, en un seul fichier |
-| `prompt-modele.txt` | le modèle dont est tiré le prompt de chaque partie (section 6) |
-| `prompt-seul-modele.txt` | le modèle du prompt court de `--prompt-seul` (section 6) |
-| `verifier-analyse.py` | le contrôle du PGN rendu par le LLM (section 7) |
-| [`TECHNIQUE.md`](TECHNIQUE.md) | la documentation technique : règles de cohérence, format des fichiers, encodages, modèle de prompt, tests |
-| [`CHANGELOG.md`](CHANGELOG.md) | l'historique des versions |
-| [`LICENSE`](LICENSE) | la licence du code (voir Licences) |
+Un outil supplémentaire, `verifier-analyse.py`, contrôle le PGN que le LLM vous a rendu : voir la section 8.
 
 Plateformes : Debian et macOS (Homebrew). Python 3.10 ou plus récent et python-chess, que le script installe lui-même dans un environnement virtuel dédié.
+
+La documentation tient en trois fichiers :
+
+- ce README, pour installer IAnalyze et analyser une partie
+- [EXEMPLES.md](EXEMPLES.md), l'aide-mémoire : toutes les commandes, toutes les options, et ce que le terminal affiche
+- [TECHNIQUE.md](TECHNIQUE.md), pour le fonctionnement du script, son emploi depuis un autre programme, le détail des fichiers produits et les tests
+
+## Sommaire
+
+- [1. Présentation](#1-présentation)
+- [2. Prérequis et installation](#2-prérequis-et-installation)
+- [3. Utilisation](#3-utilisation)
+- [4. Options courantes](#4-options-courantes)
+- [5. Résultat](#5-résultat)
+- [6. Prompt d'analyse](#6-prompt-danalyse)
+- [7. Choisir un LLM](#7-choisir-un-llm)
+- [8. Vérifier le PGN rendu](#8-vérifier-le-pgn-rendu)
+- [9. Sources et liens](#9-sources-et-liens)
+- [Licences](#licences)
 
 ---
 
@@ -67,6 +78,20 @@ La chaîne complète tient en trois temps :
 Le prompt est tiré du modèle `prompt-modele.txt`, rangé à côté du script.
 
 Il décrit toujours la synthèse que cette version du script vient d'écrire : les deux ne peuvent pas diverger.
+
+Les fichiers du dépôt :
+
+| Fichier | Rôle |
+|---|---|
+| `ianalyze.py` | le script, en un seul fichier |
+| `prompt-modele.txt` | le modèle dont est tiré le prompt de chaque partie (section 6) |
+| `prompt-seul-modele.txt` | le modèle du prompt court de `--prompt-seul` (section 6) |
+| `verifier-analyse.py` | l'outil supplémentaire qui contrôle le PGN rendu par le LLM (section 8) |
+| [`EXEMPLES.md`](EXEMPLES.md) | l'aide-mémoire : commandes, options et sorties |
+| [`TECHNIQUE.md`](TECHNIQUE.md) | la documentation technique |
+| [`CHANGELOG.md`](CHANGELOG.md) | l'historique des versions |
+| [`LICENSE`](LICENSE) | la licence du code (voir Licences) |
+| `test-app.sh`, `test.pgn` | la suite de tests et sa partie d'essai, décrites dans TECHNIQUE.md |
 
 ## 2. Prérequis et installation
 
@@ -141,11 +166,25 @@ L'explorateur de Lichess demande un jeton d'accès personnel.
 
 Une fois connecté à Lichess, créez-le sur <https://lichess.org/account/oauth/token>, sans cocher aucun droit.
 
-Le script le lit dans `~/.lichess_token`, un fichier en mode 600 qui ne contient que le jeton :
+Le script le lit dans `~/.lichess_token`, un fichier qui ne contient que le jeton et que vous seul pouvez lire.
+
+Créez le fichier vide, fermez-en l'accès, puis collez-y le jeton :
 
 ```bash
-umask 077 ; vi ~/.lichess_token
+touch ~/.lichess_token
 ```
+
+```bash
+chmod 600 ~/.lichess_token
+```
+
+```bash
+vi ~/.lichess_token
+```
+
+Dans cet ordre, le jeton n'est à aucun moment dans un fichier lisible par d'autres.
+
+Le script ne l'affiche jamais, ne l'écrit dans aucun des fichiers qu'il produit et ne le reçoit pas en ligne de commande. Il vous prévient si le fichier est lisible par d'autres que vous.
 
 Sans jeton, lancez le script avec `--sans-explorateur`.
 
@@ -155,12 +194,6 @@ Votre pseudo, votre cadence habituelle et votre niveau sont gardés dans `~/.con
 
 Le script les demande une seule fois, au premier lancement dans un terminal.
 
-Vous pouvez ensuite modifier le fichier à la main, ou le supprimer avec `--purge-reglages`.
-
-Le script réécrit ce fichier quand il y ajoute une réponse : vos clefs et vos sections sont gardées, vos lignes de commentaire sont perdues.
-
-Pour le supprimer :
-
 ```ini
 [joueur]
 pseudos = MonPseudo, AutrePseudo
@@ -168,32 +201,15 @@ cadence = 15+10
 niveau = 1300
 ```
 
+Vous pouvez modifier ce fichier à la main, ou le supprimer avec `--purge-reglages` : vos réponses seront alors redemandées.
+
 **Le niveau** est un nombre de points Elo approximatifs, de 100 à 3500, ou "inconnu".
 
 Il est transmis à l'analyste, qui y adapte ses explications. Sans lui, c'est l'Elo de votre balise dans la partie qui sert.
 
-**L'annotateur** est une clef facultative, que le script ne demande pas. Elle fixe la balise Annotator du PGN annoté :
+**La cadence** s'écrit `15+10` pour le temps réel, minutes par joueur puis incrément en secondes, et `14 jours` pour la correspondance à délai fixe.
 
-```text
-annotateur = Claude (Anthropic)
-```
-
-Sans elle, le prompt demande à l'analyste d'y mettre son propre nom de modèle.
-
-**La cadence** s'écrit de l'une de ces façons :
-
-| Vous écrivez | Système | Où on le trouve |
-|---|---|---|
-| `15+10` | temps réel : minutes par joueur, puis incrément en secondes | Lichess |
-| `14 jours` | correspondance à délai fixe : jours par coup, rien n'est reporté d'un coup au suivant | Lichess, chess.com |
-| `10 coups en 50 jours` | correspondance par période : le temps économisé est reporté | ICCF, cadence standard |
-| `5 jours + 36 heures, plafond 20 jours` | correspondance à capital de temps : jours au départ, puis incrément par coup en heures ou en jours, plafond facultatif | chess-mail.com |
-| `50 jours + 3 jours, plafond 50 jours, réserve 75 jours` | le même, avec une réserve à côté du capital | ICCF, Triple Block |
-| `inconnue` | | |
-
-Les deux systèmes de l'ICCF suivent ses règles en vigueur depuis le 1er janvier 2026, section 2.4.
-
-Le délai fixe par coup, lui, n'existe pas à l'ICCF.
+Les autres formes de correspondance, la clef facultative `annotateur` et la façon dont le script réécrit ce fichier sont décrites dans [TECHNIQUE.md](TECHNIQUE.md), section 6.
 
 ## 3. Utilisation
 
@@ -209,35 +225,20 @@ SOURCE accepte trois formes :
 ./ianalyze.py <identifiant>                      # identifiant
 ```
 
-**Une URL** doit viser lichess.org et porter l'identifiant en tête de chemin.
+L'identifiant est la suite de 8 caractères qui suit `lichess.org/` dans l'adresse de la partie.
 
-L'identifiant est la suite de 8 caractères qui suit `lichess.org/` dans l'adresse de la partie. Les formes `/<id>/black`, `/embed/game/<id>`, `/embed/<id>` et `/game/export/<id>` sont acceptées.
+**Le PGN doit contenir une seule partie, entière, en échecs standard, notée en anglais** : K, Q, R, B, N.
 
-Un autre hôte, ou une autre page du site (étude, analyse, exercices), est refusé sans rien envoyer à Lichess.
+Le script refuse plutôt que d'analyser de travers :
 
-**Un identifiant** fait exactement 8 ou 12 caractères alphanumériques.
+- un fichier qui réunit plusieurs parties : isolez celle à analyser dans un fichier à part
+- une partie qui ne part pas de la position initiale, c'est-à-dire qui porte une balise FEN : pour étudier une position, chargez-la dans un échiquier d'analyse
+- une partie notée en français (R, D, T, F, C) ou en figurines : sans ce refus, "Cf3" serait lu "f3", un coup de pion, et l'analyse porterait sur une autre partie que la vôtre
+- un PGN abîmé : accolade ou parenthèse jamais fermée, texte libre hors des accolades
 
-Une source qui ressemble à un chemin (point, barre oblique ou tilde) et qui n'existe pas est signalée comme fichier introuvable. Un répertoire est refusé, même si son nom a la forme d'un identifiant.
+Le message d'erreur nomme ce qui est refusé. Les formes d'adresse acceptées et le détail de ces contrôles sont dans [TECHNIQUE.md](TECHNIQUE.md), section 4.
 
-**Un PGN** doit contenir une seule partie, en échecs standard. Un fichier qui en réunit plusieurs est refusé : isolez celle à analyser dans un fichier à part.
-
-Un PGN corrompu est refusé plutôt qu'analysé tronqué. Une partie qui ne part pas de la position initiale, c'est-à-dire qui porte une balise FEN, est refusée elle aussi : IAnalyze analyse une partie entière, du premier coup au dernier. Pour étudier une position, chargez-la dans un échiquier d'analyse.
-
-Les coups doivent être écrits en notation anglaise : K, Q, R, B, N. Une partie notée en français (R, D, T, F, C) ou en figurines est refusée, avec le premier mot qui n'a pas été compris. Sans ce refus, "Cf3" serait lu "f3", un coup de pion, et l'analyse porterait sur une autre partie que la vôtre.
-
-Sont refusés de la même façon :
-
-- un commentaire dont l'accolade n'est jamais fermée
-- une variante dont la parenthèse n'est jamais fermée, ou une parenthèse fermante en trop
-- du texte libre hors des accolades, après la partie par exemple
-
-Le chemin de l'archive est écrit seul sur la sortie standard, le journal horodaté va sur la sortie d'erreur :
-
-```bash
-ARCHIVE=$(./ianalyze.py ma-partie.pgn 2>/dev/null)
-```
-
-### Questions de démarrage
+### Les questions du script
 
 Avant la collecte, le script vous pose quelques questions. Entrée retient la valeur proposée.
 
@@ -260,423 +261,34 @@ correspondance, 14 jours par coup
 correspondance, capital de 5 jours + 36 heures par coup, plafonné à 20 jours
 ```
 
-Les réponses vont dans `contexte.md`, repris en tête de la synthèse sous le titre "Consignes d'analyse".
-
 Une réponse fait 255 caractères au plus. Un nom de joueur ou un pseudo ne peut contenir ni guillemet, ni barre oblique inversée, ni crochet, ni accolade : il part dans une balise du PGN, que ces signes rendraient illisible. Une réponse refusée est redemandée.
 
-### Quand les questions ne sont pas posées
+Pour lancer une collecte sans répondre à rien, ajoutez `--sans-questions`. Le prompt dit alors au LLM que vos réponses n'ont pas été recueillies, et c'est lui qui vous les demande avant d'analyser.
 
-Les questions s'affichent dans le terminal et attendent une réponse au clavier.
+Le script ne pose pas non plus ses questions quand il n'est pas lancé à la main dans un terminal, depuis un autre programme par exemple : voir [TECHNIQUE.md](TECHNIQUE.md), section 5.
 
-Le script ne les pose donc que s'il est lancé à la main, dans un terminal. Il ne demande rien dans ces quatre cas :
+## 4. Options courantes
 
-- vous passez `--sans-questions`
-- un autre programme le lance sans terminal : cron, un service
-- son entrée ne vient pas du clavier : `./ianalyze.py ma-partie.pgn < /dev/null`
-- son journal ne va pas à l'écran : `./ianalyze.py ma-partie.pgn 2> journal.log`
+Quelques options suffisent à la plupart des usages :
 
-Le dernier cas surprend : les questions s'écrivent au même endroit que le journal, la sortie d'erreur. Si vous la redirigez, vous ne les verriez pas.
-
-L'exemple plus haut, avec `2>/dev/null`, ne pose donc aucune question. Sans cette redirection, `ARCHIVE=$(./ianalyze.py ma-partie.pgn)` les pose normalement.
-
-Dans la suite, "sans terminal" désigne ces quatre cas.
-
-## 4. Options
-
-### Général
-
-#### `-h, --help`
-
-Affiche l'aide complète et les exemples.
+| Option | Effet |
+|---|---|
+| `--sans-explorateur` | pas de statistiques d'ouverture : ni jeton ni catalogue ne sont demandés |
+| `--sans-questions` | aucune question : le LLM vous les posera lui-même |
+| `--prompt-seul` | un prompt court à coller seul, sans archive, pour un LLM qui n'ouvre pas les zip (section 7) |
+| `--garder-dossier` | garde le dossier décompressé à côté de l'archive |
+| `--sortie REP` | écrit les fichiers dans le répertoire REP |
+| `--base maitres` | interroge la base des maîtres au lieu de celle de tous les joueurs de Lichess |
+| `--profondeur D` | profondeur de calcul de Stockfish, 18 par défaut : plus elle est grande, plus le calcul est long |
+| `--coups-stockfish N` | limite le moteur aux N premiers coups |
+| `--pseudos LISTE` | vos pseudos, pour cette seule collecte |
+| `--reglages FICHIER` | un autre fichier de réglages, créé s'il n'existe pas : un profil par joueur |
 
 ```bash
-./ianalyze.py --help
+./ianalyze.py ma-partie.pgn --sans-explorateur --sortie ~/analyses
 ```
 
-#### `--delai S`
-
-*Défaut : `30`*
-
-Délai réseau maximal par requête, en secondes : export PGN,  explorateur, téléchargement du catalogue.
-
-```bash
-./ianalyze.py ma-partie.pgn --delai 60
-```
-
-#### `--debug`
-
-Laisse remonter la trace complète d'une erreur inattendue, expurgée du jeton.
-
-Sans cette option, seul un message d'une ligne s'affiche.
-
-```bash
-./ianalyze.py ma-partie.pgn --debug
-```
-
-### Environnement virtuel
-
-#### `--installer-venv`
-
-Crée l'environnement virtuel s'il manque, y installe ou met à jour python-chess, puis quitte. Peut être relancé sans risque.
-
-```bash
-./ianalyze.py --installer-venv
-```
-
-#### `--venv CHEMIN`
-
-*Défaut : `~/.local/share/IAnalyze/venv`*
-
-Emplacement de l'environnement virtuel, à l'installation comme à l'usage.
-
-```bash
-./ianalyze.py --installer-venv --venv ~/venv/echecs
-./ianalyze.py ma-partie.pgn --venv ~/venv/echecs
-```
-
-### Questions de démarrage
-
-#### `--sans-questions`
-
-Ne pose aucune question, ni camp ni contexte.
-
-Rien n'est retenu à votre place : le prompt dit alors au LLM que vos réponses n'ont pas été recueillies, et c'est lui qui vous pose les questions avant d'analyser.
-
-```bash
-./ianalyze.py ma-partie.pgn --sans-questions
-```
-
-#### `--pseudos LISTE`
-
-*Défaut : ceux de vos réglages*
-
-Vos noms de joueur, séparés par des virgules, cherchés sans tenir compte de la casse dans White et Black pour déduire votre camp.
-
-Le premier sert à compléter une balise vide. L'option remplace, le temps d'un lancement, les pseudos du fichier de réglages.
-
-```bash
-./ianalyze.py ma-partie.pgn --pseudos MonPseudo,AutrePseudo
-```
-
-#### `--reglages FICHIER`
-
-*Défaut : `~/.config/IAnalyze/reglages.ini`*
-
-Fichier de réglages, au format INI, section `[joueur]` : pseudos, cadence et niveau.
-
-- Une clef absente est demandée une seule fois, dans un terminal, puis enregistrée.
-- Une clef présente, même vide, n'est jamais redemandée.
-- Une cadence ou un niveau illisible est redemandé.
-- Les clefs et les sections que vous ajoutez sont conservées.
-- Sans terminal, rien n'est demandé ni écrit.
-
-Un fichier mal formé arrête le script avec un message.
-
-```bash
-./ianalyze.py ma-partie.pgn --reglages ~/echecs.ini
-```
-
-#### `--purge-reglages`
-
-Supprime le fichier de réglages, puis quitte. Aucune partie n'est attendue.
-
-Vos réponses seront redemandées à la prochaine collecte lancée dans un terminal.
-
-Avec `--reglages`, c'est le fichier désigné qui est supprimé. Son répertoire reste en place.
-
-Un fichier absent n'est pas une erreur, un répertoire est refusé.
-
-```bash
-./ianalyze.py --purge-reglages
-```
-
-### Catalogue des ouvertures
-
-#### `--installer-catalogue`
-
-Télécharge les cinq fichiers du catalogue (`a.tsv` à `e.tsv`), rejoue chaque ligne pour la valider, écrit l'index puis quitte.
-
-Le remplacement est atomique : un échec laisse l'ancien index en place. Relancer l'option fait la mise à jour.
-
-```bash
-./ianalyze.py --installer-catalogue
-```
-
-#### `--catalogue REP`
-
-*Défaut : `~/.local/share/IAnalyze`*
-
-Répertoire du catalogue local, à l'installation comme à l'usage.
-
-```bash
-./ianalyze.py --installer-catalogue --catalogue ~/echecs/catalogue
-./ianalyze.py ma-partie.pgn --catalogue ~/echecs/catalogue
-```
-
-### Sortie
-
-#### `--sortie REP`
-
-*Défaut : `.`*
-
-Répertoire où écrire l'archive, créé au besoin.
-
-```bash
-./ianalyze.py ma-partie.pgn --sortie ~/analyses
-```
-
-#### `--garder-dossier`
-
-Conserve le dossier de travail à côté de l'archive. Sans cette option, il est supprimé une fois l'archive vérifiée.
-
-```bash
-./ianalyze.py ma-partie.pgn --garder-dossier
-```
-
-#### `--prompt FICHIER`
-
-*Défaut : `prompt-modele.txt` à côté du script*
-
-Modèle du prompt d'analyse, écrit à côté de l'archive sous le nom `<archive>.prompt.txt` (voir section 6).
-
-Le modèle est contrôlé avant la collecte : un repère inconnu arrête le script en donnant le numéro de la ligne. Un fichier désigné par l'option doit exister.
-
-Si le modèle par défaut manque, parce que le script a été copié seul, la collecte se fait sans prompt et le journal le signale. Avec `--prompt-seul`, dont le prompt est le but, le script s'arrête.
-
-```bash
-./ianalyze.py ma-partie.pgn --prompt ~/mon-modele.txt
-```
-
-#### `--sans-prompt`
-
-N'écrit pas le prompt d'analyse. S'exclut avec `--prompt` et avec `--prompt-seul`.
-
-```bash
-./ianalyze.py ma-partie.pgn --sans-prompt
-```
-
-#### `--prompt-seul`
-
-Écrit un prompt court, à coller seul dans la conversation, sans pièce jointe : quelques consignes, la partie, puis les évaluations de Stockfish.
-
-C'est le repli pour un LLM qui n'ouvre pas les zip ou n'exécute pas de code (voir section 7). Le PGN annoté lui est demandé dans un bloc de code.
-
-Ce prompt est tiré de `prompt-seul-modele.txt`, et non de `prompt-modele.txt`.
-
-Aucune archive n'est écrite : le prompt est le seul fichier produit, et son chemin est écrit sur la sortie standard. Pour l'archive et ses données, lancez une collecte sans cette option.
-
-Avec `--garder-dossier`, le dossier de travail reste à côté du prompt : c'est lui que lit `verifier-analyse.py`.
-
-S'exclut avec `--sans-prompt`. Avec `--prompt`, le modèle désigné doit placer `{{PARTIE_PGN}}`, sans quoi le script s'arrête avant la collecte.
-
-```bash
-./ianalyze.py ma-partie.pgn --prompt-seul
-```
-
-### Explorateur
-
-#### `--base {lichess,maitres}`
-
-*Défaut : `lichess`*
-
-Base interrogée :
-
-- `lichess` : les parties classées de tous les joueurs du site, la base de <https://lichess.org/opening>
-- `maitres` : les parties de maîtres
-
-```bash
-./ianalyze.py ma-partie.pgn --base maitres
-```
-
-#### `--cadences LISTE`
-
-*Défaut : `bullet,blitz,rapid,classical,correspondence`*
-
-Base `lichess` seulement. Cadences retenues, séparées par des virgules, parmi : ultraBullet, bullet, blitz, rapid, classical, correspondence.
-
-La casse est tolérée, les doublons sont retirés.
-
-```bash
-./ianalyze.py ma-partie.pgn --cadences rapid,classical,correspondence
-```
-
-#### `--classements LISTE`
-
-*Défaut : `1000,1200,1400,1600,1800,2000,2200,2500`*
-
-Base `lichess` seulement. Tranches de classement retenues parmi 0, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2500.
-
-Chaque tranche court de sa valeur à la suivante : 0 couvre 0 à 999 (affichée "400" sur le site), 2500 tout ce qui dépasse.
-
-Une partie est rangée selon la moyenne des classements de ses deux joueurs.
-
-```bash
-./ianalyze.py ma-partie.pgn --classements 0,1000
-```
-
-Les filtres par défaut, plus la date de début fixée à janvier 2017, reprennent ceux de <https://lichess.org/opening> : vous y retrouvez les mêmes pourcentages.
-
-#### `--jeton-fichier FICHIER`
-
-*Défaut : `~/.lichess_token`*
-
-Fichier contenant le jeton personnel, et rien d'autre.
-
-```bash
-./ianalyze.py ma-partie.pgn --jeton-fichier ~/.jeton-test
-```
-
-#### `--seuil-parties N`
-
-*Défaut : `50`*
-
-Arrêt quand la position compte moins de N parties dans la base.
-
-```bash
-./ianalyze.py ma-partie.pgn --seuil-parties 200
-```
-
-#### `--seuil-frequence P`
-
-*Défaut : `10.0`*
-
-Un coup joué dans moins de P % des parties de la position est rare.
-
-Un coup rare qui mène hors du catalogue des ouvertures est une sortie de théorie. S'il reste dans une ligne nommée, ce n'en est pas une.
-
-0 désactive le critère.
-
-```bash
-./ianalyze.py ma-partie.pgn --seuil-frequence 5
-./ianalyze.py ma-partie.pgn --seuil-frequence 0
-```
-
-#### `--coups-min N`
-
-*Défaut : `6`*
-
-Aucun arrêt sur la fréquence avant la fin du coup N, soit 2N demi-coups.
-
-La table couvre ainsi le début de partie même après une sortie précoce.
-
-Le seuil de parties reste actif, et la première sortie est notée même dans la fenêtre. 0 arrête dès la première sortie.
-
-```bash
-./ianalyze.py ma-partie.pgn --coups-min 10
-./ianalyze.py ma-partie.pgn --coups-min 0
-```
-
-#### `--jusqu-a-epuisement`
-
-Ignore les deux seuils pour l'arrêt : l'interrogation descend tant que la base connaît la position. La première sortie reste notée.
-
-```bash
-./ianalyze.py ma-partie.pgn --jusqu-a-epuisement
-```
-
-#### `--max-demicoups N`
-
-*Défaut : `60`*
-
-Plafond de demi-coups interrogés, garde-fou toujours actif.
-
-```bash
-./ianalyze.py ma-partie.pgn --max-demicoups 30
-```
-
-#### `--pause S`
-
-*Défaut : `2.0`*
-
-Pause entre deux requêtes, minimum 2 secondes. Sur un HTTP 429, le script attend 60 secondes et retente une seule fois.
-
-```bash
-./ianalyze.py ma-partie.pgn --pause 3
-```
-
-#### `--sans-explorateur`
-
-Saute la collecte explorateur : ni réseau vers l'explorateur, ni jeton, ni catalogue requis.
-
-```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur
-```
-
-### Moteur
-
-L'évaluation Stockfish fait partie de toute collecte. Le binaire est vérifié avant toute écriture.
-
-#### `--coups-stockfish N`
-
-*Défaut : `0`*
-
-Limite le moteur aux N premiers coups entiers, soit 2N demi-coups. 0 analyse toute la partie.
-
-```bash
-./ianalyze.py ma-partie.pgn --coups-stockfish 15
-```
-
-#### `--profondeur D`
-
-*Défaut : `18`*
-
-Profondeur de recherche par position, de 1 à 60. Le temps de calcul croît très vite avec elle : au delà de 60, une seule position occuperait le moteur des heures.
-
-```bash
-./ianalyze.py ma-partie.pgn --profondeur 22
-```
-
-#### `--multipv K`
-
-*Défaut : `3`*
-
-Nombre de meilleurs coups demandés par position. Si le coup joué n'y figure pas, une seconde analyse fournit son évaluation et son écart.
-
-```bash
-./ianalyze.py ma-partie.pgn --multipv 5
-```
-
-#### `--fils N`
-
-*Défaut : nombre de processeurs*
-
-Threads Stockfish.
-
-```bash
-./ianalyze.py ma-partie.pgn --fils 2
-```
-
-#### `--hachage MO`
-
-*Défaut : `256`*
-
-Table de hachage du moteur, en mégaoctets.
-
-```bash
-./ianalyze.py ma-partie.pgn --hachage 512
-```
-
-#### `--stockfish CHEMIN`
-
-*Défaut : selon la plateforme, voir la section 2*
-
-Binaire du moteur.
-
-```bash
-./ianalyze.py ma-partie.pgn --stockfish /usr/local/bin/stockfish
-```
-
-#### `--longueur-pv N`
-
-*Défaut : `5`*
-
-Demi-coups de variante principale reproduits dans la synthèse, 0 pour la variante entière.
-
-Les variantes complètes restent dans `stockfish/evaluations.json`.
-
-```bash
-./ianalyze.py ma-partie.pgn --longueur-pv 0
-```
+Toutes les options sont dans [EXEMPLES.md](EXEMPLES.md), chacune avec sa commande et ce que le terminal affiche. `./ianalyze.py --help` en donne le résumé.
 
 ## 5. Résultat
 
@@ -684,7 +296,7 @@ Archive : `analyse-<étiquette>-<AAAAMMJJ-HHMMSS>.zip`, l'étiquette étant le n
 
 En cas d'échec, le dossier de travail est conservé tel quel pour diagnostic.
 
-L'étiquette est assainie (voir [TECHNIQUE.md](TECHNIQUE.md), section 5) : le journal l'annonce alors par "Nom du dossier assaini : ..."
+L'étiquette est assainie (voir [TECHNIQUE.md](TECHNIQUE.md), section 11) : le journal l'annonce alors par "Nom du dossier assaini : ..."
 
 Contenu :
 
@@ -708,7 +320,7 @@ Son chemin est donné par le journal, la sortie standard ne porte que celui de l
 
 Avec `--prompt-seul`, il n'y a pas d'archive : la sortie standard porte le chemin du prompt.
 
-Le détail de la synthèse, les codes de retour et les règles suivies par le script sont dans [TECHNIQUE.md](TECHNIQUE.md).
+Le contenu de chacun de ces fichiers est détaillé dans [TECHNIQUE.md](TECHNIQUE.md), section 10.
 
 ## 6. Prompt d'analyse
 
@@ -716,11 +328,9 @@ Les données ne suffisent pas : il faut dire à l'analyste ce qu'il doit en fair
 
 À chaque collecte, le script en tire le prompt de la partie : il remplit les valeurs et ne garde que les passages qui s'appliquent.
 
-Pour écrire votre propre modèle, la liste des repères, des valeurs et des conditions est dans [TECHNIQUE.md](TECHNIQUE.md), section 6.
+Pour écrire votre propre modèle, la liste des repères, des valeurs et des conditions est dans [TECHNIQUE.md](TECHNIQUE.md), section 12.
 
 Le prompt suit ce que la collecte a réellement fait. Sans explorateur, il ne demande ni fréquence ni coup majoritaire. Avec `--coups-stockfish`, il dit jusqu'où le moteur a évalué. Avec `--multipv 1`, il n'annonce pas trois coups par position.
-
-Sans terminal, le camp se déduit de vos pseudos sans poser de question.
 
 Le prompt se colle comme un message, dans une conversation neuve, l'archive en pièce jointe. Il vaut pour une partie : c'est le coller à chaque conversation qui garantit qu'il correspond à l'archive.
 
@@ -739,7 +349,7 @@ Le prompt prévoit les deux cas :
 - **Le LLM exécute du code** : il construit le PGN avec python-chess et en prouve la légalité.
 - **Le LLM n'exécute pas de code** : il écrit le PGN lui-même, le dit, et vous laisse ouvrir le fichier pour confirmer.
 
-## 7. Choisir un LLM et vérifier son travail
+## 7. Choisir un LLM
 
 ### Avec Claude : le zip et le prompt
 
@@ -772,7 +382,7 @@ Ce qu'il faut savoir de ce mode :
 - aucune archive n'est écrite, le prompt est le seul fichier produit
 - **c'est un repli, et il n'a pas encore été essayé** : les essais ci-dessous lui sont antérieurs
 
-La qualité de l'analyse dépend alors du LLM que vous choisissez. Pour contrôler son PGN avec `verifier-analyse.py --prompt-seul`, décrit plus bas, ajoutez `--garder-dossier` à la collecte : le vérificateur a besoin des évaluations qui ont servi au prompt.
+La qualité de l'analyse dépend alors du LLM que vous choisissez. Pour contrôler son PGN avec `verifier-analyse.py --prompt-seul` (section 8), ajoutez `--garder-dossier` à la collecte : le vérificateur a besoin des évaluations qui ont servi au prompt.
 
 Deux conseils tirés des essais :
 
@@ -797,11 +407,13 @@ Ce que ces essais montrent :
 - **Les données tiennent partout.** Aucun des quatre n'a inventé une évaluation, et tous donnent les trois mêmes erreurs principales, avec les bons écarts.
 - **C'est la fabrication du PGN qui les sépare.** Seul le LLM qui a construit son fichier avec python-chess a rendu un PGN utilisable tel quel.
 - **Le fond peut être bon sous une forme fautive.** Les 25 variantes écrites à la main par GPT-6 étaient toutes légales et tirées des lignes du moteur.
-- **La partie était notée gagnée dans une position perdue.** Deux LLM sur quatre ont raconté une victoire méritée, d'où la ligne ajoutée à la synthèse (voir [TECHNIQUE.md](TECHNIQUE.md), section 4).
+- **La partie était notée gagnée dans une position perdue.** Deux LLM sur quatre ont raconté une victoire méritée, d'où la ligne ajoutée à la synthèse (voir [TECHNIQUE.md](TECHNIQUE.md), section 10).
 
 L'offre gratuite de Claude annonce elle aussi la création de fichiers et l'exécution de code, sur d'autres modèles que celui de l'essai, d'après [sa page de tarifs](https://claude.com/pricing) lue le 20 novembre 2026. Elle n'a pas été essayée.
 
-### Vérifier le PGN rendu
+## 8. Vérifier le PGN rendu
+
+`verifier-analyse.py` est un outil supplémentaire, indépendant de la collecte : il contrôle ce que le LLM vous a rendu.
 
 Un LLM peut rendre un PGN qui a l'air juste et ne l'est pas : un coup illégal dans une variante, un chiffre arrangé, une gaffe passée sous silence.
 
@@ -877,16 +489,6 @@ Trois limites à connaître :
 - un nombre écrit sans signe, "7.77", n'est pas pris pour une évaluation : le script le confondrait avec une durée ou un classement. Un chiffre inventé écrit ainsi passe donc
 - le script repère un chiffre qui n'existe nulle part, pas un vrai chiffre attribué au mauvais coup
 
-## 8. Jeton
-
-Le jeton n'est transmis que dans l'en-tête Authorization, jamais dans l'URL. Il n'apparaît ni dans le journal, ni dans l'archive, où `collecte.json` note seulement sa présence.
-
-Il n'est envoyé qu'à l'adresse de l'explorateur : si celui-ci répondait par une redirection, elle ne serait pas suivie, et l'interrogation s'arrêterait là.
-
-Un fichier de jeton lisible par d'autres déclenche un avertissement. Le fichier ne porte que le jeton : une affectation, `LICHESS_TOKEN=...`, ou des guillemets sont refusés.
-
-Le fichier peut porter une marque d'ordre des octets ou être en UTF-16, comme en produisent certains éditeurs Windows : le journal le signale et le jeton est lu normalement.
-
 ## 9. Sources et liens
 
 Ce que le script interroge :
@@ -900,7 +502,7 @@ Ce que le script interroge :
 Ce sur quoi il s'appuie :
 
 - [python-chess](https://python-chess.readthedocs.io/en/latest/), la bibliothèque qui lit le PGN et pilote le moteur
-- [Stockfish](https://stockfishchess.org/), le moteur
+- [Stockfish](https://stockfishchess.org/), le moteur, et [ses options UCI](https://official-stockfish.github.io/docs/stockfish-wiki/UCI-Protocol-and-Stockfish-Commands.html), dont Threads, Hash et MultiPV (en anglais)
 - [Spécification PGN](https://www.saremba.de/chessgml/standards/pgn/pgn-complete.htm), Steven J. Edwards, 1994
 
 D'où viennent les cadences :

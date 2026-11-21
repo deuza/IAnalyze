@@ -28,7 +28,7 @@ jamais publiées.
   `#! si`, `#! si non`, `#! sinon`, `#! fin` et `#! note`. Le modèle est
   contrôlé avant la collecte : un repère inconnu ou mal écrit, une
   condition jamais fermée ou un modèle sans une ligne de texte arrêtent
-  le script, avec le numéro de la ligne. `TECHNIQUE.md`, section 6,
+  le script, avec le numéro de la ligne. `TECHNIQUE.md`, section 12,
   donne la liste des valeurs et des conditions.
 - Options `--prompt FICHIER`, pour un autre modèle, et `--sans-prompt`.
 - Option `--prompt-seul` : un prompt court, à coller seul dans la
@@ -141,15 +141,16 @@ jamais publiées.
   jamais rendre un PGN sans commentaires au motif qu'un fichier manque.
   La coupe des commentaires passe de 76 à 75 colonnes, pour que les
   lignes exportées tiennent en 79 caractères.
-- Documentation en Markdown, en deux fichiers : `README.md`, qui
-  remplace `README.nfo` et s'en tient à l'usage courant, et
-  `TECHNIQUE.md`, pour les règles de cohérence, le détail des fichiers
-  produits, les encodages, le modèle de prompt et les tests, à la place
-  de `TESTS.nfo`. Le README présente IAnalyze comme fait pour Claude,
-  avec le zip et le prompt, et `--prompt-seul` comme le repli pour un
-  autre LLM. Il gagne une procédure d'installation par plateforme, une
-  section "Choisir un LLM et vérifier son travail" et une section de
-  liens vers les sources citées.
+- Documentation en Markdown, en trois fichiers. `README.md` remplace
+  `README.nfo` et s'en tient à l'installation et à l'usage courant.
+  `EXEMPLES.md` est l'aide-mémoire, bâti comme une page de manuel :
+  toutes les commandes, toutes les options, et ce que le terminal
+  affiche. `TECHNIQUE.md` explique le fonctionnement du script, son
+  emploi depuis un autre programme, le détail des fichiers produits,
+  les encodages, le modèle de prompt et les tests, à la place de
+  `TESTS.nfo`. Le README présente IAnalyze comme fait pour Claude, avec
+  le zip et le prompt, et `--prompt-seul` comme le repli pour un autre
+  LLM.
 
 ### Removed
 
