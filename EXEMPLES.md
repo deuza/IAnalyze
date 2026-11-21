@@ -601,6 +601,8 @@ Avec `--reglages`, c'est le fichier désigné qui est supprimé. Son répertoire
 
 Un fichier absent n'est pas une erreur, un répertoire est refusé.
 
+Un fichier qui n'est pas un fichier de réglages est refusé lui aussi : seul un fichier portant la section `[joueur]`, ou un fichier vide, est supprimé.
+
 ```bash
 ./ianalyze.py --purge-reglages
 ```
@@ -1507,6 +1509,30 @@ Le modèle désigné par `--prompt` porte ici une valeur mal écrite.
 ```text
 [01:11:55] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
 Modèle de prompt ~/modele-fautif.txt, ligne 21 : valeur inconnue {{VERSON}}, valeurs admises : VERSION, DEPOT, ARCHIVE, PSEUDOS, CAMP, NIVEAU, CADENCE, ANNOTATEUR, BASE, SEUIL_IMPRECISION, SEUIL_ERREUR, SEUIL_GAFFE, PROFONDEUR, MULTIPV, PARTIE_PGN, TABLEAU_MOTEUR, ALERTE_RESULTAT, CONSIGNES_JOUEUR, OUVERTURE, DEMI_COUPS, DEMI_COUPS_EVALUES, COUPS_FAIBLES_JOUEUR
+```
+
+### Fichier qui n'est pas un fichier de réglages
+
+`--purge-reglages` ne supprime pas le fichier qu'une faute de frappe lui désignerait. Le code de retour vaut 1.
+
+```bash
+./ianalyze.py --purge-reglages --reglages ma-partie.pgn
+```
+
+```text
+--purge-reglages : ma-partie.pgn n'est pas un fichier de réglages, il ne porte pas la section [joueur]. Rien n'est supprimé.
+```
+
+### Dossier à plusieurs collectes, pour le vérificateur
+
+Le répertoire courant contient ici deux dossiers de collecte complets. Le code de retour vaut 2.
+
+```bash
+./verifier-analyse.py . analyse-llm.pgn
+```
+
+```text
+Lecture impossible : . contient 2 collectes complètes : analyse-ma-partie-20261121-010931, analyse-ma-partie-20261121-011502. Donnez le dossier de celle que le LLM a reçue.
 ```
 
 ### Archive introuvable, pour le vérificateur

@@ -70,7 +70,10 @@ jamais publiées.
   absentes sont demandées une seule fois, au premier lancement sur un
   terminal. Hors terminal, rien n'est demandé ni écrit.
 - Options `--reglages FICHIER`, pour désigner un autre fichier, et
-  `--purge-reglages`, qui le supprime puis quitte.
+  `--purge-reglages`, qui le supprime puis quitte. Seul un fichier qui
+  porte la section `[joueur]`, ou un fichier vide, est supprimé : une
+  faute de frappe derrière `--reglages` ne détruit pas un autre
+  fichier.
 - Cadence saisie par des questions vérifiées, et non plus en texte
   libre : temps réel, correspondance ou inconnue, puis les minutes par
   joueur et l'incrément en secondes. La correspondance connaît trois

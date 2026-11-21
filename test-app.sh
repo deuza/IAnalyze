@@ -1881,6 +1881,22 @@ verifier "T69 fichier absent, annoncé" \
 egal "T69 répertoire, code de retour" 1 "$?"
 verifier "T69 répertoire refusé" contient journal "n'est pas un fichier"
 verifier "T69 le répertoire est toujours là" test -d t-rep
+# Une faute de frappe derrière --reglages ne doit pas détruire un autre
+# fichier : seul un fichier portant la section [joueur], ou vide, part.
+printf '[White "Alice"]\n\n1. e4 e5 *\n' > t-pas-reglages.pgn
+"$SCRIPT" --purge-reglages --reglages t-pas-reglages.pgn > sortie 2> journal
+egal "T69 autre fichier, code de retour" 1 "$?"
+verifier "T69 autre fichier refusé" \
+    contient journal "n'est pas un fichier de réglages"
+verifier "T69 l'autre fichier est toujours là" test -f t-pas-reglages.pgn
+printf 'pseudos = Alice\n[joueur\n[joueur]\n' > t-purge.ini
+"$SCRIPT" --purge-reglages --reglages t-purge.ini > sortie 2> journal
+egal "T69 réglages abîmés, supprimés quand même" "0 0" \
+    "$? $(find . -maxdepth 1 -name t-purge.ini | wc -l)"
+: > t-purge.ini
+"$SCRIPT" --purge-reglages --reglages t-purge.ini > sortie 2> journal
+egal "T69 fichier vide, supprimé" "0 0" \
+    "$? $(find . -maxdepth 1 -name t-purge.ini | wc -l)"
 joindre journal
 
 

@@ -1793,6 +1793,12 @@ def purger_reglages(chemin: str) -> None:
     terminal. Un fichier absent n'est pas une erreur : le but, ne plus
     avoir de réglages, est déjà atteint. Un répertoire, ou tout ce qui
     n'est pas un fichier, est refusé plutôt que supprimé.
+
+    Avec --reglages, le chemin vient de la ligne de commande : une faute
+    de frappe ne doit pas détruire un autre fichier. Seul un fichier qui
+    porte la section [joueur], ou un fichier vide, est supprimé. La
+    section se cherche dans le texte brut : un fichier de réglages abîmé,
+    que configparser refuserait, reste ainsi supprimable.
     """
     p = chemin_reglages(chemin)
     if not p.exists() and not p.is_symlink():
@@ -1801,6 +1807,18 @@ def purger_reglages(chemin: str) -> None:
     if not (est_fichier(p) or p.is_symlink()):
         raise SystemExit("--purge-reglages : %s n'est pas un fichier, rien "
                          "n'est supprimé." % p)
+    try:
+        brut = p.read_bytes()
+    except OSError as e:
+        raise SystemExit("--purge-reglages : lecture de %s impossible : %s. "
+                         "Rien n'est supprimé." % (p, e)) from e
+    en_tete = re.compile(rb"^[ \t]*\[%s\][ \t]*\r?$"
+                         % re.escape(REGLAGES_SECTION).encode("ascii"),
+                         re.MULTILINE)
+    if brut.strip() and not en_tete.search(brut):
+        raise SystemExit("--purge-reglages : %s n'est pas un fichier de "
+                         "réglages, il ne porte pas la section [%s]. Rien "
+                         "n'est supprimé." % (p, REGLAGES_SECTION))
     try:
         p.unlink()
     except OSError as e:
