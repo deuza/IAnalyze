@@ -9,9 +9,12 @@
 
 # IAnalyze - Le dossier d'une partie d'échecs pour un analyste LLM
 
-IAnalyze prépare l'analyse d'une partie d'échecs par un LLM.
+IAnalyze prépare l'analyse d'une partie d'échecs par un LLM *(désigné comme l'analyste dans la suite de ce document)*.
 
+Celui-ci y ajoute les évaluations de Stockfish : une ligne par demi-coup, et derrière chaque coup faible le meilleur coup et sa suite.   
 Son script, `ianalyze.py`, rassemble le PGN, les statistiques de l'explorateur Lichess, le catalogue des ouvertures et les évaluations de Stockfish, puis écrit deux fichiers : une archive zip et le prompt qui va avec.
+
+L'idée vient du programme [Lucas Chess](https://lucaschess.pythonanywhere.com/), dont le prompt d'analyse tient en quelques lignes suivies de la partie.
 
 *Le script ne produit aucune analyse : il donne à l'analyste des chiffres sûrs, et le prompt lui impose de s'y tenir.*
 
@@ -26,11 +29,13 @@ analyse-ma-partie-20261119-164140.prompt.txt
 
 Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec Claude, vous joignez le fichier zip et vous recevez un PGN annoté et une synthèse.
 
-**IAnalyze est fait pour Claude.** Avec un compte gratuit, ou pour un autre LLM, l'option `--prompt-seul` écrit un prompt court qui porte la partie et les évaluations de Stockfish, à coller seul, sans pièce jointe : voir la section 7.
+**IAnalyze est fait pour Claude :**   
+Avec un compte gratuit, ou pour un autre LLM, l'option `--prompt-seul` écrit un prompt court qui porte la partie et les évaluations de Stockfish, à coller seul, sans pièce jointe : voir la section 7.
 
 Un outil supplémentaire, `verifier-analyse.py`, contrôle le PGN que le LLM vous a rendu : voir la section 8.
 
-Plateformes : Debian et macOS (Homebrew). Python 3.10 ou plus récent et python-chess, que le script installe lui-même dans un environnement virtuel dédié.
+Plateformes : Debian et macOS (Homebrew).   
+Python 3.10 ou plus récent et python-chess, que le script installe lui-même dans un environnement virtuel dédié.
 
 La documentation tient en trois fichiers :
 
@@ -76,8 +81,7 @@ La chaîne complète tient en trois temps :
 
    Il explique, il ne calcule pas : les évaluations viennent de Stockfish, la théorie vient de l'explorateur et du catalogue.
 
-Le prompt est tiré du modèle `prompt-modele.txt`, rangé à côté du script.
-
+Le prompt est tiré du modèle `prompt-modele.txt`, rangé à côté du script.   
 Il décrit toujours la synthèse que cette version du script vient d'écrire : les deux ne peuvent pas diverger.
 
 Les fichiers du dépôt :
@@ -99,7 +103,7 @@ Les fichiers du dépôt :
 
 Tout s'installe dans votre répertoire personnel, sous Debian comme sous macOS.
 
-Seule l'installation des paquets de Debian demande les droits root.
+Seule l'installation des paquets de Debian nécessitent les droits root.
 
 **1. Les paquets**
 
@@ -139,12 +143,10 @@ Chaque joueur de la machine refait les étapes 2 et 3 sous son propre compte : r
 
 ### Ce que font ces deux commandes
 
-**`--installer-venv`** crée un environnement virtuel dédié et y installe python-chess, que Debian n'empaquette pas.
-
+**`--installer-venv`** crée un environnement virtuel dédié et y installe python-chess, que Debian n'empaquette pas.   
 Le script s'y relance ensuite tout seul : vous continuez à l'appeler avec le Python du système.
 
-**`--installer-catalogue`** télécharge le catalogue des ouvertures nommées de Lichess, gardé en local.
-
+**`--installer-catalogue`** télécharge le catalogue des ouvertures nommées de Lichess, gardé en local.   
 Relancez-la de temps en temps pour le mettre à jour.
 
 **Stockfish est obligatoire** : son évaluation fait partie de toute collecte.
@@ -166,8 +168,7 @@ Les mêmes sur les deux plateformes, sauf pour le moteur :
 
 L'explorateur de Lichess demande un jeton d'accès personnel.
 
-Une fois connecté à Lichess, créez-le sur <https://lichess.org/account/oauth/token>, sans cocher aucun droit.
-
+Une fois connecté à Lichess, créez-le sur <https://lichess.org/account/oauth/token>, sans cocher aucun droit.   
 Le script le lit dans `~/.lichess_token`, un fichier qui ne contient que le jeton et que vous seul pouvez lire.
 
 Créez le fichier vide, fermez-en l'accès, puis collez-y le jeton :
@@ -183,10 +184,11 @@ chmod 600 ~/.lichess_token
 ```bash
 vi ~/.lichess_token
 ```
+*Utilisez `nano` si vous ne connaissez pas `vi` ou l'éditeur de votre choix* 
 
-Dans cet ordre, le jeton n'est à aucun moment dans un fichier lisible par d'autres.
-
-Le script ne l'affiche jamais, ne l'écrit dans aucun des fichiers qu'il produit et ne le reçoit pas en ligne de commande. Il vous prévient si le fichier est lisible par d'autres que vous.
+Dans cet ordre, le jeton n'est à aucun moment dans un fichier lisible par d'autres.   
+Le script ne l'affiche jamais, ne l'écrit dans aucun des fichiers qu'il produit et ne le reçoit pas en ligne de commande.   
+Il vous prévient si le fichier est lisible par d'autres que vous.
 
 Sans jeton, lancez le script avec `--sans-explorateur`.
 
@@ -242,16 +244,17 @@ Le message d'erreur nomme ce qui est refusé. Les formes d'adresse acceptées et
 
 ### Les questions du script
 
-Avant la collecte, le script vous pose quelques questions. Entrée retient la valeur proposée.
+Avant la collecte, le script vous pose quelques questions.   
+*Entrée retient la valeur proposée.*
 
 - **Au tout premier lancement seulement** : votre pseudo, votre cadence habituelle et votre niveau, rangés dans le fichier de réglages.
 - **Votre camp**, s'il ne se déduit pas des balises White ou Black grâce à vos pseudos.
 
-  Les balises vides sont alors complétées, et le PGN fourni est conservé sous `partie-origine.pgn`.
+Les balises vides sont alors complétées, et le PGN fourni est conservé sous `partie-origine.pgn`.
 
 - **La cadence de la partie**, si la balise TimeControl ne la donne pas : temps réel, correspondance ou inconnue.
 
-  Entrée retient votre cadence habituelle. Seuls des nombres entiers sont acceptés, une autre réponse fait reposer la question.
+Entrée retient votre cadence habituelle. Seuls des nombres entiers sont acceptés, une autre réponse fait reposer la question.
 
 - **Quatre questions de contexte** : périmètre, objectif, contexte particulier, commentaires à inclure dans le PGN final.
 
@@ -263,9 +266,13 @@ correspondance, 14 jours par coup
 correspondance, capital de 5 jours + 36 heures par coup, plafonné à 20 jours
 ```
 
-Une réponse fait 255 caractères au plus. Un nom de joueur ou un pseudo ne peut contenir ni guillemet, ni barre oblique inversée, ni crochet, ni accolade : il part dans une balise du PGN, que ces signes rendraient illisible. Une réponse refusée est redemandée.
+Une réponse fait 255 caractères au plus.   
+Un nom de joueur ou un pseudo ne peut contenir ni guillemet, ni barre oblique inversée, ni crochet, ni accolade : il part dans une balise du PGN, que ces signes rendraient illisible. 
 
-Pour lancer une collecte sans répondre à rien, ajoutez `--sans-questions`. Le prompt dit alors au LLM que vos réponses n'ont pas été recueillies, et c'est lui qui vous les demande avant d'analyser.
+Une réponse refusée est redemandée.
+
+Pour lancer une collecte sans répondre à rien, ajoutez `--sans-questions`.   
+Le prompt dit alors au LLM que vos réponses n'ont pas été recueillies, et c'est lui qui vous les demande avant d'analyser.
 
 Le script ne pose pas non plus ses questions quand il n'est pas lancé à la main dans un terminal, depuis un autre programme par exemple : voir [TECHNIQUE.md](TECHNIQUE.md), section 5.
 
@@ -290,11 +297,13 @@ Quelques options suffisent à la plupart des usages :
 ./ianalyze.py ma-partie.pgn --sans-explorateur --sortie ~/analyses
 ```
 
-Toutes les options sont dans [EXEMPLES.md](EXEMPLES.md), chacune avec sa commande et ce que le terminal affiche. `./ianalyze.py --help` en donne le résumé.
+Toutes les options sont dans [EXEMPLES.md](EXEMPLES.md), chacune avec sa commande et ce que le terminal affiche.   
+- `./ianalyze.py --help` en donne le résumé.
 
 ## 5. Résultat
 
-Archive : `analyse-<étiquette>-<AAAAMMJJ-HHMMSS>.zip`, l'étiquette étant le nom du PGN sans extension ou l'identifiant Lichess. Un dossier ou une archive homonyme fait ajouter un suffixe -2, -3...
+Archive : `analyse-<étiquette>-<AAAAMMJJ-HHMMSS>.zip`, l'étiquette étant le nom du PGN sans extension ou l'identifiant Lichess.   
+Un dossier ou une archive homonyme fait ajouter un suffixe -2, -3...
 
 En cas d'échec, le dossier de travail est conservé tel quel pour diagnostic.
 
@@ -317,6 +326,7 @@ Contenu :
 ```text
 analyse-<étiquette>-<AAAAMMJJ-HHMMSS>.prompt.txt
 le prompt d'analyse de cette partie, à coller dans la conversation.
+
 Son chemin est donné par le journal, la sortie standard ne porte que celui de l'archive.
 ```
 
@@ -326,15 +336,18 @@ Le contenu de chacun de ces fichiers est détaillé dans [TECHNIQUE.md](TECHNIQU
 
 ## 6. Prompt d'analyse
 
-Les données ne suffisent pas : il faut dire à l'analyste ce qu'il doit en faire. Ce texte vit dans le modèle `prompt-modele.txt`, que vous pouvez modifier librement, sans toucher au script.
+Les données ne suffisent pas : il faut dire à l'analyste ce qu'il doit en faire.   
+Ce texte vit dans le modèle `prompt-modele.txt`, que vous pouvez modifier librement, sans toucher au script.
 
 À chaque collecte, le script en tire le prompt de la partie : il remplit les valeurs et ne garde que les passages qui s'appliquent.
 
 Pour écrire votre propre modèle, la liste des repères, des valeurs et des conditions est dans [TECHNIQUE.md](TECHNIQUE.md), section 12.
 
-Le prompt suit ce que la collecte a réellement fait. Sans explorateur, il ne demande ni fréquence ni coup majoritaire. Avec `--coups-stockfish`, il dit jusqu'où le moteur a évalué. Avec `--multipv 1`, il n'annonce pas trois coups par position.
+Le prompt suit ce que la collecte a réellement fait. Sans explorateur, il ne demande ni fréquence ni coup majoritaire.   
+Avec `--coups-stockfish`, il dit jusqu'où le moteur a évalué. Avec `--multipv 1`, il n'annonce pas trois coups par position.
 
-Le prompt se colle comme un message, dans une conversation neuve, l'archive en pièce jointe. Il vaut pour une partie : c'est le coller à chaque conversation qui garantit qu'il correspond à l'archive.
+Le prompt se colle comme un message, dans une conversation neuve, l'archive en pièce jointe.   
+Il vaut pour une partie : c'est le coller à chaque conversation qui garantit qu'il correspond à l'archive.
 
 Tous les LLM n'ouvrent pas un zip, et tous n'exécutent pas de code.
 
@@ -344,46 +357,48 @@ Le prompt prévoit les deux cas :
 
   `--garder-dossier` laisse le dossier décompressé à côté de l'archive.
 
-  Le prompt demande à l'analyste de se servir de tous les fichiers, pas de la seule synthèse : les `.json` portent les variantes entières du moteur et tous les coups connus de l'explorateur, que `synthese.md` résume.
+Le prompt demande à l'analyste de se servir de tous les fichiers, pas de la seule synthèse : les `.json` portent les variantes entières du moteur et tous les coups connus de l'explorateur, que `synthese.md` résume.
 
-  S'il n'en reçoit qu'une partie, il doit dire lesquels manquent et vous proposer de les envoyer.
+S'il n'en reçoit qu'une partie, il doit dire lesquels manquent et vous proposer de les envoyer.
 
 - **Le LLM exécute du code** : il construit le PGN avec python-chess et en prouve la légalité.
 - **Le LLM n'exécute pas de code** : il écrit le PGN lui-même, le dit, et vous laisse ouvrir le fichier pour confirmer.
 
 ## 7. Choisir un LLM
 
-**Prenez Claude.** C'est le conseil de ce dépôt, et il vient des essais décrits plus bas.
+**Optez pour Claude** : C'est le conseil de ce dépôt, et il vient des essais décrits plus bas.
 
-Avec le zip, Claude est le seul qui ait rendu un PGN utilisable tel quel. Avec le prompt court, avec un abonnement comme avec un compte gratuit, c'est lui qui a rendu les PGN les plus propres, et ses explications sont celles qui ont le mieux tenu à la vérification sur l'échiquier.
+Avec le zip, Claude est le seul qui ait rendu un PGN utilisable tel quel.   
+Avec le prompt court, avec un abonnement comme avec un compte gratuit, c'est lui qui a rendu les PGN les plus propres et ses explications sont celles qui ont le mieux tenu à la vérification sur l'échiquier.
 
-IAnalyze a été mis au point avec lui. Deux routes mènent à une analyse, et il est le premier choix sur les deux :
+IAnalyze a été mis au point avec lui par l'auteur qui l'utilise pour analyser ses parties.   
+Deux routes mènent à une analyse, et il est le premier choix sur les deux :
 
 | Route | Ce que vous envoyez | Ce qu'il faut au LLM | Ce que vous recevez |
 |---|---|---|---|
 | Le zip et le prompt | l'archive en pièce jointe, le prompt collé | ouvrir un zip, exécuter du code, rendre un fichier | un fichier PGN construit avec python-chess, appuyé sur toutes les données |
 | `--prompt-seul` | un seul texte collé, sans pièce jointe | une simple conversation | le PGN annoté dans un bloc de code |
 
-**Avec un compte gratuit, prenez `--prompt-seul` et Claude.** C'est la combinaison qui a donné le meilleur résultat sans rien payer.
+**Avec un compte gratuit, prenez `--prompt-seul` et Claude. Choisisez le modèle `Sonnet 5.5` avec l'effort `Max`**   
+C'est la combinaison qui a donné le meilleur résultat sans rien payer.
 
 ### Avec le zip et le prompt
 
-C'est la chaîne complète : vous joignez le zip, vous collez le prompt, le LLM rend un fichier PGN.
-
+C'est la chaîne complète : vous joignez le zip, vous collez le prompt, le LLM rend un fichier PGN.   
 Il dispose alors de toutes les données : la synthèse, les trois meilleurs coups du moteur à chaque position, les statistiques de l'explorateur.
 
 Cette chaîne demande un LLM qui sait :
 
-- ouvrir une archive zip
-- exécuter du code et y installer python-chess, pour construire le PGN et en prouver la légalité
-- rendre un fichier à télécharger
+- Ouvrir une archive zip
+- Exécuter du code et y installer python-chess, pour construire le PGN et en prouver la légalité
+- Rendre un fichier à télécharger
 
-Dans les essais, seul Claude l'a menée au bout.
+Dans les essais, seul Claude l'a menée au bout correctement.
 
 Deux conseils si vous l'essayez avec un autre LLM :
 
-- certains refusent un fichier `.pgn` en pièce jointe : renommez-le en `.txt`, ou passez à `--prompt-seul`
-- si le LLM annonce un fichier que vous ne trouvez pas, demandez-lui le PGN dans un bloc de code
+- Certains refusent un fichier `.pgn` en pièce jointe : renommez-le en `.txt`, ou passez à `--prompt-seul`.
+- Si le LLM annonce un fichier que vous ne trouvez pas, demandez-lui le PGN dans un bloc de code.
 
 ### Avec `--prompt-seul`
 
@@ -393,34 +408,36 @@ Pour un compte gratuit, ou pour un LLM qui n'ouvre pas les zip, refuse certaines
 ./ianalyze.py ma-partie.pgn --prompt-seul
 ```
 
-Vous collez ce seul texte dans la conversation, sans rien joindre. Le LLM rend le PGN annoté dans un bloc de code, que vous enregistrez vous-même dans un fichier `.pgn`.
-
-L'idée vient de Lucas Chess, dont le prompt d'analyse tient en quelques lignes suivies de la partie. Celui-ci y ajoute les évaluations de Stockfish : une ligne par demi-coup, et derrière chaque coup faible le meilleur coup et sa suite.
+Vous collez ce seul texte dans la conversation, sans rien joindre.   
+Le LLM rend le PGN annoté dans un bloc de code, que vous enregistrez vous-même dans un fichier `.pgn`.
 
 Ce qu'il faut savoir de ce mode :
 
-- le prompt pèse environ 5 Ko pour une partie de 25 coups
-- il ne porte ni la synthèse ni les fichiers `.json` : le LLM n'a que la partie, le tableau du moteur et, avec l'explorateur, une phrase sur l'ouverture
-- aucune archive n'est écrite, le prompt est le seul fichier produit
-- les cinq réponses essayées ont rendu la partie entière, tous les coups commentés, sans une évaluation inventée
+- Le prompt pèse environ 5 Ko pour une partie de 25 coups
+- Il ne porte ni la synthèse ni les fichiers `.json` : le LLM n'a que la partie, le tableau du moteur et, avec l'explorateur, une phrase sur l'ouverture
+- Aucune archive n'est écrite, le prompt est le seul fichier produit
+- Les cinq réponses essayées ont rendu la partie entière, tous les coups commentés, sans une évaluation inventée
 
 Pour contrôler le PGN rendu avec `verifier-analyse.py --prompt-seul` (section 8), ajoutez `--garder-dossier` à la collecte : le vérificateur a besoin des évaluations qui ont servi au prompt.
 
 ### Fiez-vous aux chiffres, vérifiez les récits
 
-C'est ce que les deux séries d'essais ont en commun.
+C'est ce que les deux séries d'essais ont en commun.   
+**Les chiffres tiennent.** Aucun LLM n'a inventé une évaluation, avec le zip comme avec le prompt court.   
+Ce qui vient du tableau du moteur est recopié fidèlement : les écarts, les meilleurs coups, leurs suites.
 
-**Les chiffres tiennent.** Aucun LLM n'a inventé une évaluation, avec le zip comme avec le prompt court. Ce qui vient du tableau du moteur est recopié fidèlement : les écarts, les meilleurs coups, leurs suites.
+**Les récits sont fragiles.**   
+Ce que le LLM déduit seul de la position peut être faux : un sacrifice qui n'en est pas un, une pièce en prise que personne ne signale, un mat en un qui est un mat en deux.
 
-**Les récits sont fragiles.** Ce que le LLM déduit seul de la position peut être faux : un sacrifice qui n'en est pas un, une pièce en prise que personne ne signale, un mat en un qui est un mat en deux.
-
-Quand un commentaire vous surprend, posez les pièces et regardez. `verifier-analyse.py` contrôle la forme du PGN et les chiffres cités, il ne juge pas ce qui est raconté.
+Quand un commentaire vous surprend, posez les pièces et regardez.   
+Le script `verifier-analyse.py` contrôle la forme du PGN et les chiffres cités, il ne juge pas ce qui est raconté.
 
 ### Essais menés
 
 Deux séries, un seul essai par LLM et par offre, une partie par série.
 
-**Ce n'est pas un banc d'essai.** Un essai ne dit rien de la régularité d'un modèle. Mais les deux séries vont dans le même sens, et le conseil de cette section ne s'appuie sur rien d'autre que ce qui a été vu.
+**Ce n'est pas un banc d'essai.**   
+Un essai ne dit rien de la régularité d'un modèle. Mais les deux séries vont dans le même sens, et le conseil de cette section ne s'appuie sur rien d'autre que ce qui a été vu.
 
 #### Le 20 novembre 2026, avec le zip et le prompt
 
@@ -440,16 +457,19 @@ Ce que cette série montre :
 - **Le fond peut être bon sous une forme fautive.** Les 25 variantes écrites à la main par GPT-6 étaient toutes légales et tirées des lignes du moteur.
 - **La partie était notée gagnée dans une position perdue.** Deux LLM sur quatre ont raconté une victoire méritée, d'où la ligne ajoutée à la synthèse (voir [TECHNIQUE.md](TECHNIQUE.md), section 10).
 
-L'offre gratuite de Claude annonce elle aussi la création de fichiers et l'exécution de code, sur d'autres modèles que celui de cet essai, d'après [sa page de tarifs](https://claude.com/pricing) lue le 20 novembre 2026. Avec le zip, elle n'a pas été essayée.
+L'offre gratuite de Claude annonce elle aussi la création de fichiers et l'exécution de code, sur d'autres modèles que celui de cet essai, d'après [sa page de tarifs](https://claude.com/pricing) lue le 20 novembre 2026. 
+
+Elle n'a pas été testée avec le fichier .zip 
 
 #### Le 21 novembre 2026, avec `--prompt-seul`
 
-Une partie de 39 demi-coups, gagnée par le joueur, et le même prompt court collé seul dans cinq conversations. Le tableau du moteur y marque dix coups faibles, dont deux du joueur.
+Une partie de 39 demi-coups, gagnée par le joueur, et le même prompt court collé seul dans cinq conversations.   
+Le tableau du moteur y marque dix coups faibles, dont deux du joueur.
 
 Les cinq réponses ont en commun l'essentiel :
 
-- la ligne principale est recopiée sans un coup changé
-- les 39 demi-coups sont commentés, toutes les erreurs et gaffes du tableau comprises
+- La ligne principale est recopiée sans un coup changé
+- Les 39 demi-coups sont commentés, toutes les erreurs et gaffes du tableau comprises
 - 126 évaluations sont citées dans les PGN, toutes tirées du tableau
 
 Ce qui les sépare :
@@ -462,7 +482,7 @@ Ce qui les sépare :
 | Gemini (Google), version non relevée | gratuite | 7 suites jouables sur 10. Il parle du joueur à la troisième personne, puis écrit deux fois "erreur de ma part" à sa place | le même faux sacrifice, la couleur des fous inversée sur trois coups, une colonne annoncée ouverte qui ne l'est pas |
 | Copilot (Microsoft), version non relevée | gratuite | pas de bloc de code : la balise Site est rendue sous la forme d'un lien HTML. 10 suites jouables sur 10 | le même faux sacrifice, et un cavalier laissé en prise que rien ne signale |
 
-Les erreurs de la dernière colonne ont été vérifiées une à une sur la position, avec python-chess. La liste n'est pas exhaustive.
+Les erreurs de la dernière colonne ont été vérifiées une à une sur la position, avec python-chess. **La liste n'est pas exhaustive.**
 
 Ce que cette série montre :
 
@@ -476,8 +496,7 @@ Ce que cette série montre :
 
 `verifier-analyse.py` est un outil supplémentaire, indépendant de la collecte : il contrôle ce que le LLM vous a rendu.
 
-Un LLM peut rendre un PGN qui a l'air juste et ne l'est pas : un coup illégal dans une variante, un chiffre arrangé, une gaffe passée sous silence.
-
+Un LLM peut rendre un PGN qui a l'air juste et ne l'est pas : un coup illégal dans une variante, un chiffre arrangé, une gaffe passée sous silence.   
 `verifier-analyse.py` compare le PGN rendu à l'archive que le LLM a reçue, et sort le même bilan pour chaque LLM essayé.
 
 ```bash
@@ -508,13 +527,15 @@ Pour un PGN obtenu avec le prompt court de `--prompt-seul`, ajoutez la même opt
 
 Le prompt court demande moins que le prompt complet. Avec cette option, les contrôles qu'il ne fonde pas sont sautés : lignes de 79 caractères, résumé avant le premier coup, NAG, `%`, tiret cadratin, notation suffixe, balises Annotator et PlyCount, longueur des variantes, nombre de FEN. Restent la lecture, la ligne principale, les accolades, les balises recopiées, le marqueur de fin, les erreurs et gaffes commentées, les évaluations citées et les variantes.
 
-Si vous avez convenu avec le LLM d'un périmètre, les 20 premiers coups par exemple, le script le lit dans votre réponse à la question de démarrage et n'attend aucun commentaire au-delà. Quand le périmètre a été fixé dans la conversation, donnez-le :
+Si vous avez convenu avec le LLM d'un périmètre, les 20 premiers coups par exemple, le script le lit dans votre réponse à la question de démarrage et n'attend aucun commentaire au-delà.   
+Quand le périmètre a été fixé dans la conversation, donnez-le :
 
 ```bash
 ./verifier-analyse.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn --perimetre 20
 ```
 
-Le script accepte le zip ou son dossier décompressé, et se relance tout seul dans l'environnement virtuel d'IAnalyze, à son emplacement par défaut. Un dossier qui contient plusieurs collectes est refusé : donnez celui de la collecte que le LLM a reçue.
+Le script accepte le zip ou son dossier décompressé, et se relance tout seul dans l'environnement virtuel d'IAnalyze, à son emplacement par défaut.   
+Un dossier qui contient plusieurs collectes est refusé : donnez celui de la collecte que le LLM a reçue.
 
 Il n'a pas d'option `--venv`. Si votre environnement est ailleurs, lancez-le avec le Python de cet environnement : `~/venv/echecs/bin/python3 verifier-analyse.py ...`
 
@@ -544,17 +565,19 @@ Deux de ces défauts viennent de vrais PGN de LLM et méritent une explication :
 | `ATTENTION` | à regarder de près, sans être forcément fautif |
 | `INFO` | mesure donnée pour comparer les LLM entre eux |
 
-Code de retour : 0 sans `ECHEC`, 1 avec au moins un `ECHEC`, 2 si un fichier ne peut pas être lu ou si l'archive n'est pas celle d'IAnalyze. Avec le code 2, aucun contrôle n'a eu lieu.
+Code de retour : 0 sans `ECHEC`, 1 avec au moins un `ECHEC`, 2 si un fichier ne peut pas être lu ou si l'archive n'est pas celle d'IAnalyze.   
+Avec le code 2, aucun contrôle n'a eu lieu.
 
 ### Ce que le script ne fait pas
 
-Il ne juge pas la qualité du commentaire. Une explication fausse mais bien formée passe : un LLM peut placer une dame sur la mauvaise case dans une phrase sans qu'aucun contrôle ne le voie. Cette lecture reste la vôtre.
+Il ne juge pas la qualité du commentaire. Une explication fausse mais bien formée passe : un LLM peut placer une dame sur la mauvaise case dans une phrase sans qu'aucun contrôle ne le voie.   
+Cette lecture reste la vôtre.
 
 Trois limites à connaître :
 
-- une évaluation arrondie à une décimale est acceptée : "+0.35" cité "+0.4" ou "+0.3" ne compte pas comme inventé
-- un nombre écrit sans signe, "7.77", n'est pas pris pour une évaluation : le script le confondrait avec une durée ou un classement. Un chiffre inventé écrit ainsi passe donc
-- le script repère un chiffre qui n'existe nulle part, pas un vrai chiffre attribué au mauvais coup
+- Une évaluation arrondie à une décimale est acceptée : "+0.35" cité "+0.4" ou "+0.3" ne compte pas comme inventé
+- Un nombre écrit sans signe, "7.77", n'est pas pris pour une évaluation : le script le confondrait avec une durée ou un classement. Un chiffre inventé écrit ainsi passe donc
+- Le script repère un chiffre qui n'existe nulle part, pas un vrai chiffre attribué au mauvais coup
 
 ## 9. Sources et liens
 
@@ -564,7 +587,7 @@ Ce que le script interroge :
 
 - Explorateur, base de tous les joueurs : `https://explorer.lichess.org/lichess`
 - Explorateur, base des maîtres : `https://explorer.lichess.org/masters`
-- Catalogue des ouvertures : [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings), fichiers `a.tsv` à `e.tsv`. Ce sont ceux que charge aussi le serveur de l'explorateur.
+- Catalogue des ouvertures : [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings), fichiers `a.tsv` à `e.tsv`. (Ce sont ceux que charge aussi le serveur de l'explorateur.)
 
 Ce sur quoi il s'appuie :
 
