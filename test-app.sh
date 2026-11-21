@@ -2663,6 +2663,48 @@ EOF
         sauter "T82 : verifier-analyse.py absent du dépôt"
     fi
 
+    titre "T83 : parties d'exemples du dépôt"
+    # EXEMPLES.md joue ses commandes sur les fichiers de parties-exemples :
+    # chacun doit rester ce que la page en dit, accepté ou refusé avec sa
+    # cause. Les collectes se font dans le répertoire des tests.
+    EX="$DEPOT/parties-exemples"
+    if [ -d "$EX" ]; then
+        for partie in ma-partie polonaise partie-commentee; do
+            lancer "$EX/$partie.pgn" $MOTEUR --profondeur 1 --fils 1 \
+                --hachage 16
+            egal "T83 $partie.pgn, collecte faite" "0 1" \
+                "$RC $(find . -maxdepth 1 -name "analyse-$partie-*.zip" | wc -l)"
+        done
+        while IFS='|' read -r partie cause; do
+            lancer "$EX/$partie.pgn" $MOTEUR --profondeur 1
+            egal "T83 $partie.pgn, code de retour" 1 "$RC"
+            verifier "T83 $partie.pgn, refusé avec sa cause" \
+                contient journal "$cause"
+        done <<'FIN'
+francais|n'est ni un coup en notation anglaise
+deux-parties|Le PGN contient 2 parties
+position|ne commence pas à la position initiale
+accolade|accolade
+FIN
+        # Les PGN annotés de la page passent par le vérificateur, sur
+        # l'archive de ma-partie.pgn : le premier sans échec, le second
+        # avec.
+        lancer "$EX/ma-partie.pgn" $MOTEUR --profondeur 1 --fils 1 \
+            --hachage 16
+        "$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH" "$EX/analyse-llm.pgn" \
+            > bilan 2>&1
+        verifier "T83 analyse-llm.pgn, bilan produit" \
+            contient bilan "=== Bilan ==="
+        "$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH" \
+            "$EX/analyse-fautive.pgn" > bilan 2>&1
+        egal "T83 analyse-fautive.pgn, des échecs" 1 "$?"
+        egal "T83 aucune partie réelle : ni adresse ni identifiant" 0 \
+            "$(cat "$EX"/* | grep -c -i 'lichess.org/\|GameId')"
+        rm -rf "$DEPOT/__pycache__"
+    else
+        sauter "T83 : parties-exemples absent du dépôt"
+    fi
+
     titre "M2 : analyse complète de l'italienne, moteur seul"
     lancer italienne.pgn $MOTEUR --profondeur 10 --fils 2 --hachage 64
     egal "M2 code de retour" 0 "$RC"

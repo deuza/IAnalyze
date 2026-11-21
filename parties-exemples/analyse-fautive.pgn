@@ -1,0 +1,15 @@
+[Event "Partie amicale"]
+[Site "?"]
+[Date "2026.11.19"]
+[Round "-"]
+[White "MonPseudo"]
+[Black "Adversaire"]
+[Result "*"]
+[Annotator "Exemple"]
+[PlyCount "9"]
+
+{ Une partie italienne calme, arrêtée au cinquième coup. } 1. e4 { Le
+moteur donne +1.50 aux Blancs, soit 60 % de chances de gain. } 1... e5
+
+2. Nf3 Nc6 3. Bc4 { Le moteur préfère le clouage (3. Bb5 a6 4. Ba4) de
+peu. } 3... Bc5 4. c3 Nf6 5. d3 *

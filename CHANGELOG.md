@@ -100,6 +100,10 @@ jamais publiées.
   l'analyste de le dire.
 - `collecte.json` : clef `prompt_ecrit`, et les pseudos réellement
   utilisés.
+- `parties-exemples/`, les fichiers cités dans `EXEMPLES.md` : les
+  parties des exemples, les PGN que le script refuse, trois PGN annotés
+  pour le vérificateur, et une vraie partie anonymisée, exportée de
+  Lichess avec ses commentaires, pour un premier essai.
 - `test.pgn`, partie d'essai qui réunit les cas tordus d'un PGN :
   balises accentuées, commentaires de toutes sortes, NAG, variantes
   emboîtées, mat manqué, prise en passant, promotion, les deux roques

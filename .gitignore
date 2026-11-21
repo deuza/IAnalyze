@@ -1,4 +1,6 @@
 # Productions du script et des tests lancés depuis le dépôt.
 rapport-tests-*.txt
 analyse-*
+# Sauf les PGN annotés des exemples, qui portent ce préfixe.
+!parties-exemples/analyse-*.pgn
 __pycache__/

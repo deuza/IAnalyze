@@ -98,6 +98,7 @@ Les fichiers du dépôt :
 | [`CHANGELOG.md`](CHANGELOG.md) | l'historique des versions |
 | [`LICENSE`](LICENSE) | la licence du code (voir Licences) |
 | `test-app.sh`, `test.pgn` | la suite de tests et sa partie d'essai, décrites dans [TESTS.md](TESTS.md) |
+| `parties-exemples/` | les parties et les fichiers des exemples d'[EXEMPLES.md](EXEMPLES.md), dont une vraie partie anonymisée pour un premier essai |
 
 ## 2. Prérequis et installation
 

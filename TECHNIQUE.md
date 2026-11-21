@@ -52,6 +52,7 @@ Après l'étape 8, un échec laisse le dossier de travail en place, tel quel, po
 | `prompt-modele.txt`, `prompt-seul-modele.txt` | les deux modèles de prompt (section 12) |
 | `test-app.sh` | la suite de tests, pour Linux et macOS, décrite dans [TESTS.md](TESTS.md) |
 | `test.pgn` | une partie d'essai qui réunit les cas tordus d'un PGN, décrite dans [TESTS.md](TESTS.md) |
+| `parties-exemples/` | les fichiers cités dans [EXEMPLES.md](EXEMPLES.md) : parties, PGN refusés, PGN annotés |
 | `README.md`, `EXEMPLES.md`, `TECHNIQUE.md`, `TESTS.md`, `CHANGELOG.md` | la documentation et l'historique des versions |
 | `LICENSE` | la licence, CC0 |
 

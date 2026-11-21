@@ -12,6 +12,7 @@ Fichiers : ianalyze.py, prompt-modele.txt (modèle du prompt),
 prompt-seul-modele.txt (modèle du prompt court de --prompt-seul),
 verifier-analyse.py (contrôle du PGN rendu par le LLM),
 test.pgn (partie d'essai), test-app.sh (suite de tests),
+parties-exemples/ (fichiers des exemples d'EXEMPLES.md),
 README.md (installation et usage courant), EXEMPLES.md (commandes,
 options et sorties, sur le plan d'une page de manuel), TECHNIQUE.md
 (fonctionnement), TESTS.md (lancement des tests et tableau de tous les
