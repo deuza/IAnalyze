@@ -1,0 +1,18 @@
+[Event "Adversaires pour débutants"]
+[Site "Lucas Chess R 6.2.4"]
+[Date "????.??.??"]
+[Round "?"]
+[White "MonPseudo"]
+[Black "Adversaire"]
+[Result "1-0"]
+[ECO "B00"]
+[TimeControl "600+5"]
+[Termination "Echec et mat"]
+[Opening "Défense Barnes"]
+[PlyCount "7"]
+
+1. e4 {[%emt 00:00:2.56]}{[%clk 00:10:2.44]} f6 {[%emt 00:00:3.25]}{[%clk
+00:10:1.75]} 2. Bc4 {[%emt 00:00:6.83]}{[%clk 00:10:0.61]} Nh6 {[%emt
+00:00:2.75]}{[%clk 00:10:4.00]} 3. Qh5+ {[%emt 00:00:17.11]}{[%clk 00:09:48.50]}
+Nf7 {[%emt 00:00:2.75]}{[%clk 00:10:6.25]} 4. Qxf7# {[%emt 00:00:2.55]}{[%clk
+00:09:50.95]} 1-0

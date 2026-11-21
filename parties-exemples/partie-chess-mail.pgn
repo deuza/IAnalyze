@@ -1,0 +1,44 @@
+[Event "Match"]
+[Site "www.chess-mail.com"]
+[Date "????.??.??"]
+[Round "1"]
+[White "Adversaire"]
+[Black "MonPseudo"]
+[WhiteElo "1560"]
+[BlackElo "1550"]
+[Result "0-1"]
+[ECO ""]
+[Termination "0"]
+1.Ng1f3 d5
+2.d4 Nb8c6
+3.Bc1d2 e6
+4.e3 Ng8f6
+5.Nb1c3 a6
+6.Bf1d3 b5
+7.O-O Bc8b7
+8.a3 Bf8e7
+9.Nc3e2 O-O
+10.h3 Be7d6
+11.g4 Nf6e4
+12.Bd2c1 f5
+13.Kg2 e5
+14.Nf3h4 Qd8xh4
+15.Bd3xe4 dxe4
+16.dxe5 Nc6xe5
+17.Rf1h1 fxg4
+18.Ne2f4 b4
+19.a4 gxh3
+20.Rh1xh3 Qh4g5
+21.Rh3g3 Qg5e7
+22.Qd1h5 Ne5f3
+23.Qh5xh7 Kxh7
+24.Rg3h3 Nf3h4
+25.Kf1 Bd6xf4
+26.exf4 e3
+27.Bc1xe3 Bb7g2
+28.Kg1 Bg2xh3
+29.Ra1c1 Nh4f3
+30.Kh1 Qe7h4
+0-1
+
+0-1

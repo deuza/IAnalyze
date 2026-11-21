@@ -2685,11 +2685,16 @@ EOF
     # cause. Les collectes se font dans le répertoire des tests.
     EX="$DEPOT/parties-exemples"
     if [ -d "$EX" ]; then
-        for partie in ma-partie polonaise partie-commentee; do
+        for partie in ma-partie polonaise partie-commentee \
+            partie-chess-com partie-chess-mail partie-ajedrezmail \
+            partie-lucas-chess; do
             lancer "$EX/$partie.pgn" $MOTEUR --profondeur 1 --fils 1 \
                 --hachage 16
             egal "T83 $partie.pgn, collecte faite" "0 1" \
                 "$RC $(find . -maxdepth 1 -name "analyse-$partie-*.zip" | wc -l)"
+            # Le journal de l'export de chess-mail.com est gardé : il doit
+            # dire que le résultat répété a été ignoré.
+            [ "$partie" = partie-chess-mail ] && cp journal t-83-journal
         done
         while IFS='|' read -r partie cause; do
             lancer "$EX/$partie.pgn" $MOTEUR --profondeur 1
@@ -2714,6 +2719,8 @@ FIN
         "$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH" \
             "$EX/analyse-fautive.pgn" > bilan 2>&1
         egal "T83 analyse-fautive.pgn, des échecs" 1 "$?"
+        verifier "T83 export de chess-mail.com, résultat répété ignoré" \
+            contient t-83-journal "Résultat répété en fin de fichier"
         egal "T83 aucune partie réelle : ni adresse ni identifiant" 0 \
             "$(cat "$EX"/* | grep -c -i 'lichess.org/\|GameId')"
         rm -rf "$DEPOT/__pycache__"

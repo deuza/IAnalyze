@@ -150,7 +150,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | T80 | Nom long | un nom de PGN long, en caractères de plusieurs octets, donne une étiquette bornée et valide |
 | T81 | Cas combinés | la purge s'emploie seule, un modèle vide est refusé, un jeton mal écrit est refusé sans être affiché |
 | T82 | Vérificateur, suite | mats cités, périmètre convenu, contrôles sautés du mode court, dossier parent à une ou plusieurs collectes |
-| T83 | Parties d'exemples | les fichiers de `parties-exemples` restent ce qu'`EXEMPLES.md` en dit : trois parties acceptées, quatre refusées avec leur cause, deux PGN annotés contrôlés, aucune adresse ni identifiant de partie réelle |
+| T83 | Parties d'exemples | les fichiers de `parties-exemples` restent ce qu'`EXEMPLES.md` en dit : sept parties acceptées, dont les exports de quatre sites et d'un logiciel, quatre refusées avec leur cause, deux PGN annotés contrôlés, aucune adresse ni identifiant de partie réelle |
 | M1 | Collecte, noms | nom de PGN accentué, chemin de sortie avec espace et accent |
 | M2 | Collecte complète | l'italienne analysée en entier, moteur seul, sans processus du moteur laissé derrière |
 

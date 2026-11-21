@@ -8,6 +8,13 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `parties-exemples/` : quatre vraies parties anonymisées, telles que
+  les exportent Chess.com, chess-mail.com, ajedrezmail.org et Lucas
+  Chess. Avec celle de Lichess, elles montrent les exports essayés, que
+  le README énumère.
+
 ### Fixed
 
 - Un PGN dont le résultat est écrit deux fois en fin de fichier, comme
