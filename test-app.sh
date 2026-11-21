@@ -1314,6 +1314,12 @@ egal "T65 sans explorateur, seule la section 3 fait foi" 1 \
     "$(grep -c 'Seuls les chiffres de la section 3 font foi' "$PR")"
 egal "T65 sans explorateur, la section 2 ne fait pas foi" 0 \
     "$(grep -c 'Les chiffres des sections 2 et 3 font foi' "$PR")"
+# Le récapitulatif, la balise Opening et la consigne finale renvoyaient
+# encore à la section 2, que cette collecte n'a pas.
+egal "T65 sans explorateur, aucun renvoi à la section 2" "0 0 0" \
+    "$(grep -c 'sortie de théorie)' "$PR") $(grep -c 'sections 2 et 3' "$PR") $(grep -c 'position nommée' "$PR")"
+verifier "T65 sans explorateur, la section 3 prime seule" \
+    contient "$PR" "Les chiffres de la section 3 priment"
 egal "T65 hors terminal, réponses non recueillies" 1 \
     "$(grep -c "n'a pas recueilli les réponses" "$PR")"
 "$SCRIPT" t-pr.pgn $R --profondeur 1 --base maitres > sortie 2> journal
@@ -1341,9 +1347,11 @@ for base in ("BASE_LICHESS", "BASE_MAITRES"):
     print(base, rendu.count("celle de tous les joueurs de Lichess"),
           rendu.count("celle des maîtres"),
           rendu.count("trois coups théoriques"),
-          rendu.count("Aucune base n'a été interrogée"))
+          rendu.count("Aucune base n'a été interrogée"),
+          rendu.count("Les chiffres des sections 2 et 3 priment"),
+          rendu.count("position nommée de la section"))
 EOF
-printf 'BASE_LICHESS 1 0 1 0\nBASE_MAITRES 0 1 1 0\n' > attendu-t65
+printf 'BASE_LICHESS 1 0 1 0 1 1\nBASE_MAITRES 0 1 1 0 1 1\n' > attendu-t65
 verifier "T65 avec explorateur, une seule branche de base" \
     cmp -s attendu-t65 sortie-t65
 joindre sortie-t65

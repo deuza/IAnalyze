@@ -178,14 +178,23 @@ mémoire.
 La section "Consignes d'analyse" contient les réponses du joueur : ne
 posez aucune question. Ouvrez votre réponse par un récapitulatif de
 cinq lignes au plus (camp, cadence, résultat, Elo, ouverture et
+#! si EXPLORATEUR
 variante, première sortie de théorie, périmètre et objectif), puis
+#! sinon
+variante, périmètre et objectif), puis
+#! fin
 enchaînez directement sur l'analyse. Seule exception : si le camp du
 joueur est "inconnu", demandez-le en une phrase et attendez.
 #! sinon
 Le script n'a pas recueilli les réponses du joueur aux questions de
 démarrage. Ouvrez votre réponse par un récapitulatif de cinq lignes au
+#! si EXPLORATEUR
 plus (camp, cadence, résultat, Elo, ouverture et variante, première
 sortie de théorie), posez en un seul message les questions suivantes,
+#! sinon
+plus (camp, cadence, résultat, Elo, ouverture et variante), posez en
+un seul message les questions suivantes,
+#! fin
 numérotées, avec le défaut entre parenthèses, puis arrêtez-vous et
 attendez la réponse :
    a. Périmètre : les N premiers coups, ou la partie complète ?
@@ -330,8 +339,13 @@ code.
    - Opening et Variation : coupez le nom d'ouverture au premier
      deux-points, la partie gauche dans Opening, la droite dans
      Variation, qui prend "?" sans deux-points. Le nom vient de la
+#! si EXPLORATEUR
      balise Opening, sinon de la dernière position nommée de la section
      2, qui fournit alors aussi ECO ;
+#! sinon
+     balise Opening. Sans elle, Opening et ECO prennent "?" : aucune
+     base n'a été interrogée pour cette partie ;
+#! fin
    - PlyCount : le nombre de demi-coups donné en section 1 ;
    - TimeControl : la valeur de la balise d'origine, sinon "?". La
      cadence des consignes sert au commentaire, pas à cette balise ;
@@ -485,10 +499,15 @@ Après le fichier, dans la conversation et en texte simple :
 - Distinguez ce que vous voyez avec certitude de ce que vous estimez.
   Une variante que vous n'avez pas calculée jusqu'au bout est annoncée
   comme telle.
+#! si EXPLORATEUR
 - Les chiffres des sections 2 et 3 priment sur votre mémoire. Quand
   ils manquent, dites que vous estimez. Si la table de la section 2
   s'arrête avant le point que vous voulez commenter, dites-le au lieu
   d'affirmer.
+#! sinon
+- Les chiffres de la section 3 priment sur votre mémoire. Quand ils
+  manquent, dites que vous estimez.
+#! fin
 - Une position trop complexe se tranche avec le moteur, si vous en
   avez un. Sinon, dites qu'elle reste ouverte.
 - Les repères de phase et les chances G/N/P sont indicatifs.
