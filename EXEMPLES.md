@@ -38,7 +38,8 @@ SOURCE est un fichier PGN, l'adresse d'une partie de Lichess ou son identifiant 
 
 ## DESCRIPTION
 
-`ianalyze.py` rassemble le PGN d'une partie, les statistiques de l'explorateur Lichess et les évaluations de Stockfish. Il écrit une archive zip et le prompt qui va avec, à donner à un LLM. Il n'analyse rien lui-même.
+`ianalyze.py` rassemble le PGN d'une partie, les statistiques de l'explorateur Lichess et les évaluations de Stockfish.   
+Il écrit une archive zip et le prompt qui va avec, à donner à un LLM. Il n'analyse rien lui-même.
 
 `verifier-analyse.py` compare ensuite le PGN annoté rendu par le LLM à cette archive.
 
@@ -285,7 +286,8 @@ Noirs matent en un coup. Le compte se lit après le coup de la ligne :
 
 ### Vérifier la réponse du LLM
 
-`analyse-llm.pgn` tient ici la place du PGN annoté qu'un LLM aurait rendu : il a été écrit pour l'exemple. Le vérificateur le compare à l'archive :
+`analyse-llm.pgn` tient ici la place du PGN annoté qu'un LLM aurait rendu : il a été écrit pour l'exemple.   
+Le vérificateur le compare à l'archive :
 
 ```bash
 ./verifier-analyse.py analyse-ma-partie-20261121-010838.zip analyse-llm.pgn
@@ -340,7 +342,8 @@ Contrôle d'une analyse rendue par un LLM
   attentions : 0
 ```
 
-Un PGN fautif, lui, voit chacun de ses défauts nommé. Celui-ci porte une ligne vide entre deux coups, un signe pour cent, un chiffre inventé et une variante écrite dans un commentaire :
+Un PGN fautif, lui, voit chacun de ses défauts nommé.   
+Celui-ci porte une ligne vide entre deux coups, un signe pour cent, un chiffre inventé et une variante écrite dans un commentaire :
 
 ```bash
 ./verifier-analyse.py analyse-ma-partie-20261121-010838.zip analyse-fautive.pgn --nom "Modèle essayé"
@@ -841,7 +844,8 @@ Cette option lui fait prendre votre modèle à la place de celui du dépôt.
 analyse-ma-partie-20261121-010949.zip
 ```
 
-Le fichier doit exister. Pour écrire un modèle, partez d'une copie de `prompt-modele.txt` : ce qu'il peut contenir est décrit dans [TECHNIQUE.md](TECHNIQUE.md), section 12.
+Le fichier doit exister.   
+Pour écrire un modèle, partez d'une copie de `prompt-modele.txt` : ce qu'il peut contenir est décrit dans [TECHNIQUE.md](TECHNIQUE.md), section 12.
 
 Avec `--prompt-seul`, le modèle par défaut est `prompt-seul-modele.txt`, et c'est de lui qu'il faut partir.
 
@@ -948,8 +952,7 @@ Jeton absent : ~/.jeton-test introuvable.
 
 *Défaut : `50`*
 
-Arrêt quand la position compte moins de N parties dans la base.
-
+Arrêt quand la position compte moins de N parties dans la base.   
 Avec le seuil par défaut, 50, la Polonaise s'arrête au troisième demi-coup dans la base des maîtres :
 
 ```bash
@@ -970,8 +973,7 @@ Pour un seuil plus exigeant :
 
 *Défaut : `10.0`*
 
-Un coup joué dans moins de P % des parties de la position est rare.
-
+Un coup joué dans moins de P % des parties de la position est rare.   
 Un coup rare qui mène hors du catalogue des ouvertures est une sortie de théorie. S'il reste dans une ligne nommée, ce n'en est pas une.
 
 0 désactive le critère.
@@ -1080,7 +1082,7 @@ Le journal passe alors de la lecture de la partie au moteur, sans ligne "Explora
 
 ### Moteur
 
-L'évaluation Stockfish fait partie de toute collecte. Le binaire est vérifié avant toute écriture.
+L'évaluation Stockfish fait partie de toute collecte : le binaire est vérifié avant toute écriture.
 
 #### `--coups-stockfish N`
 
@@ -1103,7 +1105,7 @@ Limite le moteur aux N premiers coups entiers, soit 2N demi-coups. 0 analyse tou
 *Défaut : `18`*
 
 Profondeur de recherche par position, de 1 à 60.   
-Le temps de calcul croît très vite avec elle : au delà de 60, une seule position occuperait le moteur des heures.
+Le temps de calcul croît très vite avec elle : au delà de 60, une seule position occuperait le moteur des heures !
 
 ```bash
 ./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --profondeur 12
@@ -1138,8 +1140,7 @@ Si le coup joué n'en fait pas partie, le script le fait évaluer à part, pour 
 
 *Défaut : le nombre de processeurs de la machine*
 
-Nombre de processeurs que Stockfish emploie en même temps.   
-Baissez-le pour garder la machine disponible pendant le calcul.
+Nombre de processeurs que Stockfish emploie en même temps. Baissez-le pour garder la machine disponible pendant le calcul.
 
 #### `--hachage MO`
 
@@ -1242,7 +1243,8 @@ Contrôle d'une analyse rendue par un LLM
 
 #### `--synthese FICHIER`
 
-La conversation du LLM, copiée dans un fichier texte. Les positions et les évaluations qu'elle cite sont alors contrôlées aussi, dans deux sections de plus.
+La conversation du LLM, copiée dans un fichier texte.   
+Les positions et les évaluations qu'elle cite sont alors contrôlées aussi, dans deux sections de plus.
 
 ```bash
 ./verifier-analyse.py analyse-ma-partie-20261121-010838.zip analyse-llm.pgn --synthese conversation.txt
@@ -1531,7 +1533,7 @@ Modèle de prompt ~/modele-fautif.txt, ligne 21 : valeur inconnue {{VERSON}}, va
 
 ### Fichier qui n'est pas un fichier de réglages
 
-`--purge-reglages` ne supprime pas le fichier qu'une faute de frappe lui désignerait.   
+`--purge-reglages` ne supprime pas le fichier qu'une faute de frappe lui désignerait :   
 Le code de retour vaut 1.
 
 ```bash
@@ -1544,7 +1546,7 @@ Le code de retour vaut 1.
 
 ### Dossier à plusieurs collectes, pour le vérificateur
 
-Le répertoire courant contient ici deux dossiers de collecte complets.   
+Le répertoire courant contient ici deux dossiers de collecte complets :   
 Le code de retour vaut 2.
 
 ```bash
