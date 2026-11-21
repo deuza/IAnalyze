@@ -674,6 +674,8 @@ Le README dit comment lancer le script et ce qu'il contrôle. Cette section donn
 
 Trois fichiers de l'archive : `partie.pgn`, `synthese.md` et `stockfish/evaluations.json`. Il les prend dans le zip, ou dans un dossier : le dossier de travail lui-même, ou celui qui le contient.
 
+Les trois fichiers viennent toujours de la même collecte. Dans un dossier parent, seule une collecte complète est retenue, et le bilan la nomme : une collecte interrompue rangée à côté est ignorée. Si le dossier en contient plusieurs complètes, le script s'arrête et les nomme, plutôt que d'en choisir une.
+
 Si l'un d'eux manque, ou si l'archive ne se lit pas, aucun contrôle n'a lieu et le code de retour vaut 2.
 
 Comme `ianalyze.py`, il se relance dans l'environnement virtuel quand python-chess manque, mais seulement à son emplacement par défaut : il n'a pas d'option `--venv`.
@@ -696,6 +698,7 @@ Code de retour : 0 sans `ECHEC`, 1 avec au moins un `ECHEC`, 2 si aucun contrôl
 - **Signes interdits dans un commentaire** : accolade, signe pour cent, tiret cadratin. Un point-virgule vaut `ATTENTION`.
 - **Balises** : les sept obligatoires en tête et dans l'ordre, leurs valeurs reprises de la partie d'origine. Les autres par ordre alphabétique, Annotator renseignée et PlyCount exact, sinon `ATTENTION`.
 - **Coups commentés** : chaque erreur et chaque gaffe de Stockfish doit l'être. Le nombre total de coups commentés est donné pour information, le prompt en visant 15 à 25.
+- **Périmètre** : le prompt limite les commentaires au périmètre convenu. Une erreur jouée au-delà n'est pas attendue. Le périmètre est le premier nombre de votre réponse à la question de démarrage, lue dans les consignes de `synthese.md` : "les 20 premiers coups" vaut 20 coups. Une réponse sans nombre, ou laissée par défaut, vaut la partie complète. `--perimetre N` le donne à la main, quand il a été convenu dans la conversation.
 - **NAG de position** : `$14`, `$16`, `$18` et `$20` donnent les Blancs mieux, `$15`, `$17`, `$19` et `$21` les Noirs. Un tel NAG est contraire au moteur quand celui-ci donne l'autre camp mieux d'au moins un demi-pion, ou un mat.
 - **NAG de qualité** : `$6` pour une imprécision, `$2` pour une erreur, `$4` pour une gaffe. Un autre avis que celui du moteur est donné pour information.
 - **Variantes** : 5 demi-coups au plus, sinon `ATTENTION`. Une variante est dite appuyée sur le moteur quand ses deux premiers coups sont ceux d'une ligne que le moteur donne pour ce demi-coup.
@@ -703,13 +706,13 @@ Code de retour : 0 sans `ECHEC`, 1 avec au moins un `ECHEC`, 2 si aucun contrôl
 
 ### Évaluations citées
 
-Une évaluation se reconnaît à son signe : `+0.35`, `-1,20`, `+ 0.35`, le signe moins typographique, ou `#-3` pour un mat. Un nombre sans signe n'en est pas une.
+Une évaluation se reconnaît à son signe : `+0.35`, `-1,20`, `+ 0.35`, le signe moins typographique, ou `#-3` pour un mat. Un nombre sans signe n'en est pas une, sauf pour un mat : `#2` est lu comme `#+2`, la forme du dossier.
 
 Elle doit exister dans `evaluations.json`, pour le coup joué ou pour l'un des meilleurs coups, telle quelle ou arrondie à une décimale : `+0.35` peut être cité `+0.4` ou `+0.3`.
 
 ### Avec `--prompt-seul`
 
-Le prompt court demande moins que le prompt complet. Les contrôles qu'il ne fonde pas sont sautés : longueur des lignes, résumé, NAG, signe pour cent, tiret cadratin, notation suffixe, balises Annotator et PlyCount.
+Le prompt court demande moins que le prompt complet. Les contrôles qu'il ne fonde pas sont sautés : longueur des lignes, résumé, NAG, signe pour cent, tiret cadratin, notation suffixe, balises Annotator et PlyCount, longueur des variantes. Avec `--synthese`, le tiret cadratin de la conversation et le nombre de FEN ne sont pas contrôlés non plus : une FEN citée doit seulement être valide et venir de la partie.
 
 Les balises sont contrôlées autrement. Le prompt complet veut les sept balises obligatoires du standard PGN, dans leur ordre. Le prompt court demande seulement de recopier celles de la partie : parmi les sept, seules celles que porte la partie d'origine sont attendues, dans l'ordre où elle les écrit.
 
@@ -799,7 +802,7 @@ GARDER=1 ./test-app.sh
 | Moteur | T25, T26, T51, T52, T55, T78, M2 | moteur introuvable, analyse limitée aux premiers coups, mat manqué, mat compté après le coup, coup nul, options hors bornes, moteur qui s'arrête, analyse complète |
 | Partie d'essai | T70 | `test.pgn` : commentaires, variantes, prise en passant, promotion, roques, coup nul |
 | Résultat contraire | T72 | partie notée gagnée dans une position perdue : la synthèse et le prompt le disent |
-| Vérification | T73 | `verifier-analyse.py` : un PGN conforme passe, un PGN fautif voit chacun de ses défauts relevé, PGN absent, archive illisible |
+| Vérification | T73, T82 | `verifier-analyse.py` : un PGN conforme passe, un PGN fautif voit chacun de ses défauts relevé, PGN absent, archive illisible, mats cités, périmètre, mode court, dossier parent |
 
 ### Tests avec `--reseau`
 

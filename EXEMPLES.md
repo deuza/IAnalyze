@@ -31,7 +31,7 @@ Le [README](README.md) explique l'installation et l'usage courant. [TECHNIQUE.md
 ./ianalyze.py --purge-reglages [--reglages FICHIER]
 ./ianalyze.py --help
 
-./verifier-analyse.py ARCHIVE PGN [--synthese FICHIER] [--nom NOM] [--prompt-seul]
+./verifier-analyse.py ARCHIVE PGN [--synthese FICHIER] [--nom NOM] [--prompt-seul] [--perimetre N]
 ```
 
 SOURCE est un fichier PGN, l'adresse d'une partie de Lichess ou son identifiant de 8 caractères.
@@ -1202,6 +1202,8 @@ Les options qui suivent sont celles de `verifier-analyse.py`.
 
 L'archive écrite par `ianalyze.py`, zip ou dossier décompressé, puis le PGN annoté rendu par le LLM. Un tiret à la place du PGN signale que le LLM n'en a rendu aucun.
 
+Le dossier peut aussi être celui qui contient la collecte, s'il n'en contient qu'une complète : le bilan la nomme.
+
 Voir [Vérifier la réponse du LLM](#vérifier-la-réponse-du-llm) pour un bilan complet.
 
 #### `--nom NOM`
@@ -1307,11 +1309,9 @@ Contrôle d'une analyse rendue par un LLM
   OK        marqueur de fin "*" identique à la balise Result "*"
 
 === 4. Coups commentés ===
-  INFO      3 coup(s) commenté(s) sur 9, 15 à 25 visés sur une partie complète
+  INFO      3 coup(s) commenté(s) sur 9
   INFO      0 coup(s) porteur(s) d'un NAG
   OK        les 0 erreur(s) et gaffe(s) de Stockfish sont toutes commentées (0 oubliée(s))
-  OK        aucun NAG de position contraire à l'évaluation du moteur
-  INFO      NAG de qualité : 0 conforme(s) à la nature donnée par le moteur, 0 d'un autre avis
 
 === 5. Évaluations citées dans le PGN ===
   INFO      0 évaluation(s) citée(s)
@@ -1323,6 +1323,27 @@ Contrôle d'une analyse rendue par un LLM
 === Bilan ===
   échecs     : 0
   attentions : 0
+```
+
+#### `--perimetre N`
+
+Le périmètre convenu avec le LLM, en coups. Les erreurs et gaffes jouées après le coup N ne sont pas attendues dans le PGN : le prompt limite les commentaires au périmètre.
+
+Sans cette option, le périmètre est celui de votre réponse à la question de démarrage, lu dans l'archive. Elle sert quand il a été fixé dans la conversation.
+
+```bash
+./verifier-analyse.py analyse-ma-partie-20261121-010838.zip analyse-llm.pgn --perimetre 3
+```
+
+```text
+...
+=== 4. Coups commentés ===
+  OK        résumé de la partie avant le coup 1 (3 ligne(s), 6 à 10 demandées)
+  INFO      3 coup(s) commenté(s) sur 9, 15 à 25 visés sur une partie complète
+  INFO      0 coup(s) porteur(s) d'un NAG
+  INFO      périmètre convenu : les 3 premiers coups, les erreurs et gaffes jouées au-delà ne sont pas attendues
+  OK        les 0 erreur(s) et gaffe(s) de Stockfish sont toutes commentées (0 oubliée(s))
+...
 ```
 
 ## MESSAGES D'ERREUR

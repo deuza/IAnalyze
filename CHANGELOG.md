@@ -56,7 +56,14 @@ jamais publiées.
   et la variante écrite à l'intérieur d'un commentaire, qu'il rejoue
   lui-même. Il ne juge pas la qualité du commentaire. Son option
   `--prompt-seul` contrôle un PGN rendu d'après le prompt court, qui ne
-  demande ni résumé, ni lignes de 79 caractères, ni NAG.
+  demande ni résumé, ni lignes de 79 caractères, ni NAG, ni tiret
+  cadratin, ni FEN. Son option `--perimetre N` borne le contrôle des
+  erreurs et gaffes commentées au périmètre convenu avec le LLM. Sans
+  elle, le périmètre est lu dans la réponse du joueur à la question de
+  démarrage. Un mat cité, `#+2` ou `#2`, est contrôlé comme les autres
+  évaluations. Dans un dossier qui contient plusieurs collectes, seule
+  une collecte complète est retenue, et nommée : s'il y en a plusieurs,
+  le script s'arrête plutôt que d'en choisir une.
 - Fichier de réglages, `~/.config/IAnalyze/reglages.ini`, au format
   INI : il garde vos pseudos, votre cadence habituelle et votre niveau
   en points Elo, plus un réglage facultatif `annotateur`. Les clefs

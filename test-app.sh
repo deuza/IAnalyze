@@ -2491,6 +2491,125 @@ EOF
         sauter "T73 : test.pgn ou verifier-analyse.py absent du dépôt"
     fi
 
+    titre "T82 : vérificateur, mats, périmètre, mode court, dossier parent"
+    if [ -f "$DEPOT/verifier-analyse.py" ]; then
+        VERIF="$DEPOT/verifier-analyse.py"
+        # Le mat de Légal : 5... Bxd1 concède un mat, que 7. Nd5# donne.
+        printf '[White "Alice"]\n[Black "Bob"]\n[Result "1-0"]\n\n' > t-legal.pgn
+        printf '1. e4 e5 2. Nf3 d6 3. Bc4 Bg4 4. Nc3 g6 5. Nxe5 Bxd1 ' \
+            >> t-legal.pgn
+        printf '6. Bxf7+ Ke7 7. Nd5# 1-0\n' >> t-legal.pgn
+        mkdir -p t-parent
+        lancer t-legal.pgn $MOTEUR $RAPIDE --garder-dossier --sortie t-parent
+        egal "T82 code de retour" 0 "$RC"
+        DOSSIER82="${ARCH%.zip}"
+        egal "T82 tableau : le mat se compte après le coup" "1 1 1" \
+            "$(grep -c -E '\| Bxf7\+ \| #\+1 \|' "$DOSSIER82/synthese.md") $(grep -c -E '\| Ke7 \| #\+1 \|' "$DOSSIER82/synthese.md") $(grep -c -E '\| Nd5# \| #\+0 \|' "$DOSSIER82/synthese.md")"
+        # Trois PGN rendus : des mats cités, des commentaires limités aux
+        # quatre premiers coups, un NAG contraire au moteur.
+        PARTIE="$DOSSIER82/partie.pgn" "$PYVENV" - 2> journal-t82 <<'EOF'
+import os
+
+import chess.pgn
+
+for nom in ("mats", "quatre", "nag"):
+    with open(os.environ["PARTIE"], encoding="utf-8") as f:
+        jeu = chess.pgn.read_game(f)
+    for rang, noeud in enumerate(jeu.mainline(), 1):
+        noeud.comment = "Coup %d." % rang
+        if nom == "mats" and rang == 11:
+            noeud.comment = "Le moteur donne #+1."
+        if nom == "mats" and rang == 12:
+            noeud.comment = "Toujours #1, puis un inventé : #+7."
+        if nom == "quatre" and rang > 8:
+            noeud.comment = ""
+        if nom == "nag" and rang == 10:
+            noeud.nags.add(15)
+    with open("t-82-%s.pgn" % nom, "w", encoding="utf-8") as f:
+        print(jeu, file=f)
+EOF
+        joindre journal-t82 5
+        # Un mat des Blancs s'écrit "#+1" dans le dossier : cité tel quel
+        # ou sans signe, il est reconnu, et un mat inventé est relevé.
+        "$PYVENV" "$VERIF" "$ARCH" t-82-mats.pgn --prompt-seul > bilan 2>&1
+        sed -n '/^=== 5\. /,/^=== 6\. /p' bilan > section5
+        verifier "T82 mats cités : trois évaluations lues" \
+            contient section5 "3 évaluation(s) citée(s)"
+        verifier "T82 mats cités : le mat inventé est le seul relevé" \
+            contient section5 "(1 introuvable(s))"
+        verifier "T82 mats cités : mat inventé nommé" contient section5 "#+7"
+        # Le périmètre convenu borne le contrôle : la gaffe du coup 5
+        # n'est pas attendue d'un PGN limité aux quatre premiers coups.
+        "$PYVENV" "$VERIF" "$ARCH" t-82-quatre.pgn --prompt-seul > bilan 2>&1
+        # Le nombre d'erreurs relevées après le coup 4 varie avec le
+        # moteur : seul compte l'échec du contrôle.
+        egal "T82 sans périmètre, la gaffe du coup 5 est attendue" "1 0" \
+            "$(grep -c 'ECHEC     les .* sont toutes commentées' bilan) $(grep -c '(0 oubliée(s))' bilan)"
+        "$PYVENV" "$VERIF" "$ARCH" t-82-quatre.pgn --prompt-seul \
+            --perimetre 4 > bilan 2>&1
+        egal "T82 --perimetre 4, code de retour" 0 "$?"
+        verifier "T82 --perimetre 4, dit dans le bilan" \
+            contient bilan "périmètre convenu : les 4 premiers coups"
+        verifier "T82 --perimetre 4, plus rien d'oublié" \
+            contient bilan "(0 oubliée(s))"
+        "$PYVENV" "$VERIF" "$ARCH" t-82-quatre.pgn --perimetre 0 \
+            > bilan 2>&1
+        egal "T82 --perimetre 0 refusé" 2 "$?"
+        # Le périmètre donné au script se lit dans les consignes de la
+        # synthèse : un nombre y vaut un nombre de coups.
+        VERIF="$VERIF" "$PYVENV" - > sortie-t82 2> journal-t82 <<'EOF'
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location("va", os.environ["VERIF"])
+va = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(va)
+for reponse in ("les 20 premiers coups", "12", "la partie complète (défaut)",
+                "jusqu'au milieu de partie", "0"):
+    print(va.perimetre_convenu("## Consignes\n- Périmètre : %s\n" % reponse))
+print(va.perimetre_convenu("Aucune consigne."))
+EOF
+        printf '20\n12\nNone\nNone\nNone\nNone\n' > attendu-t82
+        verifier "T82 périmètre lu dans les consignes de la synthèse" \
+            cmp -s attendu-t82 sortie-t82
+        joindre sortie-t82
+        joindre journal-t82 5
+        rm -rf "$DEPOT/__pycache__"
+        # Mode court : ni NAG, ni tiret cadratin, ni nombre de FEN, que le
+        # prompt court ne demande pas. Sans l'option, ils sont relevés.
+        printf 'Synth\303\250se \342\200\224 sans position.\n' > t-82-conv.txt
+        "$PYVENV" "$VERIF" "$ARCH" t-82-nag.pgn --prompt-seul \
+            --synthese t-82-conv.txt > bilan 2>&1
+        egal "T82 mode court, code de retour" 0 "$?"
+        egal "T82 mode court, NAG, tiret cadratin et FEN non contrôlés" \
+            "0 0 0" \
+            "$(grep -c 'NAG de position' bilan) $(grep -c 'tiret cadratin' bilan) $(grep -c 'deux demandées' bilan)"
+        "$PYVENV" "$VERIF" "$ARCH" t-82-nag.pgn \
+            --synthese t-82-conv.txt > bilan 2>&1
+        egal "T82 mode complet, les trois sont relevés" "1 1 1" \
+            "$(grep -c 'ECHEC     aucun NAG de position' bilan) $(grep -c 'ECHEC     aucun tiret cadratin dans la conversation' bilan) $(grep -c 'ATTENTION 0 FEN' bilan)"
+        # Dossier parent : la seule collecte complète est prise et nommée,
+        # une collecte interrompue à côté ne s'y mêle pas, et deux
+        # collectes complètes sont refusées plutôt que choisies.
+        mkdir -p t-parent/analyse-aaa-interrompue
+        cp "$DOSSIER82/partie.pgn" t-parent/analyse-aaa-interrompue/
+        printf '1. d4 d5 *\n' > t-parent/analyse-aaa-interrompue/partie.pgn
+        "$PYVENV" "$VERIF" t-parent t-82-mats.pgn --prompt-seul > bilan 2>&1
+        verifier "T82 dossier parent, collecte complète nommée" \
+            contient bilan "collecte: $(basename "$DOSSIER82")"
+        verifier "T82 dossier parent, la bonne partie est lue" \
+            contient bilan "OK        ligne principale identique"
+        cp -R "$DOSSIER82" t-parent/analyse-zzz-seconde
+        "$PYVENV" "$VERIF" t-parent t-82-mats.pgn --prompt-seul > bilan 2>&1
+        egal "T82 deux collectes complètes, code de retour" 2 "$?"
+        verifier "T82 deux collectes complètes, nommées" \
+            contient bilan "contient 2 collectes complètes"
+        joindre bilan
+        rm -rf t-parent
+    else
+        sauter "T82 : verifier-analyse.py absent du dépôt"
+    fi
+
     titre "M2 : analyse complète de l'italienne, moteur seul"
     lancer italienne.pgn $MOTEUR --profondeur 10 --fils 2 --hachage 64
     egal "M2 code de retour" 0 "$RC"

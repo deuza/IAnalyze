@@ -7,10 +7,11 @@ reçue, et sort le même bilan pour chaque LLM essayé. Il ne juge pas la
 qualité du commentaire : il vérifie ce qui se vérifie à la machine.
 
     ./verifier-analyse.py ARCHIVE PGN [--synthese FICHIER] [--nom NOM]
-                          [--prompt-seul]
+                          [--prompt-seul] [--perimetre N]
 
     ARCHIVE     le zip produit par ianalyze.py, ou son dossier
-                décompressé
+                décompressé. Un dossier qui contient ce dernier convient
+                aussi, s'il ne contient qu'une collecte complète
     PGN         le fichier .pgn rendu par le LLM, ou un tiret, "-", si le
                 LLM n'a rendu aucun fichier : seule la synthèse est alors
                 contrôlée
@@ -22,7 +23,13 @@ qualité du commentaire : il vérifie ce qui se vérifie à la machine.
                 le PGN répond au prompt court de ianalyze.py --prompt-seul.
                 Ce prompt demande moins : les contrôles qu'il ne fonde pas
                 sont sautés (lignes de 79 caractères, résumé avant le coup
-                1, NAG, pour cent, balises Annotator et PlyCount)
+                1, NAG, pour cent, tiret cadratin, balises Annotator et
+                PlyCount, longueur des variantes, nombre de FEN)
+    --perimetre N
+                périmètre convenu avec le LLM, en coups : les erreurs et
+                gaffes jouées après le coup N ne sont pas attendues. Sans
+                cette option, le périmètre est celui que le joueur a donné
+                au script, lu dans les consignes de l'archive
 
 Ce qui est contrôlé :
 
@@ -30,7 +37,8 @@ Ce qui est contrôlé :
   2. la ligne principale est celle de la partie d'origine ;
   3. le format demandé par le prompt : longueur des lignes, accolades,
      pour cent, tiret cadratin, notation suffixe, balises, résultat ;
-  4. chaque erreur et chaque gaffe relevée par Stockfish est commentée ;
+  4. chaque erreur et chaque gaffe relevée par Stockfish est commentée,
+     dans le périmètre convenu ;
   5. chaque évaluation citée existe bien dans les données du moteur ;
   6. les variantes : nombre, longueur, appui sur une ligne du moteur,
      et celles qu'un LLM écrit à tort à l'intérieur d'un commentaire ;
@@ -98,15 +106,21 @@ LONGUEUR_MAX = 79
 
 #: Fourchettes données par le prompt, reprises ici pour situer un LLM.
 VARIANTE_MAX = 5
+
+#: Clef sous laquelle lire_archive range le nom de la collecte retenue,
+#: quand l'archive donnée est le dossier parent de cette collecte.
+COLLECTE = "collecte retenue"
 COMMENTES_MIN, COMMENTES_MAX = 15, 25
 
 #: Une évaluation écrite dans un commentaire : "+0.35", "-1,20", "#-3".
 #: Sont reconnus aussi le signe suivi d'une espace, "+ 0.35", le signe
 #: moins typographique, et une troisième décimale. Un nombre sans signe
 #: n'est pas pris pour une évaluation : ce serait confondre "7.5 minutes"
-#: avec un score.
+#: avec un score. Un mat fait exception : IAnalyze écrit "#+2" celui des
+#: Blancs, et un LLM le cite aussi bien "#2".
 RE_EVALUATION = re.compile(
-    r"(?<![\w.,])([+\-\u2212\u2013][ \u00a0]?\d+[.,]\d{1,3}|#-?\d+)(?![\d])")
+    r"(?<![\w.,])([+\-\u2212\u2013][ \u00a0]?\d+[.,]\d{1,3}"
+    r"|#[+\-\u2212\u2013]?\d+)(?![\d])")
 
 #: Une variante écrite dans un commentaire : "(12... Nd4 13. Qd2 Nxe2)". Ce
 #: n'est alors que du texte, que SCID ne permet pas de rejouer.
@@ -180,13 +194,26 @@ def lire_archive(chemin: pathlib.Path) -> dict[str, str]:
     voulus = ("partie.pgn", "synthese.md", "stockfish/evaluations.json")
     trouves: dict[str, str] = {}
     if chemin.is_dir():
+        # Le dossier peut être celui de la collecte ou son parent. Les
+        # trois fichiers viennent toujours du même dossier : pris un par
+        # un, ils mêlaient la partie d'une collecte interrompue aux
+        # évaluations d'une autre.
+        dossier = chemin
+        if not any((chemin / nom).is_file() for nom in voulus):
+            completes = [d for d in sorted(chemin.iterdir()) if d.is_dir()
+                         and all((d / nom).is_file() for nom in voulus)]
+            if len(completes) > 1:
+                raise ArchiveInutilisable(
+                    "%s contient %d collectes complètes : %s. Donnez le "
+                    "dossier de celle que le LLM a reçue."
+                    % (chemin, len(completes),
+                       ", ".join(d.name for d in completes)))
+            if completes:
+                dossier = completes[0]
+                trouves[COLLECTE] = dossier.name
         for nom in voulus:
-            # Le dossier peut être celui de la collecte ou son parent.
-            candidats = [chemin / nom] + sorted(chemin.glob("*/" + nom))
-            for c in candidats:
-                if c.is_file():
-                    trouves[nom] = c.read_text(encoding="utf-8")
-                    break
+            if (dossier / nom).is_file():
+                trouves[nom] = (dossier / nom).read_text(encoding="utf-8")
     else:
         with zipfile.ZipFile(chemin) as z:
             for membre in z.namelist():
@@ -511,14 +538,37 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
                % (marqueur, partie.headers.get("Result")))
 
 
+def perimetre_convenu(synthese_archive: str) -> int | None:
+    """
+    Nombre de coups du périmètre que le joueur a donné au script, ou None
+    pour la partie complète.
+
+    La réponse est dans les consignes de synthese.md, sur la ligne
+    "- Périmètre : ...". C'est un texte libre : le premier nombre qu'il
+    porte est pris pour le nombre de coups, "les 20 premiers coups"
+    donnant 20. Une réponse laissée par défaut, ou sans nombre, vaut la
+    partie complète.
+    """
+    m = re.search(r"(?m)^- Périmètre : (.*)$", synthese_archive)
+    if m is None or m.group(1).rstrip().endswith("(défaut)"):
+        return None
+    nombre = re.search(r"\d+", m.group(1))
+    return int(nombre.group()) if nombre and int(nombre.group()) else None
+
+
 def controler_couverture(b: Bilan, partie: chess.pgn.Game,
                          evaluations: list[dict],
-                         court: bool = False) -> None:
+                         court: bool = False,
+                         perimetre: int | None = None) -> None:
     """
     Chaque erreur et chaque gaffe doit être commentée.
 
     Le prompt court ne demande ni résumé avant le premier coup ni NAG :
     avec `court`, ces deux points ne sont pas contrôlés.
+
+    Le prompt limite les commentaires au périmètre convenu avec le
+    joueur : avec `perimetre`, en coups, une erreur jouée au-delà n'est
+    pas attendue, et son absence n'est pas une faute.
     """
     b.titre("4. Coups commentés")
     if not court:
@@ -529,15 +579,25 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
 
     noeuds = list(partie.mainline())
     commentes = [n for n in noeuds if n.comment.strip()]
-    b.noter("INFO", "%d coup(s) commenté(s) sur %d, %d à %d visés sur une "
-            "partie complète" % (len(commentes), len(noeuds),
-                                 COMMENTES_MIN, COMMENTES_MAX))
+    if court:
+        b.noter("INFO", "%d coup(s) commenté(s) sur %d"
+                % (len(commentes), len(noeuds)))
+    else:
+        b.noter("INFO", "%d coup(s) commenté(s) sur %d, %d à %d visés sur "
+                "une partie complète" % (len(commentes), len(noeuds),
+                                         COMMENTES_MIN, COMMENTES_MAX))
     b.noter("INFO", "%d coup(s) porteur(s) d'un NAG"
             % sum(1 for n in noeuds if n.nags))
 
+    if perimetre:
+        b.noter("INFO", "périmètre convenu : les %d premiers coups, les "
+                "erreurs et gaffes jouées au-delà ne sont pas attendues"
+                % perimetre)
     oublies, sans_nag, fautes = [], [], 0
     for e in evaluations:
         if e.get("nature") not in ("erreur", "gaffe"):
+            continue
+        if perimetre and e["numero"] > perimetre:
             continue
         fautes += 1
         indice = e["demicoup"] - 1
@@ -557,6 +617,10 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
         b.controle(not sans_nag, "chaque erreur ou gaffe commentée porte un "
                    "NAG", sans_nag, grave=False)
 
+    if court:
+        # Le prompt court ne demande aucun NAG : ni leur accord avec le
+        # moteur ni leur nature ne sont contrôlés.
+        return
     # NAG de position contraire au moteur : "léger avantage noir" posé sur
     # un coup après lequel Stockfish donne les Blancs nettement mieux.
     contraires, accords, ecarts = [], 0, []
@@ -620,6 +684,9 @@ def controler_chiffres(b: Bilan, textes: list[tuple[str, str]],
             # ASCII collé au nombre, point décimal.
             lu = re.sub(r"[ \u00a0]", "", brut.replace(",", "."))
             lu = lu.replace("\u2212", "-").replace("\u2013", "-")
+            # Un mat cité sans signe est celui des Blancs : "#2" vaut
+            # "#+2", la forme du dossier.
+            lu = re.sub(r"^#(\d)", r"#+\1", lu)
             if lu not in connues:
                 inconnues.append("%s : %s" % (lieu, brut))
     b.noter("INFO", "%d évaluation(s) citée(s)" % citees)
@@ -638,7 +705,8 @@ def lignes_du_moteur(evaluations: list[dict]) -> dict[int, list[list[str]]]:
 
 def controler_variantes_en_texte(b: Bilan, partie: chess.pgn.Game,
                                  evaluations: list[dict],
-                                 jouables: int) -> None:
+                                 jouables: int,
+                                 court: bool = False) -> None:
     """
     Variantes écrites à l'intérieur d'un commentaire.
 
@@ -706,7 +774,7 @@ def controler_variantes_en_texte(b: Bilan, partie: chess.pgn.Game,
         b.noter("ATTENTION", "%d variante(s) dont le numéro de coup ne "
                 "correspond à aucune position voisine" % len(perdues),
                 perdues)
-    if longues:
+    if longues and not court:
         b.noter("ATTENTION", "variante(s) de plus de %d demi-coups"
                 % VARIANTE_MAX, longues)
     b.noter("INFO", "%d légale(s), dont %d partent d'une ligne du moteur"
@@ -714,8 +782,14 @@ def controler_variantes_en_texte(b: Bilan, partie: chess.pgn.Game,
 
 
 def controler_variantes(b: Bilan, partie: chess.pgn.Game,
-                        evaluations: list[dict]) -> None:
-    """Nombre et longueur des variantes, appui sur une ligne du moteur."""
+                        evaluations: list[dict],
+                        court: bool = False) -> None:
+    """
+    Nombre et longueur des variantes, appui sur une ligne du moteur.
+
+    Le prompt court ne fixe aucune longueur : avec `court`, une variante
+    de plus de cinq demi-coups n'est pas relevée.
+    """
     b.titre("6. Variantes")
     lignes_moteur = lignes_du_moteur(evaluations)
 
@@ -741,13 +815,15 @@ def controler_variantes(b: Bilan, partie: chess.pgn.Game,
 
     b.noter("INFO", "%d variante(s) jouable(s) sur la ligne principale"
             % len(variantes))
-    controler_variantes_en_texte(b, partie, evaluations, len(variantes))
+    controler_variantes_en_texte(b, partie, evaluations, len(variantes),
+                                 court)
     if not variantes:
         return
-    longues = ["%s : %d demi-coups" % (lieu, n)
-               for lieu, n, _ in variantes if n > VARIANTE_MAX]
-    b.controle(not longues, "aucune variante de plus de %d demi-coups"
-               % VARIANTE_MAX, longues, grave=False)
+    if not court:
+        longues = ["%s : %d demi-coups" % (lieu, n)
+                   for lieu, n, _ in variantes if n > VARIANTE_MAX]
+        b.controle(not longues, "aucune variante de plus de %d demi-coups"
+                   % VARIANTE_MAX, longues, grave=False)
     libres = [lieu for lieu, _, appuyee in variantes if not appuyee]
     b.noter("INFO", "%d variante(s) partent d'une ligne du moteur, %d sont "
             "du cru du LLM" % (len(variantes) - len(libres), len(libres)),
@@ -756,8 +832,15 @@ def controler_variantes(b: Bilan, partie: chess.pgn.Game,
 
 def controler_synthese(b: Bilan, texte: str, evaluations: list[dict],
                        synthese_archive: str,
-                       origine: chess.pgn.Game) -> None:
-    """FEN citées dans la synthèse finale du LLM, et tiret cadratin."""
+                       origine: chess.pgn.Game,
+                       court: bool = False) -> None:
+    """
+    FEN citées dans la synthèse finale du LLM, et tiret cadratin.
+
+    Le prompt court ne demande ni FEN ni typographie : avec `court`, le
+    tiret cadratin et le nombre de FEN ne sont pas contrôlés. Une FEN
+    citée quand même doit rester valide et venir de la partie.
+    """
     b.titre("7. Conversation : positions citées, langue")
     # Une FEN du dossier se reconnaît à ses quatre premiers champs : les
     # compteurs de coups n'identifient pas la position.
@@ -776,10 +859,13 @@ def controler_synthese(b: Bilan, texte: str, evaluations: list[dict],
         connues.add(clef(plateau.fen()))
     connues |= {clef(f) for f in RE_FEN.findall(synthese_archive)}
     citees = RE_FEN.findall(texte)
-    b.controle("\u2014" not in texte, "aucun tiret cadratin dans la "
-               "conversation (%d relevé(s))" % texte.count("\u2014"))
-    b.controle(len(citees) >= 2, "%d FEN citée(s), deux demandées"
-               % len(citees), grave=False)
+    if court:
+        b.noter("INFO", "%d FEN citée(s)" % len(citees))
+    else:
+        b.controle("\u2014" not in texte, "aucun tiret cadratin dans la "
+                   "conversation (%d relevé(s))" % texte.count("\u2014"))
+        b.controle(len(citees) >= 2, "%d FEN citée(s), deux demandées"
+                   % len(citees), grave=False)
     if not citees:
         return
     invalides, etrangeres = [], []
@@ -829,7 +915,15 @@ def main(argv: list[str]) -> int:
                    help="le PGN répond au prompt court de ianalyze.py "
                         "--prompt-seul : les contrôles que ce prompt ne "
                         "fonde pas sont sautés")
+    p.add_argument("--perimetre", metavar="N", type=int,
+                   help="périmètre convenu avec le LLM, en coups : les "
+                        "erreurs et gaffes jouées après le coup N ne sont "
+                        "pas attendues. Sans cette option, le périmètre "
+                        "est celui que le joueur a donné au script, lu "
+                        "dans l'archive")
     options = p.parse_args(argv)
+    if options.perimetre is not None and options.perimetre < 1:
+        p.error("--perimetre attend un nombre de coups, 1 au moins")
 
     try:
         fichiers = lire_archive(pathlib.Path(options.archive))
@@ -862,7 +956,13 @@ def main(argv: list[str]) -> int:
     b.lignes.append("Contrôle d'une analyse rendue par un LLM")
     if options.nom:
         b.lignes.append("  modèle  : %s" % options.nom)
-    b.lignes.append("  archive : %s" % pathlib.Path(options.archive).name)
+    # Le nom d'un chemin comme "." est vide : le chemin donné est alors
+    # repris tel quel.
+    b.lignes.append("  archive : %s" % (pathlib.Path(options.archive).name
+                                        or options.archive))
+    if COLLECTE in fichiers:
+        b.lignes.append("  collecte: %s, seule collecte complète du dossier"
+                        % fichiers[COLLECTE])
     b.lignes.append("  PGN     : %s" % pathlib.Path(options.pgn).name)
     if options.prompt_seul:
         b.lignes.append("  prompt  : court (--prompt-seul), contrôles "
@@ -875,7 +975,8 @@ def main(argv: list[str]) -> int:
                 "objet")
         if synthese_llm is not None:
             controler_synthese(b, synthese_llm, evaluations,
-                               fichiers["synthese.md"], origine)
+                               fichiers["synthese.md"], origine,
+                               options.prompt_seul)
             controler_chiffres(b, [("conversation", synthese_llm)],
                                evaluations,
                                "8. Évaluations citées dans la conversation")
@@ -887,7 +988,9 @@ def main(argv: list[str]) -> int:
                      len(ligne_principale(origine)), options.prompt_seul,
                      balises_du_texte(fichiers["partie.pgn"]))
     if identique:
-        controler_couverture(b, partie, evaluations, options.prompt_seul)
+        controler_couverture(
+            b, partie, evaluations, options.prompt_seul,
+            options.perimetre or perimetre_convenu(fichiers["synthese.md"]))
     else:
         # Sans la même ligne principale, les demi-coups ne se
         # correspondent plus : ces contrôles n'auraient aucun sens.
@@ -896,10 +999,11 @@ def main(argv: list[str]) -> int:
     controler_chiffres(b, commentaires(partie), evaluations,
                        "5. Évaluations citées dans le PGN")
     if identique:
-        controler_variantes(b, partie, evaluations)
+        controler_variantes(b, partie, evaluations, options.prompt_seul)
     if synthese_llm is not None:
         controler_synthese(b, synthese_llm, evaluations,
-                           fichiers["synthese.md"], origine)
+                           fichiers["synthese.md"], origine,
+                           options.prompt_seul)
         controler_chiffres(b, [("conversation", synthese_llm)],
                            evaluations,
                            "8. Évaluations citées dans la conversation")

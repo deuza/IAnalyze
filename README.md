@@ -504,9 +504,15 @@ Pour un PGN obtenu avec le prompt court de `--prompt-seul`, ajoutez la même opt
 ./verifier-analyse.py analyse-ma-partie-20261119-164140 analyse-llm.pgn --prompt-seul
 ```
 
-Le prompt court demande moins que le prompt complet. Avec cette option, les contrôles qu'il ne fonde pas sont sautés : lignes de 79 caractères, résumé avant le premier coup, NAG, `%`, tiret cadratin, notation suffixe, balises Annotator et PlyCount. Restent la lecture, la ligne principale, les accolades, les balises recopiées, le marqueur de fin, les erreurs et gaffes commentées, les évaluations citées et les variantes.
+Le prompt court demande moins que le prompt complet. Avec cette option, les contrôles qu'il ne fonde pas sont sautés : lignes de 79 caractères, résumé avant le premier coup, NAG, `%`, tiret cadratin, notation suffixe, balises Annotator et PlyCount, longueur des variantes, nombre de FEN. Restent la lecture, la ligne principale, les accolades, les balises recopiées, le marqueur de fin, les erreurs et gaffes commentées, les évaluations citées et les variantes.
 
-Le script accepte le zip ou son dossier décompressé, et se relance tout seul dans l'environnement virtuel d'IAnalyze, à son emplacement par défaut.
+Si vous avez convenu avec le LLM d'un périmètre, les 20 premiers coups par exemple, le script le lit dans votre réponse à la question de démarrage et n'attend aucun commentaire au-delà. Quand le périmètre a été fixé dans la conversation, donnez-le :
+
+```bash
+./verifier-analyse.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn --perimetre 20
+```
+
+Le script accepte le zip ou son dossier décompressé, et se relance tout seul dans l'environnement virtuel d'IAnalyze, à son emplacement par défaut. Un dossier qui contient plusieurs collectes est refusé : donnez celui de la collecte que le LLM a reçue.
 
 Il n'a pas d'option `--venv`. Si votre environnement est ailleurs, lancez-le avec le Python de cet environnement : `~/venv/echecs/bin/python3 verifier-analyse.py ...`
 
@@ -517,8 +523,8 @@ Il n'a pas d'option `--venv`. Si votre environnement est ailleurs, lancez-le ave
 | Lecture | fichier hors UTF-8, coup illégal dans la partie ou dans une variante, ligne vide dans le corps de la partie |
 | Ligne principale | différente de la partie d'origine |
 | Format | ligne de plus de 79 caractères, accolade ouvrante ou fermante dans un commentaire, `%`, tiret cadratin, notation suffixe, balises absentes ou dans le désordre, marqueur de fin |
-| Coups commentés | erreur ou gaffe de Stockfish laissée sans commentaire, NAG de position contraire à l'évaluation du moteur |
-| Évaluations | chiffre cité qui n'existe nulle part dans les données du moteur |
+| Coups commentés | erreur ou gaffe de Stockfish laissée sans commentaire dans le périmètre convenu, NAG de position contraire à l'évaluation du moteur |
+| Évaluations | chiffre ou mat cité qui n'existe nulle part dans les données du moteur |
 | Variantes | variante écrite à l'intérieur d'un commentaire, donc non jouable, variante illégale ou trop longue |
 | Conversation | FEN invalide ou étrangère à la partie, tiret cadratin |
 
