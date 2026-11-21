@@ -8,6 +8,10 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Added - 2026-11-21
+
+Icône de la licence CC-0
+
 ## [4.0.2] - 2026-11-21
 
 ### Added
