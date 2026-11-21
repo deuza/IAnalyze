@@ -1482,7 +1482,7 @@ Le modèle désigné par `--prompt` porte ici une valeur mal écrite.
 
 ```text
 [01:11:55] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
-Modèle de prompt ~/modele-fautif.txt, ligne 21 : valeur inconnue {{VERSON}}, valeurs admises : VERSION, DEPOT, ARCHIVE, PSEUDOS, CAMP, NIVEAU, CADENCE, ANNOTATEUR, BASE, SEUIL_IMPRECISION, SEUIL_ERREUR, SEUIL_GAFFE, PROFONDEUR, MULTIPV, PARTIE_PGN, TABLEAU_MOTEUR, ALERTE_RESULTAT, CONSIGNES_JOUEUR, OUVERTURE, DEMI_COUPS, DEMI_COUPS_EVALUES
+Modèle de prompt ~/modele-fautif.txt, ligne 21 : valeur inconnue {{VERSON}}, valeurs admises : VERSION, DEPOT, ARCHIVE, PSEUDOS, CAMP, NIVEAU, CADENCE, ANNOTATEUR, BASE, SEUIL_IMPRECISION, SEUIL_ERREUR, SEUIL_GAFFE, PROFONDEUR, MULTIPV, PARTIE_PGN, TABLEAU_MOTEUR, ALERTE_RESULTAT, CONSIGNES_JOUEUR, OUVERTURE, DEMI_COUPS, DEMI_COUPS_EVALUES, COUPS_FAIBLES_JOUEUR
 ```
 
 ### Archive introuvable, pour le vérificateur

@@ -44,8 +44,18 @@ inventez aucune et ne les contredisez pas. Les plans et les
 explications sont votre travail : dites ce que vous estimez, sans le
 présenter comme un calcul.
 
+#! note Le bilan demande trois erreurs. Quand le tableau en marque
+#! note moins chez le joueur, le prompt donne leur nombre : un LLM à qui
+#! note l'on en réclame trois en invente une.
+#! si PEU_DE_COUPS_FAIBLES
+Après le bloc de code, donnez en quelques lignes les erreurs les plus
+coûteuses du joueur et le thème qu'il doit travailler en priorité.
+Coups faibles du joueur dans le tableau : {{COUPS_FAIBLES_JOUEUR}}.
+Tenez-vous-en à ceux-là, sans en ajouter.
+#! sinon
 Après le bloc de code, donnez en quelques lignes les trois erreurs les
 plus coûteuses du joueur et le thème qu'il doit travailler en priorité.
+#! fin
 #! si RESULTAT_CONTREDIT
 
 Attention : {{ALERTE_RESULTAT}}

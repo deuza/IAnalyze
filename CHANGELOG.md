@@ -40,7 +40,13 @@ jamais publiées.
   moteur en plus. Il est tiré d'un modèle à part,
   `prompt-seul-modele.txt`. Aucune archive n'est alors écrite : le
   prompt est le seul fichier produit, sauf avec `--garder-dossier`, qui
-  laisse le dossier de travail à `verifier-analyse.py`.
+  laisse le dossier de travail à `verifier-analyse.py`. Son bilan
+  demande les trois erreurs les plus coûteuses du joueur : quand le
+  tableau du moteur marque moins de trois coups faibles de son côté,
+  le prompt en donne le nombre et demande de s'en tenir à ceux-là :
+  un LLM à qui l'on en réclame trois en invente une. Valeur
+  `COUPS_FAIBLES_JOUEUR` et condition `PEU_DE_COUPS_FAIBLES` pour les
+  modèles personnels.
 - `verifier-analyse.py`, qui contrôle le PGN annoté rendu par un LLM en
   le comparant à l'archive qu'il a reçue : lecture, ligne principale,
   format, erreurs et gaffes commentées, évaluations citées, variantes,

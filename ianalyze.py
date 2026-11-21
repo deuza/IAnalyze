@@ -396,13 +396,19 @@ PROMPT_CONDITIONS = ("STOCKFISH", "EXPLORATEUR", "BASE_LICHESS",
                      "BASE_MAITRES", "REPONSES",
                      "CAMP_CONNU", "PSEUDO_CONNU", "NIVEAU_DECLARE",
                      "RESULTAT_CONTREDIT", "CONSIGNES_DONNEES",
-                     "OUVERTURE_CONNUE", "COUVERTURE_PARTIELLE", "COUP_NUL")
+                     "OUVERTURE_CONNUE", "COUVERTURE_PARTIELLE", "COUP_NUL",
+                     "PEU_DE_COUPS_FAIBLES")
 PROMPT_VALEURS = ("VERSION", "DEPOT", "ARCHIVE", "PSEUDOS", "CAMP", "NIVEAU",
                   "CADENCE", "ANNOTATEUR", "BASE", "SEUIL_IMPRECISION",
                   "SEUIL_ERREUR", "SEUIL_GAFFE", "PROFONDEUR", "MULTIPV",
                   "PARTIE_PGN", "TABLEAU_MOTEUR", "ALERTE_RESULTAT",
                   "CONSIGNES_JOUEUR", "OUVERTURE", "DEMI_COUPS",
-                  "DEMI_COUPS_EVALUES")
+                  "DEMI_COUPS_EVALUES", "COUPS_FAIBLES_JOUEUR")
+
+#: Nombre d'erreurs que le prompt court demande dans son bilan. Quand le
+#: tableau du moteur en marque moins chez le joueur, le prompt donne leur
+#: nombre réel : un LLM à qui l'on en réclame trois en invente une.
+ERREURS_DU_BILAN = 3
 
 #: Valeur de la balise Annotator quand les réglages n'en donnent pas : le
 #: script ignore quel modèle rédigera l'analyse.
@@ -3200,6 +3206,23 @@ def tableau_compact(partie: chess.pgn.Game, resultats: list[dict],
     return "\n".join(lignes)
 
 
+def coups_faibles_joueur(resultats: list[dict],
+                         camp: str | None) -> int | None:
+    """
+    Nombre de coups du joueur que le tableau du prompt court marque comme
+    faibles : imprécisions, erreurs et gaffes. None si son camp est
+    inconnu.
+
+    La règle est celle de tableau_compact : un coup n'est marqué que si
+    le moteur lui a trouvé une nature et propose un meilleur coup. Le
+    nombre rendu est donc celui que le LLM peut compter lui-même.
+    """
+    if camp is None:
+        return None
+    return sum(1 for r in resultats
+               if r["trait"] == camp and r.get("nature") and r["meilleurs"])
+
+
 def phrase_ouverture(explorateur: dict | None, libelle_base: str) -> str:
     """
     Pour le prompt court, l'ouverture et la sortie de théorie en une
@@ -4409,6 +4432,8 @@ def main(argv: list[str]) -> int:
         ouverture = phrase_ouverture(resume_explorateur, base["libelle"])
         coups_partie = list(partie.mainline_moves())
         evalues = len(resume_stockfish["resultats"])
+        faibles = coups_faibles_joueur(resume_stockfish["resultats"],
+                                       camp_joueur)
         conditions = {
             # Toujours vraie depuis la version 4.0.0, gardée pour les
             # modèles personnels qui l'emploient.
@@ -4428,6 +4453,11 @@ def main(argv: list[str]) -> int:
             # chaque coup.
             "COUVERTURE_PARTIELLE": evalues < len(coups_partie),
             "COUP_NUL": any(not coup for coup in coups_partie),
+            # Le bilan du prompt court demande trois erreurs : quand le
+            # tableau en marque moins chez le joueur, le prompt le dit, pour
+            # que le LLM n'en invente pas une.
+            "PEU_DE_COUPS_FAIBLES": (faibles is not None
+                                     and faibles < ERREURS_DU_BILAN),
         }
         valeurs = {
             "VERSION": VERSION,
@@ -4453,6 +4483,8 @@ def main(argv: list[str]) -> int:
             "OUVERTURE": ouverture,
             "DEMI_COUPS": str(len(coups_partie)),
             "DEMI_COUPS_EVALUES": str(evalues),
+            "COUPS_FAIBLES_JOUEUR": ("inconnu" if faibles is None
+                                     else str(faibles)),
         }
         prompt = archive.with_name(dossier.name + PROMPT_SUFFIXE)
         try:

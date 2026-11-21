@@ -1520,6 +1520,23 @@ egal "T74 tableau : gaffe, écart et meilleur coup" 1 \
 # Notée 1-0, la partie finit avec une dame de moins pour les Blancs.
 egal "T74 résultat contraire à l'évaluation, dit au LLM" 1 \
     "$(grep -c '^Attention : Résultat et évaluation finale' "$PR")"
+# Le bilan demande trois erreurs. Un LLM à qui l'on en réclame trois en
+# invente une quand le joueur en a commis moins : le prompt donne alors le
+# nombre de coups faibles que porte son tableau. Les Blancs n'ont joué que
+# trois coups, et le moteur ne juge pas toujours les mêmes faibles d'une
+# machine à l'autre : le compte attendu se lit dans le tableau du prompt.
+FAIBLES74="$(grep -c -E '^[0-9]+\. .* (imprécision|erreur|gaffe) \(' "$PR")"
+if [ "$FAIBLES74" -lt 3 ]; then
+    verifier "T74 bilan : le nombre de coups faibles du joueur est donné" \
+        contient "$PR" "Coups faibles du joueur dans le tableau : $FAIBLES74."
+    egal "T74 bilan : une seule des deux phrases" 0 \
+        "$(grep -c 'les trois erreurs' "$PR")"
+else
+    verifier "T74 bilan : trois coups faibles, trois erreurs demandées" \
+        contient "$PR" "les trois erreurs"
+    egal "T74 bilan : une seule des deux phrases" 0 \
+        "$(grep -c 'Coups faibles du joueur' "$PR")"
+fi
 # Avec --garder-dossier, le dossier de travail reste, sans archive :
 # verifier-analyse.py peut le lire, avec les chiffres mêmes du prompt.
 rm -f analyse-t-seul-*
@@ -1569,6 +1586,48 @@ EOF
 printf '%s\n' "- Objectif : la sortie de la dame" "[]" "[]" > attendu-t74
 verifier "T74 réponses du joueur reprises, défauts, camp et balise écartés" \
     cmp -s attendu-t74 sortie-t74
+joindre journal-t74 5
+rm -rf "$DEPOT/__pycache__"
+# Le compte des coups faibles, sans moteur. Sa règle est celle du tableau :
+# un coup n'y est marqué que s'il a une nature et un meilleur coup. Le
+# modèle court change de phrase quand le joueur en compte moins de trois.
+SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t74 2> journal-t74 <<'EOF'
+import importlib.util
+import os
+import pathlib
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+
+
+def coup(trait, nature, meilleurs=("x",)):
+    return {"trait": trait, "nature": nature, "meilleurs": list(meilleurs)}
+
+
+resultats = [coup("Blancs", None), coup("Noirs", "gaffe"),
+             coup("Blancs", "erreur"), coup("Noirs", "imprécision"),
+             coup("Blancs", "gaffe"), coup("Blancs", "erreur", ()),
+             coup("Blancs", "imprécision")]
+print(cp.coups_faibles_joueur(resultats, "Blancs"),
+      cp.coups_faibles_joueur(resultats, "Noirs"),
+      cp.coups_faibles_joueur(resultats, None),
+      cp.coups_faibles_joueur([], "Blancs"))
+modele = pathlib.Path(os.environ["SCRIPT"]).with_name(
+    cp.PROMPT_SEUL_MODELE).read_text(encoding="utf-8")
+for peu in (True, False):
+    conditions = dict.fromkeys(cp.PROMPT_CONDITIONS, False)
+    conditions["PEU_DE_COUPS_FAIBLES"] = peu
+    valeurs = dict.fromkeys(cp.PROMPT_VALEURS, "x")
+    valeurs["COUPS_FAIBLES_JOUEUR"] = "2"
+    rendu = cp.rendre_modele(modele, conditions, valeurs, "essai")
+    print(peu, rendu.count("Coups faibles du joueur dans le tableau : 2."),
+          rendu.count("sans en ajouter"), rendu.count("les trois erreurs"))
+EOF
+printf '3 2 None 0\nTrue 1 1 0\nFalse 0 0 1\n' > attendu-t74
+verifier "T74 bilan : compte des coups faibles, phrase selon le compte" \
+    cmp -s attendu-t74 sortie-t74
+joindre sortie-t74
 joindre journal-t74 5
 rm -rf "$DEPOT/__pycache__"
 "$SCRIPT" t-seul.pgn $S74 > sortie 2> journal

@@ -619,6 +619,7 @@ Valeurs :
 | `OUVERTURE` | l'ouverture et la sortie de théorie en une phrase, d'après l'explorateur |
 | `DEMI_COUPS` | nombre de demi-coups de la partie |
 | `DEMI_COUPS_EVALUES` | nombre de demi-coups que le moteur a évalués, plus petit avec `--coups-stockfish` |
+| `COUPS_FAIBLES_JOUEUR` | nombre de vos coups que `TABLEAU_MOTEUR` marque imprécision, erreur ou gaffe, "inconnu" si votre camp ne l'est pas |
 
 Conditions :
 
@@ -637,8 +638,20 @@ Conditions :
 | `OUVERTURE_CONNUE` | `OUVERTURE` n'est pas vide |
 | `COUVERTURE_PARTIELLE` | `--coups-stockfish` a limité le moteur aux premiers coups |
 | `COUP_NUL` | la partie contient un coup nul, noté `--` |
+| `PEU_DE_COUPS_FAIBLES` | votre camp est connu et `COUPS_FAIBLES_JOUEUR` est inférieur à trois |
 
-Les deux modèles, `prompt-modele.txt` et `prompt-seul-modele.txt`, partagent ces repères. `PARTIE_PGN`, `TABLEAU_MOTEUR`, `ALERTE_RESULTAT`, `CONSIGNES_JOUEUR`, `OUVERTURE` et les conditions `RESULTAT_CONTREDIT`, `CONSIGNES_DONNEES`, `OUVERTURE_CONNUE`, `COUP_NUL` servent au prompt court.
+Les deux modèles, `prompt-modele.txt` et `prompt-seul-modele.txt`, partagent ces repères. `PARTIE_PGN`, `TABLEAU_MOTEUR`, `ALERTE_RESULTAT`, `CONSIGNES_JOUEUR`, `OUVERTURE`, `COUPS_FAIBLES_JOUEUR` et les conditions `RESULTAT_CONTREDIT`, `CONSIGNES_DONNEES`, `OUVERTURE_CONNUE`, `COUP_NUL`, `PEU_DE_COUPS_FAIBLES` servent au prompt court.
+
+Le prompt court finit par un bilan : les trois erreurs les plus coûteuses du joueur et le thème à travailler. Quand le tableau marque moins de trois coups faibles de votre côté, la phrase change : elle donne leur nombre et demande de s'en tenir à ceux-là.
+
+```text
+Après le bloc de code, donnez en quelques lignes les erreurs les plus
+coûteuses du joueur et le thème qu'il doit travailler en priorité.
+Coups faibles du joueur dans le tableau : 2.
+Tenez-vous-en à ceux-là, sans en ajouter.
+```
+
+La raison vient des essais du 21 novembre 2026 (README, section 7) : le joueur n'avait commis que deux erreurs, et trois réponses sur cinq en ont présenté une troisième pour arriver au compte demandé.
 
 Un repère inconnu ou mal écrit, comme `{{ NIVEAU }}`, un "si" jamais fermé, une directive mal formée ou un modèle sans une ligne de texte arrêtent le script avant la collecte :
 
