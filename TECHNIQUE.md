@@ -428,6 +428,7 @@ Sources : [options UCI de Stockfish](https://official-stockfish.github.io/docs/s
 ### Ce que le script tire des évaluations
 
 - **L'évaluation** est donnée du point de vue des Blancs, en pions : `+0.35`. Un mat s'écrit `#+2`, les Blancs matent en deux coups, ou `#-1`, les Noirs matent en un coup.
+- **Un mat se compte après le coup**, comme toute évaluation du tableau. Le moteur, lui, compte avant le coup, celui-ci compris : le script retire donc un coup au camp qui mate quand c'est lui qui vient de jouer. `#+0` ou `#-0` : le coup de la ligne donne mat.
 - **L'écart** est ce que le coup joué perd par rapport au premier choix du moteur, en centipions, du point de vue du joueur au trait.
 - **La nature** suit l'écart : imprécision à partir de 50, erreur à partir de 100, gaffe à partir de 300.
 - **Un écart négatif** n'est pas une faute. Le coup joué, évalué à part quand il n'est pas dans les premiers choix, sort alors un peu au-dessus du premier : les deux se valent.
@@ -795,7 +796,7 @@ GARDER=1 ./test-app.sh
 | Explorateur simulé | T49, T56 | réponses inattendues, arrêt au coup nul |
 | Réglages | T57 à T63, T68, T69 | premier lancement, priorité de `--pseudos`, fichier mal formé, cadence et niveau vérifiés, correspondance, purge |
 | Prompt | T64 à T67, T74 | écrit à côté de l'archive, passages gardés ou retirés, modèle fautif refusé, script copié sans son modèle, prompt court de `--prompt-seul` |
-| Moteur | T25, T26, T51, T52, T55, M2 | moteur introuvable, analyse limitée aux premiers coups, mat manqué, coup nul, options hors bornes, analyse complète |
+| Moteur | T25, T26, T51, T52, T55, T78, M2 | moteur introuvable, analyse limitée aux premiers coups, mat manqué, mat compté après le coup, coup nul, options hors bornes, moteur qui s'arrête, analyse complète |
 | Partie d'essai | T70 | `test.pgn` : commentaires, variantes, prise en passant, promotion, roques, coup nul |
 | Résultat contraire | T72 | partie notée gagnée dans une position perdue : la synthèse et le prompt le disent |
 | Vérification | T73 | `verifier-analyse.py` : un PGN conforme passe, un PGN fautif voit chacun de ses défauts relevé, PGN absent, archive illisible |

@@ -179,6 +179,13 @@ jamais publiées.
 
 ### Fixed
 
+- Mats : le nombre de coups était celui d'avant le coup. Dans un
+  tableau qui donne l'évaluation après chaque coup, le camp qui mate
+  affichait un coup de trop : `#+2` après un échec qui ne laissait
+  qu'un coup, `#+1` sur le coup du mat lui-même. Le compte se lit
+  maintenant après le coup, `#+0` ou `#-0` désignant le coup qui donne
+  mat. Les centipions, les écarts et la nature des coups ne changent
+  pas.
 - Une partie notée en français, en figurines ou en minuscules était
   analysée de travers sans aucun message : python-chess écarte la lettre
   qu'il ne connaît pas, et "Cf3" devenait "f3", un coup de pion. Le

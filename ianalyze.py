@@ -2705,11 +2705,27 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
 # Stockfish
 # ===========================================================================
 
-def formater_score(score: chess.engine.PovScore) -> str:
-    """Met en forme un score du point de vue des Blancs, en pions ou en mat."""
+def formater_score(score: chess.engine.PovScore,
+                   trait: bool | None = None) -> str:
+    """
+    Met en forme un score du point de vue des Blancs, en pions ou en mat.
+
+    Le score vient d'une recherche faite avant le coup, et l'évaluation
+    s'annonce après lui. En pions, cela ne change rien. Pour un mat, le
+    moteur compte les coups du camp qui mate, celui-ci compris : quand ce
+    camp est celui qui joue, donné par `trait`, il lui en reste un de
+    moins une fois le coup joué. "#+0" et "#-0" désignent le coup qui
+    donne mat lui-même. Le camp maté, lui, ne retire rien : après son
+    coup, l'adversaire a encore tous les siens à jouer.
+    """
     blanc = score.white()
     if blanc.is_mate():
-        return "#%+d" % blanc.mate()
+        coups = blanc.mate()
+        if trait is not None and (coups > 0) == (trait == chess.WHITE):
+            coups += -1 if coups > 0 else 1
+            if coups == 0:
+                return "#+0" if trait == chess.WHITE else "#-0"
+        return "#%+d" % coups
     return "%+.2f" % (blanc.score() / 100.0)
 
 
@@ -2887,7 +2903,7 @@ def decrire_variante(plateau: chess.Board, info: dict, trait: bool) -> dict:
     return {
         "san": plateau.san(pv[0]),
         "uci": pv[0].uci(),
-        "score": formater_score(info["score"]),
+        "score": formater_score(info["score"], trait),
         "valeur_trait": valeur_pour_trait(info["score"], trait),
         "profondeur": info.get("depth"),
         "pv_uci": [m.uci() for m in pv],
@@ -3476,6 +3492,10 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
           "n'est pas un coup des échecs, le moteur ne l'évalue pas : "
           "ses colonnes Éval, G/N/P, Écart et Nature portent `-`, les "
           "meilleurs coups de la position restant donnés.")
+    a("Mat : `#+2`, les Blancs matent en deux coups, `#-1`, les Noirs "
+      "matent en un coup. Comme toute évaluation de ce tableau, le compte "
+      "se lit après le coup de la ligne : `#+0` ou `#-0`, ce coup donne "
+      "mat.")
     a("Écart `mat` : l'un des deux scores comparés est un mat, que le "
       "coup joué manque un mat ou qu'il en concède un ; l'écart ne se "
       "chiffre pas en centipions, comparez les colonnes Éval et 1er.")

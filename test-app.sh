@@ -1939,7 +1939,14 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
     grep -E '^\| [34] \|' extrait > lignes 2>/dev/null
     egal "T51 lignes 3 et 4 portent mat et gaffe" 2 \
         "$(grep -c '| mat | gaffe |' lignes)"
-    verifier "T51 Qh4# en premier choix" contient lignes "Qh4# (#-1)"
+    # Un mat se compte après le coup de la ligne : 2. g4 laisse aux Noirs
+    # un mat en un, "#-1", et le coup qui le donnerait, Qh4#, vaut "#-0".
+    verifier "T51 Qh4# en premier choix, mat donné" \
+        contient lignes "Qh4# (#-0)"
+    egal "T51 après 2. g4, mat en un pour les Noirs" 1 \
+        "$(grep -c -E '^\| 3 \|.*\| g4 \| #-1 \|' lignes)"
+    verifier "T51 légende des mats" contient extrait \
+        "le compte se lit après le coup de la ligne"
     verifier "T51 phrase d'explication" contient extrait "Écart \`mat\`"
     verifier "T51 écart négatif expliqué" contient extrait \
         "Négatif, il ne signale aucune faute"
@@ -1970,6 +1977,37 @@ EOF
 300 -99999 mat gaffe
 EOF
     verifier "T51 écarts : deux mats, mat manqué, écart négatif" \
+        cmp -s attendu-t51 sortie-t51
+    joindre sortie-t51
+    joindre journal-t51 5
+    # Le moteur compte un mat avant le coup, celui-ci compris : le camp
+    # qui mate en a un de moins à jouer une fois son coup joué, le camp
+    # maté n'en retire aucun. Sans camp donné, le compte du moteur reste.
+    SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t51 2> journal-t51 <<'EOF'
+import importlib.util
+import os
+
+import chess
+import chess.engine
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+
+
+def mat(coups, camp):
+    return chess.engine.PovScore(chess.engine.Mate(coups), camp)
+
+
+B, N = chess.WHITE, chess.BLACK
+print(cp.formater_score(mat(2, B), B), cp.formater_score(mat(1, B), B),
+      cp.formater_score(mat(-2, B), B), cp.formater_score(mat(3, N), N),
+      cp.formater_score(mat(1, N), N), cp.formater_score(mat(-1, N), N),
+      cp.formater_score(mat(2, B)),
+      cp.formater_score(chess.engine.PovScore(chess.engine.Cp(35), N), N))
+EOF
+    printf '%s\n' "#+1 #+0 #-2 #-2 #-0 #+1 #+2 -0.35" > attendu-t51
+    verifier "T51 mats comptés après le coup, camp qui mate et camp maté" \
         cmp -s attendu-t51 sortie-t51
     joindre sortie-t51
     joindre journal-t51 5

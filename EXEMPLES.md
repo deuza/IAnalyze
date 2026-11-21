@@ -264,6 +264,9 @@ Derrière un coup faible viennent sa nature, ce qu'il perd en centipions
 par rapport au meilleur coup, puis ce meilleur coup, sa suite et son
 évaluation. "mat" à la place du nombre : le coup manque un mat ou en
 concède un.
+Un mat s'écrit "#+2", les Blancs matent en deux coups, ou "#-1", les
+Noirs matent en un coup. Le compte se lit après le coup de la ligne :
+"#+0" ou "#-0", ce coup donne mat.
 
 1. e4           +0.35
 1... e5         +0.34
