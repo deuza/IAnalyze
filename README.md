@@ -37,7 +37,7 @@ Un outil supplémentaire, `verifier-analyse.py`, contrôle le PGN que le LLM vou
 Plateformes : Debian et macOS (Homebrew).   
 Python 3.10 ou plus récent et python-chess, que le script installe lui-même dans un environnement virtuel dédié.
 
-La documentation tient en trois fichiers :
+La documentation tient en quatre fichiers :
 
 - ce README, pour installer IAnalyze et analyser une partie
 - [EXEMPLES.md](EXEMPLES.md), l'aide-mémoire : toutes les commandes, toutes les options, et ce que le terminal affiche
