@@ -1623,6 +1623,7 @@ niveau = 1300
 ## VOIR AUSSI
 
 - [README.md](README.md) : l'installation, l'usage courant, le choix du LLM
-- [TECHNIQUE.md](TECHNIQUE.md) : le fonctionnement du script, le format des fichiers, les tests
+- [TECHNIQUE.md](TECHNIQUE.md) : le fonctionnement du script, le format des fichiers
+- [TESTS.md](TESTS.md) : la suite de tests, test par test
 - [CHANGELOG.md](CHANGELOG.md) : l'historique des versions
 - `./ianalyze.py --help` : le résumé des options, dans le terminal

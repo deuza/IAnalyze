@@ -2,8 +2,8 @@
 # ===========================================================================
 # test-app.sh : tests de ianalyze.py, sous macOS et sous Debian
 #
-# Ce script joue tous les tests du projet, décrits famille par famille
-# dans TECHNIQUE.md, puis écrit un rapport que vous pouvez renvoyer tel quel.
+# Ce script joue tous les tests du projet, décrits un par un dans
+# TESTS.md, puis écrit un rapport que vous pouvez renvoyer tel quel.
 #
 #     sh test-app.sh             tests hors réseau : encodages, archive,
 #                                réglages, cadence, moteur, vérification

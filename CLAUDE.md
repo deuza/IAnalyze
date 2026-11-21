@@ -14,7 +14,8 @@ verifier-analyse.py (contrôle du PGN rendu par le LLM),
 test.pgn (partie d'essai), test-app.sh (suite de tests),
 README.md (installation et usage courant), EXEMPLES.md (commandes,
 options et sorties, sur le plan d'une page de manuel), TECHNIQUE.md
-(fonctionnement et tests), CHANGELOG.md.
+(fonctionnement), TESTS.md (lancement des tests et tableau de tous les
+tests), CHANGELOG.md.
 
 ## Plateformes
 
@@ -53,10 +54,9 @@ options et sorties, sur le plan d'une page de manuel), TECHNIQUE.md
 - Chaque ajout de comportement s'accompagne d'un test dans test-app.sh
   et d'une mise à jour de la documentation : EXEMPLES.md pour une
   option ou un message, avec sa sortie réelle, README.md si l'usage
-  courant change, TECHNIQUE.md pour le fonctionnement. La section
-  Tests de TECHNIQUE.md ne décrit que les
-  familles de tests : elle ne change que si une famille apparaît ou si
-  la façon de lancer les tests change.
+  courant change, TECHNIQUE.md pour le fonctionnement, TESTS.md pour
+  les tests. TESTS.md porte une ligne par test : un test ajouté y
+  reçoit sa ligne, un test modifié y voit la sienne mise à jour.
 
 ## Vérifications avant livraison
 

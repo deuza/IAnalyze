@@ -161,14 +161,15 @@ jamais publiées.
   jamais rendre un PGN sans commentaires au motif qu'un fichier manque.
   La coupe des commentaires passe de 76 à 75 colonnes, pour que les
   lignes exportées tiennent en 79 caractères.
-- Documentation en Markdown, en trois fichiers. `README.md` remplace
+- Documentation en Markdown, en quatre fichiers. `README.md` remplace
   `README.nfo` et s'en tient à l'installation et à l'usage courant.
   `EXEMPLES.md` est l'aide-mémoire, bâti comme une page de manuel :
   toutes les commandes, toutes les options, et ce que le terminal
   affiche. `TECHNIQUE.md` explique le fonctionnement du script, son
   emploi depuis un autre programme, le détail des fichiers produits,
-  les encodages, le modèle de prompt et les tests, à la place de
-  `TESTS.nfo`. Le README conseille Claude, avec le zip et le prompt
+  les encodages et le modèle de prompt. `TESTS.md` remplace
+  `TESTS.nfo` : comment lancer les tests, puis un tableau qui donne,
+  test par test, ce qui est vérifié. Le README conseille Claude, avec le zip et le prompt
   comme avec `--prompt-seul`, compte gratuit compris, et rend compte de
   deux séries d'essais sur quatre LLM : le 20 novembre 2026 avec le
   zip, le 21 avec le prompt court. Il en tire une règle de lecture :

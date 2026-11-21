@@ -36,7 +36,8 @@ La documentation tient en trois fichiers :
 
 - ce README, pour installer IAnalyze et analyser une partie
 - [EXEMPLES.md](EXEMPLES.md), l'aide-mémoire : toutes les commandes, toutes les options, et ce que le terminal affiche
-- [TECHNIQUE.md](TECHNIQUE.md), pour le fonctionnement du script, son emploi depuis un autre programme, le détail des fichiers produits et les tests
+- [TECHNIQUE.md](TECHNIQUE.md), pour le fonctionnement du script, son emploi depuis un autre programme, et le détail des fichiers produits
+- [TESTS.md](TESTS.md), pour lancer les tests et savoir ce que chacun vérifie
 
 ## Sommaire
 
@@ -89,9 +90,10 @@ Les fichiers du dépôt :
 | `verifier-analyse.py` | l'outil supplémentaire qui contrôle le PGN rendu par le LLM (section 8) |
 | [`EXEMPLES.md`](EXEMPLES.md) | l'aide-mémoire : commandes, options et sorties |
 | [`TECHNIQUE.md`](TECHNIQUE.md) | la documentation technique |
+| [`TESTS.md`](TESTS.md) | les tests : comment les lancer, ce que chacun vérifie |
 | [`CHANGELOG.md`](CHANGELOG.md) | l'historique des versions |
 | [`LICENSE`](LICENSE) | la licence du code (voir Licences) |
-| `test-app.sh`, `test.pgn` | la suite de tests et sa partie d'essai, décrites dans TECHNIQUE.md |
+| `test-app.sh`, `test.pgn` | la suite de tests et sa partie d'essai, décrites dans [TESTS.md](TESTS.md) |
 
 ## 2. Prérequis et installation
 
