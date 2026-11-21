@@ -411,13 +411,17 @@ def balises_du_texte(texte: str) -> list[str]:
 
 def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
                      origine: chess.pgn.Game, demi_coups: int,
-                     court: bool = False) -> None:
+                     court: bool = False,
+                     balises_origine: list[str] | None = None) -> None:
     """
     Contraintes de format impératives du prompt.
 
     `court` vaut vrai pour un PGN rendu d'après le prompt court de
     --prompt-seul : seuls restent les contrôles que ce prompt fonde, les
     accolades, les balises recopiées et le marqueur de fin.
+    `balises_origine` donne alors les noms des balises de la partie
+    d'origine, dans l'ordre où son fichier les écrit : parmi les sept
+    balises obligatoires du standard, seules celles-là sont attendues.
     """
     b.titre("3. Format")
     lignes = texte.split("\n")
@@ -457,11 +461,27 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
     # Balises : les sept obligatoires d'abord, les autres par ordre
     # alphabétique, et leurs valeurs reprises de la partie d'origine.
     noms = balises_du_texte(texte)
-    absentes = [n for n in SEPT_BALISES if n not in noms]
-    b.controle(tuple(noms[:7]) == SEPT_BALISES,
-               "les sept balises obligatoires, dans l'ordre",
-               ["ordre rendu : %s" % ", ".join(noms[:7])]
-               + ["absente : %s" % n for n in absentes])
+    if court:
+        # Le prompt court demande de recopier les balises, sans plus :
+        # parmi les sept du standard, seules celles que porte la partie
+        # d'origine sont attendues, dans l'ordre où elle les écrit. Les
+        # exiger toutes donnait un échec à un PGN fidèle quand la partie
+        # fournie n'en portait que trois.
+        attendues = [n for n in (balises_origine or [])
+                     if n in SEPT_BALISES]
+        rendues = [n for n in noms if n in attendues]
+        absentes = [n for n in attendues if n not in noms]
+        b.controle(rendues == attendues,
+                   "les balises obligatoires de la partie d'origine, dans "
+                   "le même ordre",
+                   ["ordre rendu : %s" % ", ".join(noms)]
+                   + ["absente : %s" % n for n in absentes])
+    else:
+        absentes = [n for n in SEPT_BALISES if n not in noms]
+        b.controle(tuple(noms[:7]) == SEPT_BALISES,
+                   "les sept balises obligatoires, dans l'ordre",
+                   ["ordre rendu : %s" % ", ".join(noms[:7])]
+                   + ["absente : %s" % n for n in absentes])
     autres = noms[7:]
     if not court:
         b.controle(autres == sorted(autres),
@@ -864,7 +884,8 @@ def main(argv: list[str]) -> int:
     texte, partie = controler_lecture(b, brut)
     identique = controler_partie(b, partie, origine)
     controler_format(b, texte, partie, origine,
-                     len(ligne_principale(origine)), options.prompt_seul)
+                     len(ligne_principale(origine)), options.prompt_seul,
+                     balises_du_texte(fichiers["partie.pgn"]))
     if identique:
         controler_couverture(b, partie, evaluations, options.prompt_seul)
     else:

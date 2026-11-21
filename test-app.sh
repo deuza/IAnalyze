@@ -1576,6 +1576,22 @@ PR="$(head -n 1 sortie)"
 PR="${PR%.zip}.prompt.txt"
 egal "T74 sans l'option, le prompt complet" "0 1" \
     "$(grep -c '^La partie :' "$PR") $(grep -c 'PIÈCES JOINTES ATTENDUES' "$PR")"
+# verifier-analyse.py --prompt-seul attend les balises de la partie
+# d'origine, et non les sept du standard : t-seul.pgn n'en porte que trois,
+# et sa copie fidèle ne doit pas être prise en faute. Les mêmes balises
+# rendues dans un autre ordre, elles, le sont.
+ARCH74="$(head -n 1 sortie)"
+"$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH74" t-seul.pgn --prompt-seul \
+    > bilan 2>&1
+verifier "T74 vérificateur : trois balises recopiées, aucune faute" \
+    contient bilan "OK        les balises obligatoires de la partie d'origine"
+printf '[Black "Bob"]\n[White "Alice"]\n[Result "1-0"]\n\n' > t-seul-inverse.pgn
+printf '1. e4 e5 2. Qh5 Nc6 3. Qxf7+ Kxf7 1-0\n' >> t-seul-inverse.pgn
+"$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH74" t-seul-inverse.pgn \
+    --prompt-seul > bilan 2>&1
+verifier "T74 vérificateur : balises dans un autre ordre, relevé" \
+    contient bilan "ECHEC     les balises obligatoires de la partie d'origine"
+rm -rf "$DEPOT/__pycache__"
 rm -f analyse-t-seul-*
 "$SCRIPT" t-seul.pgn $S74 --prompt-seul --sans-prompt > sortie 2> journal
 egal "T74 options exclusives, code de retour" 2 $?
