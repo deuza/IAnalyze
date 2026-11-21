@@ -1,12 +1,259 @@
 # Changelog
 
-Toutes les modifications notables de collecte-partie.py sont consignées
+Toutes les modifications notables d'IAnalyze sont consignées
 dans ce fichier.
 
 Le format suit [Tenez un Changelog](https://keepachangelog.com/fr/1.1.0/)
 et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
+
+## [4.0.0] - 2026-11-21
+
+Première version publiée depuis la 3.5.8. Elle réunit le travail des
+versions 3.5.9 à 3.8.0, restées sur la branche de développement et
+jamais publiées.
+
+### Added
+
+- Prompt d'analyse écrit à côté de l'archive, sous le nom
+  `<archive>.prompt.txt`, à coller dans la conversation avec l'archive
+  en pièce jointe. Il est tiré d'un modèle, `prompt-modele.txt`, rangé
+  à côté du script et modifiable sans toucher au code : le script y
+  remplit les valeurs (pseudo, camp, niveau, cadence, nom de l'archive)
+  et ne garde que les passages qui s'appliquent (base interrogée,
+  explorateur ou non, réponses recueillies ou non). Le prompt décrit
+  ainsi toujours la synthèse que cette version vient d'écrire.
+- Repères du modèle : `{{NOM}}` pour une valeur, et les directives
+  `#! si`, `#! si non`, `#! sinon`, `#! fin` et `#! note`. Le modèle est
+  contrôlé avant la collecte : un repère inconnu ou mal écrit, une
+  condition jamais fermée ou un modèle sans une ligne de texte arrêtent
+  le script, avec le numéro de la ligne. `TECHNIQUE.md`, section 12,
+  donne la liste des valeurs et des conditions.
+- Options `--prompt FICHIER`, pour un autre modèle, et `--sans-prompt`.
+- Option `--prompt-seul` : un prompt court, à coller seul dans la
+  conversation, sans pièce jointe. Il tient en quelques consignes, la
+  partie et les évaluations de Stockfish, une ligne par demi-coup, le
+  meilleur coup et sa suite derrière chaque coup faible. C'est la
+  route à prendre avec un compte gratuit, ou avec un LLM qui n'ouvre
+  pas les zip ou n'exécute pas de code, sur le modèle du prompt
+  d'analyse de Lucas Chess, avec les chiffres du moteur en plus. Il
+  est tiré d'un modèle à part,
+  `prompt-seul-modele.txt`. Aucune archive n'est alors écrite : le
+  prompt est le seul fichier produit, sauf avec `--garder-dossier`, qui
+  laisse le dossier de travail à `verifier-analyse.py`. Son bilan
+  demande les trois erreurs les plus coûteuses du joueur : quand le
+  tableau du moteur marque moins de trois coups faibles de son côté,
+  le prompt en donne le nombre et demande de s'en tenir à ceux-là :
+  un LLM à qui l'on en réclame trois en invente une. Valeur
+  `COUPS_FAIBLES_JOUEUR` et conditions `PEU_DE_COUPS_FAIBLES` et
+  `AUCUN_COUP_FAIBLE` pour les modèles personnels. Sans aucun coup
+  faible, le prompt demande de ne prêter aucune erreur au joueur.
+  Quand son camp n'est pas connu, il demande de commenter les deux
+  camps de la même façon et de donner le bilan pour chacun.
+- `verifier-analyse.py`, qui contrôle le PGN annoté rendu par un LLM en
+  le comparant à l'archive qu'il a reçue : lecture, ligne principale,
+  format, erreurs et gaffes commentées, évaluations citées, variantes,
+  positions citées dans la conversation. Il nomme les pièges relevés
+  sur de vrais PGN de LLM, dont la ligne vide dans le corps de la partie
+  et la variante écrite à l'intérieur d'un commentaire, qu'il rejoue
+  lui-même. Il ne juge pas la qualité du commentaire. Son option
+  `--prompt-seul` contrôle un PGN rendu d'après le prompt court, qui ne
+  demande ni résumé, ni lignes de 79 caractères, ni NAG, ni tiret
+  cadratin, ni FEN. Son option `--perimetre N` borne le contrôle des
+  erreurs et gaffes commentées au périmètre convenu avec le LLM. Sans
+  elle, le périmètre est lu dans la réponse du joueur à la question de
+  démarrage. Un mat cité, `#+2` ou `#2`, est contrôlé comme les autres
+  évaluations. Dans un dossier qui contient plusieurs collectes, seule
+  une collecte complète est retenue, et nommée : s'il y en a plusieurs,
+  le script s'arrête plutôt que d'en choisir une.
+- Fichier de réglages, `~/.config/IAnalyze/reglages.ini`, au format
+  INI : il garde vos pseudos, votre cadence habituelle et votre niveau
+  en points Elo, plus un réglage facultatif `annotateur`. Les clefs
+  absentes sont demandées une seule fois, au premier lancement sur un
+  terminal. Hors terminal, rien n'est demandé ni écrit.
+- Options `--reglages FICHIER`, pour désigner un autre fichier, et
+  `--purge-reglages`, qui le supprime puis quitte. Seul un fichier qui
+  porte la section `[joueur]`, ou un fichier vide, est supprimé : une
+  faute de frappe derrière `--reglages` ne détruit pas un autre
+  fichier.
+- Cadence saisie par des questions vérifiées, et non plus en texte
+  libre : temps réel, correspondance ou inconnue, puis les minutes par
+  joueur et l'incrément en secondes. La correspondance connaît trois
+  systèmes : un délai fixe en jours par coup (Lichess, chess.com), un
+  nombre de coups par période, comme "10 coups en 50 jours" (cadence
+  standard de l'ICCF), ou un capital de temps avec incrément, plafond
+  et réserve facultatifs (chess-mail.com, Triple Block de l'ICCF). Les
+  deux derniers suivent les ICCF Rules en vigueur depuis le 1er
+  janvier 2026. Le script rédige lui-même la phrase transmise à
+  l'analyste, avec la catégorie de Lichess, calculée comme le fait
+  Lichess sur le temps initial plus quarante fois l'incrément.
+- Une balise `TimeControl` de la forme `600+5` ou `300` est citée, puis
+  traduite : "soit rapide, 10 minutes + 5 secondes par coup".
+- Sans pseudo connu, le script demande votre nom de joueur quand votre
+  balise est vide, comme il le fait pour l'adversaire. Hors terminal,
+  le camp du joueur se déduit de ses pseudos, sans question.
+- Synthèse : sous le tableau de Stockfish, une ligne "Résultat et
+  évaluation finale se contredisent" quand le camp déclaré vainqueur
+  est moins bien d'au moins 300 cp après le dernier coup. La partie ne
+  s'est alors pas décidée sur l'échiquier, et le prompt demande à
+  l'analyste de le dire.
+- `collecte.json` : clef `prompt_ecrit`, et les pseudos réellement
+  utilisés.
+- `parties-exemples/`, les fichiers cités dans `EXEMPLES.md` : les
+  parties des exemples, les PGN que le script refuse, trois PGN annotés
+  pour le vérificateur, et une vraie partie anonymisée, exportée de
+  Lichess avec ses commentaires, pour un premier essai.
+- `test.pgn`, partie d'essai qui réunit les cas tordus d'un PGN :
+  balises accentuées, commentaires de toutes sortes, NAG, variantes
+  emboîtées, mat manqué, prise en passant, promotion, les deux roques
+  et un coup nul.
+- `test-app.sh`, qui joue la suite de tests d'un seul coup et écrit un
+  rapport, sous Linux comme sous macOS : `sh test-app.sh` hors réseau,
+  `sh test-app.sh --reseau PARTIE` avec un jeton et une partie de
+  Lichess de votre choix. Le dépôt ne cite aucune partie réelle : sans
+  partie, le test de téléchargement est sauté.
+- `.gitignore` : rapports de `test-app.sh`, archives, dossiers de
+  travail et prompts produits dans le dépôt.
+
+### Changed
+
+- Le script s'appelle `ianalyze.py`, du nom du projet, au lieu de
+  `collecte-partie.py`. La commande devient
+  `./ianalyze.py ma-partie.pgn`.
+- Stockfish est obligatoire : son évaluation fait partie de toute
+  collecte. Une synthèse sans chiffres du moteur laissait l'analyste
+  estimer seul, ce qui n'est pas le but du projet.
+- Emplacements par défaut, les mêmes sous Debian et sous macOS, tous
+  dans le répertoire personnel : environnement virtuel dans
+  `~/.local/share/IAnalyze/venv`, catalogue dans
+  `~/.local/share/IAnalyze`, réglages dans `~/.config/IAnalyze`. Sous
+  Debian, seuls les paquets demandent encore les droits root. Les
+  anciens emplacements étaient `/opt/venv/lichess`,
+  `/usr/local/share/collecte-partie` et
+  `~/.local/share/collecte-partie`.
+- En-tête d'agent HTTP : `IAnalyze/4.0.0`, suivi de l'adresse du dépôt.
+- `--pseudos` n'a plus de valeur par défaut dans le code : sans
+  l'option, les pseudos viennent du fichier de réglages. Donnée, elle
+  l'emporte toujours.
+- Un PGN qui contient plusieurs parties est refusé, avec leur nombre.
+  Jusqu'ici la première était analysée après un simple avertissement.
+- Un PGN qui ne part pas de la position initiale, donc qui porte une
+  balise FEN, est refusé. IAnalyze analyse une partie entière, du
+  premier coup au dernier.
+- Un PGN dont l'encodage n'est ni UTF-8, ni UTF-16, ni cp1252 est
+  refusé, avec le conseil de le convertir. Il était lu en latin-1, et
+  ses lettres accentuées retirées comme des caractères de contrôle.
+- `--profondeur` est bornée à 60. Une valeur démesurée, par faute de
+  frappe, occupait le moteur sans jamais rendre la main.
+- Questions de démarrage : une réponse fait 255 caractères au plus, et
+  un nom de joueur ne peut plus contenir de guillemet, de barre oblique
+  inversée, de crochet ni d'accolade. Un tel nom donnait un
+  `partie.pgn` non conforme. La question est reposée.
+- Nom de l'archive : les espaces du nom du PGN y deviennent des tirets,
+  `partie contre machin.pgn` donne `analyse-partie-contre-machin-...`.
+- Le modèle du prompt, `prompt-modele.txt`, remplace
+  `INSTRUCTIONS.txt`, qui était un texte à coller tel quel. Le prompt
+  demande à l'analyste de se servir de tous les fichiers de l'archive,
+  et les décrit un par un. Il ne suppose plus que l'analyste exécute du
+  code : celui qui n'en exécute pas écrit le PGN lui-même, l'annonce,
+  et n'invente ni résultat d'exécution ni évaluation chiffrée.
+- Prompt : consignes ajoutées après des essais sur quatre LLM, chacune
+  répondant à un défaut relevé sur un PGN réellement rendu. Aucune
+  ligne vide dans le corps de la partie, variantes écrites hors des
+  accolades, ne jamais annoncer un fichier qui n'a pas été créé, ne
+  jamais rendre un PGN sans commentaires au motif qu'un fichier manque.
+  La coupe des commentaires passe de 76 à 75 colonnes, pour que les
+  lignes exportées tiennent en 79 caractères.
+- Documentation en Markdown, en quatre fichiers. `README.md` remplace
+  `README.nfo` et s'en tient à l'installation et à l'usage courant.
+  `EXEMPLES.md` est l'aide-mémoire, bâti comme une page de manuel :
+  toutes les commandes, toutes les options, et ce que le terminal
+  affiche. `TECHNIQUE.md` explique le fonctionnement du script, son
+  emploi depuis un autre programme, le détail des fichiers produits,
+  les encodages et le modèle de prompt. `TESTS.md` remplace
+  `TESTS.nfo` : comment lancer les tests, puis un tableau qui donne,
+  test par test, ce qui est vérifié. Le README conseille Claude, avec le zip et le prompt
+  comme avec `--prompt-seul`, compte gratuit compris, et rend compte de
+  deux séries d'essais sur quatre LLM : le 20 novembre 2026 avec le
+  zip, le 21 avec le prompt court. Il en tire une règle de lecture :
+  les chiffres tiennent, les récits sont à vérifier sur l'échiquier.
+
+### Removed
+
+- Options `--avec-stockfish` et `--sans-stockfish` : le moteur est
+  toujours appelé. La clef `avec_stockfish` de `collecte.json`
+  disparaît aussi.
+- Option `--consignes`, qui insérait un fichier de votre main en tête
+  de la synthèse. Elle datait d'avant le prompt, quand la synthèse était
+  le seul fichier remis au LLM. Le prompt porte désormais les consignes
+  d'analyse, et vos réponses aux questions de démarrage le contexte de
+  la partie.
+- Le pseudo et la cadence personnels de l'auteur, jusqu'ici valeurs par
+  défaut du script. Les exemples de l'aide et de la documentation
+  emploient des pseudos neutres.
+- `INSTRUCTIONS.txt`, `README.nfo` et `TESTS.nfo`, remplacés par les
+  fichiers cités plus haut.
+
+### Fixed
+
+- Mats : le nombre de coups était celui d'avant le coup. Dans un
+  tableau qui donne l'évaluation après chaque coup, le camp qui mate
+  affichait un coup de trop : `#+2` après un échec qui ne laissait
+  qu'un coup, `#+1` sur le coup du mat lui-même. Le compte se lit
+  maintenant après le coup, `#+0` ou `#-0` désignant le coup qui donne
+  mat. Les centipions, les écarts et la nature des coups ne changent
+  pas.
+- Une partie notée en français, en figurines ou en minuscules était
+  analysée de travers sans aucun message : python-chess écarte la lettre
+  qu'il ne connaît pas, et "Cf3" devenait "f3", un coup de pion. Le
+  corps de la partie est maintenant contrôlé avant la lecture, et le
+  premier mot qui n'est pas un élément de PGN arrête le script.
+- Un commentaire dont l'accolade n'est jamais fermée tronquait la
+  partie en silence. Il est refusé, comme une parenthèse de variante
+  jamais fermée ou fermée en trop.
+- Explorateur : un coup nul, `--` dans le PGN, ressortait dans la table
+  à 0.0 % et était désigné comme la première sortie de théorie, ou
+  provoquait un HTTP 400 de Lichess. L'interrogation s'arrête désormais
+  au coup nul, sans requête pour ce demi-coup, et la section 4 de la
+  synthèse le liste.
+- Explorateur : une erreur HTTP dont le corps arrive coupé, ou une
+  réponse imbriquée à l'excès, faisait avorter toute la collecte. Seule
+  l'interrogation s'arrête maintenant, et Stockfish fait son travail.
+  Un compte de parties négatif ou démesuré est tenu pour absent.
+- Plusieurs entrées finissaient en "Erreur inattendue" au lieu du
+  message prévu : du texte libre après la partie, l'entrée standard
+  fermée par l'appelant, un nom de fichier trop long, une URL aux
+  crochets mal placés, un moteur qui s'arrête hors d'une recherche.
+- Source : une adresse au schéma en majuscules, `HTTPS://`, était prise
+  pour un fichier. Une rubrique de Lichess de huit lettres, `Analysis`
+  ou `features`, et un répertoire local de huit lettres étaient pris
+  pour des identifiants de partie, et une requête partait.
+- Chemins : `--sortie='~/analyses'` créait un répertoire nommé `~`, et
+  `--stockfish` ne développait pas le tilde. Un moteur désigné par son
+  nom nu était contrôlé dans le répertoire courant, puis lancé depuis
+  le PATH.
+- Un PGN au nom long, écrit en caractères de plusieurs octets, faisait
+  échouer l'écriture de l'archive après toute l'analyse.
+- Synthèse : entre deux mats de même sens, la colonne "Écart cp"
+  affichait 1, lu comme un centipion. Elle affiche 0, et la légende dit
+  ce que vaut un écart négatif. Le titre d'une partie sans balise Site
+  est "partie locale" et non "?".
+- Un fichier de jeton écrit `LICHESS_TOKEN=...` ou entre guillemets
+  passait la lecture, et Lichess répondait 401 : il est refusé avec un
+  message clair.
+- Sur une partie qui contient un coup nul, le journal répétait à
+  chaque position suivante un avis de python-chess. Sans conséquence
+  sur les évaluations, il est écarté.
+
+### Security
+
+- Le jeton Lichess ne suit plus une redirection HTTP. Si l'explorateur
+  répondait 301, 302, 303, 307 ou 308, l'en-tête Authorization partait
+  avec la requête vers la nouvelle adresse, quel qu'en soit l'hôte. La
+  redirection est maintenant refusée et l'interrogation s'arrête.
+- Le jeton est retiré de la réponse de l'explorateur avant qu'elle soit
+  gardée dans l'archive, au cas où un serveur renverrait l'en-tête reçu.
 
 ## [3.5.8] - 2026-11-18
 
@@ -316,19 +563,19 @@ inchangés.
 
 ## [3.3.0] - 2026-10-09
 
-Historique reconstitué à partir des conversations des 8 et 9 octobre
-2026. La numérotation des étapes intermédiaires n'a pas été conservée :
+Historique reconstitué à partir des conversations des 8 et 9 octobre 2026.
+La numérotation des étapes intermédiaires n'a pas été conservée :
 leurs changements sont regroupés ici, sous la version que porte l'en-tête
 d'agent du script.
 
 ### Added
 
 - `--base {lichess,maitres}` : interrogation de la base de l'ensemble des
-  joueurs Lichess, celle de https://lichess.org/opening, en plus de la
+  joueurs Lichess, celle de <https://lichess.org/opening>, en plus de la
   base maîtres.
 - `--cadences` et `--classements` : filtres de la base Lichess, avec les
-  défauts de https://lichess.org/opening et les parties depuis janvier
-  2017.
+  défauts de <https://lichess.org/opening> et les parties depuis
+  janvier 2017.
 - Catalogue local des ouvertures nommées de Lichess (domaine public,
   CC0) : `--installer-catalogue`, `--catalogue`, et colonne Ouverture
   dans la synthèse.

@@ -1,0 +1,113 @@
+#! note ===============================================================
+#! note Modèle du prompt court, écrit avec l'option --prompt-seul.
+#! note
+#! note Ce prompt se colle seul dans une conversation, sans pièce jointe :
+#! note quelques consignes, la partie, puis les évaluations de Stockfish.
+#! note Il est fait pour un LLM qui n'ouvre pas les zip ou n'exécute pas
+#! note de code. Le prompt complet, lui, vient de prompt-modele.txt.
+#! note
+#! note Les repères sont les mêmes que dans prompt-modele.txt : une valeur
+#! note entre doubles accolades est remplacée, une ligne commençant par
+#! note "#!" est une directive ("si CONDITION", "si non CONDITION",
+#! note "sinon", "fin", "note"). Leur liste est dans TECHNIQUE.md.
+#! note
+#! note Gardez-le court : c'est sa raison d'être.
+#! note ===============================================================
+Vous êtes Maître International d'échecs.
+
+Analysez la partie ci-dessous coup par coup, pour un joueur qui cherche
+à progresser. Le style est instructif et détaillé, en français, et vous
+tutoyez le joueur.
+#! si CAMP_CONNU
+Le joueur avait les {{CAMP}}.
+Son niveau : {{NIVEAU}}.
+#! sinon
+Le camp du joueur n'est pas connu : commentez les deux camps de la même
+façon, sans supposer lequel est le sien.
+Niveau du joueur : {{NIVEAU}}.
+#! fin
+
+Rendez la partie entière dans un seul bloc de code, au format PGN, vos
+commentaires entre accolades après les coups :
+
+- recopiez les balises et les coups sans en changer un seul ;
+- commentez les deux camps : l'idée du coup, la tactique, la stratégie
+  et l'évaluation de la position ;
+- commentez tous les coups marqués erreur ou gaffe dans le tableau, en
+  disant ce qu'il fallait jouer et pourquoi ;
+- pour montrer une suite, reprenez celle du tableau, entre parenthèses
+  et hors des accolades :
+  11. Ne4 { ton commentaire } ( 11. dxc5 Bc7 ) 11... dxe4
+- n'écrivez ni accolade dans un commentaire, ni ligne vide entre les
+  coups.
+
+Les évaluations du tableau viennent de Stockfish et font foi : n'en
+inventez aucune et ne les contredisez pas. Les plans et les
+explications sont votre travail : dites ce que vous estimez, sans le
+présenter comme un calcul.
+
+#! note Le bilan demande trois erreurs. Quand le tableau en marque
+#! note moins chez le joueur, le prompt donne leur nombre : un LLM à qui
+#! note l'on en réclame trois en invente une.
+#! si AUCUN_COUP_FAIBLE
+Le tableau ne marque aucun coup faible du joueur : après le bloc de
+code, ne lui prêtez aucune erreur, et donnez en quelques lignes le
+thème qu'il peut travailler en priorité.
+#! sinon
+#! si PEU_DE_COUPS_FAIBLES
+Après le bloc de code, donnez en quelques lignes les erreurs les plus
+coûteuses du joueur et le thème qu'il doit travailler en priorité.
+Coups faibles du joueur dans le tableau : {{COUPS_FAIBLES_JOUEUR}}.
+Tenez-vous-en à ceux-là, sans en ajouter.
+#! sinon
+#! si CAMP_CONNU
+Après le bloc de code, donnez en quelques lignes les trois erreurs les
+plus coûteuses du joueur et le thème qu'il doit travailler en priorité.
+#! sinon
+Après le bloc de code, donnez en quelques lignes, pour chaque camp, ses
+erreurs les plus coûteuses, trois au plus, et le thème à travailler en
+priorité.
+#! fin
+#! fin
+#! fin
+#! si RESULTAT_CONTREDIT
+
+Attention : {{ALERTE_RESULTAT}}
+Dites-le au joueur, sans présenter ce résultat comme la suite logique
+du jeu.
+#! fin
+#! si CONSIGNES_DONNEES
+
+Ce que le joueur a précisé :
+{{CONSIGNES_JOUEUR}}
+#! fin
+#! si OUVERTURE_CONNUE
+
+{{OUVERTURE}}
+#! fin
+
+La partie :
+
+{{PARTIE_PGN}}
+
+Évaluations de Stockfish, profondeur {{PROFONDEUR}}, du point de vue des Blancs,
+#! si COUVERTURE_PARTIELLE
+après chacun des {{DEMI_COUPS_EVALUES}} premiers demi-coups sur {{DEMI_COUPS}}. Le moteur n'a pas
+évalué la suite de la partie : n'y avancez aucun chiffre.
+#! sinon
+après chaque coup joué.
+#! fin
+Derrière un coup faible viennent sa nature, ce qu'il perd en centipions
+par rapport au meilleur coup, puis ce meilleur coup, sa suite et son
+évaluation. "mat" à la place du nombre : le coup manque un mat ou en
+concède un.
+Un mat s'écrit "#+2", les Blancs matent en deux coups, ou "#-1", les
+Noirs matent en un coup. Le compte se lit après le coup de la ligne :
+"#+0" ou "#-0", ce coup donne mat.
+#! si COUP_NUL
+Un coup noté "--" est un coup nul : le trait passe sans qu'une pièce
+bouge. Le moteur ne l'évalue pas : quand le tableau le couvre, sa
+ligne porte un tiret à la place de l'évaluation.
+#! fin
+
+{{TABLEAU_MOTEUR}}

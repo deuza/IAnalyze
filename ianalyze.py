@@ -13,13 +13,24 @@ Ce programme ne produit aucune analyse. Il rassemble et met en forme :
      des ouvertures nommées, gardé en local, ne compte pas comme une
      sortie ;
   3. l'évaluation Stockfish de la partie en multipv, calculée en local
-     pour épargner ce travail à l'analyste ; --sans-stockfish la lui
-     laisse.
+     pour épargner ce travail à l'analyste. Le moteur est obligatoire.
 
 Avant la collecte, sur un terminal interactif, le script demande votre
 camp si les en-têtes ne le donnent pas, puis vos réponses aux questions
-de démarrage du projet d'analyse, rangées dans contexte.md et reprises en
+de démarrage, rangées dans contexte.md et reprises en
 tête de la synthèse.
+
+Votre pseudo, votre cadence habituelle et votre niveau ne sont pas dans
+le code : ils vous sont demandés une seule fois, au premier lancement sur
+un terminal, puis gardés dans un fichier de réglages que vous pouvez
+modifier à la main.
+
+À côté de l'archive, le script écrit le prompt d'analyse de la partie,
+tiré du modèle prompt-modele.txt : vous le collez dans la conversation,
+l'archive en pièce jointe. Avec --prompt-seul, c'est un prompt court,
+tiré de prompt-seul-modele.txt, qui porte la partie et les évaluations
+de Stockfish : il se colle seul, sans pièce jointe, et aucune archive
+n'est alors écrite.
 
 Le résultat est une archive zip contenant les données brutes ainsi qu'un
 fichier de synthèse unique, destiné à être joint à une conversation
@@ -34,12 +45,15 @@ from __future__ import annotations
 
 import argparse
 import codecs
+import concurrent.futures
+import configparser
 import contextlib
 import csv
 import datetime
 import http.client
 import io
 import json
+import logging
 import math
 import os
 import pathlib
@@ -69,14 +83,41 @@ import zipfile
 #     marche à suivre, ou on le crée si vous avez passé --installer-venv.
 # ===========================================================================
 
-#: Vrai sous macOS. Les emplacements par défaut et les commandes
-#: d'installation proposées dans les messages en dépendent. Sous Debian,
-#: rien ne change par rapport aux versions précédentes.
+
+def est_fichier(candidat: pathlib.Path) -> bool:
+    """
+    Vrai si le chemin désigne un fichier, faux dans tous les autres cas.
+
+    Path.is_file() rend faux pour un fichier absent, mais laisse passer
+    d'autres erreurs du système : nom trop long, répertoire interdit. Un
+    texte collé par mégarde à la place d'un nom de fichier finissait
+    ainsi en erreur inattendue. Ici, ce que le système refuse de
+    regarder n'est pas un fichier lisible, et le message habituel suit.
+    """
+    try:
+        return candidat.is_file()
+    except OSError:
+        return False
+
+
+def est_repertoire(candidat: pathlib.Path) -> bool:
+    """Vrai si le chemin désigne un répertoire, faux dans les autres cas."""
+    try:
+        return candidat.is_dir()
+    except OSError:
+        return False
+
+
+#: Vrai sous macOS. Les commandes d'installation proposées dans les
+#: messages et l'emplacement du moteur en dépendent.
 EST_MACOS = sys.platform == "darwin"
 
-#: Répertoire utilisateur des données du script sous macOS : vous n'avez
-#: besoin d'aucun droit root, contrairement à /opt et à /usr/local.
-DONNEES_MACOS = "~/.local/share/collecte-partie"
+#: Répertoire des données du script, dans le répertoire personnel sous
+#: Debian comme sous macOS : l'environnement virtuel et le catalogue y
+#: vont, et vous n'avez besoin d'aucun droit root pour les installer.
+#: Jusqu'à la version 3.8.0, Debian les rangeait dans /opt/venv/lichess
+#: et dans /usr/local/share.
+DONNEES = "~/.local/share/IAnalyze"
 
 #: Commandes d'installation des prérequis, reprises dans les messages et
 #: dans l'aide. Sous macOS, le Python de Homebrew fournit déjà le module
@@ -89,11 +130,11 @@ else:
     CMD_PAQUET_STOCKFISH = "apt install stockfish"
 
 #: Emplacement par défaut de l'environnement virtuel dédié.
-VENV_DEFAUT = (DONNEES_MACOS + "/venv") if EST_MACOS else "/opt/venv/lichess"
+VENV_DEFAUT = DONNEES + "/venv"
 
 #: Variable d'environnement servant de garde-fou contre une relance en
 #: boucle si l'environnement virtuel existe mais reste incomplet.
-MARQUEUR_RELANCE = "COLLECTE_PARTIE_DEJA_RELANCE"
+MARQUEUR_RELANCE = "IANALYZE_DEJA_RELANCE"
 
 #: Jeton en cours d'utilisation, conservé uniquement pour que le gestionnaire
 #: d'erreurs de dernier recours puisse l'expurger d'un message inattendu.
@@ -110,6 +151,16 @@ try:
 except ImportError:
     CHESS_DISPONIBLE = False
 
+#: Sur une partie qui contient un coup nul, python-chess écrit à chaque
+#: position suivante "Not transmitting history with null moves to UCI
+#: engine" : il prévient qu'il donne au moteur la position seule, sans
+#: l'historique des coups. Les évaluations n'en dépendent pas, et le coup
+#: nul est déjà signalé dans le journal et dans la synthèse : ce message,
+#: en anglais et répété, est écarté. Les autres avis de la bibliothèque
+#: continuent de s'afficher.
+logging.getLogger("chess.engine").addFilter(
+    lambda avis: "null moves" not in avis.getMessage())
+
 
 def python_du_venv(venv: str) -> pathlib.Path:
     """Renvoie le chemin de l'interpréteur d'un environnement virtuel."""
@@ -125,7 +176,7 @@ def venv_operationnel(venv: str) -> bool:
     environnement fonctionnel.
     """
     interpreteur = python_du_venv(venv)
-    if not interpreteur.is_file():
+    if not est_fichier(interpreteur):
         return False
     try:
         subprocess.run([str(interpreteur), "-c", "import chess"],
@@ -146,7 +197,7 @@ def installer_venv(venv: str) -> None:
     racine = pathlib.Path(os.path.expanduser(venv))
     interpreteur = python_du_venv(venv)
 
-    if not interpreteur.is_file():
+    if not est_fichier(interpreteur):
         journal("Création de l'environnement virtuel : %s" % racine)
         try:
             racine.parent.mkdir(parents=True, exist_ok=True)
@@ -201,8 +252,8 @@ def relancer_dans_venv(venv: str, argv: list[str]) -> None:
             "Réparez-le avec : %s --installer-venv --venv %s"
             % (venv, script, venv))
 
-    if interpreteur.is_file():
-        journal("Module chess absent, relance via %s" % interpreteur)
+    if est_fichier(interpreteur):
+        journal("Environnement virtuel : relance via %s" % interpreteur)
         os.environ[MARQUEUR_RELANCE] = "1"
         try:
             os.execv(str(interpreteur), [str(interpreteur), script] + argv)
@@ -269,11 +320,8 @@ CATALOGUE_SOURCE = ("https://raw.githubusercontent.com/lichess-org/"
                     "chess-openings/master/{partie}.tsv")
 CATALOGUE_PARTIES = ("a", "b", "c", "d", "e")
 
-#: Répertoire par défaut du catalogue local, et nom de son index. Sous
-#: macOS, /usr/local/share n'est pas inscriptible sans root : le catalogue
-#: va dans le répertoire utilisateur du script.
-CATALOGUE_DEFAUT = (DONNEES_MACOS if EST_MACOS
-                    else "/usr/local/share/collecte-partie")
+#: Répertoire par défaut du catalogue local, et nom de son index.
+CATALOGUE_DEFAUT = DONNEES
 CATALOGUE_INDEX = "catalogue.tsv"
 
 #: Version du format de l'index, vérifiée au chargement.
@@ -282,14 +330,147 @@ CATALOGUE_FORMAT = "1"
 #: Numéro de coup dans une ligne du catalogue, "1." ou "12." par exemple.
 RE_NUMERO_COUP = re.compile(r"\d+\.+")
 
-#: Pseudos du joueur, séparés par des virgules. Ils sont cherchés, sans
-#: tenir compte de la casse, dans les balises White et Black pour déduire
-#: son camp ; le premier sert à compléter une balise vide.
-PSEUDOS_DEFAUT = "DeuZa42"
+#: Fichier de réglages de l'utilisateur, au même endroit sous Debian et
+#: sous macOS. Il porte ce qui dépend de la personne et non de la partie :
+#: ses pseudos et sa cadence habituelle. Rien de personnel ne figure donc
+#: dans ce script, que chacun peut reprendre tel quel.
+#: Les répertoires portent le nom du projet, IAnalyze, et non celui du
+#: script : il en va de même du catalogue et des données sous macOS.
+REGLAGES_DEFAUT = "~/.config/IAnalyze/reglages.ini"
 
-#: Questions de démarrage du projet d'analyse, avec le défaut que retient
+#: Section du fichier de réglages qui décrit le joueur.
+REGLAGES_SECTION = "joueur"
+
+#: Clefs connues de cette section, avec les lignes de commentaire écrites
+#: au-dessus de chacune dans le fichier. Les pseudos sont cherchés, sans
+#: tenir compte de la casse, dans les balises White et Black pour déduire
+#: le camp du joueur ; le premier sert à compléter une balise vide.
+REGLAGES_CLEFS = (
+    ("pseudos",
+     ("Vos noms de joueur, séparés par des virgules. Ils sont cherchés,",
+      "sans tenir compte de la casse, dans les balises White et Black",
+      "pour déduire votre camp. L'option --pseudos les remplace le temps",
+      "d'un lancement.")),
+    ("cadence",
+     ("Votre cadence habituelle, proposée quand la balise TimeControl",
+      "d'une partie ne la donne pas. Formes admises :",
+      "  15+10                 temps réel, minutes puis incrément en",
+      "                        secondes",
+      "  14 jours              correspondance, délai fixe par coup",
+      "  10 coups en 50 jours  correspondance, coups par période",
+      "  5 jours + 36 heures   correspondance, capital de départ puis",
+      "                        incrément par coup, en heures ou en",
+      "                        jours ; ajoutez au besoin \", plafond 20",
+      "                        jours\" et \", réserve 50 jours\"",
+      "  inconnue")),
+    ("niveau",
+     ("Votre niveau, en points Elo approximatifs, ou inconnu. Il est",
+      "transmis à l'analyste, qui y adapte ses explications. Sans lui,",
+      "c'est l'Elo de votre balise dans la partie qui sert.")),
+)
+
+#: Bornes d'un niveau exprimé en points Elo.
+NIVEAU_MIN, NIVEAU_MAX = 100, 3500
+
+#: Modèle du prompt d'analyse, cherché à côté du script, et suffixe du
+#: prompt écrit à côté de l'archive.
+PROMPT_MODELE = "prompt-modele.txt"
+PROMPT_SUFFIXE = ".prompt.txt"
+
+#: Modèle du prompt court de --prompt-seul : quelques consignes, la partie
+#: et les évaluations du moteur, à coller seul, sans pièce jointe.
+PROMPT_SEUL_MODELE = "prompt-seul-modele.txt"
+
+#: Valeur par laquelle un modèle place la partie. Avec --prompt-seul, un
+#: modèle qui ne la placerait pas ne donnerait rien à analyser.
+PROMPT_DONNEES = "{{PARTIE_PGN}}"
+
+#: Repères du modèle. Une ligne commençant par PROMPT_DIRECTIVE est une
+#: directive, jamais recopiée ; une valeur s'écrit entre doubles accolades.
+PROMPT_DIRECTIVE = "#!"
+RE_VALEUR_MODELE = re.compile(r"\{\{([A-Za-z_]+)\}\}")
+
+#: Conditions que connaît une directive "si", et valeurs remplaçables. Un
+#: nom absent de ces listes arrête le script avant la collecte.
+PROMPT_CONDITIONS = ("STOCKFISH", "EXPLORATEUR", "BASE_LICHESS",
+                     "BASE_MAITRES", "REPONSES",
+                     "CAMP_CONNU", "PSEUDO_CONNU", "NIVEAU_DECLARE",
+                     "RESULTAT_CONTREDIT", "CONSIGNES_DONNEES",
+                     "OUVERTURE_CONNUE", "COUVERTURE_PARTIELLE", "COUP_NUL",
+                     "PEU_DE_COUPS_FAIBLES", "AUCUN_COUP_FAIBLE")
+PROMPT_VALEURS = ("VERSION", "DEPOT", "ARCHIVE", "PSEUDOS", "CAMP", "NIVEAU",
+                  "CADENCE", "ANNOTATEUR", "BASE", "SEUIL_IMPRECISION",
+                  "SEUIL_ERREUR", "SEUIL_GAFFE", "PROFONDEUR", "MULTIPV",
+                  "PARTIE_PGN", "TABLEAU_MOTEUR", "ALERTE_RESULTAT",
+                  "CONSIGNES_JOUEUR", "OUVERTURE", "DEMI_COUPS",
+                  "DEMI_COUPS_EVALUES", "COUPS_FAIBLES_JOUEUR")
+
+#: Nombre d'erreurs que le prompt court demande dans son bilan. Quand le
+#: tableau du moteur en marque moins chez le joueur, le prompt donne leur
+#: nombre réel : un LLM à qui l'on en réclame trois en invente une.
+ERREURS_DU_BILAN = 3
+
+#: Valeur de la balise Annotator quand les réglages n'en donnent pas : le
+#: script ignore quel modèle rédigera l'analyse.
+ANNOTATEUR_DEFAUT = ("votre nom de modèle, suivi de son éditeur entre "
+                     "parenthèses")
+
+#: Libellé d'une cadence inconnue, quand ni la balise TimeControl ni les
+#: réglages ne la donnent.
+CADENCE_DEFAUT = "non précisée"
+
+#: Catégories de cadence de Lichess, de la plus lente à la plus rapide,
+#: chacune avec la durée estimée, en secondes, à partir de laquelle elle
+#: s'applique. La durée estimée d'une partie vaut le temps initial plus
+#: COUPS_ESTIMES fois l'incrément. Bornes et formule reprises du source de
+#: Lichess (scalachess : Speed.scala et Clock.scala). Au delà de six
+#: heures, Lichess parle de correspondance ; une cadence saisie comme du
+#: temps réel reste ici "classique".
+CATEGORIES_CADENCE = ((1500, "classique"), (480, "rapide"), (180, "blitz"),
+                      (30, "bullet"), (0, "ultrabullet"))
+COUPS_ESTIMES = 40
+
+#: Formes de cadence admises dans le fichier de réglages : "15+10", minutes
+#: par joueur puis incrément en secondes, à la manière de Lichess, et
+#: "14 jours" pour la correspondance. Les autres valeurs de
+#: CADENCES_INCONNUES désignent une cadence inconnue.
+RE_CADENCE_REELLE = re.compile(r"([0-9]{1,5})\s*\+\s*([0-9]{1,5})")
+RE_CADENCE_JOURS = re.compile(r"([0-9]{1,4})\s*(?:j|jour|jours)")
+
+#: Correspondance par période : "10 coups en 50 jours". C'est la cadence
+#: dite standard de l'ICCF, le temps économisé sur une période étant
+#: reporté sur la suivante.
+RE_CADENCE_PERIODE = re.compile(
+    r"([0-9]{1,3})\s*coups?\s*en\s*([0-9]{1,4})\s*(?:j|jour|jours)")
+
+#: Correspondance à capital de temps : "5 jours + 36 heures", suivi au
+#: besoin de ", plafond 20 jours" et de ", réserve 50 jours". Un capital
+#: est donné au départ, un incrément s'y ajoute à chaque coup, un plafond
+#: peut le borner, et une réserve peut exister à côté, où le joueur puise
+#: à sa guise. chess-mail.com en est la forme simple (5 jours, 36 heures
+#: par coup, plafond de 20 jours), le Triple Block de l'ICCF la forme
+#: complète (50 jours, un incrément en jours, plafond de 50 jours, réserve
+#: de 50 ou 75 jours). L'incrément porte son unité, heures ou jours : un
+#: jour et demi ne s'écrit pas en jours entiers.
+RE_CADENCE_CAPITAL = re.compile(
+    r"([0-9]{1,4})\s*(?:j|jour|jours)\s*\+\s*([0-9]{1,4})\s*"
+    r"(h|heure|heures|j|jour|jours)"
+    r"(?:\s*,?\s*plafond\s*([0-9]{1,4})\s*(?:j|jour|jours))?"
+    r"(?:\s*,?\s*r[ée]serve\s*([0-9]{1,4})\s*(?:j|jour|jours))?")
+
+#: Incrément saisi avec son unité : "36h" ou "3j".
+RE_INCREMENT = re.compile(r"([0-9]{1,4})\s*(h|heure|heures|j|jour|jours)")
+CADENCES_INCONNUES = ("", "?", "inconnue", "non précisée")
+
+#: Balise TimeControl du standard PGN, dans ses deux formes les plus
+#: courantes : "600+5", secondes puis incrément, et "300", temps seul.
+RE_TIMECONTROL = re.compile(r"([0-9]{1,6})(?:\+([0-9]{1,5}))?")
+
+#: Cadence inconnue, valeur de repli.
+CADENCE_INCONNUE = {"type": "inconnue"}
+
+#: Questions de démarrage, avec le défaut que retient
 #: une réponse vide : libellé dans contexte.md, question, défaut.
-CADENCE_DEFAUT = "correspondance, 14 jours par coup"
 QUESTIONS_CONTEXTE = (
     ("a. Périmètre",
      "Périmètre : les N premiers coups, ou la partie complète ?",
@@ -319,6 +500,10 @@ SEUIL_GAFFE = 300
 #: une convention de calcul, non une évaluation du moteur : il n'est pas
 #: affiché.
 SEUIL_ECART_MAT = 10000
+
+#: Valeur à partir de laquelle une évaluation bornée est celle d'un mat :
+#: valeur_pour_trait ramène un mat en n coups à 100000 - n.
+SEUIL_MAT = 90000
 
 #: Erreurs et gaffes reprises au plus, par camp, dans le palmarès.
 PALMARES_MAX = 5
@@ -354,10 +539,15 @@ RE_ID_SOURCE = re.compile(r"[A-Za-z0-9]{8}(?:[A-Za-z0-9]{4})?")
 
 #: Version du script, selon le versionnage sémantique. Elle est reprise
 #: dans l'en-tête d'agent : c'est le seul endroit à modifier.
-VERSION = "3.5.8"
+VERSION = "4.0.0"
+
+#: Adresse du dépôt du projet, citée en tête du prompt d'analyse pour
+#: que l'analyste, ou toute personne à qui le prompt est transmis,
+#: sache d'où viennent le prompt et l'archive.
+DEPOT = "https://github.com/deuza/IAnalyze"
 
 #: En-tête d'agent, par politesse envers l'API.
-UA = "collecte-partie/%s (analyse personnelle)" % VERSION
+UA = "IAnalyze/%s (+%s)" % (VERSION, DEPOT)
 
 
 # ===========================================================================
@@ -451,6 +641,17 @@ def expurger(texte: str, jeton: str | None) -> str:
     return texte
 
 
+#: Profondeur de recherche la plus grande admise. Au delà, une seule
+#: position occuperait le moteur des heures, sans rien apporter à
+#: l'analyse d'une partie : une faute de frappe, "180" pour "18", ne
+#: doit pas bloquer la machine.
+PROFONDEUR_MAX = 60
+
+#: Plus grand compte de parties tenu pour plausible dans une réponse de
+#: l'explorateur. La base Lichess en compte quelques milliards.
+COMPTE_MAX = 10 ** 15
+
+
 def entier(valeur) -> int:
     """
     Convertit prudemment une valeur venue d'un JSON externe en entier.
@@ -461,9 +662,14 @@ def entier(valeur) -> int:
     que int() refuse par une OverflowError.
     """
     try:
-        return int(valeur)
+        nombre = int(valeur)
     except (TypeError, ValueError, OverflowError):
         return 0
+    # Un compte de parties est positif, et aucune base n'en tient plus de
+    # quelques milliards. Hors de ces bornes la valeur est tenue pour
+    # absente : négative, elle donnerait une fréquence de -5 %, énorme,
+    # elle ferait échouer la division qui suit.
+    return nombre if 0 <= nombre <= COMPTE_MAX else 0
 
 
 #: Marques d'ordre des octets reconnues en tête de fichier. Celles de
@@ -656,7 +862,8 @@ def ecrire_texte(chemin: pathlib.Path, texte: str) -> None:
 RE_NOM_RISQUE = re.compile(
     r'[\x00-\x1f\x7f-\x9f/\\:*?"<>|\ud800-\udfff\ufffd]')
 
-#: Longueur maximale de l'étiquette reprise dans le nom du dossier.
+#: Longueur maximale, en octets, de l'étiquette reprise dans le nom du
+#: dossier.
 ETIQUETTE_MAX = 80
 
 
@@ -665,11 +872,22 @@ def etiquette_sure(nom: str) -> str:
     Tire d'un nom de fichier une étiquette sûre pour le dossier de
     travail et pour les chemins de l'archive.
 
-    Chaque caractère à risque devient "_". Les points et les espaces de
-    bord sont retirés, la longueur est bornée, et une étiquette vide
-    devient "partie".
+    Chaque caractère à risque devient "_", chaque suite d'espaces un
+    tiret : un nom d'archive sans espace se passe de guillemets dans une
+    ligne de commande. Les points et les tirets de bord sont retirés, et
+    une étiquette vide devient "partie".
+
+    La longueur est bornée en octets, non en caractères : c'est en
+    octets que le système de fichiers compte, et quatre-vingts
+    idéogrammes en font deux cent quarante. Bornée en caractères,
+    l'étiquette laissait passer des noms que l'archive, une fois
+    l'horodatage ajouté, ne pouvait plus porter.
     """
-    sure = RE_NOM_RISQUE.sub("_", nom)[:ETIQUETTE_MAX].strip(" .")
+    sure = RE_NOM_RISQUE.sub("_", re.sub(r"\s+", "-", nom.strip()))
+    sure = sure.encode("utf-8", errors="surrogateescape")[:ETIQUETTE_MAX]
+    # Une coupe en plein caractère laisse des octets orphelins : ils sont
+    # écartés au décodage.
+    sure = sure.decode("utf-8", errors="ignore").strip("-.")
     return sure or "partie"
 
 
@@ -700,7 +918,7 @@ def lire_jeton(chemin: str) -> str:
     sont contrôlés au passage.
     """
     p = pathlib.Path(os.path.expanduser(chemin))
-    if not p.is_file():
+    if not est_fichier(p):
         raise SystemExit("Jeton absent : %s introuvable." % p)
 
     try:
@@ -721,7 +939,11 @@ def lire_jeton(chemin: str) -> str:
                 % (p, mode & 0o777))
 
     jeton = contenu.strip()
-    if not jeton or any(c.isspace() for c in jeton):
+    # Une affectation, LICHESS_TOKEN=lip_..., ou des guillemets autour du
+    # jeton tiennent en un seul mot : sans ce contrôle, ils passaient, et
+    # Lichess répondait 401 sans que rien ne désigne le fichier.
+    if (not jeton or any(c.isspace() for c in jeton)
+            or any(c in jeton for c in "=\"'")):
         raise SystemExit("Le fichier %s doit contenir le jeton seul, sans "
                          "espace ni affectation de variable." % p)
     # Le jeton part dans un en-tête HTTP : hors de l'ASCII imprimable, il
@@ -740,7 +962,12 @@ HOTES_LICHESS = ("lichess.org", "www.lichess.org")
 #: Rubriques du site dont le nom fait huit lettres : elles ont la forme
 #: d'un identifiant de partie sans en être un. https://lichess.org/analysis
 #: était pris pour la partie "analysis" et demandé à Lichess.
-RUBRIQUES_LICHESS = ("analysis", "training", "practice", "streamer")
+RUBRIQUES_LICHESS = ("analysis", "training", "practice", "streamer",
+                     "features", "insights", "learning", "username",
+                     "patron", "calendar", "storm", "racer", "coach",
+                     "broadcast", "tournament", "simul", "swiss", "team",
+                     "forum", "player", "games", "editor", "variant",
+                     "paste", "contact", "mobile", "about", "account")
 
 #: Préfixes de chemin admis devant l'identifiant, en plus de la forme
 #: directe /<identifiant> : la partie embarquée et l'export PGN.
@@ -751,7 +978,8 @@ def extraire_id(source: str) -> str | None:
     """
     Extrait l'identifiant de partie d'une URL ou d'une chaîne brute.
 
-    Accepte https://lichess.org/xvoiNy2C, /xvoiNy2C/black, l'identifiant
+    Accepte https://lichess.org/<identifiant>, la même adresse suivie de
+    /black, l'identifiant
     seul, ainsi que les identifiants de coup à douze caractères dont seuls
     les huit premiers sont conservés. L'identifiant, seul ou dans l'URL,
     doit faire exactement 8 ou 12 caractères alphanumériques.
@@ -763,9 +991,15 @@ def extraire_id(source: str) -> str | None:
     à Lichess.
     """
     source = source.strip()
-    if source.startswith(("http://", "https://")):
-        url = urllib.parse.urlparse(source)
-        if (url.hostname or "").lower() not in HOTES_LICHESS:
+    if source.lower().startswith(("http://", "https://")):
+        try:
+            url = urllib.parse.urlparse(source)
+            hote = (url.hostname or "").lower()
+        except ValueError:
+            # Crochets mal placés, par exemple : urlparse y voit une
+            # adresse IPv6 invalide. Ce n'est pas une partie Lichess.
+            return None
+        if hote not in HOTES_LICHESS:
             return None
         morceaux = [m for m in url.path.split("/") if m]
         for prefixe in PREFIXES_PARTIE:
@@ -776,10 +1010,11 @@ def extraire_id(source: str) -> str | None:
         # premier segment de huit caractères où qu'il soit, l'identifiant
         # d'une étude par exemple.
         if (morceaux and RE_ID_SOURCE.fullmatch(morceaux[0])
-                and morceaux[0] not in RUBRIQUES_LICHESS):
+                and morceaux[0].lower() not in RUBRIQUES_LICHESS):
             return morceaux[0][:8]
         return None
-    if RE_ID_SOURCE.fullmatch(source) and source not in RUBRIQUES_LICHESS:
+    if (RE_ID_SOURCE.fullmatch(source)
+            and source.lower() not in RUBRIQUES_LICHESS):
         return source[:8]
     return None
 
@@ -814,16 +1049,111 @@ def telecharger_pgn(identifiant: str, delai: int) -> str:
                          % getattr(err, "reason", err)) from err
 
 
+#: Ce que le corps d'une partie peut contenir hors des commentaires : un
+#: résultat, un numéro de coup, un NAG, un coup en notation anglaise ou un
+#: signe d'appréciation. L'ordre compte : le résultat puis le roque écrit
+#: avec des zéros passent avant le numéro de coup, qui commence lui aussi
+#: par un chiffre.
+RE_JETON_PGN = re.compile(
+    r"(?:1-0|0-1|1/2-1/2|\*)(?![\w/-])"
+    r"|(?:O-O-O|O-O|0-0-0|0-0|--|Z0|0000|@@@@"
+    r"|[KQRBN]?[a-h]?[1-8]?[-x]?[a-h][1-8](?:=?[QRBNKqrbnk])?)"
+    r"[+#]?[!?]{0,2}(?![\w=])"
+    r"|\d+\.*"
+    r"|\$\d+"
+    r"|[!?]{1,2}")
+
+
+def controler_lexique(texte_pgn: str) -> None:
+    """
+    Refuse un PGN dont le corps contient autre chose que des coups.
+
+    python-chess saute sans rien dire les caractères qu'il ne reconnaît
+    pas. Un coup écrit en notation française, "Cf3", est alors lu "f3",
+    un coup de pion : la partie analysée n'est plus celle qui a été
+    jouée, et rien ne le signale. De même, une accolade jamais fermée
+    avale toute la suite de la partie. Ce contrôle passe donc avant la
+    lecture : il ne joue aucun coup, il vérifie seulement que chaque mot
+    du corps a la forme d'un mot de PGN.
+
+    Sont admis hors des commentaires : les balises en début de ligne, les
+    numéros de coup, les coups en notation anglaise, les NAG, les signes
+    d'appréciation, les parenthèses de variante et le résultat.
+    """
+    i, n = 0, len(texte_pgn)
+    profondeur = 0
+    ligne = 1
+    debut_de_ligne = True
+    while i < n:
+        c = texte_pgn[i]
+        if c == "\n":
+            ligne += 1
+            debut_de_ligne = True
+            i += 1
+        elif c.isspace():
+            i += 1
+        elif c == "{":
+            fin = texte_pgn.find("}", i)
+            if fin < 0:
+                raise SystemExit(
+                    "PGN corrompu : le commentaire ouvert par une accolade "
+                    "à la ligne %d n'est jamais fermé." % ligne)
+            ligne += texte_pgn.count("\n", i, fin)
+            i = fin + 1
+            debut_de_ligne = False
+        elif c == ";" or (debut_de_ligne and c in "[%"):
+            # Commentaire de fin de ligne, balise, ou ligne d'échappement :
+            # tout va jusqu'au saut de ligne.
+            fin = texte_pgn.find("\n", i)
+            i = n if fin < 0 else fin
+        elif c == "(":
+            profondeur += 1
+            i += 1
+            debut_de_ligne = False
+        elif c == ")":
+            if profondeur == 0:
+                raise SystemExit(
+                    "PGN corrompu : parenthèse fermante sans variante "
+                    "ouverte, ligne %d." % ligne)
+            profondeur -= 1
+            i += 1
+            debut_de_ligne = False
+        else:
+            m = RE_JETON_PGN.match(texte_pgn, i)
+            if m is None:
+                mot = re.match(r"\S+", texte_pgn[i:i + 40])
+                raise SystemExit(
+                    "PGN corrompu : \"%s\", ligne %d, n'est ni un coup en "
+                    "notation anglaise (K, Q, R, B, N) ni un autre élément "
+                    "de PGN. Une partie notée en français ou en figurines "
+                    "doit être convertie, un texte libre placé entre "
+                    "accolades."
+                    % (nettoyer_valeur(mot.group(0) if mot else c)[:20],
+                       ligne))
+            i = m.end()
+            debut_de_ligne = False
+    if profondeur:
+        raise SystemExit("PGN corrompu : %d variante(s) ouverte(s) par une "
+                         "parenthèse et jamais fermée(s)." % profondeur)
+
+
 def charger_partie(texte_pgn: str) -> chess.pgn.Game:
     """
-    Analyse le PGN et renvoie la première partie qu'il contient.
+    Analyse le PGN et renvoie la partie qu'il contient, qui doit être seule.
 
     Le parseur de python-chess est tolérant : sur un coup illégal il
     s'arrête sans lever d'exception et consigne l'erreur dans la partie. On
     refuse un tel PGN plutôt que d'analyser une partie tronquée en silence.
     """
+    controler_lexique(texte_pgn)
     flux = io.StringIO(texte_pgn)
-    partie = chess.pgn.read_game(flux)
+    try:
+        partie = chess.pgn.read_game(flux)
+    except (IndexError, ValueError) as err:
+        # Filet : le contrôle lexical écarte les cas connus, mais aucune
+        # entrée ne doit finir en erreur inattendue.
+        raise SystemExit("PGN corrompu : python-chess n'a pas pu le lire "
+                         "(%s)." % type(err).__name__) from err
     if partie is None:
         raise SystemExit("PGN illisible ou vide.")
     if partie.errors:
@@ -832,6 +1162,17 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
                                      for e in partie.errors))
     if not list(partie.mainline_moves()):
         raise SystemExit("PGN sans aucun coup dans la ligne principale.")
+    # IAnalyze analyse une partie entière, du premier coup au dernier :
+    # l'explorateur, le catalogue des ouvertures et les consignes du
+    # prompt supposent tous la position initiale. Une partie reprise d'une
+    # position, donnée par une balise FEN, est donc refusée ici, plutôt
+    # qu'analysée à moitié avec un prompt qui ne lui correspond pas.
+    if partie.board().fen() != chess.STARTING_FEN:
+        raise SystemExit(
+            "La partie ne commence pas à la position initiale, elle part "
+            "d'une balise FEN. IAnalyze analyse une partie entière, du "
+            "premier coup au dernier : pour étudier une position, "
+            "chargez-la dans un échiquier d'analyse.")
 
     # Les valeurs des balises partent dans les en-têtes de la synthèse et
     # dans le journal : on en retire tabulations et caractères de contrôle
@@ -847,9 +1188,18 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
         raise SystemExit("Variante non prise en charge : %s. Ce script ne "
                          "traite que les échecs standard." % variante)
 
-    if chess.pgn.read_game(flux) is not None:
-        journal("Attention : le PGN contient plusieurs parties, seule la "
-                "première est traitée.")
+    # Une seule partie par fichier. Analyser la première d'une série
+    # n'aurait pas de sens : rien ne dit que c'est celle que vous vouliez,
+    # et partie.pgn, recopié dans l'archive, les porterait toutes.
+    autres = 0
+    try:
+        while chess.pgn.read_game(flux) is not None:
+            autres += 1
+    except (IndexError, ValueError):
+        autres += 1
+    if autres:
+        raise SystemExit("Le PGN contient %d parties : isolez celle à "
+                         "analyser dans un fichier à part." % (autres + 1))
     return partie
 
 
@@ -858,39 +1208,440 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
 #
 # Les questions passent par la sortie d'erreur et l'entrée standard, jamais
 # par la sortie standard, réservée au chemin de l'archive : la forme
-# ARCHIVE=$(./collecte-partie.py ...) continue de fonctionner, questions
+# ARCHIVE=$(./ianalyze.py ...) continue de fonctionner, questions
 # comprises. Elles ne sont posées que sur un terminal interactif.
 # ===========================================================================
 
 def questions_possibles(sans_questions: bool) -> bool:
-    """Vrai si l'on peut poser des questions : terminal des deux côtés."""
-    return (not sans_questions and sys.stdin.isatty()
-            and sys.stderr.isatty())
+    """
+    Vrai si l'on peut poser des questions : terminal des deux côtés.
+
+    Un flux fermé par l'appelant, "<&-" dans un script, vaut None en
+    Python : ce n'est pas un terminal, et aucune question n'est posée.
+    """
+    return (not sans_questions
+            and sys.stdin is not None and sys.stderr is not None
+            and sys.stdin.isatty() and sys.stderr.isatty())
 
 
-def demander(question: str, defaut: str | None = None) -> str | None:
+#: Longueur maximale d'une réponse à une question de démarrage. Aucune
+#: n'en demande autant : au delà, c'est un texte collé par mégarde.
+REPONSE_MAX = 255
+
+#: Signes qu'un nom de joueur ne peut pas porter : le nom part dans une
+#: balise du PGN, où un guillemet ou un crochet la fermerait trop tôt, et
+#: où une accolade ouvrirait un commentaire aux yeux d'un lecteur strict.
+SIGNES_INTERDITS_NOM = '"\\[]{}'
+
+
+def demander(question: str, defaut: str | None = None,
+             nom: bool = False) -> str | None:
     """
     Pose une question et renvoie la réponse nettoyée.
 
     Une réponse vide donne le défaut, ou une chaîne vide sans défaut. La
     fin de flux (Ctrl-D) renvoie None : l'appelant applique alors ses
     défauts sans insister.
+
+    Une réponse de plus de REPONSE_MAX caractères est refusée et la
+    question reposée, de même, avec `nom`, qu'une réponse portant l'un
+    des signes de SIGNES_INTERDITS_NOM.
     """
     invite = (question if defaut is None
               else "%s (Entrée : %s)" % (question, defaut))
-    sys.stderr.write(invite + " ")
-    sys.stderr.flush()
-    ligne = sys.stdin.readline()
-    if not ligne:
-        sys.stderr.write("\n")
+    while True:
+        sys.stderr.write(invite + " ")
+        sys.stderr.flush()
+        ligne = sys.stdin.readline()
+        if not ligne:
+            sys.stderr.write("\n")
+            return None
+        if RE_SUBSTITUTS.search(ligne):
+            # Saisie que l'encodage du terminal n'a pas su décoder : on
+            # retrouve les octets tapés et on leur applique le même repli
+            # que pour un fichier, cp1252 puis latin-1.
+            ligne = decoder_octets(
+                ligne.encode("utf-8", errors="surrogateescape"))[0]
+        reponse = nettoyer_valeur(ligne).strip()
+        if len(reponse) > REPONSE_MAX:
+            sys.stderr.write("  Réponse trop longue : %d caractères au "
+                             "plus.\n" % REPONSE_MAX)
+            continue
+        if nom and any(c in SIGNES_INTERDITS_NOM for c in reponse):
+            sys.stderr.write("  Un nom ne peut contenir ni guillemet, ni "
+                             "barre oblique inversée, ni crochet, ni "
+                             "accolade.\n")
+            continue
+        return reponse or (defaut or "")
+
+
+# ---------------------------------------------------------------------------
+# Cadence
+#
+# Une cadence est un petit dictionnaire, de l'une de ces cinq formes :
+#
+#     {"type": "reel", "initial": 900, "increment": 10}    en secondes
+#     {"type": "correspondance", "jours": 14}              délai par coup
+#     {"type": "correspondance", "coups": 10,              coups par
+#      "periode": 50}                                      période, en jours
+#     {"type": "correspondance", "capital": 5,             jours au départ,
+#      "increment": 36, "plafond": 20, "reserve": 0}       heures par coup,
+#                                                          plafond et
+#                                                          réserve en jours,
+#                                                          0 s'il n'y en a
+#                                                          pas
+#     {"type": "inconnue"}
+#
+# La correspondance connaît en effet trois systèmes :
+#
+#   - un délai fixe pour chaque coup, rien n'étant reporté d'un coup au
+#     suivant : Lichess, chess.com ;
+#   - un nombre de coups à jouer par période, le temps économisé étant
+#     reporté : cadence standard de l'ICCF, "10 coups en 50 jours" ;
+#   - un capital de temps qui grossit d'un incrément à chaque coup, avec
+#     un plafond et une réserve facultatifs : chess-mail.com, et le Triple
+#     Block de l'ICCF.
+#
+# Les deux derniers suivent les ICCF Rules en vigueur depuis le 1er janvier
+# 2026 (section 2.4). Le premier n'existe pas à l'ICCF.
+#
+# Elle n'est jamais un texte libre : la phrase que lit l'analyste est
+# rédigée ici, toujours de la même façon, à partir de nombres vérifiés.
+# ---------------------------------------------------------------------------
+
+def analyser_cadence(texte: str) -> dict | None:
+    """
+    Lit une cadence écrite dans le fichier de réglages.
+
+    Renvoie None si le texte n'a aucune des formes admises, "0+0" compris :
+    une partie sans temps ni incrément n'existe pas.
+    """
+    texte = texte.strip().casefold()
+    if texte in CADENCES_INCONNUES:
+        return dict(CADENCE_INCONNUE)
+    trouve = RE_CADENCE_REELLE.fullmatch(texte)
+    if trouve:
+        minutes, increment = int(trouve.group(1)), int(trouve.group(2))
+        if minutes == 0 and increment == 0:
+            return None
+        return {"type": "reel", "initial": 60 * minutes,
+                "increment": increment}
+    trouve = RE_CADENCE_JOURS.fullmatch(texte)
+    if trouve and int(trouve.group(1)) >= 1:
+        return {"type": "correspondance", "jours": int(trouve.group(1))}
+    trouve = RE_CADENCE_PERIODE.fullmatch(texte)
+    if trouve and int(trouve.group(1)) >= 1 and int(trouve.group(2)) >= 1:
+        return {"type": "correspondance", "coups": int(trouve.group(1)),
+                "periode": int(trouve.group(2))}
+    trouve = RE_CADENCE_CAPITAL.fullmatch(texte)
+    if trouve:
+        return cadence_a_capital(
+            int(trouve.group(1)),
+            heures_increment(int(trouve.group(2)), trouve.group(3)),
+            int(trouve.group(4) or 0), int(trouve.group(5) or 0))
+    return None
+
+
+def heures_increment(nombre: int, unite: str) -> int:
+    """Incrément en heures, d'après un nombre et son unité, h ou j."""
+    return nombre * 24 if unite.startswith("j") else nombre
+
+
+def duree_increment(heures: int) -> str:
+    """ "36 heures", ou "3 jours" quand le compte tombe juste en jours."""
+    if heures and heures % 24 == 0:
+        return pluriel(heures // 24, "jour")
+    return pluriel(heures, "heure")
+
+
+def cadence_a_capital(capital: int, increment: int, plafond: int,
+                      reserve: int = 0) -> dict | None:
+    """
+    Cadence par correspondance à capital de temps, ou None si elle est
+    incohérente : ni capital ni incrément, ou plafond sous le capital de
+    départ. `increment` est en heures, les autres durées en jours. Un
+    plafond ou une réserve nuls signifient qu'il n'y en a pas.
+    """
+    if capital == 0 and increment == 0:
         return None
-    if RE_SUBSTITUTS.search(ligne):
-        # Saisie que l'encodage du terminal n'a pas su décoder : on
-        # retrouve les octets tapés et on leur applique le même repli que
-        # pour un fichier, cp1252 puis latin-1.
-        ligne = decoder_octets(
-            ligne.encode("utf-8", errors="surrogateescape"))[0]
-    return nettoyer_valeur(ligne).strip() or (defaut or "")
+    if plafond and plafond < max(capital, 1):
+        return None
+    return {"type": "correspondance", "capital": capital,
+            "increment": increment, "plafond": plafond, "reserve": reserve}
+
+
+def cadence_de_balise(controle: str) -> dict | None:
+    """
+    Lit une balise TimeControl de la forme "600+5" ou "300", en secondes.
+
+    Les autres formes du standard (coups par période, sablier) et les
+    valeurs libres donnent None : la balise est alors citée telle quelle.
+    """
+    trouve = RE_TIMECONTROL.fullmatch(controle.strip())
+    if not trouve:
+        return None
+    initial, increment = int(trouve.group(1)), int(trouve.group(2) or 0)
+    if initial == 0 and increment == 0:
+        return None
+    return {"type": "reel", "initial": initial, "increment": increment}
+
+
+def noter_cadence(cadence: dict) -> str:
+    """Forme d'une cadence dans le fichier de réglages."""
+    if cadence["type"] == "reel":
+        return "%d+%d" % (cadence["initial"] // 60, cadence["increment"])
+    if cadence["type"] == "correspondance" and "capital" in cadence:
+        note = "%s + %s" % (pluriel(cadence["capital"], "jour"),
+                            duree_increment(cadence["increment"]))
+        if cadence["plafond"]:
+            note += ", plafond %s" % pluriel(cadence["plafond"], "jour")
+        if cadence["reserve"]:
+            note += ", réserve %s" % pluriel(cadence["reserve"], "jour")
+        return note
+    if cadence["type"] == "correspondance" and "coups" in cadence:
+        return "%s en %s" % (pluriel(cadence["coups"], "coup"),
+                             pluriel(cadence["periode"], "jour"))
+    if cadence["type"] == "correspondance":
+        return pluriel(cadence["jours"], "jour")
+    return "inconnue"
+
+
+def pluriel(nombre: int, mot: str) -> str:
+    """ "1 jour", "14 jours" : le nombre suivi du mot accordé."""
+    return "%d %s%s" % (nombre, mot, "s" if nombre > 1 else "")
+
+
+def categorie_cadence(initial: int, increment: int) -> str:
+    """Catégorie Lichess d'une cadence en temps réel (CATEGORIES_CADENCE)."""
+    estimee = initial + COUPS_ESTIMES * increment
+    for seuil, nom in CATEGORIES_CADENCE:
+        if estimee >= seuil:
+            return nom
+    return CATEGORIES_CADENCE[-1][1]
+
+
+def decrire_cadence(cadence: dict) -> str:
+    """
+    Phrase décrivant une cadence, telle qu'elle part dans contexte.md :
+    "rapide, 15 minutes + 10 secondes par coup", "blitz, 5 minutes sans
+    incrément", "correspondance, 14 jours par coup", "correspondance,
+    10 coups en 50 jours", "correspondance, capital de 5 jours + 36
+    heures par coup, plafonné à 20 jours", ou "non précisée".
+    """
+    if cadence["type"] == "correspondance" and "capital" in cadence:
+        phrase = ("correspondance, capital de %s + %s par coup"
+                  % (pluriel(cadence["capital"], "jour"),
+                     duree_increment(cadence["increment"])))
+        if cadence["plafond"]:
+            phrase += ", plafonné à %s" % pluriel(cadence["plafond"], "jour")
+        if cadence["reserve"]:
+            phrase += ", réserve de %s" % pluriel(cadence["reserve"], "jour")
+        return phrase
+    if cadence["type"] == "correspondance" and "coups" in cadence:
+        return "correspondance, %s en %s" % (
+            pluriel(cadence["coups"], "coup"),
+            pluriel(cadence["periode"], "jour"))
+    if cadence["type"] == "correspondance":
+        return "correspondance, %s par coup" % pluriel(cadence["jours"],
+                                                       "jour")
+    if cadence["type"] != "reel":
+        return CADENCE_DEFAUT
+    minutes, secondes = divmod(cadence["initial"], 60)
+    duree = []
+    if minutes or not secondes:
+        duree.append(pluriel(minutes, "minute"))
+    if secondes:
+        duree.append(pluriel(secondes, "seconde"))
+    increment = (" + %s par coup" % pluriel(cadence["increment"], "seconde")
+                 if cadence["increment"] else " sans incrément")
+    return "%s, %s%s" % (categorie_cadence(cadence["initial"],
+                                           cadence["increment"]),
+                         " ".join(duree), increment)
+
+
+def demander_entier(question: str, minimum: int,
+                    vide: int | None = None) -> int | None:
+    """
+    Demande un nombre entier d'au moins `minimum`, et repose la question
+    tant que la réponse n'en est pas un. La fin de flux renvoie None. Si
+    `vide` est donné, c'est la valeur que retient la touche Entrée seule.
+    """
+    while True:
+        reponse = demander(question)
+        if reponse is None:
+            return None
+        if reponse == "" and vide is not None:
+            return vide
+        if re.fullmatch(r"[0-9]{1,5}", reponse) and int(reponse) >= minimum:
+            return int(reponse)
+        sys.stderr.write("  Réponse attendue : un nombre entier, %d ou plus.\n"
+                         % minimum)
+
+
+def demander_cadence(libelle: str, defaut: dict) -> tuple[dict, bool] | None:
+    """
+    Demande une cadence en deux ou trois questions, toutes vérifiées.
+
+    Le type d'abord, temps réel, correspondance ou inconnue ; puis les
+    minutes par joueur et l'incrément en secondes, ou, par correspondance,
+    le système et ses nombres (voir demander_correspondance).
+    Entrée, à la première question, retient `defaut`. Renvoie la cadence
+    et un booléen disant si c'est le défaut, ou None à la fin de flux.
+    Aucun texte libre n'est accepté : une réponse hors des formes prévues
+    fait reposer la question.
+    """
+    propose = decrire_cadence(defaut)
+    while True:
+        reponse = demander("%s : [t]emps réel, [c]orrespondance ou "
+                           "[i]nconnue ?" % libelle, propose)
+        if reponse is None:
+            return None
+        if reponse == propose:
+            return defaut, True
+        choix = reponse.casefold()
+        if choix in ("t", "temps", "temps réel", "temps reel", "r", "reel",
+                     "réel"):
+            minutes = demander_entier("  Minutes par joueur ?", 0)
+            if minutes is None:
+                return None
+            increment = demander_entier("  Incrément en secondes ?", 0)
+            if increment is None:
+                return None
+            if minutes == 0 and increment == 0:
+                sys.stderr.write("  Une cadence sans temps ni incrément "
+                                 "n'existe pas.\n")
+                continue
+            return ({"type": "reel", "initial": 60 * minutes,
+                     "increment": increment}, False)
+        if choix in ("c", "corr", "correspondance"):
+            saisie = demander_correspondance()
+            if saisie is None:
+                return None
+            return saisie, False
+        if choix in ("i", "inconnue", "?"):
+            return dict(CADENCE_INCONNUE), False
+        sys.stderr.write("  Réponse attendue : t, c ou i.\n")
+
+
+def analyser_niveau(texte: str) -> int | None:
+    """
+    Lit un niveau écrit dans le fichier de réglages : un nombre de points
+    Elo entre NIVEAU_MIN et NIVEAU_MAX. Renvoie 0 pour un niveau inconnu,
+    et None pour une valeur d'une autre forme.
+    """
+    texte = texte.strip().casefold()
+    if texte in ("", "?", "inconnu"):
+        return 0
+    if (re.fullmatch(r"[0-9]{1,4}", texte)
+            and NIVEAU_MIN <= int(texte) <= NIVEAU_MAX):
+        return int(texte)
+    return None
+
+
+def demander_niveau() -> int | None:
+    """
+    Demande le niveau du joueur en points Elo, Entrée valant "inconnu" (0).
+    La question est reposée tant que la réponse n'est pas un nombre entier
+    dans les bornes. Renvoie None à la fin de flux.
+    """
+    while True:
+        reponse = demander("Votre niveau, en points Elo approximatifs ? "
+                           "(Entrée : inconnu)")
+        if reponse is None:
+            return None
+        niveau = analyser_niveau(reponse)
+        if niveau is not None:
+            return niveau
+        sys.stderr.write("  Réponse attendue : un nombre entier entre %d et "
+                         "%d, ou Entrée.\n" % (NIVEAU_MIN, NIVEAU_MAX))
+
+
+def deduire_camp(partie: chess.pgn.Game, pseudos: list[str]) -> str | None:
+    """
+    Camp du joueur d'après ses pseudos, sans poser de question : "Blancs",
+    "Noirs", ou None si aucune balise, ou les deux, portent un pseudo.
+    Sert hors terminal, où completer_entetes n'est pas appelée.
+    """
+    moi_blancs = est_pseudo(partie.headers.get("White", "?"), pseudos)
+    moi_noirs = est_pseudo(partie.headers.get("Black", "?"), pseudos)
+    if moi_blancs == moi_noirs:
+        return None
+    return "Blancs" if moi_blancs else "Noirs"
+
+
+def demander_correspondance() -> dict | None:
+    """
+    Demande une cadence par correspondance, dans l'un de ses trois
+    systèmes.
+
+    Délai fixe : un nombre de jours pour chaque coup. Coups par période :
+    un nombre de coups et une durée en jours. Capital de temps : des jours
+    au départ, un incrément par coup saisi avec son unité, puis un plafond
+    et une réserve facultatifs. Une saisie incohérente fait reprendre au
+    choix du système. Renvoie None à la fin de flux.
+    """
+    while True:
+        reponse = demander("  Correspondance : [d]élai fixe par coup, "
+                           "[p]ériode pour un nombre de coups, ou [c]apital "
+                           "de temps avec incrément ?")
+        if reponse is None:
+            return None
+        choix = reponse.casefold()
+        if choix in ("d", "delai", "délai"):
+            jours = demander_entier("  Jours par coup ?", 1)
+            if jours is None:
+                return None
+            return {"type": "correspondance", "jours": jours}
+        if choix in ("p", "periode", "période"):
+            coups = demander_entier("  Nombre de coups par période ?", 1)
+            if coups is None:
+                return None
+            periode = demander_entier("  Durée de la période, en jours ?", 1)
+            if periode is None:
+                return None
+            return {"type": "correspondance", "coups": coups,
+                    "periode": periode}
+        if choix in ("c", "capital"):
+            capital = demander_entier("  Capital de départ, en jours ?", 0)
+            if capital is None:
+                return None
+            increment = demander_increment()
+            if increment is None:
+                return None
+            plafond = demander_entier("  Plafond du capital, en jours ? "
+                                      "(Entrée : aucun)", 1, vide=0)
+            if plafond is None:
+                return None
+            reserve = demander_entier("  Réserve à côté du capital, en "
+                                      "jours ? (Entrée : aucune)", 1, vide=0)
+            if reserve is None:
+                return None
+            cadence = cadence_a_capital(capital, increment, plafond, reserve)
+            if cadence is not None:
+                return cadence
+            sys.stderr.write("  Cadence incohérente : il faut un capital ou "
+                             "un incrément, et un plafond au moins égal au "
+                             "capital de départ.\n")
+            continue
+        sys.stderr.write("  Réponse attendue : d, p ou c.\n")
+
+
+def demander_increment() -> int | None:
+    """
+    Demande l'incrément par coup, avec son unité, et le renvoie en heures :
+    "36h" donne 36, "3j" donne 72. La question est reposée tant que la
+    réponse n'a pas cette forme. Renvoie None à la fin de flux.
+    """
+    while True:
+        reponse = demander("  Incrément par coup, avec son unité, 36h ou 3j "
+                           "par exemple ?")
+        if reponse is None:
+            return None
+        trouve = RE_INCREMENT.fullmatch(reponse.casefold())
+        if trouve:
+            return heures_increment(int(trouve.group(1)), trouve.group(2))
+        sys.stderr.write("  Réponse attendue : un nombre entier suivi de h "
+                         "ou de j.\n")
 
 
 def est_pseudo(nom: str, pseudos: list[str]) -> bool:
@@ -907,6 +1658,10 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
     pour le camp du joueur, le nom donné pour l'adversaire. Un nom déjà
     présent n'est jamais remplacé. Renvoie le camp ("Blancs", "Noirs" ou
     None), l'origine de l'information et la liste des balises modifiées.
+
+    `pseudos` peut être vide, quand ni --pseudos ni les réglages n'en
+    donnent : le camp est alors toujours demandé, et le nom du joueur
+    aussi si sa balise est vide.
     """
     moi_blancs = est_pseudo(partie.headers.get("White", "?"), pseudos)
     moi_noirs = est_pseudo(partie.headers.get("Black", "?"), pseudos)
@@ -931,21 +1686,32 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
     mienne, autre = (("White", "Black") if camp == "Blancs"
                      else ("Black", "White"))
     if partie.headers.get(mienne, "?").strip() in ("", "?"):
-        partie.headers[mienne] = pseudos[0]
-        modifiees.append(mienne)
+        if pseudos:
+            partie.headers[mienne] = pseudos[0]
+            modifiees.append(mienne)
+        else:
+            # Aucun pseudo connu : pseudos[0] levait IndexError. On demande
+            # le nom, comme pour l'adversaire, et "?" laisse la balise.
+            nom = demander("Votre nom de joueur ?", "?", nom=True)
+            if nom and nom != "?":
+                partie.headers[mienne] = nom
+                modifiees.append(mienne)
     if partie.headers.get(autre, "?").strip() in ("", "?"):
-        nom = demander("Nom de l'adversaire ?", "?")
+        nom = demander("Nom de l'adversaire ?", "?", nom=True)
         if nom and nom != "?":
             partie.headers[autre] = nom
             modifiees.append(autre)
     return {"camp": camp, "origine": "déclaré", "modifiees": modifiees}
 
 
-def recueillir_contexte(partie: chess.pgn.Game, camp: dict) -> str:
+def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
+                        cadence_habituelle: dict | None = None) -> str:
     """
     Pose la question de cadence si la balise TimeControl ne la donne pas,
     puis les quatre questions de démarrage du projet, et rédige le texte
-    de contexte.md.
+    de contexte.md. `cadence_habituelle`, tirée des réglages, est la
+    cadence que propose la question ; sans elle, c'est "non précisée".
+    Une balise TimeControl de forme courante est citée, puis traduite.
 
     "(défaut)" signale une réponse validée par Entrée : l'analyste
     distingue ainsi un choix du joueur d'une valeur par défaut. Après une
@@ -975,16 +1741,393 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict) -> str:
     # correspondance : elle ne dit pas la cadence réelle, on la demande.
     controle = partie.headers.get("TimeControl", "?").strip()
     if controle not in ("", "?", "-"):
-        lignes.append("- Cadence : balise TimeControl `%s`" % controle)
+        # "600+5" se lit mal : dix minutes, ou six cents ? La balise est
+        # citée telle quelle, puis traduite quand sa forme le permet.
+        lue = cadence_de_balise(controle)
+        lignes.append("- Cadence : balise TimeControl `%s`%s"
+                      % (controle,
+                         ", soit %s" % decrire_cadence(lue) if lue else ""))
     else:
-        cadence, defaut = poser("Cadence de la partie ?", CADENCE_DEFAUT)
+        habituelle = cadence_habituelle or dict(CADENCE_INCONNUE)
+        saisie = (None if fin_de_flux
+                  else demander_cadence("Cadence de la partie", habituelle))
+        if saisie is None:
+            fin_de_flux = True
+            saisie = (habituelle, True)
         lignes.append("- Cadence : %s%s"
-                      % (cadence, " (défaut)" if defaut else ""))
+                      % (decrire_cadence(saisie[0]),
+                         " (défaut)" if saisie[1] else ""))
     for libelle, question, valeur in QUESTIONS_CONTEXTE:
         reponse, defaut = poser(question, valeur)
         lignes.append("- %s : %s%s"
                       % (libelle, reponse, " (défaut)" if defaut else ""))
     return "\n".join(lignes) + "\n"
+
+
+# ===========================================================================
+# Réglages de l'utilisateur
+#
+# Ce qui dépend de la personne, et non de la partie, vit dans un petit
+# fichier au format INI, lisible et modifiable à la main :
+#
+#     [joueur]
+#     pseudos = MonPseudo, AutrePseudo
+#     cadence = rapide, 15 minutes
+#
+# Il est créé au premier lancement sur un terminal, par deux questions
+# posées une seule fois. Hors terminal, rien n'est demandé ni écrit : le
+# script se contente de ce que le fichier contient déjà.
+# ===========================================================================
+
+def chemin_reglages(chemin: str) -> pathlib.Path:
+    """Chemin du fichier de réglages, le tilde étant développé."""
+    return pathlib.Path(os.path.expanduser(chemin))
+
+
+def purger_reglages(chemin: str) -> None:
+    """
+    Supprime le fichier de réglages, et lui seul : son répertoire reste en
+    place, il peut contenir autre chose.
+
+    Les questions de réglages seront reposées au prochain lancement sur un
+    terminal. Un fichier absent n'est pas une erreur : le but, ne plus
+    avoir de réglages, est déjà atteint. Un répertoire, ou tout ce qui
+    n'est pas un fichier, est refusé plutôt que supprimé.
+
+    Avec --reglages, le chemin vient de la ligne de commande : une faute
+    de frappe ne doit pas détruire un autre fichier. Seul un fichier qui
+    porte la section [joueur], ou un fichier vide, est supprimé. La
+    section se cherche dans le texte brut : un fichier de réglages abîmé,
+    que configparser refuserait, reste ainsi supprimable.
+    """
+    p = chemin_reglages(chemin)
+    if not p.exists() and not p.is_symlink():
+        journal("Aucun fichier de réglages à supprimer : %s" % p)
+        return
+    if not (est_fichier(p) or p.is_symlink()):
+        raise SystemExit("--purge-reglages : %s n'est pas un fichier, rien "
+                         "n'est supprimé." % p)
+    try:
+        brut = p.read_bytes()
+    except OSError as e:
+        raise SystemExit("--purge-reglages : lecture de %s impossible : %s. "
+                         "Rien n'est supprimé." % (p, e)) from e
+    en_tete = re.compile(rb"^[ \t]*\[%s\][ \t]*\r?$"
+                         % re.escape(REGLAGES_SECTION).encode("ascii"),
+                         re.MULTILINE)
+    if brut.strip() and not en_tete.search(brut):
+        raise SystemExit("--purge-reglages : %s n'est pas un fichier de "
+                         "réglages, il ne porte pas la section [%s]. Rien "
+                         "n'est supprimé." % (p, REGLAGES_SECTION))
+    try:
+        p.unlink()
+    except OSError as e:
+        raise SystemExit("--purge-reglages : suppression de %s impossible : "
+                         "%s" % (p, e)) from e
+    journal("Réglages supprimés : %s. Ils seront redemandés à la prochaine "
+            "collecte lancée sur un terminal." % p)
+
+
+def lire_reglages(chemin: str) -> configparser.ConfigParser:
+    """
+    Charge le fichier de réglages, ou des réglages vides s'il n'existe pas.
+
+    Le fichier passe par le même décodage que le PGN : son encodage n'a
+    pas d'importance. Un fichier que configparser refuse arrête le script
+    par un message clair, plutôt que d'être ignoré en silence. La section
+    [joueur] existe toujours dans l'objet renvoyé.
+    """
+    # interpolation=None : le signe pour cent d'une valeur reste un simple
+    # caractère, il ne déclenche aucune substitution.
+    reglages = configparser.ConfigParser(interpolation=None)
+    p = chemin_reglages(chemin)
+    if est_fichier(p):
+        texte = lire_fichier_texte(p, "réglages")[0]
+        try:
+            reglages.read_string(texte, source=str(p))
+        except configparser.Error as err:
+            raise SystemExit(
+                "Réglages illisibles : %s\n"
+                "Corrigez %s, ou supprimez-le : il sera recréé au prochain "
+                "lancement sur un terminal."
+                % (nettoyer_valeur(str(err)), p)) from err
+    if not reglages.has_section(REGLAGES_SECTION):
+        reglages.add_section(REGLAGES_SECTION)
+    return reglages
+
+
+def reglage(reglages: configparser.ConfigParser, clef: str) -> str:
+    """Valeur d'une clef de la section [joueur], vide si elle manque."""
+    return reglages.get(REGLAGES_SECTION, clef, fallback="").strip()
+
+
+def decouper_pseudos(texte: str) -> list[str]:
+    """Liste de pseudos tirée d'une chaîne séparée par des virgules."""
+    return [x.strip() for x in texte.split(",") if x.strip()]
+
+
+def ecrire_reglages(chemin: str, reglages: configparser.ConfigParser) -> bool:
+    """
+    Écrit le fichier de réglages, commentaires compris.
+
+    Les clefs connues viennent d'abord, chacune sous son commentaire ; les
+    autres clefs de [joueur] et les autres sections, que vous auriez
+    ajoutées, sont recopiées à la suite. Un échec d'écriture n'arrête pas
+    la collecte : il est signalé, et la question sera reposée au prochain
+    lancement. Renvoie vrai si le fichier a été écrit.
+    """
+    def ligne(clef: str, valeur: str) -> str:
+        # Une valeur sur plusieurs lignes se poursuit par des lignes en
+        # retrait : c'est la forme que configparser sait relire.
+        valeur = valeur.replace("\n", "\n\t")
+        return "%s = %s" % (clef, valeur) if valeur else "%s =" % clef
+
+    out = ["# Réglages de ianalyze.py.",
+           "# Vous pouvez modifier ce fichier à la main. Une clef supprimée",
+           "# sera redemandée au prochain lancement sur un terminal.",
+           "",
+           "[%s]" % REGLAGES_SECTION]
+    connues = [clef for clef, _ in REGLAGES_CLEFS]
+    for clef, commentaire in REGLAGES_CLEFS:
+        if reglages.has_option(REGLAGES_SECTION, clef):
+            out.extend("# %s" % c for c in commentaire)
+            out.append(ligne(clef, reglages.get(REGLAGES_SECTION, clef)))
+    for clef, valeur in reglages.items(REGLAGES_SECTION):
+        if clef not in connues:
+            out.append(ligne(clef, valeur))
+    for section in reglages.sections():
+        if section != REGLAGES_SECTION:
+            out.extend(["", "[%s]" % section])
+            out.extend(ligne(c, v) for c, v in reglages.items(section))
+
+    p = chemin_reglages(chemin)
+    try:
+        p.parent.mkdir(parents=True, exist_ok=True)
+        ecrire_texte(p, "\n".join(out) + "\n")
+    except OSError as err:
+        journal("Attention : réglages non enregistrés dans %s : %s"
+                % (p, err))
+        return False
+    return True
+
+
+def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
+                       pseudos_cli: list[str] | None) -> None:
+    """
+    Demande, une seule fois, les réglages que le fichier ne donne pas.
+
+    Appelée seulement sur un terminal interactif. Chaque clef absente de
+    [joueur] fait l'objet d'une question ; une clef présente, même vide,
+    n'est jamais redemandée. Les pseudos passés par --pseudos servent de
+    réponse proposée. Une fin de flux (Ctrl-D) abandonne sans rien
+    écrire : les questions reviendront au prochain lancement.
+    """
+    manquantes = [clef for clef, _ in REGLAGES_CLEFS
+                  if not reglages.has_option(REGLAGES_SECTION, clef)]
+    # Une cadence présente mais illisible, écrite à la main ou héritée
+    # d'une version qui acceptait un texte libre, est redemandée elle
+    # aussi : elle ne doit pas partir telle quelle vers l'analyste.
+    brute = reglages.get(REGLAGES_SECTION, "cadence", fallback=None)
+    if brute is not None and analyser_cadence(brute) is None:
+        journal("Réglages : la cadence enregistrée, \"%s\", n'est pas "
+                "lisible, elle est redemandée." % nettoyer_valeur(brute))
+        manquantes.append("cadence")
+    # Il en va de même du niveau, qui doit être un nombre de points Elo.
+    brute = reglages.get(REGLAGES_SECTION, "niveau", fallback=None)
+    if brute is not None and analyser_niveau(brute) is None:
+        journal("Réglages : le niveau enregistré, \"%s\", n'est pas "
+                "lisible, il est redemandé." % nettoyer_valeur(brute))
+        manquantes.append("niveau")
+    if not manquantes:
+        return
+
+    journal("Réglages : %d réponse(s) à donner une seule fois, gardée(s) "
+            "dans %s." % (len(manquantes), chemin_reglages(chemin)))
+    for clef in manquantes:
+        if clef == "pseudos":
+            if pseudos_cli:
+                reponse = demander("Votre pseudo de joueur, ou plusieurs "
+                                   "séparés par des virgules ?",
+                                   ", ".join(pseudos_cli), nom=True)
+            else:
+                reponse = demander("Votre pseudo de joueur, ou plusieurs "
+                                   "séparés par des virgules ? (Entrée : "
+                                   "aucun)", nom=True)
+            if reponse is not None:
+                reponse = ", ".join(decouper_pseudos(reponse))
+        elif clef == "niveau":
+            niveau = demander_niveau()
+            if niveau is None:
+                reponse = None
+            else:
+                reponse = str(niveau) if niveau else "inconnu"
+        else:
+            saisie = demander_cadence("Votre cadence habituelle",
+                                      dict(CADENCE_INCONNUE))
+            reponse = None if saisie is None else noter_cadence(saisie[0])
+        if reponse is None:
+            journal("Réglages non enregistrés : saisie interrompue.")
+            return
+        reglages.set(REGLAGES_SECTION, clef, reponse)
+
+    if ecrire_reglages(chemin, reglages):
+        journal("Réglages enregistrés : %s" % chemin_reglages(chemin))
+
+
+# ===========================================================================
+# Prompt d'analyse
+#
+# Les données de l'archive ne suffisent pas : il faut dire à l'analyste ce
+# qu'il doit en faire. Ce texte vit dans un modèle, prompt-modele.txt, que
+# vous retouchez sans ouvrir ce script. À chaque collecte, le script en
+# tire le prompt de la partie : il remplit les valeurs (pseudo, niveau,
+# nom de l'archive) et ne garde que les passages qui s'appliquent (base
+# interrogée, moteur présent ou non). Le prompt décrit ainsi, toujours, la
+# synthèse que cette version du script vient d'écrire.
+#
+# Deux repères dans le modèle :
+#
+#     {{NOM}}             une valeur, remplacée
+#     #! si CONDITION     garde ce qui suit si la condition est vraie
+#     #! si non CONDITION garde ce qui suit si elle est fausse
+#     #! sinon            bascule
+#     #! fin              ferme le dernier "si" ouvert
+#     #! note ...         commentaire du modèle, jamais recopié
+#
+# Les "si" peuvent s'emboîter.
+# ===========================================================================
+
+def chemin_modele(option: str | None, seul: bool = False) -> pathlib.Path:
+    """
+    Chemin du modèle de prompt : celui de --prompt, sinon, à côté du
+    script, prompt-modele.txt ou, avec --prompt-seul, le modèle court
+    prompt-seul-modele.txt. Le chemin réel du script est suivi, afin qu'un
+    lien symbolique posé ailleurs retrouve le modèle du dépôt.
+    """
+    if option:
+        return pathlib.Path(os.path.expanduser(option))
+    return (pathlib.Path(os.path.realpath(__file__)).parent
+            / (PROMPT_SEUL_MODELE if seul else PROMPT_MODELE))
+
+
+def lire_directive(ligne: str) -> list[str] | None:
+    """Mots d'une ligne de directive, ou None pour une ligne ordinaire."""
+    ligne = ligne.strip()
+    if not ligne.startswith(PROMPT_DIRECTIVE):
+        return None
+    return ligne[len(PROMPT_DIRECTIVE):].split()
+
+
+def rendre_modele(texte: str, conditions: dict[str, bool],
+                  valeurs: dict[str, str], source: str) -> str:
+    """
+    Tire un prompt du modèle : applique les directives, remplace les
+    valeurs.
+
+    Tout le modèle est contrôlé, passages écartés compris : une directive
+    inconnue, un "si" jamais fermé, une condition ou une valeur que le
+    script ne connaît pas arrêtent le script avec le numéro de la ligne.
+    Les lignes vides en trop que laisse un passage retiré sont resserrées.
+    """
+    def erreur(numero: int, message: str) -> SystemExit:
+        return SystemExit("Modèle de prompt %s, ligne %d : %s"
+                          % (source, numero, message))
+
+    sortie: list[str] = []
+    # Pile des "si" ouverts : la ligne du "si", la valeur de sa condition,
+    # et si un "sinon" a déjà été rencontré.
+    pile: list[tuple[int, bool, bool]] = []
+    for numero, ligne in enumerate(texte.split("\n"), start=1):
+        mots = lire_directive(ligne)
+        if mots is None:
+            for nom in RE_VALEUR_MODELE.findall(ligne):
+                if nom not in PROMPT_VALEURS:
+                    raise erreur(numero, "valeur inconnue {{%s}}, valeurs "
+                                 "admises : %s"
+                                 % (nom, ", ".join(PROMPT_VALEURS)))
+            # Des accolades doubles qui restent une fois les repères
+            # reconnus retirés : un repère mal écrit, {{ NIVEAU }} ou
+            # {{CAMP1}}, qui partirait tel quel dans le prompt.
+            reste = RE_VALEUR_MODELE.sub("", ligne)
+            if "{{" in reste or "}}" in reste:
+                raise erreur(numero, "repère mal formé, forme attendue : "
+                             "{{NOM}}, en majuscules et sans espace")
+            if all(vrai for _, vrai, _ in pile):
+                sortie.append(RE_VALEUR_MODELE.sub(
+                    lambda m: valeurs[m.group(1)], ligne).rstrip())
+            continue
+        if not mots or mots[0] == "note":
+            continue
+        if mots[0] == "si":
+            negation = len(mots) == 3 and mots[1] == "non"
+            if len(mots) != (3 if negation else 2):
+                raise erreur(numero, "forme attendue : \"si CONDITION\" ou "
+                             "\"si non CONDITION\"")
+            if mots[-1] not in PROMPT_CONDITIONS:
+                raise erreur(numero, "condition inconnue %s, conditions "
+                             "admises : %s"
+                             % (mots[-1], ", ".join(PROMPT_CONDITIONS)))
+            pile.append((numero, conditions[mots[-1]] != negation, False))
+        elif mots == ["sinon"]:
+            if not pile or pile[-1][2]:
+                raise erreur(numero, "\"sinon\" sans \"si\" ouvert, ou en "
+                             "double")
+            pile[-1] = (pile[-1][0], not pile[-1][1], True)
+        elif mots == ["fin"]:
+            if not pile:
+                raise erreur(numero, "\"fin\" sans \"si\" ouvert")
+            pile.pop()
+        else:
+            raise erreur(numero, "directive inconnue \"%s\", directives "
+                         "admises : si, sinon, fin, note" % " ".join(mots))
+    if pile:
+        raise erreur(pile[-1][0], "ce \"si\" n'est jamais fermé par \"fin\"")
+
+    # Lignes vides : au plus une de suite, aucune en tête ni en queue.
+    resserre: list[str] = []
+    for ligne in sortie:
+        if ligne or (resserre and resserre[-1]):
+            resserre.append(ligne)
+    return "\n".join(resserre).strip("\n") + "\n"
+
+
+def lignes_de_texte(modele: str) -> list[str]:
+    """Lignes du modèle qui iront dans le prompt : ni vides, ni directives."""
+    return [ligne for ligne in modele.split("\n")
+            if ligne.strip() and not ligne.lstrip().startswith("#!")]
+
+
+def verifier_modele(texte: str, source: str) -> None:
+    """
+    Contrôle le modèle avant la collecte, pour échouer tôt : un repère
+    inconnu ne doit pas se révéler après dix minutes de moteur. Le rendu
+    est fait à blanc, son résultat n'est pas gardé.
+    """
+    rendre_modele(texte, dict.fromkeys(PROMPT_CONDITIONS, False),
+                  dict.fromkeys(PROMPT_VALEURS, ""), source)
+    # Un modèle vide, ou fait de seules directives, donnerait un prompt
+    # sans une ligne, annoncé comme écrit.
+    if not lignes_de_texte(texte):
+        raise SystemExit("Modèle de prompt %s : il ne contient aucune "
+                         "ligne de texte." % source)
+
+
+def decrire_niveau(niveau: int, partie: chess.pgn.Game,
+                   camp: str | None) -> str:
+    """
+    Phrase du niveau du joueur. Le niveau déclaré dans les réglages
+    l'emporte ; à défaut, l'Elo de la balise du joueur dans cette partie,
+    si son camp est connu ; sinon rien de précis.
+    """
+    if niveau:
+        return "environ %d Elo, déclaré par le joueur" % niveau
+    balise = {"Blancs": "WhiteElo", "Noirs": "BlackElo"}.get(camp or "")
+    if balise:
+        elo = partie.headers.get(balise, "").strip()
+        if re.fullmatch(r"[0-9]{3,4}", elo):
+            return "%s Elo, d'après la balise %s de la partie" % (elo, balise)
+    return ("non précisé : jugez-en d'après la partie, et restez "
+            "accessible")
 
 
 # ===========================================================================
@@ -1165,7 +2308,7 @@ def lire_catalogue(repertoire: str) -> Catalogue:
     une base incomplète.
     """
     chemin = chemin_catalogue(repertoire)
-    if not chemin.is_file():
+    if not est_fichier(chemin):
         raise SystemExit(
             "Catalogue des ouvertures absent : %s introuvable.\n\n"
             "Installez-le en une commande :\n"
@@ -1209,6 +2352,21 @@ def lire_catalogue(repertoire: str) -> Catalogue:
 # Explorateur : accès réseau
 # ===========================================================================
 
+class SansRedirection(urllib.request.HTTPRedirectHandler):
+    """
+    Refuse toute redirection HTTP.
+
+    L'ouvreur par défaut d'urllib suit les redirections en recopiant les
+    en-têtes de la requête, Authorization compris, vers la nouvelle
+    adresse, même sur un autre hôte. Le jeton ne doit partir que vers
+    l'explorateur : une réponse 301, 302, 303, 307 ou 308 est donc rendue
+    telle quelle, comme une erreur HTTP, et rien n'est envoyé ailleurs.
+    """
+
+    def redirect_request(self, *_arguments, **_options):
+        return None
+
+
 class Explorateur:
     """
     Client minimal de l'explorateur Lichess, base maîtres ou base Lichess.
@@ -1236,6 +2394,9 @@ class Explorateur:
         # ne doit pas changer les requêtes en cours de collecte.
         self.filtres = dict(filtres or {})
         self._premiere = True
+        # Ouvreur propre à l'explorateur, qui ne suit aucune redirection :
+        # voir SansRedirection.
+        self._ouvreur = urllib.request.build_opener(SansRedirection)
 
     def interroger(self, coups_uci: list[str]) -> tuple[int, dict]:
         """
@@ -1276,15 +2437,28 @@ class Explorateur:
         # s'arrêter que de se faire bannir.
         for tentative in (1, 2):
             try:
-                with urllib.request.urlopen(requete, timeout=self.delai) as r:
+                with self._ouvreur.open(requete, timeout=self.delai) as r:
                     corps = r.read().decode("utf-8-sig", errors="replace")
-                    donnees = json.loads(corps)
+                    # La réponse est recopiée telle quelle dans l'archive :
+                    # si un serveur renvoyait un jour l'en-tête reçu, le
+                    # jeton n'y entrerait pas.
+                    donnees = json.loads(expurger(corps, self.jeton))
                     if not isinstance(donnees, dict):
                         return 0, {"_erreur": "réponse JSON inattendue, "
                                               "objet attendu"}
                     return r.status, donnees
             except urllib.error.HTTPError as err:
-                corps = err.read().decode("utf-8-sig", errors="replace")
+                if 300 <= err.code < 400:
+                    return err.code, {"_erreur": "redirection refusée : le "
+                                      "jeton n'est envoyé qu'à l'adresse "
+                                      "de l'explorateur"}
+                # Le corps de l'erreur n'est lu que pour le message : s'il
+                # est coupé ou trop lent, l'erreur HTTP reste ce qu'elle
+                # est, et seule l'interrogation s'arrête.
+                try:
+                    corps = err.read().decode("utf-8-sig", errors="replace")
+                except (OSError, http.client.HTTPException):
+                    corps = ""
                 if err.code == 429 and tentative == 1:
                     journal("429 reçu, pause de 60 secondes.")
                     time.sleep(60)
@@ -1295,6 +2469,10 @@ class Explorateur:
                     str(getattr(err, "reason", err)), self.jeton)}
             except ValueError as err:
                 return 0, {"_erreur": "réponse non JSON : %s" % err}
+            except RecursionError:
+                # Un JSON imbriqué sur des milliers de niveaux.
+                return 0, {"_erreur": "réponse non JSON : imbrication "
+                                      "démesurée"}
         return 0, {"_erreur": "échec après reprise"}
 
 
@@ -1356,6 +2534,11 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
     Avec `jusqu_a_epuisement`, seuls le premier critère et le plafond de
     demi-coups s'appliquent : l'interrogation descend aussi loin que la
     base répond.
+
+    Un coup nul, "--" dans le PGN, arrête la collecte avant toute
+    interrogation pour ce demi-coup, quel que soit le mode : ce n'est pas
+    un coup des échecs, la base ne peut ni le compter ni suivre la partie
+    au delà. Il n'est pas tenu pour une sortie de théorie.
     """
     brut = dossier / "explorateur"
     brut.mkdir(parents=True, exist_ok=True)
@@ -1378,6 +2561,25 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
         trait = "Blancs" if plateau.turn == chess.WHITE else "Noirs"
         san_joue = plateau.san(coup)
         uci_joue = coup.uci()
+
+        # Coup nul : le trait passe sans qu'une pièce ne bouge. La base ne
+        # le connaît pas, il ressortait donc à 0 partie, au rang "hors
+        # base", et passait pour la première sortie de théorie. Pire, le
+        # demi-coup suivant envoyait à l'explorateur une liste de coups
+        # contenant "0000", qu'il refuse par un HTTP 400 ("illegal uci") :
+        # l'arrêt était alors mis sur le compte d'une erreur réseau. On
+        # s'arrête ici, sans rien demander, en donnant la vraie raison.
+        if not coup:
+            arret = ("coup nul au demi-coup %d : ce n'est pas un coup des "
+                     "échecs, l'explorateur ne peut pas suivre la partie au "
+                     "delà" % (indice + 1))
+            journal("Explorateur : %s." % arret)
+            non_exploitables.append({
+                "demicoup": indice + 1, "numero": numero, "trait": trait,
+                "san": san_joue, "motif": "coup nul, non interrogé",
+            })
+            break
+
         # L'explorateur note le roque à la manière de Chess960, "roi prend
         # tour" : e1h1 pour le petit roque des Blancs, là où python-chess
         # écrit e1g1. Les deux formes sont admises pour retrouver le coup
@@ -1521,11 +2723,27 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
 # Stockfish
 # ===========================================================================
 
-def formater_score(score: chess.engine.PovScore) -> str:
-    """Met en forme un score du point de vue des Blancs, en pions ou en mat."""
+def formater_score(score: chess.engine.PovScore,
+                   trait: bool | None = None) -> str:
+    """
+    Met en forme un score du point de vue des Blancs, en pions ou en mat.
+
+    Le score vient d'une recherche faite avant le coup, et l'évaluation
+    s'annonce après lui. En pions, cela ne change rien. Pour un mat, le
+    moteur compte les coups du camp qui mate, celui-ci compris : quand ce
+    camp est celui qui joue, donné par `trait`, il lui en reste un de
+    moins une fois le coup joué. "#+0" et "#-0" désignent le coup qui
+    donne mat lui-même. Le camp maté, lui, ne retire rien : après son
+    coup, l'adversaire a encore tous les siens à jouer.
+    """
     blanc = score.white()
     if blanc.is_mate():
-        return "#%+d" % blanc.mate()
+        coups = blanc.mate()
+        if trait is not None and (coups > 0) == (trait == chess.WHITE):
+            coups += -1 if coups > 0 else 1
+            if coups == 0:
+                return "#+0" if trait == chess.WHITE else "#-0"
+        return "#%+d" % coups
     return "%+.2f" % (blanc.score() / 100.0)
 
 
@@ -1537,6 +2755,22 @@ def valeur_pour_trait(score: chess.engine.PovScore, trait: bool) -> float:
     coups sans faire exploser les écarts affichés.
     """
     return float(score.pov(trait).score(mate_score=100000))
+
+
+def ecart_au_meilleur(meilleur: float, joue: float) -> float:
+    """
+    Ce que le coup joué perd par rapport au premier choix du moteur, les
+    deux valeurs étant prises du point de vue du joueur au trait.
+
+    Deux mats de même sens ne se comparent pas en centipions : mater en
+    deux coups au lieu d'un, ou se faire mater un coup plus tard, ne
+    change pas l'issue. Leurs valeurs bornées, 99999 et 99998, donnaient
+    un écart de 1, lu à tort comme un centipion : il vaut zéro.
+    """
+    if min(abs(meilleur), abs(joue)) >= SEUIL_MAT and (meilleur > 0) == (
+            joue > 0):
+        return 0.0
+    return meilleur - joue
 
 
 def wdl_blancs(info: dict) -> dict | None:
@@ -1581,13 +2815,28 @@ def reste_estime(ecoule: float, faits: int, total: int) -> str:
     return ", reste environ %d h %02d" % divmod(minutes, 60)
 
 
+def resoudre_moteur(binaire: str) -> str:
+    """
+    Chemin du moteur tel qu'il sera contrôlé puis lancé.
+
+    Le tilde est développé, comme pour les autres options de chemin. Un
+    nom nu, "stockfish", est cherché dans le PATH : le lancement l'y
+    cherchait déjà, alors que le contrôle regardait le répertoire
+    courant, et les deux pouvaient se contredire.
+    """
+    binaire = os.path.expanduser(binaire)
+    if os.sep not in binaire and not est_fichier(pathlib.Path(binaire)):
+        return shutil.which(binaire) or binaire
+    return binaire
+
+
 def verifier_moteur(binaire: str) -> None:
     """Vérifie l'existence du binaire avant d'avoir créé quoi que ce soit."""
-    if not pathlib.Path(binaire).is_file():
+    if not est_fichier(pathlib.Path(binaire)):
         raise SystemExit("Stockfish introuvable : %s. Installez-le (%s), "
-                         "indiquez son "
-                         "chemin avec --stockfish, ou laissez l'évaluation "
-                         "à l'analyste avec --sans-stockfish."
+                         "ou indiquez son chemin avec --stockfish. "
+                         "L'évaluation du moteur fait partie de toute "
+                         "collecte."
                          % (binaire, AIDE_STOCKFISH))
     if not os.access(binaire, os.X_OK):
         raise SystemExit("Stockfish non exécutable : %s" % binaire)
@@ -1672,7 +2921,7 @@ def decrire_variante(plateau: chess.Board, info: dict, trait: bool) -> dict:
     return {
         "san": plateau.san(pv[0]),
         "uci": pv[0].uci(),
-        "score": formater_score(info["score"]),
+        "score": formater_score(info["score"], trait),
         "valeur_trait": valeur_pour_trait(info["score"], trait),
         "profondeur": info.get("depth"),
         "pv_uci": [m.uci() for m in pv],
@@ -1768,7 +3017,8 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
 
             ecart = None
             if meilleurs and eval_joue["valeur_trait"] is not None:
-                ecart = meilleurs[0]["valeur_trait"] - eval_joue["valeur_trait"]
+                ecart = ecart_au_meilleur(meilleurs[0]["valeur_trait"],
+                                          eval_joue["valeur_trait"])
 
             resultats.append({
                 "demicoup": indice + 1,
@@ -1786,6 +3036,14 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
     except chess.engine.EngineError as err:
         raise SystemExit("Le moteur a échoué en cours d'analyse : %s"
                          % (err or type(err).__name__)) from err
+    except concurrent.futures.CancelledError as err:
+        # Le moteur est mort hors d'une recherche, pendant un réglage par
+        # exemple : python-chess annule alors la commande en attente au
+        # lieu de lever une EngineError. La cause la plus courante est
+        # une table de hachage que le système refuse d'allouer.
+        raise SystemExit("Le moteur a échoué en cours d'analyse : il s'est "
+                         "arrêté sans répondre. Si --hachage ou --fils "
+                         "sont élevés, la mémoire a pu manquer.") from err
     finally:
         # Arrêt sûr dans tous les cas : voir fermer_moteur.
         fermer_moteur(moteur)
@@ -1811,6 +3069,51 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
 def _cellule(valeur, gabarit="%.1f") -> str:
     """Formate une valeur numérique, ou renvoie un tiret si elle est absente."""
     return "-" if valeur is None else gabarit % valeur
+
+
+def resultat_contredit(partie: chess.pgn.Game,
+                       resultats: list[dict]) -> str | None:
+    """
+    Phrase à écrire quand le résultat de la partie contredit l'évaluation
+    du moteur après le dernier coup, ou None.
+
+    Une partie notée 1-0 alors que les Noirs sont nettement mieux ne
+    s'est pas décidée sur l'échiquier : abandon, temps écoulé, ou autre
+    cause que le PGN ne dit pas. Sans cette phrase, un analyste pressé
+    raconte une victoire méritée : sur quatre LLM essayés, deux l'ont
+    fait. Le seuil est celui de la gaffe, pour ne signaler que les cas
+    nets, et rien n'est dit si le moteur n'a pas évalué le dernier coup.
+    """
+    vainqueur = {"1-0": "Blancs", "0-1": "Noirs"}.get(
+        partie.headers.get("Result", ""))
+    if vainqueur is None or not resultats:
+        return None
+    dernier = resultats[-1]
+    valeur = dernier["joue"].get("valeur_trait")
+    # Le rang du demi-coup se compare au nombre de coups joués, compté
+    # ici même, et non à une numérotation tirée du PGN.
+    joues = sum(1 for _ in partie.mainline_moves())
+    if valeur is None or dernier["demicoup"] != joues:
+        return None
+    # valeur_trait se lit du côté de celui qui vient de jouer.
+    pour_blancs = valeur if dernier["trait"] == "Blancs" else -valeur
+    pour_vainqueur = pour_blancs if vainqueur == "Blancs" else -pour_blancs
+    if pour_vainqueur > -SEUIL_GAFFE:
+        return None
+    perdant = "Noirs" if vainqueur == "Blancs" else "Blancs"
+    phrase = (
+        "**Résultat et évaluation finale se contredisent.** La partie est "
+        "notée `%s`, victoire des %s, alors que Stockfish donne %s après "
+        "le dernier coup, %d%s %s, soit un net avantage aux %s. Le "
+        "résultat ne vient donc pas de la position sur l'échiquier : "
+        "abandon, temps écoulé, ou autre cause que le PGN ne dit pas."
+        % (partie.headers["Result"], vainqueur, dernier["joue"]["score"],
+           dernier["numero"], "." if dernier["trait"] == "Blancs" else "...",
+           dernier["joue"]["san"], perdant))
+    fin = nettoyer_valeur(partie.headers.get("Termination", ""))
+    if fin and fin != "?":
+        phrase += " La balise Termination vaut `%s`." % fin
+    return phrase
 
 
 def _ecart(ecart: float | None) -> str:
@@ -1908,10 +3211,97 @@ def tronquer_variante(plateau: chess.Board, pv_uci: list[str],
         return " ".join(pv_uci)
 
 
+def tableau_compact(partie: chess.pgn.Game, resultats: list[dict],
+                    longueur_pv: int) -> str:
+    """
+    Évaluations du moteur pour le prompt court : une ligne par demi-coup,
+    le coup joué et son évaluation. Derrière un coup faible viennent sa
+    nature, son écart, puis le meilleur coup, sa suite et son évaluation.
+
+    Le tableau de la synthèse compte onze colonnes et trois variantes par
+    coup : celui-ci tient en quelques kilo-octets, pour un LLM à qui tout
+    est collé dans un seul message.
+    """
+    lignes = []
+    plateau = partie.board()
+    for r, coup in zip(resultats, partie.mainline_moves(), strict=False):
+        tete = "%d%s %s" % (r["numero"],
+                            "." if r["trait"] == "Blancs" else "...",
+                            r["joue"]["san"])
+        ligne = "%-13s %7s" % (tete, r["joue"]["score"])
+        if r.get("nature") and r["meilleurs"]:
+            meilleur = r["meilleurs"][0]
+            ligne += "   %s (%s) : mieux %s (%s)" % (
+                r["nature"], _ecart(r["ecart_cp"]),
+                tronquer_variante(plateau, meilleur["pv_uci"], longueur_pv),
+                meilleur["score"])
+        lignes.append(ligne.rstrip())
+        plateau.push(coup)
+    return "\n".join(lignes)
+
+
+def coups_faibles_joueur(resultats: list[dict],
+                         camp: str | None) -> int | None:
+    """
+    Nombre de coups du joueur que le tableau du prompt court marque comme
+    faibles : imprécisions, erreurs et gaffes. None si son camp est
+    inconnu.
+
+    La règle est celle de tableau_compact : un coup n'est marqué que si
+    le moteur lui a trouvé une nature et propose un meilleur coup. Le
+    nombre rendu est donc celui que le LLM peut compter lui-même.
+    """
+    if camp is None:
+        return None
+    return sum(1 for r in resultats
+               if r["trait"] == camp and r.get("nature") and r["meilleurs"])
+
+
+def phrase_ouverture(explorateur: dict | None, libelle_base: str) -> str:
+    """
+    Pour le prompt court, l'ouverture et la sortie de théorie en une
+    phrase, tirées de l'explorateur. Chaîne vide s'il n'a rien donné.
+    """
+    if explorateur is None:
+        return ""
+    sortie = explorateur["premiere_sortie"]
+    limite = sortie["demicoup"] if sortie else len(explorateur["lignes"]) + 1
+    nommees = [lg["ouverture"] for lg in explorateur["lignes"]
+               if lg["demicoup"] < limite and lg.get("ouverture")]
+    phrases = []
+    if nommees:
+        phrases.append("Ouverture : %s." % nommees[-1])
+    if sortie:
+        phrases.append(
+            "La théorie est quittée au coup %d par les %s, avec %s, joué "
+            "dans %s %% des parties de la base %s."
+            % (sortie["numero"], sortie["trait"], sortie["san"],
+               _cellule(sortie["frequence"]), libelle_base))
+    return " ".join(phrases)
+
+
+def consignes_joueur(contexte: str | None) -> str:
+    """
+    Pour le prompt court, ce que le joueur a réellement précisé : celles
+    de ses réponses aux questions de démarrage qu'il n'a pas laissées à
+    leur valeur par défaut. Le camp, dit ailleurs dans le prompt, n'est
+    pas repris, ni la cadence quand elle vient de la balise TimeControl
+    ou reste inconnue : le joueur n'a alors rien précisé.
+    """
+    if contexte is None:
+        return ""
+    return "\n".join(
+        ligne for ligne in contexte.split("\n")
+        if ligne.startswith("- ") and not ligne.endswith("(défaut)")
+        and not ligne.startswith(("- Camp du joueur",
+                                  "- Cadence : balise TimeControl",
+                                  "- Cadence : non précisée")))
+
+
 def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
                     source: str, consignes: str | None,
                     explorateur: dict | None, motif_sans_explorateur: str | None,
-                    stockfish: dict | None, longueur_pv: int,
+                    stockfish: dict, longueur_pv: int,
                     libelle_base: str = "maîtres",
                     filtres: dict[str, str] | None = None,
                     annexes: list[str] | None = None,
@@ -1931,6 +3321,9 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     a = out.append
 
     identifiant = partie.headers.get("Site", "").rstrip("/").split("/")[-1]
+    if identifiant == "?":
+        # python-chess donne "?" à une balise Site absente.
+        identifiant = ""
     a("# Dossier d'analyse : %s"
       % (nettoyer_valeur(identifiant) or "partie locale"))
     a("")
@@ -2097,144 +3490,152 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     # -- 3. Stockfish -------------------------------------------------------
     a("## 3. Évaluations Stockfish")
     a("")
-    if stockfish is None:
-        a("Aucune évaluation moteur dans ce dossier : la collecte a été "
-          "lancée avec `--sans-stockfish`. L'évaluation de la partie est "
-          "à la charge de l'analyste.")
+    a("Moteur : `%s`, profondeur %d, multipv %d, %d demi-coups "
+      "couverts sur %d. Les évaluations sont exprimées **du point de "
+      "vue des Blancs**. L'écart est exprimé en centipions **du point "
+      "de vue du joueur au trait** : positif, il mesure ce que le coup "
+      "joué perd par rapport au premier choix du moteur. Négatif, il ne "
+      "signale aucune faute : le coup joué, évalué à part quand il n'est "
+      "pas parmi les premiers choix, sort un peu au-dessus du premier, "
+      "et les deux se valent."
+      % (stockfish["binaire"], stockfish["profondeur"],
+         stockfish["multipv"], len(stockfish["resultats"]),
+         len(list(partie.mainline_moves()))))
+    a("")
+    a("Nature : imprécision à partir de %d cp d'écart, erreur à partir "
+      "de %d, gaffe à partir de %d."
+      % (SEUIL_IMPRECISION, SEUIL_ERREUR, SEUIL_GAFFE))
+    if any(r["joue"].get("non_evalue") for r in stockfish["resultats"]):
+        a("Coup nul `--` : le trait passe sans qu'une pièce ne bouge. Ce "
+          "n'est pas un coup des échecs, le moteur ne l'évalue pas : "
+          "ses colonnes Éval, G/N/P, Écart et Nature portent `-`, les "
+          "meilleurs coups de la position restant donnés.")
+    a("Mat : `#+2`, les Blancs matent en deux coups, `#-1`, les Noirs "
+      "matent en un coup. Comme toute évaluation de ce tableau, le compte "
+      "se lit après le coup de la ligne : `#+0` ou `#-0`, ce coup donne "
+      "mat.")
+    a("Écart `mat` : l'un des deux scores comparés est un mat, que le "
+      "coup joué manque un mat ou qu'il en concède un ; l'écart ne se "
+      "chiffre pas en centipions, comparez les colonnes Éval et 1er.")
+    if stockfish.get("wdl"):
+        a("G/N/P : chances de gain, de nulle et de perte des Blancs "
+          "après le coup joué, en pour cent arrondi, selon le modèle de "
+          "Stockfish. Ce modèle reflète le jeu du moteur : lisez-le "
+          "comme une tendance, non comme la probabilité réelle entre "
+          "deux joueurs humains.")
+    a("")
+    a("| # | Coup | Trait | Joué | Éval | G/N/P | Écart cp | Nature "
+      "| 1er | 2e | 3e |")
+    a("|---:|---:|---|---|---:|---:|---:|---|---|---|---|")
+    for r in stockfish["resultats"]:
+        trois = list(r["meilleurs"][:3])
+        while len(trois) < 3:
+            trois.append(None)
+        colonnes = ["-" if m is None else "%s (%s)" % (m["san"], m["score"])
+                    for m in trois]
+        a("| %d | %d | %s | %s | %s | %s | %s | %s | %s | %s | %s |"
+          % (r["demicoup"], r["numero"], r["trait"], r["joue"]["san"],
+             r["joue"]["score"], _gnp(r["joue"].get("wdl")),
+             _ecart(r["ecart_cp"]),
+             r.get("nature") or "-",
+             colonnes[0], colonnes[1], colonnes[2]))
+    a("")
+
+    # Résultat contraire à l'évaluation finale : dit ici, sous le tableau,
+    # pour que l'analyste ne raconte pas une victoire méritée.
+    contradiction = resultat_contredit(partie, stockfish["resultats"])
+    if contradiction:
+        a(contradiction)
         a("")
+
+    # Les variantes principales, rejouées depuis chaque position, pour
+    # que l'analyste dispose de lignes concrètes calculées par le
+    # moteur et n'ait pas à les inventer. Les variantes complètes sont
+    # dans stockfish/evaluations.json.
+    a("### 3 bis. Variantes principales du moteur")
+    a("")
+    if longueur_pv > 0:
+        a("Variantes tronquées à %d demi-coups ; les variantes complètes "
+          "sont dans `stockfish/evaluations.json`." % longueur_pv)
     else:
-        a("Moteur : `%s`, profondeur %d, multipv %d, %d demi-coups "
-          "couverts sur %d. Les évaluations sont exprimées **du point de "
-          "vue des Blancs**. L'écart est exprimé en centipions **du point "
-          "de vue du joueur au trait** : positif, il mesure ce que le coup "
-          "joué perd par rapport au premier choix du moteur."
-          % (stockfish["binaire"], stockfish["profondeur"],
-             stockfish["multipv"], len(stockfish["resultats"]),
-             len(list(partie.mainline_moves()))))
-        a("")
-        a("Nature : imprécision à partir de %d cp d'écart, erreur à partir "
-          "de %d, gaffe à partir de %d."
-          % (SEUIL_IMPRECISION, SEUIL_ERREUR, SEUIL_GAFFE))
-        if any(r["joue"].get("non_evalue") for r in stockfish["resultats"]):
-            a("Coup nul `--` : le trait passe sans qu'une pièce ne bouge. Ce "
-              "n'est pas un coup des échecs, le moteur ne l'évalue pas : "
-              "ses colonnes Éval, G/N/P, Écart et Nature portent `-`, les "
-              "trois meilleurs coups de la position restant donnés.")
-        a("Écart `mat` : l'un des deux scores comparés est un mat, que le "
-          "coup joué manque un mat ou qu'il en concède un ; l'écart ne se "
-          "chiffre pas en centipions, comparez les colonnes Éval et 1er.")
-        if stockfish.get("wdl"):
-            a("G/N/P : chances de gain, de nulle et de perte des Blancs "
-              "après le coup joué, en pour cent arrondi, selon le modèle de "
-              "Stockfish. Ce modèle reflète le jeu du moteur : lisez-le "
-              "comme une tendance, non comme la probabilité réelle entre "
-              "deux joueurs humains.")
-        a("")
-        a("| # | Coup | Trait | Joué | Éval | G/N/P | Écart cp | Nature "
-          "| 1er | 2e | 3e |")
-        a("|---:|---:|---|---|---:|---:|---:|---|---|---|---|")
-        for r in stockfish["resultats"]:
-            trois = list(r["meilleurs"][:3])
-            while len(trois) < 3:
-                trois.append(None)
-            colonnes = ["-" if m is None else "%s (%s)" % (m["san"], m["score"])
-                        for m in trois]
-            a("| %d | %d | %s | %s | %s | %s | %s | %s | %s | %s | %s |"
-              % (r["demicoup"], r["numero"], r["trait"], r["joue"]["san"],
-                 r["joue"]["score"], _gnp(r["joue"].get("wdl")),
-                 _ecart(r["ecart_cp"]),
-                 r.get("nature") or "-",
-                 colonnes[0], colonnes[1], colonnes[2]))
-        a("")
+        a("Variantes complètes, telles que renvoyées par le moteur.")
+    a("")
+    plateau = partie.board()
+    for r, coup in zip(stockfish["resultats"], partie.mainline_moves(),
+                       strict=False):
+        a("- Demi-coup %d, %s jouent %s (position avant le coup)"
+          % (r["demicoup"], r["trait"], r["joue"]["san"]))
+        rangs = ("1er", "2e", "3e", "4e", "5e")
+        joue_dans_liste = False
+        for k, m in enumerate(r["meilleurs"]):
+            etiquette = rangs[k] if k < len(rangs) else "%de" % (k + 1)
+            if m["uci"] == r["joue"]["uci"]:
+                etiquette += ", joué"
+                joue_dans_liste = True
+            a("    - %s (%s) : %s" % (etiquette, m["score"],
+                                      tronquer_variante(
+                                          plateau, m["pv_uci"],
+                                          longueur_pv)))
+        if r["joue"].get("non_evalue"):
+            a("    - joué : coup nul, non évalué par le moteur")
+        elif not joue_dans_liste:
+            a("    - joué (%s) : %s" % (r["joue"]["score"],
+                                        tronquer_variante(
+                                            plateau, r["joue"]["pv_uci"],
+                                            longueur_pv)))
+        plateau.push(coup)
+    a("")
 
-        # Les variantes principales, rejouées depuis chaque position, pour
-        # que l'analyste dispose de lignes concrètes calculées par le
-        # moteur et n'ait pas à les inventer. Les variantes complètes sont
-        # dans stockfish/evaluations.json.
-        a("### 3 bis. Variantes principales du moteur")
+    # Palmarès : les coups qui coûtent le plus, par camp, avec ce qu'il
+    # fallait jouer et la FEN, matière directe des commentaires
+    # obligatoires et des positions à revoir.
+    a("### 3 ter. Erreurs et gaffes par camp")
+    a("")
+    a("Coups dont l'écart atteint %d cp, du plus coûteux au moins "
+      "coûteux, %d au plus par camp ; les imprécisions restent dans le "
+      "tableau. Les chances G/N/P sont celles du camp au trait, la FEN "
+      "celle de la position avant le coup."
+      % (SEUIL_ERREUR, PALMARES_MAX))
+    a("")
+    for camp in ("Blancs", "Noirs"):
+        fautes = sorted((r for r in stockfish["resultats"]
+                         if r["trait"] == camp
+                         and r["ecart_cp"] is not None
+                         and r["ecart_cp"] >= SEUIL_ERREUR),
+                        key=lambda r: -r["ecart_cp"])
+        a("**%s**" % camp)
         a("")
-        if longueur_pv > 0:
-            a("Variantes tronquées à %d demi-coups ; les variantes complètes "
-              "sont dans `stockfish/evaluations.json`." % longueur_pv)
-        else:
-            a("Variantes complètes, telles que renvoyées par le moteur.")
+        if not fautes:
+            a("- Aucune erreur ni gaffe.")
+        pour_noirs = camp == "Noirs"
+        for r in fautes[:PALMARES_MAX]:
+            meilleur = r["meilleurs"][0] if r["meilleurs"] else None
+            # À partir de SEUIL_ECART_MAT, l'écart vient d'un mat ramené
+            # à une valeur bornée : le chiffre n'a plus de sens, les
+            # scores parlent d'eux-mêmes.
+            ecart = ("écart %.0f cp" % r["ecart_cp"]
+                     if r["ecart_cp"] < SEUIL_ECART_MAT else
+                     "écart lié à un mat, %s au lieu de %s"
+                     % (r["joue"]["score"],
+                        meilleur["score"] if meilleur else "?"))
+            a("- Coup %d, %s jouent %s (demi-coup %d) : %s, %s."
+              % (r["numero"], r["trait"], r["joue"]["san"],
+                 r["demicoup"], r["nature"], ecart))
+            if meilleur is not None:
+                a("  Meilleur coup : %s (%s), ligne %s."
+                  % (meilleur["san"], meilleur["score"],
+                     tronquer_variante(chess.Board(r["fen"]),
+                                       meilleur["pv_uci"], longueur_pv)))
+                if meilleur.get("wdl") and r["joue"].get("wdl"):
+                    a("  Chances G/N/P : %s avec le meilleur coup, %s "
+                      "après le coup joué."
+                      % (_gnp(meilleur["wdl"], pour_noirs),
+                         _gnp(r["joue"]["wdl"], pour_noirs)))
+            a("  FEN : `%s`" % r["fen"])
+        if len(fautes) > PALMARES_MAX:
+            a("- %d autres, voir le tableau."
+              % (len(fautes) - PALMARES_MAX))
         a("")
-        plateau = partie.board()
-        for r, coup in zip(stockfish["resultats"], partie.mainline_moves(),
-                           strict=False):
-            a("- Demi-coup %d, %s jouent %s (position avant le coup)"
-              % (r["demicoup"], r["trait"], r["joue"]["san"]))
-            rangs = ("1er", "2e", "3e", "4e", "5e")
-            joue_dans_liste = False
-            for k, m in enumerate(r["meilleurs"]):
-                etiquette = rangs[k] if k < len(rangs) else "%de" % (k + 1)
-                if m["uci"] == r["joue"]["uci"]:
-                    etiquette += ", joué"
-                    joue_dans_liste = True
-                a("    - %s (%s) : %s" % (etiquette, m["score"],
-                                          tronquer_variante(
-                                              plateau, m["pv_uci"],
-                                              longueur_pv)))
-            if r["joue"].get("non_evalue"):
-                a("    - joué : coup nul, non évalué par le moteur")
-            elif not joue_dans_liste:
-                a("    - joué (%s) : %s" % (r["joue"]["score"],
-                                            tronquer_variante(
-                                                plateau, r["joue"]["pv_uci"],
-                                                longueur_pv)))
-            plateau.push(coup)
-        a("")
-
-        # Palmarès : les coups qui coûtent le plus, par camp, avec ce qu'il
-        # fallait jouer et la FEN, matière directe des commentaires
-        # obligatoires et des positions à revoir.
-        a("### 3 ter. Erreurs et gaffes par camp")
-        a("")
-        a("Coups dont l'écart atteint %d cp, du plus coûteux au moins "
-          "coûteux, %d au plus par camp ; les imprécisions restent dans le "
-          "tableau. Les chances G/N/P sont celles du camp au trait, la FEN "
-          "celle de la position avant le coup."
-          % (SEUIL_ERREUR, PALMARES_MAX))
-        a("")
-        for camp in ("Blancs", "Noirs"):
-            fautes = sorted((r for r in stockfish["resultats"]
-                             if r["trait"] == camp
-                             and r["ecart_cp"] is not None
-                             and r["ecart_cp"] >= SEUIL_ERREUR),
-                            key=lambda r: -r["ecart_cp"])
-            a("**%s**" % camp)
-            a("")
-            if not fautes:
-                a("- Aucune erreur ni gaffe.")
-            pour_noirs = camp == "Noirs"
-            for r in fautes[:PALMARES_MAX]:
-                meilleur = r["meilleurs"][0] if r["meilleurs"] else None
-                # À partir de SEUIL_ECART_MAT, l'écart vient d'un mat ramené
-                # à une valeur bornée : le chiffre n'a plus de sens, les
-                # scores parlent d'eux-mêmes.
-                ecart = ("écart %.0f cp" % r["ecart_cp"]
-                         if r["ecart_cp"] < SEUIL_ECART_MAT else
-                         "écart lié à un mat, %s au lieu de %s"
-                         % (r["joue"]["score"],
-                            meilleur["score"] if meilleur else "?"))
-                a("- Coup %d, %s jouent %s (demi-coup %d) : %s, %s."
-                  % (r["numero"], r["trait"], r["joue"]["san"],
-                     r["demicoup"], r["nature"], ecart))
-                if meilleur is not None:
-                    a("  Meilleur coup : %s (%s), ligne %s."
-                      % (meilleur["san"], meilleur["score"],
-                         tronquer_variante(chess.Board(r["fen"]),
-                                           meilleur["pv_uci"], longueur_pv)))
-                    if meilleur.get("wdl") and r["joue"].get("wdl"):
-                        a("  Chances G/N/P : %s avec le meilleur coup, %s "
-                          "après le coup joué."
-                          % (_gnp(meilleur["wdl"], pour_noirs),
-                             _gnp(r["joue"]["wdl"], pour_noirs)))
-                a("  FEN : `%s`" % r["fen"])
-            if len(fautes) > PALMARES_MAX:
-                a("- %d autres, voir le tableau."
-                  % (len(fautes) - PALMARES_MAX))
-            a("")
 
     # -- 4. Positions non exploitables --------------------------------------
     a("## 4. Positions à échantillon non exploitable")
@@ -2266,12 +3667,14 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
         a("- `partie.pgn` : le PGN source, avec ses commentaires d'origine.")
     for annexe in annexes or []:
         a(annexe)
-    a("- `explorateur/NNN-<uci>.json` : une réponse brute par demi-coup "
-      "interrogé, numérotée dans l'ordre de la partie.")
-    if stockfish is not None:
-        a("- `stockfish/evaluations.json` : les évaluations moteur "
-          "complètes, avec la variante principale entière de chaque coup, "
-          "en UCI et en notation algébrique.")
+    if explorateur is not None:
+        # Sans explorateur, l'archive n'a pas ce dossier : l'annoncer
+        # ferait chercher à l'analyste des fichiers qui n'existent pas.
+        a("- `explorateur/NNN-<uci>.json` : une réponse brute par "
+          "demi-coup interrogé, numérotée dans l'ordre de la partie.")
+    a("- `stockfish/evaluations.json` : les évaluations moteur "
+      "complètes, avec la variante principale entière de chaque coup, "
+      "en UCI et en notation algébrique.")
     a("- `collecte.json` : les paramètres exacts de cette collecte.")
     a("")
 
@@ -2382,63 +3785,69 @@ exemples d'utilisation
   Première installation, une seule fois :
 
       %s
-      ./collecte-partie.py --installer-venv
-      ./collecte-partie.py --installer-catalogue
+      %s
+      ./ianalyze.py --installer-venv
+      ./ianalyze.py --installer-catalogue
 
   Relancer --installer-catalogue de temps en temps met le catalogue des
   ouvertures à jour.
 
   Usage courant, sur un PGN local :
 
-      ./collecte-partie.py ma-partie.pgn
+      ./ianalyze.py ma-partie.pgn
 
   Sur une partie Lichess, par URL ou par identifiant :
 
-      ./collecte-partie.py https://lichess.org/xvoiNy2C
-      ./collecte-partie.py xvoiNy2C
+      ./ianalyze.py https://lichess.org/<identifiant>
+      ./ianalyze.py <identifiant>
 
-  Joindre vos consignes d'analyse en tête de la synthèse, pour n'avoir
-  qu'un seul fichier à fournir :
-
-      ./collecte-partie.py ma-partie.pgn --consignes ~/prompt-annotation.md
-
-  Usage hors du projet d'analyse, sans aucune question, ou avec tous vos
+  Sans aucune question, par exemple depuis un autre script, ou avec tous vos
   noms de joueur pour que le camp soit déduit des en-têtes :
 
-      ./collecte-partie.py ma-partie.pgn --sans-questions
-      ./collecte-partie.py ma-partie.pgn --pseudos DeuZa42,Deuza
+      ./ianalyze.py ma-partie.pgn --sans-questions
+      ./ianalyze.py ma-partie.pgn --pseudos MonPseudo,AutrePseudo
 
   Descendre aussi loin que la base répond, sans aucun seuil :
 
-      ./collecte-partie.py ma-partie.pgn --jusqu-a-epuisement
+      ./ianalyze.py ma-partie.pgn --jusqu-a-epuisement
 
   La base de tous les joueurs Lichess est interrogée par défaut, avec les
   filtres de https://lichess.org/opening. La restreindre à certaines
   cadences et tranches de classement, ou interroger la base maîtres :
 
-      ./collecte-partie.py ma-partie.pgn \\
+      ./ianalyze.py ma-partie.pgn \\
           --cadences rapid,classical,correspondence --classements 0,1000
-      ./collecte-partie.py ma-partie.pgn --base maitres
+      ./ianalyze.py ma-partie.pgn --base maitres
 
   Couvrir les dix premiers coups quelle que soit la fréquence des coups
   joués, ou au contraire s'arrêter dès la première sortie de théorie :
 
-      ./collecte-partie.py ma-partie.pgn --coups-min 10
-      ./collecte-partie.py ma-partie.pgn --coups-min 0
+      ./ianalyze.py ma-partie.pgn --coups-min 10
+      ./ianalyze.py ma-partie.pgn --coups-min 0
 
-  Laisser l'évaluation à l'analyste, ou moteur seul, sans réseau :
+  Moteur seul, sans réseau ni jeton :
 
-      ./collecte-partie.py ma-partie.pgn --sans-stockfish
-      ./collecte-partie.py ma-partie.pgn --sans-explorateur
+      ./ianalyze.py ma-partie.pgn --sans-explorateur
 
   Conserver le dossier de travail à côté de l'archive :
 
-      ./collecte-partie.py ma-partie.pgn --garder-dossier
+      ./ianalyze.py ma-partie.pgn --garder-dossier
+
+  Pour un LLM qui n'ouvre pas les zip ou n'exécute pas de code : un
+  prompt court qui porte la partie et les évaluations, à coller seul.
+  Aucune archive n'est écrite :
+
+      ./ianalyze.py ma-partie.pgn --prompt-seul
+
+  Utiliser votre propre modèle de prompt, ou ne pas écrire de prompt :
+
+      ./ianalyze.py ma-partie.pgn --prompt ~/mon-modele.txt
+      ./ianalyze.py ma-partie.pgn --sans-prompt
 
   Moteur plus profond, ou limité aux quinze premiers coups :
 
-      ./collecte-partie.py ma-partie.pgn --profondeur 22
-      ./collecte-partie.py ma-partie.pgn --coups-stockfish 15
+      ./ianalyze.py ma-partie.pgn --profondeur 22
+      ./ianalyze.py ma-partie.pgn --coups-stockfish 15
 
 résultat
 --------
@@ -2449,30 +3858,42 @@ résultat
   sortie d'erreur. En cas d'échec, le dossier de travail est conservé tel
   quel pour diagnostic.
 
+  À côté de l'archive, le prompt d'analyse de la partie, sous le nom
+  analyse-<partie>-<horodatage>.prompt.txt : collez-le dans la
+  conversation, l'archive en pièce jointe. Il est tiré du modèle
+  prompt-modele.txt, rangé à côté du script, que vous pouvez modifier.
+
 prérequis
 ---------
 
   %s
-  %-29s# sauf avec --sans-stockfish
+  %s
 
   python-chess n'est pas empaqueté par Debian. L'option --installer-venv
-  crée un environnement virtuel dédié (%s par défaut) et y installe le
-  module. Le script s'y relance ensuite tout seul, vous pouvez continuer à
+  crée un environnement virtuel dédié et y installe le module. Par défaut :
+  %s
+  Le script s'y relance ensuite tout seul, vous pouvez continuer à
   l'appeler avec le python du système.
 
   Le catalogue des ouvertures nommées de Lichess (domaine public, CC0)
-  est gardé en local dans %s, installé et mis à jour par
-  --installer-catalogue. Il n'est pas requis avec --sans-explorateur.
+  est gardé en local dans %s,
+  installé et mis à jour par --installer-catalogue. Il n'est pas requis
+  avec --sans-explorateur.
 
-  Le jeton personnel Lichess est lu dans %s, en mode 600, ce fichier ne
-  contenant que le jeton. Il n'apparaît jamais dans la sortie, ni dans les
-  fichiers produits, ni dans la ligne de commande.
+  Le jeton personnel Lichess est lu dans %s, en mode 600,
+  ce fichier ne contenant que le jeton. Il n'apparaît jamais dans la
+  sortie, ni dans les fichiers produits, ni dans la ligne de commande.
+
+  Votre pseudo, votre cadence habituelle et votre niveau sont demandés
+  une seule fois, au premier lancement sur un terminal, puis gardés dans
+  %s, que vous pouvez modifier à la main.
 
   Aucune autre dépendance : le HTTP passe par urllib de la bibliothèque
-  standard, l'archive par zipfile. Le paquet stockfish est nécessaire
-  sauf avec --sans-stockfish ; le moteur est piloté en UCI.
-""" % (CMD_PAQUET_VENV, CMD_PAQUET_VENV, CMD_PAQUET_STOCKFISH,
-       VENV_DEFAUT, CATALOGUE_DEFAUT, JETON_DEFAUT)
+  standard, l'archive par zipfile. Le paquet stockfish est obligatoire,
+  le moteur est piloté en UCI.
+""" % (CMD_PAQUET_VENV, CMD_PAQUET_STOCKFISH,
+       CMD_PAQUET_VENV, CMD_PAQUET_STOCKFISH,
+       VENV_DEFAUT, CATALOGUE_DEFAUT, JETON_DEFAUT, REGLAGES_DEFAUT)
 
 
 def valider_liste(p: argparse.ArgumentParser, option: str, valeur: str,
@@ -2509,20 +3930,23 @@ def valider_liste(p: argparse.ArgumentParser, option: str, valeur: str,
 def analyser_arguments(argv: list[str]) -> argparse.Namespace:
     """Définit et lit les options de la ligne de commande."""
     p = argparse.ArgumentParser(
-        prog="collecte-partie.py",
+        prog="ianalyze.py",
+        # Les sauts de ligne sont écrits ici : avec ce formateur, argparse
+        # ne coupe pas la description, qui tenait sur une ligne de 250
+        # colonnes.
         description="Collecte le matériel d'analyse d'une partie d'échecs : "
-                    "PGN, statistiques de l'explorateur Lichess (base de "
-                    "tous les joueurs, ou base maîtres avec --base "
-                    "maitres) pour déterminer la sortie de théorie, et "
-                    "évaluations "
-                    "Stockfish de la partie. Ne produit aucune "
-                    "analyse.",
+                    "PGN, statistiques\n"
+                    "de l'explorateur Lichess (base de tous les joueurs, "
+                    "ou base maîtres avec\n"
+                    "--base maitres) pour déterminer la sortie de théorie, "
+                    "et évaluations\n"
+                    "Stockfish de la partie. Ne produit aucune analyse.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=EXEMPLES)
 
     p.add_argument("source", nargs="?",
                    help="fichier PGN local, URL Lichess, ou identifiant de "
-                        "partie à huit caractères")
+                        "partie à huit ou douze caractères")
 
     g = p.add_argument_group("environnement virtuel")
     g.add_argument("--installer-venv", action="store_true",
@@ -2534,14 +3958,23 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
 
     g = p.add_argument_group("questions de démarrage")
     g.add_argument("--sans-questions", action="store_true",
-                   help="ne pose aucune question, ni camp ni contexte, pour "
-                        "un usage hors du projet d'analyse ; implicite hors "
-                        "terminal interactif")
-    g.add_argument("--pseudos", default=PSEUDOS_DEFAUT, metavar="LISTE",
+                   help="ne pose aucune question, ni camp ni contexte ; "
+                        "implicite hors terminal interactif")
+    g.add_argument("--pseudos", default=None, metavar="LISTE",
                    help="vos noms de joueur, séparés par des virgules, "
                         "cherchés sans tenir compte de la casse dans White "
                         "et Black pour déduire votre camp "
+                        "(défaut : ceux de vos réglages)")
+    g.add_argument("--reglages", default=REGLAGES_DEFAUT, metavar="FICHIER",
+                   help="fichier de réglages, où sont gardés votre pseudo, "
+                        "votre cadence habituelle et votre niveau, demandés "
+                        "une seule fois sur un terminal "
                         "(défaut : %(default)s)")
+    g.add_argument("--purge-reglages", action="store_true",
+                   help="supprime le fichier de réglages, celui de "
+                        "--reglages s'il est donné, puis quitte ; vos "
+                        "réponses seront redemandées à la prochaine "
+                        "collecte")
 
     g = p.add_argument_group("catalogue des ouvertures")
     g.add_argument("--installer-catalogue", action="store_true",
@@ -2555,13 +3988,24 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
     g.add_argument("--sortie", default=".", metavar="REP",
                    help="répertoire où écrire l'archive "
                         "(défaut : %(default)s)")
-    g.add_argument("--consignes", metavar="FICHIER",
-                   help="fichier texte ou markdown inséré tel quel en tête "
-                        "de la synthèse, sous le titre \"Consignes "
-                        "d'analyse\", à la place des questions de contexte")
     g.add_argument("--garder-dossier", action="store_true",
                    help="ne supprime pas le dossier de travail après "
-                        "création de l'archive")
+                        "création de l'archive, ou du prompt avec "
+                        "--prompt-seul")
+    g.add_argument("--prompt", metavar="FICHIER",
+                   help="modèle du prompt d'analyse, écrit à côté de "
+                        "l'archive sous le nom <archive>%s (défaut : %s à "
+                        "côté du script)" % (PROMPT_SUFFIXE, PROMPT_MODELE))
+    g.add_argument("--sans-prompt", action="store_true",
+                   help="n'écrit pas le prompt d'analyse")
+    g.add_argument("--prompt-seul", action="store_true",
+                   help="écrit un prompt court qui porte la partie et les "
+                        "évaluations de Stockfish, à coller seul dans la "
+                        "conversation, sans pièce jointe : pour un LLM qui "
+                        "n'ouvre pas les zip ou n'exécute pas de code. Son "
+                        "modèle est %s. Aucune archive n'est écrite, et le "
+                        "dossier de travail est supprimé, sauf avec "
+                        "--garder-dossier" % PROMPT_SEUL_MODELE)
 
     g = p.add_argument_group("explorateur")
     g.add_argument("--base", choices=sorted(BASES_EXPLORATEUR),
@@ -2589,13 +4033,15 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                         "(défaut : %(default)s)")
     g.add_argument("--seuil-frequence", type=float, default=10.0, metavar="P",
                    help="arrêt dès que le coup joué tombe sous P pour cent "
-                        "de fréquence, 0 pour désactiver ce critère "
+                        "de fréquence et sort du catalogue des ouvertures, "
+                        "0 pour désactiver ce critère "
                         "(défaut : %(default)s)")
     g.add_argument("--jusqu-a-epuisement", action="store_true",
                    help="ignore les deux seuils et interroge la base tant "
                         "qu'elle répond, l'arrêt n'ayant alors lieu que sur "
-                        "une erreur HTTP ou sur une position absente de la "
-                        "base")
+                        "une erreur HTTP, sur une position absente de la "
+                        "base, sur un coup nul, au plafond "
+                        "--max-demicoups ou à la fin de la partie")
     g.add_argument("--coups-min", type=int, default=6, metavar="N",
                    help="aucun arrêt sur la fréquence avant la fin du coup "
                         "N, le seuil de parties restant actif ; la table "
@@ -2611,19 +4057,14 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
     g.add_argument("--sans-explorateur", action="store_true",
                    help="saute entièrement la collecte explorateur")
 
-    g = p.add_argument_group("moteur (inactif avec --sans-stockfish)")
-    g.add_argument("--sans-stockfish", action="store_true",
-                   help="saute l'évaluation Stockfish, laissée alors à "
-                        "l'analyste ; par défaut elle est calculée en local")
-    g.add_argument("--avec-stockfish", action="store_true",
-                   help="sans effet, l'évaluation étant désormais le "
-                        "défaut ; conservée pour les anciennes commandes")
+    g = p.add_argument_group("moteur")
     g.add_argument("--coups-stockfish", type=int, default=0, metavar="N",
                    help="limite l'analyse moteur aux N premiers coups "
                         "entiers, soit 2N demi-coups ; 0 analyse toute la "
                         "partie (défaut : %(default)s)")
     g.add_argument("--profondeur", type=int, default=18, metavar="D",
-                   help="profondeur de recherche (défaut : %(default)s)")
+                   help="profondeur de recherche, de 1 à 60 "
+                        "(défaut : %(default)s)")
     g.add_argument("--multipv", type=int, default=3, metavar="K",
                    help="nombre de variantes demandées par position "
                         "(défaut : %(default)s)")
@@ -2649,10 +4090,25 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
 
     options = p.parse_args(argv)
 
-    if options.installer_venv or options.installer_catalogue:
+    if options.purge_reglages and (options.installer_venv
+                                   or options.installer_catalogue
+                                   or options.source):
+        # La purge se fait seule : combinée, elle était ignorée sans un
+        # mot au profit de l'autre action.
+        p.error("--purge-reglages s'emploie seule, sans partie ni autre "
+                "action")
+    if options.prompt is not None and not options.prompt.strip():
+        # Cas d'une variable vide dans un script : --prompt "$MODELE".
+        p.error("--prompt : chemin vide")
+    if (options.installer_venv or options.installer_catalogue
+            or options.purge_reglages):
         return options
     if not options.source:
         p.error("il faut un fichier PGN, une URL ou un identifiant de partie")
+    if options.prompt and options.sans_prompt:
+        p.error("--prompt et --sans-prompt s'excluent")
+    if options.prompt_seul and options.sans_prompt:
+        p.error("--prompt-seul et --sans-prompt s'excluent")
     # nan et inf sont des flottants valides pour argparse, mais nan échappe
     # à toute comparaison et time.sleep() refuse l'un comme l'autre : on
     # les écarte ici, avant toute création de dossier.
@@ -2666,27 +4122,22 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                 "fils", "hachage", "delai"):
         if getattr(options, nom) < 1:
             p.error("--%s doit valoir au moins 1" % nom.replace("_", "-"))
+    # Chemins : le tilde n'est développé par le shell que s'il ouvre le
+    # mot, pas dans la forme --sortie=~/analyses.
+    options.sortie = os.path.expanduser(options.sortie)
+    options.stockfish = resoudre_moteur(options.stockfish)
+    if options.profondeur > PROFONDEUR_MAX:
+        p.error("--profondeur ne doit pas dépasser %d" % PROFONDEUR_MAX)
     if options.coups_stockfish < 0:
         p.error("--coups-stockfish doit valoir 0 ou plus")
     if options.coups_min < 0:
         p.error("--coups-min doit valoir 0 ou plus")
-    options.pseudos = [x.strip() for x in options.pseudos.split(",")
-                       if x.strip()]
-    if not options.pseudos:
-        p.error("--pseudos : liste vide")
-    if options.avec_stockfish and options.sans_stockfish:
-        p.error("--avec-stockfish et --sans-stockfish s'excluent")
-    # L'évaluation est désormais le défaut : --avec-stockfish ne fait que
-    # le confirmer, et le reste du script continue de lire avec_stockfish.
-    options.avec_stockfish = not options.sans_stockfish
-    if not options.avec_stockfish:
-        # Une option moteur passée avec --sans-stockfish serait ignorée en
-        # silence : mieux vaut le dire que laisser croire à une analyse.
-        for nom in ("coups_stockfish", "profondeur", "multipv", "fils",
-                    "hachage", "stockfish", "longueur_pv"):
-            if getattr(options, nom) != p.get_default(nom):
-                p.error("--%s n'a pas d'effet avec --sans-stockfish"
-                        % nom.replace("_", "-"))
+    # Sans --pseudos, la valeur reste None : les pseudos viendront alors
+    # des réglages. L'option, quand elle est donnée, doit en porter un.
+    if options.pseudos is not None:
+        options.pseudos = decouper_pseudos(options.pseudos)
+        if not options.pseudos:
+            p.error("--pseudos : liste vide")
     if options.seuil_frequence < 0 or options.seuil_frequence > 100:
         p.error("--seuil-frequence doit être compris entre 0 et 100")
     if options.longueur_pv < 0:
@@ -2724,6 +4175,11 @@ def main(argv: list[str]) -> int:
     if options.installer_venv:
         installer_venv(options.venv)
         return 0
+    # -- Purge des réglages -------------------------------------------------
+    # Placée avant la relance : elle ne demande ni python-chess ni partie.
+    if options.purge_reglages:
+        purger_reglages(options.reglages)
+        return 0
     if not CHESS_DISPONIBLE:
         relancer_dans_venv(options.venv, argv)
 
@@ -2733,14 +4189,43 @@ def main(argv: list[str]) -> int:
         installer_catalogue(options.catalogue, options.delai)
         return 0
 
-    # -- Consignes d'analyse, lues avant tout pour échouer tôt --------------
+    # Texte de la section "Consignes d'analyse" de la synthèse : les
+    # réponses aux questions de démarrage, quand elles sont posées.
     consignes = None
-    if options.consignes:
-        chemin_consignes = pathlib.Path(os.path.expanduser(options.consignes))
-        if not chemin_consignes.is_file():
-            raise SystemExit("Fichier de consignes introuvable : %s"
-                             % chemin_consignes)
-        consignes = lire_texte(chemin_consignes, "consignes")
+
+    # -- Réglages de l'utilisateur, lus tôt eux aussi -----------------------
+    reglages = lire_reglages(options.reglages)
+
+    # -- Modèle du prompt, lu et contrôlé avant la collecte -----------------
+    # Un modèle désigné par --prompt doit exister. Le modèle par défaut,
+    # lui, peut manquer quand le script a été copié seul : la collecte se
+    # fait alors sans prompt, et le journal le dit.
+    modele_prompt = None
+    if not options.sans_prompt:
+        fichier_modele = chemin_modele(options.prompt, options.prompt_seul)
+        if est_fichier(fichier_modele):
+            modele_prompt = lire_texte(fichier_modele, "modèle de prompt")
+            verifier_modele(modele_prompt, str(fichier_modele))
+            # Un prompt à coller seul doit porter la partie : un modèle
+            # personnel qui ne la place pas est refusé avant la collecte.
+            # Le repère est cherché dans les lignes de texte : placé
+            # dans une note, il ne mettrait rien dans le prompt.
+            if options.prompt_seul and not any(
+                    PROMPT_DONNEES in ligne
+                    for ligne in lignes_de_texte(modele_prompt)):
+                raise SystemExit(
+                    "--prompt-seul : le modèle %s ne contient pas %s, le "
+                    "prompt ne porterait pas la partie. Partez de %s."
+                    % (fichier_modele, PROMPT_DONNEES, PROMPT_SEUL_MODELE))
+        elif options.prompt or options.prompt_seul:
+            # --prompt-seul demande un prompt : sans modèle, mieux vaut
+            # s'arrêter ici qu'après la collecte.
+            raise SystemExit("Modèle de prompt introuvable : %s"
+                             % fichier_modele)
+        else:
+            journal("Attention : modèle de prompt introuvable (%s), aucun "
+                    "prompt ne sera écrit. Voir --prompt et --sans-prompt."
+                    % fichier_modele)
 
     # -- Récupération du PGN ------------------------------------------------
     # Encodage retenu pour le PGN et remarques de décodage, consignés dans
@@ -2748,24 +4233,41 @@ def main(argv: list[str]) -> int:
     encodage_pgn = "utf-8"
     remarques_pgn: list[str] = []
     chemin_local = pathlib.Path(os.path.expanduser(options.source))
-    if chemin_local.is_file():
+    if est_fichier(chemin_local):
         journal("Lecture du PGN local : %s" % chemin_local)
         texte_pgn, encodage_pgn, remarques_pgn = lire_fichier_texte(
             chemin_local, "PGN")
+        if encodage_pgn == "latin-1":
+            # Le repli sur latin-1 n'a lieu que si le fichier contient un
+            # octet que cp1252 ne définit pas : c'est le signe d'un autre
+            # encodage, cp850 ou MacRoman par exemple, dont les lettres
+            # accentuées seraient retirées comme des caractères de
+            # contrôle. Plutôt que d'abîmer les noms en silence, le
+            # script s'arrête.
+            raise SystemExit(
+                "Encodage du PGN non reconnu : ni UTF-8, ni UTF-16, ni "
+                "cp1252. Convertissez le fichier en UTF-8, par exemple "
+                "avec iconv, puis relancez.")
         etiquette = etiquette_sure(chemin_local.stem)
         if etiquette != chemin_local.stem:
             journal("Nom du dossier assaini : %s" % etiquette)
+    elif options.source.strip() and est_repertoire(chemin_local):
+        # Un répertoire dont le nom fait huit lettres passerait sinon pour
+        # un identifiant, et une requête partirait vers Lichess.
+        raise SystemExit("%s est un répertoire, pas un fichier PGN."
+                         % chemin_local)
     else:
         identifiant = extraire_id(options.source)
         if identifiant is None:
             # Hors URL, un point, une barre oblique ou un tilde trahissent
             # un chemin : le fichier visé n'existe pas, autant le dire.
-            if (not options.source.strip().startswith(("http://",
-                                                        "https://"))
+            if (not options.source.strip().lower().startswith(
+                    ("http://", "https://"))
                     and any(c in options.source for c in "./~")):
                 raise SystemExit("Fichier PGN introuvable : %s"
                                  % chemin_local)
-            if options.source.strip().startswith(("http://", "https://")):
+            if options.source.strip().lower().startswith(
+                    ("http://", "https://")):
                 # Message propre aux URL : dire la forme attendue vaut
                 # mieux qu'un refus général.
                 raise SystemExit("URL non reconnue comme une partie Lichess "
@@ -2786,12 +4288,6 @@ def main(argv: list[str]) -> int:
     motif_sans_explorateur = None
     if options.sans_explorateur:
         motif_sans_explorateur = "désactivée par --sans-explorateur"
-    elif partie.board().fen() != chess.STARTING_FEN:
-        # La base maîtres n'est interrogeable qu'à partir de la position
-        # initiale ; une partie "from position" n'a pas de sens ici.
-        motif_sans_explorateur = ("la partie ne commence pas à la position "
-                                  "initiale, l'explorateur est inapplicable")
-        journal("Explorateur ignoré : %s." % motif_sans_explorateur)
     else:
         # Le jeton n'est lu qu'ici et n'est ni écrit ni journalisé.
         JETON_COURANT = lire_jeton(options.jeton_fichier)
@@ -2800,24 +4296,35 @@ def main(argv: list[str]) -> int:
         catalogue = lire_catalogue(options.catalogue)
         journal("Catalogue des ouvertures : %s positions connues, du %s"
                 % (catalogue.meta.get("connues"), catalogue.meta.get("date")))
-    if options.avec_stockfish:
-        verifier_moteur(options.stockfish)
-        # Les options moteur sont contrôlées ici, auprès du moteur, et non
-        # à sa configuration, qui n'a lieu qu'après la phase explorateur.
-        verifier_options_moteur(options.stockfish, options.fils,
-                                options.hachage, options.multipv)
+    # Le moteur est obligatoire depuis la version 4.0.0 : il est vérifié
+    # avant toute écriture et avant la moindre requête.
+    verifier_moteur(options.stockfish)
+    # Les options moteur sont contrôlées ici, auprès du moteur, et non
+    # à sa configuration, qui n'a lieu qu'après la phase explorateur.
+    verifier_options_moteur(options.stockfish, options.fils,
+                            options.hachage, options.multipv)
 
     # -- Questions de démarrage ---------------------------------------------
     # Posées après les vérifications, pour ne rien demander à qui va de
     # toute façon échouer, et avant la collecte, qui peut durer.
     camp = None
     contexte = None
-    if questions_possibles(options.sans_questions):
+    interactif = questions_possibles(options.sans_questions)
+    if interactif:
+        # Réglages manquants : demandés ici, une fois pour toutes, avant
+        # les questions propres à la partie.
+        completer_reglages(options.reglages, reglages, options.pseudos)
+    # --pseudos l'emporte sur les réglages. La liste retenue remplace
+    # l'option : collecte.json enregistre ainsi les pseudos réellement
+    # utilisés, et elle peut être vide.
+    if options.pseudos is None:
+        options.pseudos = decouper_pseudos(reglage(reglages, "pseudos"))
+    if interactif:
         journal("Questions de démarrage, Entrée retient la valeur proposée.")
         camp = completer_entetes(partie, options.pseudos)
-        if consignes is None:
-            contexte = recueillir_contexte(partie, camp)
-            consignes = contexte
+        contexte = recueillir_contexte(
+            partie, camp, analyser_cadence(reglage(reglages, "cadence")))
+        consignes = contexte
     else:
         journal("Questions de démarrage sautées : %s."
                 % ("option --sans-questions" if options.sans_questions
@@ -2826,7 +4333,9 @@ def main(argv: list[str]) -> int:
     # -- Création du dossier de travail -------------------------------------
     # Le nom est horodaté à la seconde ; deux lancements dans la même
     # seconde, ou un dossier laissé par un échec précédent, reçoivent un
-    # suffixe plutôt qu'une erreur.
+    # suffixe plutôt qu'une erreur. Le prompt compte aussi : avec
+    # --prompt-seul il est le seul fichier qui reste, et un second
+    # lancement dans la seconde l'écrasait.
     horodatage = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     base = pathlib.Path(options.sortie) / ("analyse-%s-%s"
                                            % (etiquette, horodatage))
@@ -2834,7 +4343,9 @@ def main(argv: list[str]) -> int:
     suffixe = 1
     while True:
         try:
-            if not chemin_archive(dossier).exists():
+            if not (chemin_archive(dossier).exists()
+                    or dossier.with_name(dossier.name
+                                         + PROMPT_SUFFIXE).exists()):
                 dossier.mkdir(parents=True, exist_ok=False)
                 break
         except FileExistsError:
@@ -2900,12 +4411,10 @@ def main(argv: list[str]) -> int:
             options.jusqu_a_epuisement, catalogue, options.coups_min * 2)
 
     # -- Stockfish ----------------------------------------------------------
-    resume_stockfish = None
-    if options.avec_stockfish:
-        resume_stockfish = collecter_stockfish(
-            partie, dossier, options.stockfish,
-            options.coups_stockfish * 2, options.profondeur,
-            options.multipv, options.fils, options.hachage)
+    resume_stockfish = collecter_stockfish(
+        partie, dossier, options.stockfish,
+        options.coups_stockfish * 2, options.profondeur,
+        options.multipv, options.fils, options.hachage)
 
     # -- Trace des paramètres, expurgée de toute donnée sensible ------------
     parametres = dict(vars(options))
@@ -2916,6 +4425,9 @@ def main(argv: list[str]) -> int:
     parametres["contexte_recueilli"] = contexte is not None
     parametres["pgn_encodage"] = encodage_pgn
     parametres["pgn_remarques"] = remarques_pgn
+    # Nom du prompt écrit à côté de l'archive, ou rien s'il n'y en a pas.
+    parametres["prompt_ecrit"] = (dossier.name + PROMPT_SUFFIXE
+                                  if modele_prompt is not None else None)
     ecrire_texte(dossier / "collecte.json",
                  json.dumps(parametres, ensure_ascii=False, indent=1,
                             default=str))
@@ -2929,8 +4441,150 @@ def main(argv: list[str]) -> int:
                     bool(camp and camp["modifiees"]))
     journal("Synthèse écrite : %s" % synthese)
 
+    # Le prompt peut reprendre le PGN : il est relu ici, avant l'archivage
+    # qui supprime le dossier de travail.
+    texte_partie = ""
+    if modele_prompt is not None:
+        texte_partie = (dossier / "partie.pgn").read_text(encoding="utf-8")
+
     # -- Archive et nettoyage -----------------------------------------------
-    archive = archiver(dossier, options.garder_dossier)
+    # Avec --prompt-seul, le prompt est tout ce que le joueur demande :
+    # aucune archive n'est écrite, et le dossier de travail est supprimé
+    # plus bas, une fois le prompt sur le disque. Le nom que l'archive
+    # aurait porté sert encore à nommer le prompt.
+    if options.prompt_seul:
+        archive = chemin_archive(dossier)
+    else:
+        archive = archiver(dossier, options.garder_dossier)
+
+    # -- Prompt d'analyse, écrit à côté de l'archive ------------------------
+    # Après l'archivage : un échec ne laisse pas un prompt sans archive. Le
+    # prompt n'entre pas dans le zip, il se colle dans la conversation.
+    if modele_prompt is not None:
+        camp_joueur = ((camp or {}).get("camp")
+                       or deduire_camp(partie, options.pseudos))
+        niveau = analyser_niveau(reglage(reglages, "niveau")) or 0
+        habituelle = (analyser_cadence(reglage(reglages, "cadence"))
+                      or dict(CADENCE_INCONNUE))
+        # Données du prompt court : calculées dans tous les cas, un modèle
+        # personnel pouvant les placer lui aussi.
+        alerte = (resultat_contredit(partie, resume_stockfish["resultats"])
+                  or "").replace("**", "")
+        precisions = consignes_joueur(contexte)
+        ouverture = phrase_ouverture(resume_explorateur, base["libelle"])
+        coups_partie = list(partie.mainline_moves())
+        evalues = len(resume_stockfish["resultats"])
+        faibles = coups_faibles_joueur(resume_stockfish["resultats"],
+                                       camp_joueur)
+        conditions = {
+            # Toujours vraie depuis la version 4.0.0, gardée pour les
+            # modèles personnels qui l'emploient.
+            "STOCKFISH": True,
+            "EXPLORATEUR": resume_explorateur is not None,
+            "BASE_LICHESS": options.base == "lichess",
+            "BASE_MAITRES": options.base == "maitres",
+            "REPONSES": contexte is not None,
+            "CAMP_CONNU": camp_joueur is not None,
+            "PSEUDO_CONNU": bool(options.pseudos),
+            "NIVEAU_DECLARE": bool(niveau),
+            "RESULTAT_CONTREDIT": bool(alerte),
+            "CONSIGNES_DONNEES": bool(precisions),
+            "OUVERTURE_CONNUE": bool(ouverture),
+            # --coups-stockfish a limité le moteur aux premiers coups : le
+            # prompt doit le dire, sans quoi il promet un chiffre pour
+            # chaque coup.
+            "COUVERTURE_PARTIELLE": evalues < len(coups_partie),
+            "COUP_NUL": any(not coup for coup in coups_partie),
+            # Le bilan du prompt court demande trois erreurs : quand le
+            # tableau en marque moins chez le joueur, le prompt le dit, pour
+            # que le LLM n'en invente pas une.
+            "PEU_DE_COUPS_FAIBLES": (faibles is not None
+                                     and faibles < ERREURS_DU_BILAN),
+            # Sans un seul coup faible, "tenez-vous-en à ceux-là" n'a pas
+            # de sens : le modèle court a une phrase pour ce cas.
+            "AUCUN_COUP_FAIBLE": faibles == 0,
+        }
+        valeurs = {
+            "VERSION": VERSION,
+            "DEPOT": DEPOT,
+            "ARCHIVE": archive.name,
+            "PSEUDOS": ", ".join(options.pseudos),
+            "CAMP": camp_joueur or "inconnu",
+            "NIVEAU": decrire_niveau(niveau, partie, camp_joueur),
+            "CADENCE": decrire_cadence(habituelle),
+            "ANNOTATEUR": (nettoyer_valeur(reglage(reglages, "annotateur"))
+                           or ANNOTATEUR_DEFAUT),
+            "BASE": base["libelle"],
+            "SEUIL_IMPRECISION": str(SEUIL_IMPRECISION),
+            "SEUIL_ERREUR": str(SEUIL_ERREUR),
+            "SEUIL_GAFFE": str(SEUIL_GAFFE),
+            "PROFONDEUR": str(options.profondeur),
+            "MULTIPV": str(options.multipv),
+            "PARTIE_PGN": texte_partie.strip("\n"),
+            "TABLEAU_MOTEUR": tableau_compact(
+                partie, resume_stockfish["resultats"], options.longueur_pv),
+            "ALERTE_RESULTAT": alerte,
+            "CONSIGNES_JOUEUR": precisions,
+            "OUVERTURE": ouverture,
+            "DEMI_COUPS": str(len(coups_partie)),
+            "DEMI_COUPS_EVALUES": str(evalues),
+            "COUPS_FAIBLES_JOUEUR": ("inconnu" if faibles is None
+                                     else str(faibles)),
+        }
+        prompt = archive.with_name(dossier.name + PROMPT_SUFFIXE)
+        try:
+            rendu = rendre_modele(
+                modele_prompt, conditions, valeurs,
+                str(chemin_modele(options.prompt, options.prompt_seul)))
+            ecrire_texte(prompt, rendu)
+            # rendre_modele retire les espaces de fin de ligne : un PGN
+            # terminé par une espace se compare donc sans elle.
+            if (options.prompt_seul
+                    and valeurs["PARTIE_PGN"].rstrip() not in rendu):
+                # Le repère existe dans le modèle, mais sous une condition
+                # fausse pour cette partie : le dire plutôt que d'annoncer
+                # un prompt complet.
+                journal("Attention : le prompt %s ne porte pas la partie, "
+                        "le modèle la place sous une condition qui ne "
+                        "s'applique pas ici. Il ne peut pas être collé "
+                        "seul." % prompt)
+            elif options.prompt_seul:
+                journal("Prompt d'analyse écrit : %s, à coller seul dans "
+                        "la conversation : il porte la partie et les "
+                        "évaluations, aucune pièce jointe n'est "
+                        "nécessaire." % prompt)
+            else:
+                journal("Prompt d'analyse écrit : %s, à coller dans la "
+                        "conversation, l'archive en pièce jointe." % prompt)
+        except OSError as err:
+            if options.prompt_seul:
+                # Le prompt était le seul produit attendu : son échec est
+                # celui de la commande. Le dossier de travail reste.
+                raise SystemExit("Prompt non écrit (%s), dossier de travail "
+                                 "conservé : %s" % (prompt, err)) from err
+            # L'archive est faite : un prompt impossible à écrire ne doit
+            # pas faire échouer la collecte.
+            journal("Attention : prompt non écrit (%s) : %s" % (prompt, err))
+
+    if options.prompt_seul:
+        # Le prompt est écrit : le dossier de travail n'a plus d'emploi,
+        # sauf si le joueur a demandé à le garder, par exemple pour le
+        # passer à verifier-analyse.py.
+        prompt = archive.with_name(dossier.name + PROMPT_SUFFIXE)
+        if options.garder_dossier:
+            journal("Dossier conservé sur demande : %s" % dossier)
+        else:
+            try:
+                shutil.rmtree(dossier)
+            except OSError as err:
+                raise SystemExit("Prompt écrit mais suppression du dossier "
+                                 "impossible : %s" % err) from err
+            journal("Dossier de travail supprimé, aucune archive n'est "
+                    "écrite avec --prompt-seul.")
+        # Le chemin écrit seul sur la sortie standard est celui du prompt.
+        annoncer_archive(prompt)
+        return 0
+
     annoncer_archive(archive)
     return 0
 

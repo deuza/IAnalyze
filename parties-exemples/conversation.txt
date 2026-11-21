@@ -1,0 +1,7 @@
+Voici le PGN annoté. Deux positions à revoir sur l'échiquier.
+
+Après 3. Bc4, que le moteur évalue +0.12 :
+r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3
+
+Après 4. c3, évaluée +0.24 :
+r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/2P2N2/PP1P1PPP/RNBQK2R b KQkq - 0 4

@@ -1,0 +1,17 @@
+[Event "Partie amicale"]
+[Site "?"]
+[Date "2026.11.19"]
+[Round "-"]
+[White "MonPseudo"]
+[Black "Adversaire"]
+[Result "*"]
+[Annotator "Exemple"]
+[PlyCount "9"]
+
+{ Une partie italienne calme, arrêtée au cinquième coup. Les deux camps
+suivent des coups connus et le moteur ne relève ni erreur ni gaffe.
+Les Blancs gardent le léger avantage du trait. } 1. e4 { Le coup le plus
+direct pour occuper le centre, évalué +0.37 par le moteur. } 1... e5 2. Nf3
+Nc6 3. Bc4 { Le fou vise f7. Le moteur préfère de peu le clouage. }
+( 3. Bb5 a6 4. Ba4 ) 3... Bc5 4. c3 Nf6 5. d3 { Les Blancs consolident e4
+avant de pousser d4, évaluation +0.21. } *
