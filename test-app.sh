@@ -2135,6 +2135,30 @@ with zipfile.ZipFile(os.environ["ARCHIVE"]) as z:
     source = chess.pgn.read_game(io.StringIO(z.read(nom).decode("utf-8")))
     evals = json.loads(z.read(racine + "stockfish/evaluations.json"))
 
+# Les évaluations "inventées" doivent réellement manquer aux données du
+# moteur. Un chiffre fixe ne le garantit pas : +7.77 a été un jour la
+# vraie évaluation d'un coup, sur une machine où la partie d'essai se
+# joue autour de +7, et le PGN fautif ne l'était plus sur ce point.
+connues = {coup.get("score") for e in evals
+           for coup in [e["joue"]] + e["meilleurs"]}
+
+
+def invente(centiemes):
+    """
+    Première évaluation, à partir de la valeur donnée en centièmes de
+    pion, que le moteur n'a rendue pour aucun coup de cette collecte.
+    """
+    while "+%d.%02d" % divmod(centiemes, 100) in connues:
+        centiemes += 1
+    return "+%d.%02d" % divmod(centiemes, 100)
+
+
+INVENTE_PGN = invente(777)
+INVENTE_CONVERSATION = invente(999)
+# Le chiffre retenu pour le PGN est rendu au script : c'est lui que le
+# bilan doit nommer.
+open("t-invente-pgn", "w", encoding="utf-8").write(INVENTE_PGN + "\n")
+
 
 def construire(fautif):
     jeu = chess.pgn.Game()
@@ -2164,9 +2188,10 @@ def construire(fautif):
                 # Demi-coup 3, mat concédé : évaluation inventée, pour
                 # cent, variante écrite dans le commentaire, variante
                 # illégale, et NAG donnant les Blancs gagnants.
-                texte += (" Chiffre inventé : +7.77, soit 50 %% de gain. (%s)"
+                texte += (" Chiffre inventé : %s, soit 50 %% de gain. (%s)"
                           " (2. Ke3 Nc6)"
-                          % " ".join(meilleur["pv_san"].split()[:4]))
+                          % (INVENTE_PGN,
+                             " ".join(meilleur["pv_san"].split()[:4])))
                 suivant.nags.add(18)
             suivant.comment = textwrap.fill(texte, 75)
             # Variante tirée de la ligne du moteur, quatre demi-coups.
@@ -2224,8 +2249,8 @@ open("t-court.pgn", "w", encoding="utf-8").write(
 open("t-conversation.txt", "w", encoding="utf-8").write(
     "Position 1 : %s\n"
     "Position 2 : 8/8/8/8/8/8/8/8 w - - 0 1\n"
-    "Evaluation +9.99 sortie de nulle part \u2014 avec un tiret cadratin.\n"
-    % evals[2]["fen"])
+    "Evaluation %s sortie de nulle part \u2014 avec un tiret cadratin.\n"
+    % (evals[2]["fen"], INVENTE_CONVERSATION))
 EOF
         "$PYVENV" "$VERIF" "$ARCH" t-conforme.pgn > bilan 2>&1
         egal "T73 PGN conforme, code de retour" 0 "$?"
@@ -2246,7 +2271,6 @@ notation suffixe|pas de notation suffixe
 marqueur de fin|marqueur de fin "1-0"
 gaffe non commentée|toutes commentées \(1 oubliée
 NAG contraire au moteur|aucun NAG de position contraire
-évaluation inventée dans le PGN|toutes se retrouvent dans les données du moteur \(1 introuvable
 variante illégale dans un commentaire|toutes légales \(1 illégale
 tiret cadratin dans la conversation|aucun tiret cadratin dans la conversation \(1 relevé
 FEN invalide|toutes les FEN sont des positions valides
@@ -2254,7 +2278,18 @@ FIN
         verifier "T73 variante écrite dans un commentaire" \
             contient bilan "écrite(s) à l'intérieur d'un commentaire"
         verifier "T73 coup illégal nommé" contient bilan "Ke3 est illégal"
-        verifier "T73 chiffre inventé nommé" contient bilan "+7.77"
+        # Les deux évaluations inventées, celle du PGN et celle de la
+        # conversation, donnent la même phrase au bilan : chacune est
+        # cherchée dans sa section, l'une passait sinon pour l'autre.
+        sed -n '/^=== 5\. /,/^=== 6\. /p' bilan > section5
+        sed -n '/^=== 8\. /,/^=== Bilan/p' bilan > section8
+        INVENTE=$(cat t-invente-pgn 2>/dev/null)
+        verifier "T73 défaut relevé : évaluation inventée dans le PGN" \
+            grep -q -E '^  ECHEC .*\(1 introuvable' section5
+        verifier "T73 chiffre inventé nommé" \
+            contient section5 ": ${INVENTE:-chiffre non rendu}"
+        verifier "T73 défaut relevé : évaluation inventée dans la conversation" \
+            grep -q -E '^  ECHEC .*\(1 introuvable' section8
         grep -E '^  (ECHEC|ATTENTION)' bilan | cut -c1-110 > lignes
         joindre lignes 20
         # Défauts qui ne changent pas les coups lus : chacun doit être
