@@ -9,26 +9,33 @@ Le [README](README.md) explique l'installation et l'usage courant. [TECHNIQUE.md
 - [NOM](#nom)
 - [SYNOPSIS](#synopsis)
 - [DESCRIPTION](#description)
-- [EXEMPLES](#exemples) :
+- <details><summary><a href="#exemples">EXEMPLES</a></summary>
+
   - [première collecte](#première-collecte)
   - [collecte sans rien saisir](#collecte-sans-rien-saisir)
   - [partie de Lichess](#partie-de-lichess)
   - [avec l'explorateur](#avec-lexplorateur)
   - [pour un LLM qui n'ouvre pas les zip](#pour-un-llm-qui-nouvre-pas-les-zip)
   - [vérifier la réponse du LLM](#vérifier-la-réponse-du-llm)
-- [OPTIONS](#options) : 
-  - [général](#général), 
+
+  </details>
+- <details><summary><a href="#options">OPTIONS</a></summary>
+
+  - [général](#général)
   - [environnement virtuel](#environnement-virtuel)
   - [questions de démarrage](#questions-de-démarrage)
   - [catalogue des ouvertures](#catalogue-des-ouvertures)
   - [sortie](#sortie)
   - [explorateur](#explorateur)
-  - [moteur](#moteur) 
+  - [moteur](#moteur)
   - [vérificateur](#vérificateur)
+
+  </details>
 - [MESSAGES D'ERREUR](#messages-derreur)
 - [CODES DE RETOUR](#codes-de-retour)
 - [FICHIERS](#fichiers)
 - [VOIR AUSSI](#voir-aussi)
+
 
 ## NOM
 
