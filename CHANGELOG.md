@@ -46,8 +46,11 @@ jamais publiées.
   tableau du moteur marque moins de trois coups faibles de son côté,
   le prompt en donne le nombre et demande de s'en tenir à ceux-là :
   un LLM à qui l'on en réclame trois en invente une. Valeur
-  `COUPS_FAIBLES_JOUEUR` et condition `PEU_DE_COUPS_FAIBLES` pour les
-  modèles personnels.
+  `COUPS_FAIBLES_JOUEUR` et conditions `PEU_DE_COUPS_FAIBLES` et
+  `AUCUN_COUP_FAIBLE` pour les modèles personnels. Sans aucun coup
+  faible, le prompt demande de ne prêter aucune erreur au joueur.
+  Quand son camp n'est pas connu, il demande de commenter les deux
+  camps de la même façon et de donner le bilan pour chacun.
 - `verifier-analyse.py`, qui contrôle le PGN annoté rendu par un LLM en
   le comparant à l'archive qu'il a reçue : lecture, ligne principale,
   format, erreurs et gaffes commentées, évaluations citées, variantes,

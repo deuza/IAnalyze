@@ -1615,21 +1615,50 @@ print(cp.coups_faibles_joueur(resultats, "Blancs"),
       cp.coups_faibles_joueur([], "Blancs"))
 modele = pathlib.Path(os.environ["SCRIPT"]).with_name(
     cp.PROMPT_SEUL_MODELE).read_text(encoding="utf-8")
-for peu in (True, False):
+# Quatre cas : aucun coup faible, moins de trois, trois ou plus, et un
+# camp inconnu, où "le joueur" n'est d'aucun camp.
+for cas, vraies in (("aucun", ("CAMP_CONNU", "PEU_DE_COUPS_FAIBLES",
+                               "AUCUN_COUP_FAIBLE")),
+                    ("peu", ("CAMP_CONNU", "PEU_DE_COUPS_FAIBLES")),
+                    ("trois", ("CAMP_CONNU",)),
+                    ("inconnu", ())):
     conditions = dict.fromkeys(cp.PROMPT_CONDITIONS, False)
-    conditions["PEU_DE_COUPS_FAIBLES"] = peu
+    conditions.update(dict.fromkeys(vraies, True))
     valeurs = dict.fromkeys(cp.PROMPT_VALEURS, "x")
     valeurs["COUPS_FAIBLES_JOUEUR"] = "2"
     rendu = cp.rendre_modele(modele, conditions, valeurs, "essai")
-    print(peu, rendu.count("Coups faibles du joueur dans le tableau : 2."),
-          rendu.count("sans en ajouter"), rendu.count("les trois erreurs"))
+    print(cas, rendu.count("ne marque aucun coup faible du joueur"),
+          rendu.count("Coups faibles du joueur dans le tableau : 2."),
+          rendu.count("sans en ajouter"), rendu.count("les trois erreurs"),
+          rendu.count("pour chaque camp"),
+          rendu.count("Le camp du joueur n'est pas connu"))
 EOF
-printf '3 2 None 0\nTrue 1 1 0\nFalse 0 0 1\n' > attendu-t74
+printf '3 2 None 0\naucun 1 0 0 0 0 0\npeu 0 1 1 0 0 0\n' > attendu-t74
+printf 'trois 0 0 0 1 0 0\ninconnu 0 0 0 0 1 1\n' >> attendu-t74
 verifier "T74 bilan : compte des coups faibles, phrase selon le compte" \
     cmp -s attendu-t74 sortie-t74
 joindre sortie-t74
 joindre journal-t74 5
 rm -rf "$DEPOT/__pycache__"
+# Un PGN terminé par une espace : le prompt porte bien la partie, et le
+# journal ne doit pas annoncer le contraire.
+printf '[White "Alice"]\n[Black "Bob"]\n\n1. e4 e5 * ' > t-espace.pgn
+"$SCRIPT" t-espace.pgn $S74 --prompt-seul > sortie 2> journal
+egal "T74 PGN fini par une espace, aucune fausse alerte" "0 1" \
+    "$(grep -c 'ne porte pas la partie' journal) $(grep -c 'à coller seul dans la conversation' journal)"
+rm -f analyse-t-espace-*
+# Deux lancements dans la même seconde portaient le même nom : le second
+# prompt écrasait le premier. Six lancements, six fichiers.
+mkdir -p t-meme-seconde
+for essai in 1 2 3 4 5 6; do
+    "$SCRIPT" t-espace.pgn --sans-explorateur --sans-questions \
+        --venv "$VENV" --reglages t-pr.ini --profondeur 1 --fils 1 \
+        --hachage 16 --prompt-seul --sortie t-meme-seconde \
+        > /dev/null 2>> journal || noter "  note   lancement $essai en échec"
+done
+egal "T74 lancements rapprochés, aucun prompt écrasé" 6 \
+    "$(find t-meme-seconde -name '*.prompt.txt' | wc -l)"
+rm -rf t-meme-seconde
 "$SCRIPT" t-seul.pgn $S74 > sortie 2> journal
 PR="$(head -n 1 sortie)"
 PR="${PR%.zip}.prompt.txt"

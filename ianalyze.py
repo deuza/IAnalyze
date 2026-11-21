@@ -397,7 +397,7 @@ PROMPT_CONDITIONS = ("STOCKFISH", "EXPLORATEUR", "BASE_LICHESS",
                      "CAMP_CONNU", "PSEUDO_CONNU", "NIVEAU_DECLARE",
                      "RESULTAT_CONTREDIT", "CONSIGNES_DONNEES",
                      "OUVERTURE_CONNUE", "COUVERTURE_PARTIELLE", "COUP_NUL",
-                     "PEU_DE_COUPS_FAIBLES")
+                     "PEU_DE_COUPS_FAIBLES", "AUCUN_COUP_FAIBLE")
 PROMPT_VALEURS = ("VERSION", "DEPOT", "ARCHIVE", "PSEUDOS", "CAMP", "NIVEAU",
                   "CADENCE", "ANNOTATEUR", "BASE", "SEUIL_IMPRECISION",
                   "SEUIL_ERREUR", "SEUIL_GAFFE", "PROFONDEUR", "MULTIPV",
@@ -4333,7 +4333,9 @@ def main(argv: list[str]) -> int:
     # -- Création du dossier de travail -------------------------------------
     # Le nom est horodaté à la seconde ; deux lancements dans la même
     # seconde, ou un dossier laissé par un échec précédent, reçoivent un
-    # suffixe plutôt qu'une erreur.
+    # suffixe plutôt qu'une erreur. Le prompt compte aussi : avec
+    # --prompt-seul il est le seul fichier qui reste, et un second
+    # lancement dans la seconde l'écrasait.
     horodatage = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     base = pathlib.Path(options.sortie) / ("analyse-%s-%s"
                                            % (etiquette, horodatage))
@@ -4341,7 +4343,9 @@ def main(argv: list[str]) -> int:
     suffixe = 1
     while True:
         try:
-            if not chemin_archive(dossier).exists():
+            if not (chemin_archive(dossier).exists()
+                    or dossier.with_name(dossier.name
+                                         + PROMPT_SUFFIXE).exists()):
                 dossier.mkdir(parents=True, exist_ok=False)
                 break
         except FileExistsError:
@@ -4496,6 +4500,9 @@ def main(argv: list[str]) -> int:
             # que le LLM n'en invente pas une.
             "PEU_DE_COUPS_FAIBLES": (faibles is not None
                                      and faibles < ERREURS_DU_BILAN),
+            # Sans un seul coup faible, "tenez-vous-en à ceux-là" n'a pas
+            # de sens : le modèle court a une phrase pour ce cas.
+            "AUCUN_COUP_FAIBLE": faibles == 0,
         }
         valeurs = {
             "VERSION": VERSION,
@@ -4530,7 +4537,10 @@ def main(argv: list[str]) -> int:
                 modele_prompt, conditions, valeurs,
                 str(chemin_modele(options.prompt, options.prompt_seul)))
             ecrire_texte(prompt, rendu)
-            if options.prompt_seul and valeurs["PARTIE_PGN"] not in rendu:
+            # rendre_modele retire les espaces de fin de ligne : un PGN
+            # terminé par une espace se compare donc sans elle.
+            if (options.prompt_seul
+                    and valeurs["PARTIE_PGN"].rstrip() not in rendu):
                 # Le repère existe dans le modèle, mais sous une condition
                 # fausse pour cette partie : le dire plutôt que d'annoncer
                 # un prompt complet.

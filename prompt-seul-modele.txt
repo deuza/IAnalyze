@@ -22,6 +22,8 @@ tutoyez le joueur.
 Le joueur avait les {{CAMP}}.
 Son niveau : {{NIVEAU}}.
 #! sinon
+Le camp du joueur n'est pas connu : commentez les deux camps de la même
+façon, sans supposer lequel est le sien.
 Niveau du joueur : {{NIVEAU}}.
 #! fin
 
@@ -47,14 +49,26 @@ présenter comme un calcul.
 #! note Le bilan demande trois erreurs. Quand le tableau en marque
 #! note moins chez le joueur, le prompt donne leur nombre : un LLM à qui
 #! note l'on en réclame trois en invente une.
+#! si AUCUN_COUP_FAIBLE
+Le tableau ne marque aucun coup faible du joueur : après le bloc de
+code, ne lui prêtez aucune erreur, et donnez en quelques lignes le
+thème qu'il peut travailler en priorité.
+#! sinon
 #! si PEU_DE_COUPS_FAIBLES
 Après le bloc de code, donnez en quelques lignes les erreurs les plus
 coûteuses du joueur et le thème qu'il doit travailler en priorité.
 Coups faibles du joueur dans le tableau : {{COUPS_FAIBLES_JOUEUR}}.
 Tenez-vous-en à ceux-là, sans en ajouter.
 #! sinon
+#! si CAMP_CONNU
 Après le bloc de code, donnez en quelques lignes les trois erreurs les
 plus coûteuses du joueur et le thème qu'il doit travailler en priorité.
+#! sinon
+Après le bloc de code, donnez en quelques lignes, pour chaque camp, ses
+erreurs les plus coûteuses, trois au plus, et le thème à travailler en
+priorité.
+#! fin
+#! fin
 #! fin
 #! si RESULTAT_CONTREDIT
 
@@ -92,7 +106,8 @@ Noirs matent en un coup. Le compte se lit après le coup de la ligne :
 "#+0" ou "#-0", ce coup donne mat.
 #! si COUP_NUL
 Un coup noté "--" est un coup nul : le trait passe sans qu'une pièce
-bouge. Le moteur ne l'évalue pas, et sa ligne porte un tiret.
+bouge. Le moteur ne l'évalue pas : quand le tableau le couvre, sa
+ligne porte un tiret à la place de l'évaluation.
 #! fin
 
 {{TABLEAU_MOTEUR}}

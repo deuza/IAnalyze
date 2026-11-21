@@ -640,8 +640,9 @@ Conditions :
 | `COUVERTURE_PARTIELLE` | `--coups-stockfish` a limité le moteur aux premiers coups |
 | `COUP_NUL` | la partie contient un coup nul, noté `--` |
 | `PEU_DE_COUPS_FAIBLES` | votre camp est connu et `COUPS_FAIBLES_JOUEUR` est inférieur à trois |
+| `AUCUN_COUP_FAIBLE` | votre camp est connu et `COUPS_FAIBLES_JOUEUR` vaut zéro |
 
-Les deux modèles, `prompt-modele.txt` et `prompt-seul-modele.txt`, partagent ces repères. `PARTIE_PGN`, `TABLEAU_MOTEUR`, `ALERTE_RESULTAT`, `CONSIGNES_JOUEUR`, `OUVERTURE`, `COUPS_FAIBLES_JOUEUR` et les conditions `RESULTAT_CONTREDIT`, `CONSIGNES_DONNEES`, `OUVERTURE_CONNUE`, `COUP_NUL`, `PEU_DE_COUPS_FAIBLES` servent au prompt court.
+Les deux modèles, `prompt-modele.txt` et `prompt-seul-modele.txt`, partagent ces repères. `PARTIE_PGN`, `TABLEAU_MOTEUR`, `ALERTE_RESULTAT`, `CONSIGNES_JOUEUR`, `OUVERTURE`, `COUPS_FAIBLES_JOUEUR` et les conditions `RESULTAT_CONTREDIT`, `CONSIGNES_DONNEES`, `OUVERTURE_CONNUE`, `COUP_NUL`, `PEU_DE_COUPS_FAIBLES`, `AUCUN_COUP_FAIBLE` servent au prompt court.
 
 Le prompt court finit par un bilan : les trois erreurs les plus coûteuses du joueur et le thème à travailler. Quand le tableau marque moins de trois coups faibles de votre côté, la phrase change : elle donne leur nombre et demande de s'en tenir à ceux-là.
 
@@ -651,6 +652,8 @@ coûteuses du joueur et le thème qu'il doit travailler en priorité.
 Coups faibles du joueur dans le tableau : 2.
 Tenez-vous-en à ceux-là, sans en ajouter.
 ```
+
+Sans aucun coup faible de votre côté, le prompt demande de ne vous prêter aucune erreur. Quand votre camp n'est pas connu, il demande de commenter les deux camps de la même façon et de donner le bilan pour chacun.
 
 La raison vient des essais du 21 novembre 2026 (README, section 7) : le joueur n'avait commis que deux erreurs, et trois réponses sur cinq en ont présenté une troisième pour arriver au compte demandé.
 
