@@ -7,7 +7,7 @@
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/t/deuza/IAnalyze?style=plastic)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/deuza/IAnalyze?style=plastic)
 
-# IAnalyze - Le dossier d'une partie d'échecs pour un analyste LLM
+# IAnalyze
 
 IAnalyze prépare l'analyse d'une partie d'échecs par un LLM *(désigné comme l'analyste dans la suite de ce document)*.
 
