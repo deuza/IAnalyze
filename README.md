@@ -85,7 +85,7 @@ Les fichiers du dépôt :
 |---|---|
 | `ianalyze.py` | le script, en un seul fichier |
 | `prompt-modele.txt` | le modèle dont est tiré le prompt de chaque partie (section 6) |
-| `prompt-seul-modele.txt` | le modèle du prompt court de `--prompt-seul` (section 6) |
+| `prompt-seul-modele.txt` | le modèle du prompt court de `--prompt-seul` (section 7) |
 | `verifier-analyse.py` | l'outil supplémentaire qui contrôle le PGN rendu par le LLM (section 8) |
 | [`EXEMPLES.md`](EXEMPLES.md) | l'aide-mémoire : commandes, options et sorties |
 | [`TECHNIQUE.md`](TECHNIQUE.md) | la documentation technique |

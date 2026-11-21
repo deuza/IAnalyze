@@ -573,7 +573,7 @@ Rien ne dépend de la locale.
 
 Dans l'étiquette de l'archive, les caractères de contrôle, les caractères `/ \ : * ? " < > |` et les octets non décodables du nom du PGN deviennent "\_", et les espaces des tirets : `partie contre machin.pgn` donne `analyse-partie-contre-machin-...`. L'étiquette est bornée à 80 octets.
 
-Espaces et lettres accentuées sont conservés.
+Les lettres accentuées sont conservées.
 
 Console : un caractère que le terminal ne sait pas afficher devient "?" au lieu d'arrêter le script, sous LANG=C comme avec PYTHONIOENCODING=ascii.
 
@@ -795,12 +795,13 @@ GARDER=1 ./test-app.sh
 |---|---|---|
 | Ligne de commande | T01 à T04, T50, T71 | compilation, aide, options refusées avec le code 2, fichier introuvable, valeurs `nan` et `inf`, options retirées |
 | Plateforme | T31, T32 | commandes `apt` ou `brew` proposées selon le système, emplacements par défaut |
-| Archive | T05, T06, T08, T48, T53, M1 | contenu du zip, dossier gardé, répertoire de sortie, noms à point ou accentués, interruption pendant l'archivage |
+| Archive | T05, T06, T08, T48, T53, T80, M1 | contenu du zip, dossier gardé, répertoire de sortie, noms à point ou accentués, interruption pendant l'archivage |
 | Encodages | T34 à T47 | latin-1, cp1252, UTF-16, UTF-8 abîmé, octets NUL, fins de ligne, caractères de contrôle, locale C, noms de fichiers |
-| Jeton | T27, T43 | fichier absent, marque d'ordre des octets, jeton non ASCII refusé, jeton jamais affiché |
+| Jeton | T27, T43, T76 | fichier absent, marque d'ordre des octets, jeton non ASCII refusé, jeton jamais affiché, jeton qui ne quitte pas l'explorateur |
 | URL | T54 | adresses qui ne sont pas des parties, refusées sans rien envoyer |
+| Parties refusées | T75, T77 | PGN que python-chess lirait de travers, entrées qui finissaient en erreur inattendue |
 | Explorateur simulé | T49, T56 | réponses inattendues, arrêt au coup nul |
-| Réglages | T57 à T63, T68, T69 | premier lancement, priorité de `--pseudos`, fichier mal formé, cadence et niveau vérifiés, correspondance, purge |
+| Réglages | T57 à T63, T68, T69, T79, T81 | premier lancement, priorité de `--pseudos`, fichier mal formé, cadence et niveau vérifiés, correspondance, réponses refusées, purge |
 | Prompt | T64 à T67, T74 | écrit à côté de l'archive, passages gardés ou retirés, modèle fautif refusé, script copié sans son modèle, prompt court de `--prompt-seul` |
 | Moteur | T25, T26, T51, T52, T55, T78, M2 | moteur introuvable, analyse limitée aux premiers coups, mat manqué, mat compté après le coup, coup nul, options hors bornes, moteur qui s'arrête, analyse complète |
 | Partie d'essai | T70 | `test.pgn` : commentaires, variantes, prise en passant, promotion, roques, coup nul |
