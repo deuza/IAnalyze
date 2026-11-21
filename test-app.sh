@@ -223,17 +223,24 @@ titre() {
     printf '%s\n' "$*" >&2
 }
 
+# Le shell POSIX n'a pas de variables locales : une variable affectée dans
+# une fonction est celle du script entier. Les fonctions qui suivent
+# préfixent donc les leurs, pour qu'aucun test ne voie l'une des siennes
+# changer de valeur en les appelant. T75 lisait la cause attendue dans une
+# variable "attendu", que la fonction egal écrasait : il cherchait ensuite
+# le chiffre 1 dans le journal, et le trouvait ou non selon l'heure.
+
 # verifier "libellé" commande... : la commande réussit-elle ?
 verifier() {
-    libelle=$1
+    verifier_libelle=$1
     shift
     if "$@" >/dev/null 2>&1; then
         NB_OK=$((NB_OK + 1))
-        noter "  OK     $libelle"
+        noter "  OK     $verifier_libelle"
     else
         NB_ECHEC=$((NB_ECHEC + 1))
-        noter "  ECHEC  $libelle"
-        printf '    ECHEC : %s\n' "$libelle" >&2
+        noter "  ECHEC  $verifier_libelle"
+        printf '    ECHEC : %s\n' "$verifier_libelle" >&2
         # Un texte attendu qui manque : le fichier fouillé est joint au
         # rapport, pour que l'échec se lise sans rejouer le test.
         if [ "$1" = contient ] && [ -f "$2" ]; then
@@ -245,9 +252,9 @@ verifier() {
 # egal "libellé" attendu obtenu : comparaison de deux valeurs, les espaces
 # de bord étant ignorés (wc -c en ajoute sous macOS).
 egal() {
-    obtenu=$(printf '%s' "$3" | tr -d ' \t')
-    attendu=$(printf '%s' "$2" | tr -d ' \t')
-    if [ "$obtenu" = "$attendu" ]; then
+    egal_obtenu=$(printf '%s' "$3" | tr -d ' \t')
+    egal_attendu=$(printf '%s' "$2" | tr -d ' \t')
+    if [ "$egal_obtenu" = "$egal_attendu" ]; then
         NB_OK=$((NB_OK + 1))
         noter "  OK     $1"
     else
@@ -1629,12 +1636,12 @@ printf '1. e4 e5 2. Nf3 { bon coup Nc6 3. Bb5 a6 1-0\n' > t-accolade.pgn
 printf '1. e4 e5 ( 1... c5 ( 1... d5\n' > t-parenthese.pgn
 printf '1. e4 e5 2. Ke3 ) $2 *\n' > t-orpheline.pgn
 printf '1. e4 e5 2. Nf3 *\n\nLes Blancs gagnent (voir b5) !\n' > t-queue.pgn
-while read -r fichier attendu; do
+while read -r fichier cause; do
     lancer "$fichier" $O < /dev/null
     egal "T75 $fichier, code de retour" 1 "$RC"
     verifier "T75 $fichier, refusé comme PGN corrompu" \
         contient journal "PGN corrompu"
-    verifier "T75 $fichier, cause nommée" contient journal "$attendu"
+    verifier "T75 $fichier, cause nommée" contient journal "$cause"
     egal "T75 $fichier, pas d'erreur inattendue" 0 \
         "$(grep -c 'Erreur inattendue' journal)"
 done <<'FIN'
