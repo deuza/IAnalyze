@@ -249,11 +249,17 @@ verifier() {
     fi
 }
 
-# egal "libellé" attendu obtenu : comparaison de deux valeurs, les espaces
-# de bord étant ignorés (wc -c en ajoute sous macOS).
+# egal "libellé" attendu obtenu : comparaison de deux valeurs. Les espaces
+# de bord sont ignorées (wc en ajoute sous macOS) et toute suite d'espaces
+# ou de tabulations vaut une seule espace. Les espaces intérieures comptent :
+# "1 0" n'est pas "10".
 egal() {
-    egal_obtenu=$(printf '%s' "$3" | tr -d ' \t')
-    egal_attendu=$(printf '%s' "$2" | tr -d ' \t')
+    egal_obtenu=$(printf '%s' "$3" | tr -s ' \t' '  ')
+    egal_obtenu=${egal_obtenu# }
+    egal_obtenu=${egal_obtenu% }
+    egal_attendu=$(printf '%s' "$2" | tr -s ' \t' '  ')
+    egal_attendu=${egal_attendu# }
+    egal_attendu=${egal_attendu% }
     if [ "$egal_obtenu" = "$egal_attendu" ]; then
         NB_OK=$((NB_OK + 1))
         noter "  OK     $1"
