@@ -97,7 +97,8 @@ cd parties-exemples
 |---|---|
 | `ma-partie.pgn` | une partie italienne de neuf demi-coups, celle de presque tous les exemples |
 | `polonaise.pgn` | une ouverture qui sort tôt de la théorie, pour les options de l'explorateur |
-| `partie-commentee.pgn` | une vraie partie de 25 coups, anonymisée, exportée de Lichess avec ses commentaires, ses variantes et ses horloges |
+| `partie-lichess-org.pgn` | une vraie partie de 20 coups, anonymisée, telle que Lichess l'exporte : c'est celle des essais du 21 novembre 2026 (README, section 7) |
+| `partie-commentee.pgn` | une autre vraie partie de Lichess, 25 coups, anonymisée, exportée avec l'analyse du site : commentaires, variantes et horloges |
 | `partie-chess-com.pgn`, `partie-chess-mail.pgn`, `partie-ajedrezmail.pgn`, `partie-lucas-chess.pgn` | quatre vraies parties, anonymisées, telles que ces sites et ce logiciel les exportent |
 | `francais.pgn`, `deux-parties.pgn`, `position.pgn`, `accolade.pgn` | quatre fichiers que le script refuse, pour les messages d'erreur |
 | `analyse-llm.pgn`, `analyse-fautive.pgn`, `analyse-courte.pgn` | trois PGN annotés écrits pour l'exemple, à la place de ceux qu'un LLM rendrait |

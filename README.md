@@ -234,17 +234,19 @@ L'identifiant est la suite de 8 caractères qui suit `lichess.org/` dans l'adres
 
 **Le PGN doit contenir une seule partie, entière, en échecs standard, notée en anglais** : K, Q, R, B, N.
 
+**Lichess est la source de référence d'IAnalyze** : le script y télécharge une partie par son adresse ou son identifiant, et c'est son explorateur qui fournit les statistiques d'ouverture.
+
 Les exports de ces sites et logiciels ont été essayés, et passent tels quels :
 
 | Source | Particularité de son export |
 |---|---|
-| Lichess | avec ou sans l'analyse du site, ses commentaires et ses horloges |
+| Lichess | aucune. Avec l'analyse du site, ses commentaires, ses variantes et ses horloges sont lus eux aussi |
 | Chess.com | aucune |
 | chess-mail.com | notation longue (`Ng1f3`), résultat écrit deux fois en fin de fichier : le second est ignoré, et le journal le dit |
 | ajedrezmail.org | un coup par ligne |
 | Lucas Chess | durées et horloges en commentaires |
 
-Une partie de chacun est dans le répertoire `parties-exemples`, anonymisée.
+Une partie de chacun est dans le répertoire `parties-exemples`, anonymisée. Lichess en a deux : `partie-lichess-org.pgn`, l'export simple, et `partie-commentee.pgn`, l'export avec l'analyse du site.
 
 Le script refuse plutôt que d'analyser de travers :
 
@@ -476,7 +478,7 @@ Elle n'a pas été testée avec le fichier .zip
 
 #### Le 21 novembre 2026, avec `--prompt-seul`
 
-Une partie de 39 demi-coups, gagnée par le joueur, et le même prompt court collé seul dans cinq conversations.   
+Une partie de 39 demi-coups, gagnée par le joueur, et le même prompt court collé seul dans cinq conversations. C'est `parties-exemples/partie-lichess-org.pgn`.   
 Le tableau du moteur y marque dix coups faibles, dont deux du joueur.
 
 Les cinq réponses ont en commun l'essentiel :
