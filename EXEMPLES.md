@@ -114,7 +114,9 @@ Pour être rejoués sans jeton Lichess et sans rien saisir, la plupart des exemp
 
 ### Première collecte
 
-Au tout premier lancement dans un terminal, le script demande vos réglages, puis pose les questions propres à la partie. Entrée retient la valeur proposée entre parenthèses.
+Au tout premier lancement dans un terminal, le script demande vos réglages, puis pose les questions propres à la partie. 
+
+Entrée retient la valeur proposée entre parenthèses.
 
 ```bash
 ./ianalyze.py ma-partie.pgn --sans-explorateur
@@ -208,7 +210,9 @@ Sans `--sans-explorateur`, le script interroge aussi l'explorateur de Lichess. I
 ./ianalyze.py ma-partie.pgn --sans-questions --base maitres
 ```
 
-La section 2 de `synthese.md` reçoit alors la table de l'explorateur, une ligne par demi-coup interrogé. Pour cette partie et la base des maîtres, le 20 novembre 2026 :
+La section 2 de `synthese.md` reçoit alors la table de l'explorateur, une ligne par demi-coup interrogé. 
+
+Pour cette partie et la base des maîtres, le 20 novembre 2026 :
 
 | # | Coup | Trait | Parties pos. | Joué | Rang | Fréq. | Score B. | Majoritaire | Fréq. majo | Score B. majo | Ouverture |
 |---:|---:|---|---:|---|---:|---:|---:|---|---:|---:|---|
@@ -431,7 +435,8 @@ Délai réseau maximal par requête, en secondes : export PGN,  explorateur, té
 ./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --delai 60
 ```
 
-Rien ne change à l'écran hors réseau : le délai ne joue que sur les requêtes vers Lichess. Le journal est le même qu'à la section [Collecte sans rien saisir](#collecte-sans-rien-saisir).
+Rien ne change à l'écran hors réseau : le délai ne joue que sur les requêtes vers Lichess.   
+Le journal est le même qu'à la section [Collecte sans rien saisir](#collecte-sans-rien-saisir).
 
 #### `--debug`
 
@@ -449,7 +454,7 @@ Sans erreur inattendue, rien ne change. Le journal est le même qu'à la section
 
 #### `--installer-venv`
 
-Crée l'environnement virtuel s'il manque, y installe ou met à jour python-chess, puis quitte. Peut être relancé sans risque.
+Crée l'environnement virtuel s'il manque, y installe ou met à jour python-chess, puis quitte. Il peut être relancé sans risque.
 
 La première fois :
 
@@ -550,7 +555,8 @@ grep "camp dans cette partie" analyse-ma-partie-*.prompt.txt
 
 Fichier de réglages à employer à la place du vôtre : pseudos, cadence habituelle et niveau (README, section 2).
 
-Si le fichier n'existe pas encore, le script pose ses trois questions dans le terminal, puis le crée. C'est la façon de tenir plusieurs profils sur un même compte, un par joueur par exemple.
+Si le fichier n'existe pas encore, le script pose ses trois questions dans le terminal, puis le crée.   
+C'est la façon de tenir plusieurs profils sur un même compte, un par joueur par exemple.
 
 ```bash
 ./ianalyze.py ma-partie.pgn --sans-explorateur --reglages ~/.config/IAnalyze/joueur2.ini
@@ -703,7 +709,8 @@ analyse-ma-partie-20261121-010901.zip
 
 #### `--garder-dossier`
 
-Pendant la collecte, le script range ses fichiers dans un dossier de travail, `analyse-<partie>-<date>`. Il le compresse ensuite en zip, puis le supprime.
+Pendant la collecte, le script range ses fichiers dans un dossier de travail, `analyse-<partie>-<date>`.   
+Il le compresse ensuite en zip, puis le supprime.
 
 Avec cette option, le dossier reste à côté de l'archive. Il sert quand le LLM n'ouvre pas les zip : vous lui envoyez alors les fichiers du dossier.
 
@@ -744,9 +751,11 @@ evaluations.json
 
 Écrit un prompt court, à coller seul dans la conversation, sans pièce jointe : quelques consignes, la partie, puis les évaluations de Stockfish.
 
-C'est la route à prendre avec un compte gratuit, ou avec un LLM qui n'ouvre pas les zip ou n'exécute pas de code (README, section 7). Le PGN annoté lui est demandé dans un bloc de code.
+C'est la route à prendre avec un compte gratuit, ou avec un LLM qui n'ouvre pas les zip ou n'exécute pas de code (README, section 7).   
+Le PGN annoté lui est demandé dans un bloc de code.
 
-Aucune archive n'est écrite : le prompt est le seul fichier produit, et c'est son chemin qui est écrit sur la sortie standard. Pour l'archive et ses données, lancez une collecte sans cette option.
+Aucune archive n'est écrite : le prompt est le seul fichier produit, et c'est son chemin qui est écrit sur la sortie standard.   
+Pour l'archive et ses données, lancez une collecte sans cette option.
 
 ```bash
 ./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --prompt-seul
@@ -810,7 +819,8 @@ analyse-ma-partie-20261121-010939.zip
 
 À n'employer que si vous avez écrit votre propre modèle de prompt.
 
-Le prompt d'une partie n'est pas un texte fixe. Le script le fabrique à partir d'un modèle : un fichier texte dont il remplit les blancs, votre pseudo, votre camp ou le nom de l'archive, et dont il ne garde que les passages utiles à cette partie.
+Le prompt d'une partie n'est pas un texte fixe. Le script le fabrique à partir d'un modèle :   
+Un fichier texte dont il remplit les blancs, votre pseudo, votre camp ou le nom de l'archive, et dont il ne garde que les passages utiles à cette partie.
 
 Cette option lui fait prendre votre modèle à la place de celui du dépôt.
 
@@ -888,7 +898,8 @@ Arrêt de l'interrogation : échantillon insuffisant au demi-coup 3 : 12 parties
 
 *Défaut : `bullet,blitz,rapid,classical,correspondence`*
 
-Base `lichess` seulement. Cadences retenues, séparées par des virgules, parmi : ultraBullet, bullet, blitz, rapid, classical, correspondence.
+Base `lichess` seulement.   
+Cadences retenues, séparées par des virgules, parmi : ultraBullet, bullet, blitz, rapid, classical, correspondence.
 
 La casse est tolérée, les doublons sont retirés.
 
@@ -896,7 +907,8 @@ La casse est tolérée, les doublons sont retirés.
 
 *Défaut : `1000,1200,1400,1600,1800,2000,2200,2500`*
 
-Base `lichess` seulement. Tranches de classement retenues parmi 0, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2500.
+Base `lichess` seulement.   
+Tranches de classement retenues parmi 0, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2500.
 
 Chaque tranche court de sa valeur à la suivante : 0 couvre 0 à 999 (affichée "400" sur le site), 2500 tout ce qui dépasse.
 
@@ -986,13 +998,13 @@ Arrêt de l'interrogation : fin de la partie.
 
 *Défaut : `6`*
 
-Aucun arrêt sur la fréquence avant la fin du coup N, soit 2N demi-coups.
-
+Aucun arrêt sur la fréquence avant la fin du coup N, soit 2N demi-coups.   
 La table couvre ainsi le début de partie même après une sortie précoce.
 
 Le seuil de parties reste actif, et la première sortie est notée même dans la fenêtre. 0 arrête dès la première sortie.
 
-Avec la valeur par défaut, la table de la Polonaise va jusqu'au bout de la partie, bien que 1... g6 soit une sortie de théorie : voir `--base`, plus haut. Avec 0, elle s'arrête sur ce coup :
+Avec la valeur par défaut, la table de la Polonaise va jusqu'au bout de la partie, bien que 1... g6 soit une sortie de théorie : voir `--base`, plus haut.   
+Avec 0, elle s'arrête sur ce coup :
 
 ```bash
 ./ianalyze.py polonaise.pgn --sans-questions --coups-min 0
@@ -1090,7 +1102,8 @@ Limite le moteur aux N premiers coups entiers, soit 2N demi-coups. 0 analyse tou
 
 *Défaut : `18`*
 
-Profondeur de recherche par position, de 1 à 60. Le temps de calcul croît très vite avec elle : au delà de 60, une seule position occuperait le moteur des heures.
+Profondeur de recherche par position, de 1 à 60.   
+Le temps de calcul croît très vite avec elle : au delà de 60, une seule position occuperait le moteur des heures.
 
 ```bash
 ./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --profondeur 12
@@ -1106,7 +1119,8 @@ Profondeur de recherche par position, de 1 à 60. Le temps de calcul croît trè
 
 *Défaut : `3`*
 
-Nombre de meilleurs coups que le moteur donne pour chaque position. Avec 3, la synthèse montre, en face de chaque coup de la partie, les trois coups que Stockfish préférait.
+Nombre de meilleurs coups que le moteur donne pour chaque position.   
+Avec 3, la synthèse montre, en face de chaque coup de la partie, les trois coups que Stockfish préférait.
 
 Si le coup joué n'en fait pas partie, le script le fait évaluer à part, pour mesurer ce qu'il perd.
 
@@ -1124,7 +1138,8 @@ Si le coup joué n'en fait pas partie, le script le fait évaluer à part, pour 
 
 *Défaut : le nombre de processeurs de la machine*
 
-Nombre de processeurs que Stockfish emploie en même temps. Baissez-le pour garder la machine disponible pendant le calcul.
+Nombre de processeurs que Stockfish emploie en même temps.   
+Baissez-le pour garder la machine disponible pendant le calcul.
 
 #### `--hachage MO`
 
@@ -1202,7 +1217,8 @@ Les options qui suivent sont celles de `verifier-analyse.py`.
 
 #### `ARCHIVE PGN`
 
-L'archive écrite par `ianalyze.py`, zip ou dossier décompressé, puis le PGN annoté rendu par le LLM. Un tiret à la place du PGN signale que le LLM n'en a rendu aucun.
+L'archive écrite par `ianalyze.py`, zip ou dossier décompressé, puis le PGN annoté rendu par le LLM.   
+Un tiret à la place du PGN signale que le LLM n'en a rendu aucun.
 
 Le dossier peut aussi être celui qui contient la collecte, s'il n'en contient qu'une complète : le bilan la nomme.
 
@@ -1283,7 +1299,8 @@ Contrôle d'une analyse rendue par un LLM
 
 #### `--prompt-seul`, pour le vérificateur
 
-Le PGN répond au prompt court de `ianalyze.py --prompt-seul`. Ce prompt demande moins que le prompt complet : les contrôles qu'il ne fonde pas sont sautés.
+Le PGN répond au prompt court de `ianalyze.py --prompt-seul`.   
+Ce prompt demande moins que le prompt complet : les contrôles qu'il ne fonde pas sont sautés.
 
 L'archive est ici le dossier gardé par `--prompt-seul --garder-dossier`.
 
@@ -1331,7 +1348,8 @@ Contrôle d'une analyse rendue par un LLM
 
 Le périmètre convenu avec le LLM, en coups. Les erreurs et gaffes jouées après le coup N ne sont pas attendues dans le PGN : le prompt limite les commentaires au périmètre.
 
-Sans cette option, le périmètre est celui de votre réponse à la question de démarrage, lu dans l'archive. Elle sert quand il a été fixé dans la conversation.
+Sans cette option, le périmètre est celui de votre réponse à la question de démarrage, lu dans l'archive.   
+Elle sert quand il a été fixé dans la conversation.
 
 ```bash
 ./verifier-analyse.py analyse-ma-partie-20261121-010838.zip analyse-llm.pgn --perimetre 3
@@ -1513,7 +1531,8 @@ Modèle de prompt ~/modele-fautif.txt, ligne 21 : valeur inconnue {{VERSON}}, va
 
 ### Fichier qui n'est pas un fichier de réglages
 
-`--purge-reglages` ne supprime pas le fichier qu'une faute de frappe lui désignerait. Le code de retour vaut 1.
+`--purge-reglages` ne supprime pas le fichier qu'une faute de frappe lui désignerait.   
+Le code de retour vaut 1.
 
 ```bash
 ./ianalyze.py --purge-reglages --reglages ma-partie.pgn
@@ -1525,7 +1544,8 @@ Modèle de prompt ~/modele-fautif.txt, ligne 21 : valeur inconnue {{VERSON}}, va
 
 ### Dossier à plusieurs collectes, pour le vérificateur
 
-Le répertoire courant contient ici deux dossiers de collecte complets. Le code de retour vaut 2.
+Le répertoire courant contient ici deux dossiers de collecte complets.   
+Le code de retour vaut 2.
 
 ```bash
 ./verifier-analyse.py . analyse-llm.pgn
