@@ -3870,13 +3870,16 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
     """Définit et lit les options de la ligne de commande."""
     p = argparse.ArgumentParser(
         prog="ianalyze.py",
+        # Les sauts de ligne sont écrits ici : avec ce formateur, argparse
+        # ne coupe pas la description, qui tenait sur une ligne de 250
+        # colonnes.
         description="Collecte le matériel d'analyse d'une partie d'échecs : "
-                    "PGN, statistiques de l'explorateur Lichess (base de "
-                    "tous les joueurs, ou base maîtres avec --base "
-                    "maitres) pour déterminer la sortie de théorie, et "
-                    "évaluations "
-                    "Stockfish de la partie. Ne produit aucune "
-                    "analyse.",
+                    "PGN, statistiques\n"
+                    "de l'explorateur Lichess (base de tous les joueurs, "
+                    "ou base maîtres avec\n"
+                    "--base maitres) pour déterminer la sortie de théorie, "
+                    "et évaluations\n"
+                    "Stockfish de la partie. Ne produit aucune analyse.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=EXEMPLES)
 
