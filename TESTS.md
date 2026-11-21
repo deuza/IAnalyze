@@ -142,7 +142,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | T72 | Résultat contraire | une partie notée gagnée dans une position perdue est signalée dans la synthèse et le prompt |
 | T73 | Vérificateur | un PGN conforme passe, un PGN fautif voit chaque défaut relevé, PGN absent, archive illisible |
 | T74 | Prompt seul | prompt court écrit sans archive, tableau du moteur, bilan selon le nombre de coups faibles, camp inconnu, prompt jamais écrasé |
-| T75 | PGN lus de travers | les PGN que python-chess lirait de travers, ou à plusieurs parties, sont refusés avec leur cause, sans rien écrire |
+| T75 | PGN lus de travers | les PGN que python-chess lirait de travers, ou à plusieurs parties, sont refusés avec leur cause, sans rien écrire. Un résultat répété en fin de fichier est ignoré, sauf s'il est suivi d'une vraie partie |
 | T76 | Jeton et serveurs | sur des serveurs simulés, une redirection n'est pas suivie et le jeton est expurgé des réponses citées |
 | T77 | Entrées inattendues | entrée standard fermée, nom trop long, URL mal formée, partie qui part d'une FEN, tilde de `--sortie` : un message, plus une erreur inattendue |
 | T78 | Moteur qui s'arrête | un moteur mort hors d'une recherche donne un message et le code 1 |

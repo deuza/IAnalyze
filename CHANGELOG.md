@@ -8,6 +8,14 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Un PGN dont le résultat est écrit deux fois en fin de fichier, comme
+  ceux de chess-mail.com, était refusé pour "2 parties" : python-chess
+  lit dans le second résultat une partie sans balise ni coup. Elle est
+  maintenant ignorée, et le journal le dit. Un fichier qui réunit
+  vraiment plusieurs parties reste refusé.
+
 ## [4.0.0] - 2026-11-21
 
 Première version publiée depuis la 3.5.8. Elle réunit le travail des

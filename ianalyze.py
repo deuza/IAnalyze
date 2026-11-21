@@ -1137,6 +1137,19 @@ def controler_lexique(texte_pgn: str) -> None:
                          "parenthèse et jamais fermée(s)." % profondeur)
 
 
+def resultat_orphelin(partie: chess.pgn.Game) -> bool:
+    """
+    Vrai pour une "partie" que python-chess tire d'un résultat isolé :
+    aucun coup, aucun commentaire, aucune variante, et pas une balise
+    renseignée hors Result. Ce n'est pas une partie, seulement la marque
+    de fin de la précédente, écrite une seconde fois.
+    """
+    if partie.variations or partie.comment.strip():
+        return False
+    return all(valeur in ("?", "????.??.??", "")
+               for cle, valeur in partie.headers.items() if cle != "Result")
+
+
 def charger_partie(texte_pgn: str) -> chess.pgn.Game:
     """
     Analyse le PGN et renvoie la partie qu'il contient, qui doit être seule.
@@ -1191,12 +1204,27 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
     # Une seule partie par fichier. Analyser la première d'une série
     # n'aurait pas de sens : rien ne dit que c'est celle que vous vouliez,
     # et partie.pgn, recopié dans l'archive, les porterait toutes.
+    #
+    # Un résultat répété en fin de fichier n'est pas une partie. Certains
+    # sites écrivent "0-1", une ligne vide, puis "0-1" encore : python-chess
+    # y lit une seconde partie, sans une balise ni un coup. Elle est
+    # ignorée, et le journal le dit.
     autres = 0
+    orphelins = 0
     try:
-        while chess.pgn.read_game(flux) is not None:
-            autres += 1
+        while True:
+            suivante = chess.pgn.read_game(flux)
+            if suivante is None:
+                break
+            if resultat_orphelin(suivante):
+                orphelins += 1
+            else:
+                autres += 1
     except (IndexError, ValueError):
         autres += 1
+    if orphelins and not autres:
+        journal("Résultat répété en fin de fichier, après la partie : "
+                "ignoré.")
     if autres:
         raise SystemExit("Le PGN contient %d parties : isolez celle à "
                          "analyser dans un fichier à part." % (autres + 1))

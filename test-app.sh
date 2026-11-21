@@ -1783,6 +1783,22 @@ verifier "T75 plusieurs parties, nombre annoncé" \
     contient journal "Le PGN contient 3 parties"
 egal "T75 plusieurs parties, rien n'est écrit" 0 \
     "$(ls -d analyse-t-deux* 2>/dev/null | wc -l)"
+# Un résultat répété en fin de fichier n'est pas une seconde partie :
+# certains sites écrivent "0-1", une ligne vide, puis "0-1" encore. Le
+# fichier est accepté, et le journal dit ce qui est ignoré. Suivi d'une
+# vraie partie, le même fichier reste refusé.
+printf '[White "Alice"]\n[Black "Bob"]\n[Result "0-1"]\n1.e4 e5\n0-1\n\n0-1\n' \
+    > t-repete.pgn
+lancer t-repete.pgn $O
+egal "T75 résultat répété, code de retour" 0 "$RC"
+verifier "T75 résultat répété, dit au journal" \
+    contient journal "Résultat répété en fin de fichier"
+rm -f analyse-t-repete-*
+printf '\n1. d4 d5 *\n' >> t-repete.pgn
+lancer t-repete.pgn $O
+egal "T75 résultat répété puis vraie partie, refusé" 1 "$RC"
+verifier "T75 résultat répété puis vraie partie, deux parties" \
+    contient journal "Le PGN contient 2 parties"
 # Ce qui doit continuer à passer : coups collés au numéro, signes
 # d'appréciation, NAG, roque écrit avec des zéros, commentaire de fin de
 # ligne.
