@@ -2685,7 +2685,7 @@ EOF
     # cause. Les collectes se font dans le répertoire des tests.
     EX="$DEPOT/parties-exemples"
     if [ -d "$EX" ]; then
-        for partie in ma-partie polonaise partie-commentee \
+        for partie in ma-partie polonaise partie-lichess-org partie-commentee \
             partie-chess-com partie-chess-mail partie-ajedrezmail \
             partie-lucas-chess; do
             lancer "$EX/$partie.pgn" $MOTEUR --profondeur 1 --fils 1 \

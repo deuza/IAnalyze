@@ -8,6 +8,18 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `parties-exemples/partie-lichess-org.pgn` : une vraie partie
+  anonymisée, telle que Lichess l'exporte sans l'analyse du site. C'est
+  celle des essais du 21 novembre 2026, que le README décrit en
+  section 7.
+
+### Changed
+
+- README : Lichess est présenté comme la source de référence du
+  script, avec ses deux exemples, l'export simple et l'export commenté.
+
 ## [4.0.1] - 2026-11-21
 
 ### Added
