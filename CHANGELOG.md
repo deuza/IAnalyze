@@ -8,6 +8,8 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [4.0.1] - 2026-11-21
+
 ### Added
 
 - `parties-exemples/` : quatre vraies parties anonymisées, telles que

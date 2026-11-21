@@ -37,12 +37,12 @@ tests), CHANGELOG.md.
   Unreleased pendant le travail).
 - Versions : <https://semver.org/>. La version figure dans le script et
   dans le User-Agent : les deux changent ensemble.
-- La 4.0.0 est la version qui sera fusionnée dans main, étiquetée et
-  publiée sur GitHub. D'ici là, aucun bump : tout s'accumule sous
-  Unreleased sur dev.
-- Ensuite, un seul bump par fusion dans main, jamais par fournée de
-  travail sur dev. Annonce le niveau choisi et sa raison avant de
-  l'appliquer.
+- La 4.0.0 a été fusionnée dans main, étiquetée et publiée sur GitHub
+  le 21 novembre 2026. main ne porte pas CLAUDE.md : à chaque fusion,
+  le fichier est retiré par "git rm -f CLAUDE.md" avant le commit.
+- Un seul bump par fusion dans main, jamais par fournée de travail sur
+  dev : entre deux fusions, tout s'accumule sous Unreleased. Annonce le
+  niveau choisi et sa raison avant de l'appliquer.
 
 ## Règles de modification
 

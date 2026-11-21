@@ -332,7 +332,7 @@ La base `lichess` reçoit en plus les filtres :
 | `since` | `2017-01` |
 | `recentGames` | `0` |
 
-Chaque requête porte l'en-tête d'agent `IAnalyze/4.0.0 (+https://github.com/deuza/IAnalyze)` et le jeton, dans l'en-tête Authorization.
+Chaque requête porte l'en-tête d'agent `IAnalyze/4.0.1 (+https://github.com/deuza/IAnalyze)` et le jeton, dans l'en-tête Authorization.
 
 Chaque réponse est gardée telle quelle dans `explorateur/NNN-<uci>.json` : NNN est le numéro du demi-coup, `<uci>` le coup joué. C'est la réponse sur la position d'avant ce coup.
 
