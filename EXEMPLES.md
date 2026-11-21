@@ -9,7 +9,7 @@ Le [README](README.md) explique l'installation et l'usage courant. [TECHNIQUE.md
 - [NOM](#nom)
 - [SYNOPSIS](#synopsis)
 - [DESCRIPTION](#description)
-- [EXEMPLES](#exemples) : [installer](#installer), [première collecte](#première-collecte), [collecte sans rien saisir](#collecte-sans-rien-saisir), [partie de Lichess](#partie-de-lichess), [avec l'explorateur](#avec-lexplorateur), [pour un LLM qui n'ouvre pas les zip](#pour-un-llm-qui-nouvre-pas-les-zip), [vérifier la réponse du LLM](#vérifier-la-réponse-du-llm)
+- [EXEMPLES](#exemples) : [première collecte](#première-collecte), [collecte sans rien saisir](#collecte-sans-rien-saisir), [partie de Lichess](#partie-de-lichess), [avec l'explorateur](#avec-lexplorateur), [pour un LLM qui n'ouvre pas les zip](#pour-un-llm-qui-nouvre-pas-les-zip), [vérifier la réponse du LLM](#vérifier-la-réponse-du-llm)
 - [OPTIONS](#options) : [général](#général), [environnement virtuel](#environnement-virtuel), [questions de démarrage](#questions-de-démarrage), [catalogue des ouvertures](#catalogue-des-ouvertures), [sortie](#sortie), [explorateur](#explorateur), [moteur](#moteur), [vérificateur](#vérificateur)
 - [MESSAGES D'ERREUR](#messages-derreur)
 - [CODES DE RETOUR](#codes-de-retour)
@@ -106,33 +106,7 @@ Vos propres parties se rangent où vous voulez : le script prend le chemin du PG
 
 ## EXEMPLES
 
-### Installer
-
-À faire une fois, après avoir installé Stockfish (README, section 2).
-
-```bash
-./ianalyze.py --installer-venv
-```
-
-```text
-[01:06:52] Création de l'environnement virtuel : ~/.local/share/IAnalyze/venv
-[01:06:54] Installation de python-chess dans l'environnement virtuel.
-[01:06:58] Environnement virtuel opérationnel : ~/.local/share/IAnalyze/venv/bin/python3
-```
-
-```bash
-./ianalyze.py --installer-catalogue
-```
-
-```text
-[01:07:03] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
-[01:07:03] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/a.tsv
-[01:07:04] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/b.tsv
-[01:07:04] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/c.tsv
-[01:07:05] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/d.tsv
-[01:07:05] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/e.tsv
-[01:07:06] Catalogue installé : 3865 lignes, 3865 positions nommées, 7982 positions connues, dans ~/.local/share/IAnalyze/catalogue.tsv
-```
+Ces exemples supposent IAnalyze installé (README, section 2). Les deux commandes d'installation sont décrites plus bas, à [`--installer-venv`](#--installer-venv) et à [`--installer-catalogue`](#--installer-catalogue).
 
 ### Première collecte
 
@@ -661,7 +635,15 @@ Relancer l'option le met à jour. Un échec laisse l'ancien catalogue en place.
 ./ianalyze.py --installer-catalogue
 ```
 
-Sa sortie est donnée plus haut, à la section [Installer](#installer).
+```text
+[01:07:03] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:07:03] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/a.tsv
+[01:07:04] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/b.tsv
+[01:07:04] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/c.tsv
+[01:07:05] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/d.tsv
+[01:07:05] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/e.tsv
+[01:07:06] Catalogue installé : 3865 lignes, 3865 positions nommées, 7982 positions connues, dans ~/.local/share/IAnalyze/catalogue.tsv
+```
 
 #### `--catalogue REP`
 
