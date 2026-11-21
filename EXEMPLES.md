@@ -739,7 +739,7 @@ evaluations.json
 
 Écrit un prompt court, à coller seul dans la conversation, sans pièce jointe : quelques consignes, la partie, puis les évaluations de Stockfish.
 
-C'est le repli pour un LLM qui n'ouvre pas les zip ou n'exécute pas de code (README, section 7). Le PGN annoté lui est demandé dans un bloc de code.
+C'est la route à prendre avec un compte gratuit, ou avec un LLM qui n'ouvre pas les zip ou n'exécute pas de code (README, section 7). Le PGN annoté lui est demandé dans un bloc de code.
 
 Aucune archive n'est écrite : le prompt est le seul fichier produit, et c'est son chemin qui est écrit sur la sortie standard. Pour l'archive et ses données, lancez une collecte sans cette option.
 

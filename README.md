@@ -26,7 +26,7 @@ analyse-ma-partie-20261119-164140.prompt.txt
 
 Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec Claude, vous joignez le fichier zip et vous recevez un PGN annoté et une synthèse.
 
-**IAnalyze est fait pour Claude.** Pour un autre LLM, l'option `--prompt-seul` écrit un prompt court qui porte la partie et les évaluations de Stockfish, à coller seul, sans pièce jointe : voir la section 7.
+**IAnalyze est fait pour Claude.** Avec un compte gratuit, ou pour un autre LLM, l'option `--prompt-seul` écrit un prompt court qui porte la partie et les évaluations de Stockfish, à coller seul, sans pièce jointe : voir la section 7.
 
 Un outil supplémentaire, `verifier-analyse.py`, contrôle le PGN que le LLM vous a rendu : voir la section 8.
 
@@ -275,7 +275,7 @@ Quelques options suffisent à la plupart des usages :
 |---|---|
 | `--sans-explorateur` | pas de statistiques d'ouverture : ni jeton ni catalogue ne sont demandés |
 | `--sans-questions` | aucune question : le LLM vous les posera lui-même |
-| `--prompt-seul` | un prompt court à coller seul, sans archive, pour un LLM qui n'ouvre pas les zip (section 7) |
+| `--prompt-seul` | un prompt court à coller seul, sans archive, pour un compte gratuit ou un LLM qui n'ouvre pas les zip (section 7) |
 | `--garder-dossier` | garde le dossier décompressé à côté de l'archive |
 | `--sortie REP` | écrit les fichiers dans le répertoire REP |
 | `--base maitres` | interroge la base des maîtres au lieu de celle de tous les joueurs de Lichess |
@@ -351,21 +351,41 @@ Le prompt prévoit les deux cas :
 
 ## 7. Choisir un LLM
 
-### Avec Claude : le zip et le prompt
+**Prenez Claude.** C'est le conseil de ce dépôt, et il vient des essais décrits plus bas.
 
-**IAnalyze est fait pour Claude.** C'est avec lui que la chaîne a été mise au point, et le seul avec lequel elle a rendu un PGN utilisable tel quel dans les essais ci-dessous.
+Avec le zip, Claude est le seul qui ait rendu un PGN utilisable tel quel. Avec le prompt court, avec un abonnement comme avec un compte gratuit, c'est lui qui a rendu les PGN les plus propres, et ses explications sont celles qui ont le mieux tenu à la vérification sur l'échiquier.
 
-Vous joignez le zip, vous collez le prompt, il rend un fichier PGN.
+IAnalyze a été mis au point avec lui. Deux routes mènent à une analyse, et il est le premier choix sur les deux :
 
-Cette chaîne complète demande en effet un LLM qui sait :
+| Route | Ce que vous envoyez | Ce qu'il faut au LLM | Ce que vous recevez |
+|---|---|---|---|
+| Le zip et le prompt | l'archive en pièce jointe, le prompt collé | ouvrir un zip, exécuter du code, rendre un fichier | un fichier PGN construit avec python-chess, appuyé sur toutes les données |
+| `--prompt-seul` | un seul texte collé, sans pièce jointe | une simple conversation | le PGN annoté dans un bloc de code |
+
+**Avec un compte gratuit, prenez `--prompt-seul` et Claude.** C'est la combinaison qui a donné le meilleur résultat sans rien payer.
+
+### Avec le zip et le prompt
+
+C'est la chaîne complète : vous joignez le zip, vous collez le prompt, le LLM rend un fichier PGN.
+
+Il dispose alors de toutes les données : la synthèse, les trois meilleurs coups du moteur à chaque position, les statistiques de l'explorateur.
+
+Cette chaîne demande un LLM qui sait :
 
 - ouvrir une archive zip
 - exécuter du code et y installer python-chess, pour construire le PGN et en prouver la légalité
 - rendre un fichier à télécharger
 
-### Avec un autre LLM : `--prompt-seul`
+Dans les essais, seul Claude l'a menée au bout.
 
-Pour un LLM qui n'ouvre pas les zip, refuse certaines pièces jointes ou n'exécute pas de code, le script écrit un prompt court :
+Deux conseils si vous l'essayez avec un autre LLM :
+
+- certains refusent un fichier `.pgn` en pièce jointe : renommez-le en `.txt`, ou passez à `--prompt-seul`
+- si le LLM annonce un fichier que vous ne trouvez pas, demandez-lui le PGN dans un bloc de code
+
+### Avec `--prompt-seul`
+
+Pour un compte gratuit, ou pour un LLM qui n'ouvre pas les zip, refuse certaines pièces jointes ou n'exécute pas de code, le script écrit un prompt court :
 
 ```bash
 ./ianalyze.py ma-partie.pgn --prompt-seul
@@ -380,20 +400,29 @@ Ce qu'il faut savoir de ce mode :
 - le prompt pèse environ 5 Ko pour une partie de 25 coups
 - il ne porte ni la synthèse ni les fichiers `.json` : le LLM n'a que la partie, le tableau du moteur et, avec l'explorateur, une phrase sur l'ouverture
 - aucune archive n'est écrite, le prompt est le seul fichier produit
-- **c'est un repli, et il n'a pas encore été essayé** : les essais ci-dessous lui sont antérieurs
+- les cinq réponses essayées ont rendu la partie entière, tous les coups commentés, sans une évaluation inventée
 
-La qualité de l'analyse dépend alors du LLM que vous choisissez. Pour contrôler son PGN avec `verifier-analyse.py --prompt-seul` (section 8), ajoutez `--garder-dossier` à la collecte : le vérificateur a besoin des évaluations qui ont servi au prompt.
+Pour contrôler le PGN rendu avec `verifier-analyse.py --prompt-seul` (section 8), ajoutez `--garder-dossier` à la collecte : le vérificateur a besoin des évaluations qui ont servi au prompt.
 
-Deux conseils tirés des essais :
+### Fiez-vous aux chiffres, vérifiez les récits
 
-- certains LLM refusent un fichier `.pgn` en pièce jointe : renommez-le en `.txt`, ou passez à `--prompt-seul`
-- si le LLM annonce un fichier que vous ne trouvez pas, demandez-lui le PGN dans un bloc de code
+C'est ce que les deux séries d'essais ont en commun.
+
+**Les chiffres tiennent.** Aucun LLM n'a inventé une évaluation, avec le zip comme avec le prompt court. Ce qui vient du tableau du moteur est recopié fidèlement : les écarts, les meilleurs coups, leurs suites.
+
+**Les récits sont fragiles.** Ce que le LLM déduit seul de la position peut être faux : un sacrifice qui n'en est pas un, une pièce en prise que personne ne signale, un mat en un qui est un mat en deux.
+
+Quand un commentaire vous surprend, posez les pièces et regardez. `verifier-analyse.py` contrôle la forme du PGN et les chiffres cités, il ne juge pas ce qui est raconté.
 
 ### Essais menés
 
-Un seul essai par LLM, le 20 novembre 2026, sur la même partie de 49 demi-coups, avec le même zip et le même prompt, celui de la version 4.0.0 avant les consignes et l'option `--prompt-seul` que ces essais ont fait ajouter.
+Deux séries, un seul essai par LLM et par offre, une partie par série.
 
-**Ce n'est pas un classement.** Un essai ne dit rien de la régularité d'un modèle, et les offres ne sont pas comparables : un abonnement d'un côté, trois offres gratuites de l'autre.
+**Ce n'est pas un banc d'essai.** Un essai ne dit rien de la régularité d'un modèle. Mais les deux séries vont dans le même sens, et le conseil de cette section ne s'appuie sur rien d'autre que ce qui a été vu.
+
+#### Le 20 novembre 2026, avec le zip et le prompt
+
+Une partie de 49 demi-coups, le même zip et le même prompt pour tous, celui de la version 4.0.0 avant les consignes et l'option `--prompt-seul` que ces essais ont fait ajouter.
 
 | LLM, tel qu'il se nomme lui-même | Offre | PGN rendu | Bilan de `verifier-analyse.py` |
 |---|---|---|---|
@@ -402,14 +431,44 @@ Un seul essai par LLM, le 20 novembre 2026, sur la même partie de 49 demi-coups
 | M365 Copilot (Microsoft) | gratuite | oui, la partie sans aucun commentaire | 3 échecs : il dit n'avoir trouvé que trois fichiers dans l'archive, et ne commente rien |
 | Gemini (Google), version non relevée | gratuite | non | il annonce un fichier qui n'existe pas, puis perd le fil de la conversation |
 
-Ce que ces essais montrent :
+Ce que cette série montre :
 
 - **Les données tiennent partout.** Aucun des quatre n'a inventé une évaluation, et tous donnent les trois mêmes erreurs principales, avec les bons écarts.
 - **C'est la fabrication du PGN qui les sépare.** Seul le LLM qui a construit son fichier avec python-chess a rendu un PGN utilisable tel quel.
 - **Le fond peut être bon sous une forme fautive.** Les 25 variantes écrites à la main par GPT-6 étaient toutes légales et tirées des lignes du moteur.
 - **La partie était notée gagnée dans une position perdue.** Deux LLM sur quatre ont raconté une victoire méritée, d'où la ligne ajoutée à la synthèse (voir [TECHNIQUE.md](TECHNIQUE.md), section 10).
 
-L'offre gratuite de Claude annonce elle aussi la création de fichiers et l'exécution de code, sur d'autres modèles que celui de l'essai, d'après [sa page de tarifs](https://claude.com/pricing) lue le 20 novembre 2026. Elle n'a pas été essayée.
+L'offre gratuite de Claude annonce elle aussi la création de fichiers et l'exécution de code, sur d'autres modèles que celui de cet essai, d'après [sa page de tarifs](https://claude.com/pricing) lue le 20 novembre 2026. Avec le zip, elle n'a pas été essayée.
+
+#### Le 21 novembre 2026, avec `--prompt-seul`
+
+Une partie de 39 demi-coups, gagnée par le joueur, et le même prompt court collé seul dans cinq conversations. Le tableau du moteur y marque dix coups faibles, dont deux du joueur.
+
+Les cinq réponses ont en commun l'essentiel :
+
+- la ligne principale est recopiée sans un coup changé
+- les 39 demi-coups sont commentés, toutes les erreurs et gaffes du tableau comprises
+- 126 évaluations sont citées dans les PGN, toutes tirées du tableau
+
+Ce qui les sépare :
+
+| LLM | Offre | Forme du PGN | Sur l'échiquier |
+|---|---|---|---|
+| Claude Sonnet 5.5 (Anthropic) | abonnement | conforme : bloc de code, balises intactes, 10 suites jouables sur 10 | aucune erreur trouvée |
+| Claude Sonnet 5.5 (Anthropic), effort Max | gratuite | conforme, de même | une erreur : une case de fuite annoncée au roi alors qu'elle est battue |
+| ChatGPT (OpenAI), version non relevée | gratuite | les suites sont écrites dans les commentaires, aucune n'est jouable. Dix suffixes `?!` ou `??` ajoutés aux coups, cinq balises HTML dans les commentaires | un sacrifice qui n'en est pas un, le mauvais cavalier nommé sur une prise, un mat en un annoncé pour un mat en deux |
+| Gemini (Google), version non relevée | gratuite | 7 suites jouables sur 10. Il parle du joueur à la troisième personne, puis écrit deux fois "erreur de ma part" à sa place | le même faux sacrifice, la couleur des fous inversée sur trois coups, une colonne annoncée ouverte qui ne l'est pas |
+| Copilot (Microsoft), version non relevée | gratuite | pas de bloc de code : la balise Site est rendue sous la forme d'un lien HTML. 10 suites jouables sur 10 | le même faux sacrifice, et un cavalier laissé en prise que rien ne signale |
+
+Les erreurs de la dernière colonne ont été vérifiées une à une sur la position, avec python-chess. La liste n'est pas exhaustive.
+
+Ce que cette série montre :
+
+- **Le prompt court fait le travail.** Sans pièce jointe et sans exécution de code, les cinq réponses sont lisibles et leurs chiffres sont justes. C'est mieux que ce que la chaîne complète avait donné la veille chez les trois autres LLM.
+- **Claude est devant sur les deux offres.** Ses deux PGN sont conformes, et ses explications sont celles qui résistent le mieux à la vérification : aucune erreur trouvée d'un côté, une seule de l'autre. Le compte gratuit fait presque jeu égal avec l'abonnement, en deux fois plus long : 1968 mots de commentaires contre 943.
+- **Le même piège a pris trois LLM sur quatre.** Un fou prend un pion en h7 avec échec, défendu par sa dame : le roi ne peut pas le reprendre. ChatGPT, Gemini et Copilot parlent de sacrifice. Claude écrit, dans l'essai du compte gratuit, "ici il n'y a aucun sacrifice, le pion tombe gratuitement".
+- **Demander trois erreurs en fait inventer une.** Le joueur n'en avait commis que deux. ChatGPT, Gemini et Copilot en ont présenté une troisième, Claude a répondu les deux fois qu'il n'y en avait que deux. Le prompt court donne depuis le nombre réel de coups faibles du joueur (voir [TECHNIQUE.md](TECHNIQUE.md), section 12).
+- **Le vérificateur n'aurait presque rien vu.** En mode `--prompt-seul`, il contrôle les balises, la ligne principale et les chiffres cités. Les suites écrites dans le texte, les balises HTML et les récits faux passent : c'est à vous de les relire.
 
 ## 8. Vérifier le PGN rendu
 

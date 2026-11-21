@@ -8,7 +8,7 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
-## [4.0.0] - 2026-11-20
+## [4.0.0] - 2026-11-21
 
 Première version publiée depuis la 3.5.8. Elle réunit le travail des
 versions 3.5.9 à 3.8.0, restées sur la branche de développement et
@@ -34,10 +34,11 @@ jamais publiées.
 - Option `--prompt-seul` : un prompt court, à coller seul dans la
   conversation, sans pièce jointe. Il tient en quelques consignes, la
   partie et les évaluations de Stockfish, une ligne par demi-coup, le
-  meilleur coup et sa suite derrière chaque coup faible. C'est le repli
-  pour un LLM qui n'ouvre pas les zip ou n'exécute pas de code, sur le
-  modèle du prompt d'analyse de Lucas Chess, avec les chiffres du
-  moteur en plus. Il est tiré d'un modèle à part,
+  meilleur coup et sa suite derrière chaque coup faible. C'est la
+  route à prendre avec un compte gratuit, ou avec un LLM qui n'ouvre
+  pas les zip ou n'exécute pas de code, sur le modèle du prompt
+  d'analyse de Lucas Chess, avec les chiffres du moteur en plus. Il
+  est tiré d'un modèle à part,
   `prompt-seul-modele.txt`. Aucune archive n'est alors écrite : le
   prompt est le seul fichier produit, sauf avec `--garder-dossier`, qui
   laisse le dossier de travail à `verifier-analyse.py`. Son bilan
@@ -154,9 +155,11 @@ jamais publiées.
   affiche. `TECHNIQUE.md` explique le fonctionnement du script, son
   emploi depuis un autre programme, le détail des fichiers produits,
   les encodages, le modèle de prompt et les tests, à la place de
-  `TESTS.nfo`. Le README présente IAnalyze comme fait pour Claude, avec
-  le zip et le prompt, et `--prompt-seul` comme le repli pour un autre
-  LLM.
+  `TESTS.nfo`. Le README conseille Claude, avec le zip et le prompt
+  comme avec `--prompt-seul`, compte gratuit compris, et rend compte de
+  deux séries d'essais sur quatre LLM : le 20 novembre 2026 avec le
+  zip, le 21 avec le prompt court. Il en tire une règle de lecture :
+  les chiffres tiennent, les récits sont à vérifier sur l'échiquier.
 
 ### Removed
 
