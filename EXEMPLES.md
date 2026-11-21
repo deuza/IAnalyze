@@ -98,6 +98,7 @@ cd parties-exemples
 | `ma-partie.pgn` | une partie italienne de neuf demi-coups, celle de presque tous les exemples |
 | `polonaise.pgn` | une ouverture qui sort tôt de la théorie, pour les options de l'explorateur |
 | `partie-commentee.pgn` | une vraie partie de 25 coups, anonymisée, exportée de Lichess avec ses commentaires, ses variantes et ses horloges |
+| `partie-chess-com.pgn`, `partie-chess-mail.pgn`, `partie-ajedrezmail.pgn`, `partie-lucas-chess.pgn` | quatre vraies parties, anonymisées, telles que ces sites et ce logiciel les exportent |
 | `francais.pgn`, `deux-parties.pgn`, `position.pgn`, `accolade.pgn` | quatre fichiers que le script refuse, pour les messages d'erreur |
 | `analyse-llm.pgn`, `analyse-fautive.pgn`, `analyse-courte.pgn` | trois PGN annotés écrits pour l'exemple, à la place de ceux qu'un LLM rendrait |
 | `conversation.txt` | le texte d'une conversation, pour l'option `--synthese` du vérificateur |
@@ -1422,6 +1423,23 @@ Les coups doivent être notés en anglais : K, Q, R, B, N.
 [01:11:52] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
 [01:11:52] Lecture du PGN local : francais.pgn
 PGN corrompu : "Cf3", ligne 1, n'est ni un coup en notation anglaise (K, Q, R, B, N) ni un autre élément de PGN. Une partie notée en français ou en figurines doit être convertie, un texte libre placé entre accolades.
+```
+
+### Résultat répété en fin de fichier
+
+Ce n'est pas une erreur : l'export de chess-mail.com écrit le résultat deux fois, et le second est ignoré. Le journal le signale, la collecte se poursuit.
+
+```bash
+./ianalyze.py partie-chess-mail.pgn --sans-explorateur --sans-questions
+```
+
+```text
+[17:04:02] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[17:04:03] Lecture du PGN local : partie-chess-mail.pgn
+[17:04:03] Résultat répété en fin de fichier, après la partie : ignoré.
+[17:04:03] Questions de démarrage sautées : option --sans-questions.
+...
+analyse-partie-chess-mail-20261121-170403.zip
 ```
 
 ### Plusieurs parties dans le fichier

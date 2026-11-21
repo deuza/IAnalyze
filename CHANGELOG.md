@@ -8,6 +8,23 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 ## [Unreleased]
 
+## [4.0.1] - 2026-11-21
+
+### Added
+
+- `parties-exemples/` : quatre vraies parties anonymisées, telles que
+  les exportent Chess.com, chess-mail.com, ajedrezmail.org et Lucas
+  Chess. Avec celle de Lichess, elles montrent les exports essayés, que
+  le README énumère.
+
+### Fixed
+
+- Un PGN dont le résultat est écrit deux fois en fin de fichier, comme
+  ceux de chess-mail.com, était refusé pour "2 parties" : python-chess
+  lit dans le second résultat une partie sans balise ni coup. Elle est
+  maintenant ignorée, et le journal le dit. Un fichier qui réunit
+  vraiment plusieurs parties reste refusé.
+
 ## [4.0.0] - 2026-11-21
 
 Première version publiée depuis la 3.5.8. Elle réunit le travail des

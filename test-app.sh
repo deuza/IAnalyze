@@ -1783,6 +1783,22 @@ verifier "T75 plusieurs parties, nombre annoncé" \
     contient journal "Le PGN contient 3 parties"
 egal "T75 plusieurs parties, rien n'est écrit" 0 \
     "$(ls -d analyse-t-deux* 2>/dev/null | wc -l)"
+# Un résultat répété en fin de fichier n'est pas une seconde partie :
+# certains sites écrivent "0-1", une ligne vide, puis "0-1" encore. Le
+# fichier est accepté, et le journal dit ce qui est ignoré. Suivi d'une
+# vraie partie, le même fichier reste refusé.
+printf '[White "Alice"]\n[Black "Bob"]\n[Result "0-1"]\n1.e4 e5\n0-1\n\n0-1\n' \
+    > t-repete.pgn
+lancer t-repete.pgn $O
+egal "T75 résultat répété, code de retour" 0 "$RC"
+verifier "T75 résultat répété, dit au journal" \
+    contient journal "Résultat répété en fin de fichier"
+rm -f analyse-t-repete-*
+printf '\n1. d4 d5 *\n' >> t-repete.pgn
+lancer t-repete.pgn $O
+egal "T75 résultat répété puis vraie partie, refusé" 1 "$RC"
+verifier "T75 résultat répété puis vraie partie, deux parties" \
+    contient journal "Le PGN contient 2 parties"
 # Ce qui doit continuer à passer : coups collés au numéro, signes
 # d'appréciation, NAG, roque écrit avec des zéros, commentaire de fin de
 # ligne.
@@ -2669,11 +2685,16 @@ EOF
     # cause. Les collectes se font dans le répertoire des tests.
     EX="$DEPOT/parties-exemples"
     if [ -d "$EX" ]; then
-        for partie in ma-partie polonaise partie-commentee; do
+        for partie in ma-partie polonaise partie-commentee \
+            partie-chess-com partie-chess-mail partie-ajedrezmail \
+            partie-lucas-chess; do
             lancer "$EX/$partie.pgn" $MOTEUR --profondeur 1 --fils 1 \
                 --hachage 16
             egal "T83 $partie.pgn, collecte faite" "0 1" \
                 "$RC $(find . -maxdepth 1 -name "analyse-$partie-*.zip" | wc -l)"
+            # Le journal de l'export de chess-mail.com est gardé : il doit
+            # dire que le résultat répété a été ignoré.
+            [ "$partie" = partie-chess-mail ] && cp journal t-83-journal
         done
         while IFS='|' read -r partie cause; do
             lancer "$EX/$partie.pgn" $MOTEUR --profondeur 1
@@ -2698,6 +2719,8 @@ FIN
         "$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH" \
             "$EX/analyse-fautive.pgn" > bilan 2>&1
         egal "T83 analyse-fautive.pgn, des échecs" 1 "$?"
+        verifier "T83 export de chess-mail.com, résultat répété ignoré" \
+            contient t-83-journal "Résultat répété en fin de fichier"
         egal "T83 aucune partie réelle : ni adresse ni identifiant" 0 \
             "$(cat "$EX"/* | grep -c -i 'lichess.org/\|GameId')"
         rm -rf "$DEPOT/__pycache__"

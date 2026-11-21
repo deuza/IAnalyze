@@ -234,6 +234,18 @@ L'identifiant est la suite de 8 caractères qui suit `lichess.org/` dans l'adres
 
 **Le PGN doit contenir une seule partie, entière, en échecs standard, notée en anglais** : K, Q, R, B, N.
 
+Les exports de ces sites et logiciels ont été essayés, et passent tels quels :
+
+| Source | Particularité de son export |
+|---|---|
+| Lichess | avec ou sans l'analyse du site, ses commentaires et ses horloges |
+| Chess.com | aucune |
+| chess-mail.com | notation longue (`Ng1f3`), résultat écrit deux fois en fin de fichier : le second est ignoré, et le journal le dit |
+| ajedrezmail.org | un coup par ligne |
+| Lucas Chess | durées et horloges en commentaires |
+
+Une partie de chacun est dans le répertoire `parties-exemples`, anonymisée.
+
 Le script refuse plutôt que d'analyser de travers :
 
 - un fichier qui réunit plusieurs parties : isolez celle à analyser dans un fichier à part

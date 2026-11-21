@@ -142,7 +142,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | T72 | Résultat contraire | une partie notée gagnée dans une position perdue est signalée dans la synthèse et le prompt |
 | T73 | Vérificateur | un PGN conforme passe, un PGN fautif voit chaque défaut relevé, PGN absent, archive illisible |
 | T74 | Prompt seul | prompt court écrit sans archive, tableau du moteur, bilan selon le nombre de coups faibles, camp inconnu, prompt jamais écrasé |
-| T75 | PGN lus de travers | les PGN que python-chess lirait de travers, ou à plusieurs parties, sont refusés avec leur cause, sans rien écrire |
+| T75 | PGN lus de travers | les PGN que python-chess lirait de travers, ou à plusieurs parties, sont refusés avec leur cause, sans rien écrire. Un résultat répété en fin de fichier est ignoré, sauf s'il est suivi d'une vraie partie |
 | T76 | Jeton et serveurs | sur des serveurs simulés, une redirection n'est pas suivie et le jeton est expurgé des réponses citées |
 | T77 | Entrées inattendues | entrée standard fermée, nom trop long, URL mal formée, partie qui part d'une FEN, tilde de `--sortie` : un message, plus une erreur inattendue |
 | T78 | Moteur qui s'arrête | un moteur mort hors d'une recherche donne un message et le code 1 |
@@ -150,7 +150,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | T80 | Nom long | un nom de PGN long, en caractères de plusieurs octets, donne une étiquette bornée et valide |
 | T81 | Cas combinés | la purge s'emploie seule, un modèle vide est refusé, un jeton mal écrit est refusé sans être affiché |
 | T82 | Vérificateur, suite | mats cités, périmètre convenu, contrôles sautés du mode court, dossier parent à une ou plusieurs collectes |
-| T83 | Parties d'exemples | les fichiers de `parties-exemples` restent ce qu'`EXEMPLES.md` en dit : trois parties acceptées, quatre refusées avec leur cause, deux PGN annotés contrôlés, aucune adresse ni identifiant de partie réelle |
+| T83 | Parties d'exemples | les fichiers de `parties-exemples` restent ce qu'`EXEMPLES.md` en dit : sept parties acceptées, dont les exports de quatre sites et d'un logiciel, quatre refusées avec leur cause, deux PGN annotés contrôlés, aucune adresse ni identifiant de partie réelle |
 | M1 | Collecte, noms | nom de PGN accentué, chemin de sortie avec espace et accent |
 | M2 | Collecte complète | l'italienne analysée en entier, moteur seul, sans processus du moteur laissé derrière |
 

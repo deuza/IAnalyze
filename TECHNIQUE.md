@@ -136,6 +136,8 @@ Une source qui ressemble à un chemin (point, barre oblique ou tilde) et qui n'e
 
 **Un PGN** doit contenir une seule partie, en échecs standard. Un fichier qui en réunit plusieurs est refusé : isolez celle à analyser dans un fichier à part.
 
+**Un résultat répété** en fin de fichier n'est pas une seconde partie. Certains sites écrivent le résultat, une ligne vide, puis le résultat encore : python-chess y lit une partie de plus, sans une balise ni un coup. Le script l'ignore et l'écrit au journal. Le fichier gardé dans l'archive reste celui que vous avez fourni.
+
 Un PGN corrompu est refusé plutôt qu'analysé tronqué. Une partie qui ne part pas de la position initiale, c'est-à-dire qui porte une balise FEN, est refusée elle aussi : IAnalyze analyse une partie entière, du premier coup au dernier. Pour étudier une position, chargez-la dans un échiquier d'analyse.
 
 Les coups doivent être écrits en notation anglaise : K, Q, R, B, N. Une partie notée en français (R, D, T, F, C) ou en figurines est refusée, avec le premier mot qui n'a pas été compris. Sans ce refus, "Cf3" serait lu "f3", un coup de pion, et l'analyse porterait sur une autre partie que la vôtre.
@@ -330,7 +332,7 @@ La base `lichess` reçoit en plus les filtres :
 | `since` | `2017-01` |
 | `recentGames` | `0` |
 
-Chaque requête porte l'en-tête d'agent `IAnalyze/4.0.0 (+https://github.com/deuza/IAnalyze)` et le jeton, dans l'en-tête Authorization.
+Chaque requête porte l'en-tête d'agent `IAnalyze/4.0.1 (+https://github.com/deuza/IAnalyze)` et le jeton, dans l'en-tête Authorization.
 
 Chaque réponse est gardée telle quelle dans `explorateur/NNN-<uci>.json` : NNN est le numéro du demi-coup, `<uci>` le coup joué. C'est la réponse sur la position d'avant ce coup.
 
