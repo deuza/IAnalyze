@@ -36,7 +36,6 @@ Le [README](README.md) explique l'installation et l'usage courant. [TECHNIQUE.md
 - [FICHIERS](#fichiers)
 - [VOIR AUSSI](#voir-aussi)
 
-
 ## NOM
 
 **ianalyze.py** : prépare l'analyse d'une partie d'échecs par un LLM.
@@ -926,9 +925,10 @@ Arrêt de l'interrogation : échantillon insuffisant au demi-coup 3 : 12 parties
 
 *Défaut : `bullet,blitz,rapid,classical,correspondence`*
 
-Base `lichess` seulement.   
+Base `lichess` seulement. 
+
 Cadences retenues, séparées par des virgules, parmi : 
-- UltraBullet< 
+- UltraBullet
 - Bullet 
 - Blitz 
 - Rapid
