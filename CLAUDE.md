@@ -32,7 +32,12 @@ tests), CHANGELOG.md.
 ## Git, versions, changelog
 
 - On travaille sur la branche dev. Ni push ni merge sans demande.
-- Commits atomiques, un par sujet, message en français.
+- Ne commite ni ne pousse rien. Chaque lot est livré en patch (git diff,
+  appliqué par "git apply --index"), avec un brouillon du message de
+  commit : en français, un sujet par commit, sans ligne Co-Authored-By.
+  L'utilisateur applique, commite à son nom et pousse. Avant le lot
+  suivant, vérifie qu'origin/dev contient exactement le patch, puis
+  recale-toi dessus.
 - CHANGELOG.md : <https://keepachangelog.com/en/1.1.0/> (section
   Unreleased pendant le travail).
 - Versions : <https://semver.org/>. La version figure dans le script et
@@ -43,6 +48,65 @@ tests), CHANGELOG.md.
 - Un seul bump par fusion dans main, jamais par fournée de travail sur
   dev : entre deux fusions, tout s'accumule sous Unreleased. Annonce le
   niveau choisi et sa raison avant de l'appliquer.
+
+## Traduction en anglais (en cours, vers la 5.0.0)
+
+- Tout passe en anglais, sans alias : sorties (journal, erreurs,
+  questions, aide), options, réglages, archive (noms et contenu),
+  modèles de prompt, vérificateur, commentaires, docstrings,
+  documentation et noms des fichiers du dépôt. README.fr.md est la
+  version française du README, tenue à jour avec lui.
+- Restent en français : les noms de fonctions, de variables et de
+  constantes, et les dest d'argparse (--output remplit toujours
+  options.sortie). Les algorithmes ne changent pas : seuls les
+  littéraux changent (chaînes, motifs des regex, mots des réponses),
+  sauf pluriel(), qui passe à la règle anglaise (!= 1).
+- Rupture de compatibilité, donc version majeure : 5.0.0, appliquée
+  une seule fois, à la fusion dans main.
+- Pas de migration : l'ancien reglages.ini et l'ancien catalogue.tsv
+  sont ignorés, sans message.
+- Traduction faite directement, sans DeepL.
+- Six lots, un patch chacun. Lot 0 : CLAUDE.md.
+- Lot 1 : commentaires et docstrings, sans changer le code : l'AST, une
+  fois les docstrings retirées, est identique avant et après.
+- Lot 2 : messages (journal, erreurs, questions, aide) et vérifications
+  des tests.
+- Lot 3 : interface, soit options, réponses au terminal, réglages,
+  catalogue, variables d'environnement, options de test-app.sh.
+- Lot 4 : archive et LLM, soit noms et contenu des fichiers (JSON,
+  synthèse, contexte), modèles de prompt, vérificateur.
+- Lot 5 : renommage des fichiers du dépôt et documentation.
+- Dérogation : la documentation (README, EXEMPLES, TECHNIQUE, TESTS)
+  est traduite et remise à jour au lot 5, une fois l'interface figée.
+  Le CHANGELOG suit chaque lot, en anglais, sous Unreleased. CLAUDE.md
+  suit chaque renommage dans le lot qui le fait.
+- Renommages du lot 3 : reglages.ini -> settings.ini, catalogue.tsv ->
+  catalog.tsv, variable JETON de test-app.sh -> TOKEN, option --reseau
+  de test-app.sh -> --network. Les noms des autres options sont fixés
+  au lot 3.
+- Renommages du lot 5 : verifier-analyse.py -> verify-analysis.py,
+  prompt-modele.txt -> prompt-template.txt, prompt-seul-modele.txt ->
+  prompt-only-template.txt, parties-exemples/ -> example-games/
+  (fichiers compris), EXEMPLES.md -> EXAMPLES.md, TECHNIQUE.md ->
+  TECHNICAL.md.
+- Points d'attention : au terminal, "b" voulait dire Blancs, il voudra
+  dire Black ([w/b]), à signaler dans le CHANGELOG ; verify-analysis.py
+  ne lira plus les archives 4.x ; le prompt traduit ne se valide
+  qu'avec un vrai LLM, par l'utilisateur.
+- Glossaire, à compléter au fil des lots : partie = game ; coup = move ;
+  demi-coup = ply ; trait = side to move ; Blancs, Noirs = White,
+  Black ; camp = side ; cadence = time control ; correspondance =
+  correspondence ; classique, rapide = classical, rapid ; imprécision,
+  erreur, gaffe = inaccuracy, mistake, blunder ; centipion = centipawn ;
+  écart au meilleur coup = centipawn loss ; variante = variation
+  (variante principale = principal variation, PV) ; profondeur =
+  depth ; explorateur = explorer ; base maîtres = masters database ;
+  catalogue = catalog ; niveau, classement = rating ; pseudo =
+  username ; jeton = token ; réglages = settings ; synthèse = summary ;
+  journal = log ; modèle = template ; périmètre = scope ; gain, nulle,
+  perte = win, draw, loss (W/D/L). Capital, plafond et réserve des
+  cadences par correspondance : termes à reprendre du texte anglais
+  des ICCF Rules (section 2.4), vérifiés au lot 2.
 
 ## Règles de modification
 
@@ -77,11 +141,11 @@ lance.
 
 ## Style
 
-- Commentaires abondants en français, au vouvoiement.
+- Commentaires et docstrings abondants, en anglais.
 - Pas de tiret cadratin, pas de guillemets chevrons, pas d'émoji dans
   les scripts.
-- Le vouvoiement s'applique aux documents (README, CHANGELOG), le
-  tutoiement à nos échanges.
+- Documents en anglais, sauf README.fr.md, en français et au
+  vouvoiement. Nos échanges restent en français, au tutoiement.
 
 ## Façon de travailler
 
