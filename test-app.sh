@@ -371,6 +371,13 @@ rm -rf "$DEPOT/__pycache__"
 "$SCRIPT" --help > aide 2> journal
 egal "T02 --help, exit code" 0 $?
 egal "T02 --min-moves quoted 4 times" 4 "$(grep -c -- --min-moves aide)"
+# The help places the defaults in the folder of the application.
+verifier "T02 default of --venv in the application folder" \
+    contient aide "/local/venv)"
+verifier "T02 default of --catalog in the application folder" \
+    contient aide "/local)"
+verifier "T02 default of --settings in the application folder" \
+    contient aide "/settings.ini, which you can edit by hand."
 
 titre "T31, T32: installation commands according to the platform"
 if [ "$SYSTEME" = "Darwin" ]; then
@@ -380,12 +387,6 @@ else
     egal "T31 brew install absent" 0 "$(grep -c 'brew install' aide)"
     egal "T32 apt install quoted 4 times" 4 "$(grep -c 'apt install' aide)"
 fi
-verifier "default of --venv in the application folder" \
-    contient aide "/local/venv)"
-verifier "default of --catalog in the application folder" \
-    contient aide "/local)"
-verifier "default of --settings in the application folder" \
-    contient aide "/settings.ini, which you can edit by hand."
 
 titre "T84: virtual environment left incomplete, recognized"
 # A venv without pip, as an interrupted creation leaves it, a directory

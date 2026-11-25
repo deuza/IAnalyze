@@ -311,6 +311,10 @@ and the project applies [Semantic Versioning](https://semver.org/).
   its loss staying under 50 cp. Tried on 25 November 2026, an LLM
   had put `$6` on seven moves that the engine did not classify, and
   the report counted no other opinion.
+- In the report of `test-app.sh`, the three checks of the defaults
+  that `--help` shows carry the number of their test, T02, and come
+  right after its other checks, instead of standing without a
+  number under the title of T31 and T32.
 
 ### Fixed
 
