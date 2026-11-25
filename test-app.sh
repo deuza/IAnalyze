@@ -463,7 +463,7 @@ printf '1. e4 e5 *\n' >> t-latin1.pgn
 lancer t-latin1.pgn $O
 egal "T34 exit code" 0 "$RC"
 verifier "T34 encoding chosen: cp1252" \
-    contient journal "encodage retenu : cp1252"
+    contient journal "encoding used: cp1252"
 # The same in cp850: "é" is byte 0x82 there and "ü" byte 0x81, which
 # cp1252 does not define. The script stops instead of removing the
 # accented letters like control characters.
@@ -478,7 +478,7 @@ lancer t-latin1.pgn $O
 extraire '*/summary.md'
 verifier "T34 White José" contient extrait "| White | José |"
 verifier "T34 Black Müller" contient extrait "| Black | Müller |"
-verifier "T34 encoding line in section 5" contient extrait "- Encodage : le PGN"
+verifier "T34 encoding line in section 5" contient extrait "- Encoding: the PGN"
 joindre journal
 
 titre "T35: PGN in cp1252"
@@ -487,7 +487,7 @@ printf '\n1. e4 e5 *\n' >> t-cp1252.pgn
 lancer t-cp1252.pgn $O
 egal "T35 exit code" 0 "$RC"
 verifier "T35 encoding chosen: cp1252" \
-    contient journal "encodage retenu : cp1252"
+    contient journal "encoding used: cp1252"
 extraire '*/summary.md'
 verifier "T35 curly apostrophe, dash and euro" \
     contient extrait "| Event | Coupe d’été – 5 € |"
@@ -498,7 +498,7 @@ titre "T36: UTF-8 byte order mark"
 printf '\357\273\277[White "Jos\303\251"]\n\n1. e4 e5 *\n' > t-bom.pgn
 lancer t-bom.pgn $O
 egal "T36 exit code" 0 "$RC"
-verifier "T36 UTF-8 BOM removed" contient journal "(BOM) UTF-8 retirée"
+verifier "T36 UTF-8 BOM removed" contient journal "UTF-8 byte order mark (BOM) removed"
 extraire '*/game.pgn'
 egal "T36 game.pgn starts with a bracket" "[" "$(head -c 1 extrait)"
 
@@ -510,13 +510,13 @@ if command -v iconv >/dev/null 2>&1; then
     lancer t-utf16-bom.pgn $O
     egal "T37 with BOM, exit code" 0 "$RC"
     verifier "T37 with BOM, utf-16-le announced" \
-        contient journal "(BOM) détectée, encodage retenu : utf-16-le"
+        contient journal "byte order mark (BOM) detected, encoding used: utf-16-le"
     extraire '*/summary.md'
     verifier "T37 with BOM, White José" contient extrait "| White | José |"
     lancer t-utf16.pgn $O
     egal "T37 without BOM, exit code" 0 "$RC"
     verifier "T37 without BOM, utf-16-le recognized" \
-        contient journal "un octet nul sur deux"
+        contient journal "one null byte out of two"
     extraire '*/summary.md'
     verifier "T37 without BOM, White José" contient extrait "| White | José |"
     joindre journal
@@ -529,7 +529,7 @@ printf '[White "Jos\303\251"]\n\n1. e4 {tr\377\376s bon} e5 *\n' > t-abime.pgn
 lancer t-abime.pgn $O
 egal "T38 exit code" 0 "$RC"
 verifier "T38 two invalid bytes replaced" \
-    contient journal "UTF-8 abîmé, 2 octet(s) invalide(s)"
+    contient journal "damaged UTF-8, 2 invalid byte(s)"
 extraire '*/summary.md'
 verifier "T38 White José intact" contient extrait "| White | José |"
 extraire '*/game.pgn'
@@ -539,7 +539,7 @@ titre "T39: NUL bytes"
 printf '[White "Jo\000s"]\n\n1. e4\000 e5 *\n' > t-nul.pgn
 lancer t-nul.pgn $O
 egal "T39 exit code" 0 "$RC"
-verifier "T39 two NUL removed" contient journal "dont 2 NUL"
+verifier "T39 two NUL removed" contient journal "2 of them NUL"
 egal "T39 no NUL in the archive" 0 \
     "$(unzip -p "$ARCH" | od -c | grep -c '\\0')"
 joindre journal
@@ -577,7 +577,7 @@ printf '1. e4 e5 *\n' >> t-ctrl.pgn
 lancer t-ctrl.pgn $O
 egal "T42 exit code" 0 "$RC"
 verifier "T42 two control characters removed" \
-    contient journal "2 caractère(s) de contrôle retiré(s), dont 0 NUL"
+    contient journal "2 control character(s) removed, 0 of them NUL"
 extraire '*/summary.md'
 verifier "T42 tab turned into a space" contient extrait "| Event | Tour noi |"
 verifier "T42 ESC removed from Site" contient extrait "| Site | [31mParis |"
@@ -589,7 +589,7 @@ printf '\357\273\277lip_factice\r\n' > t-jeton
 chmod 600 t-jeton
 lancer italienne.pgn --depth 1 --no-questions \
     --token-file t-jeton --catalog /nulle/part
-verifier "T43 BOM of the token removed" contient journal "(BOM) UTF-8 retirée"
+verifier "T43 BOM of the token removed" contient journal "UTF-8 byte order mark (BOM) removed"
 verifier "T43 token accepted, stop on the catalog" \
     contient journal "Opening catalog missing"
 egal "T43 the token is not displayed" 0 "$(grep -c lip_factice journal)"
@@ -955,7 +955,7 @@ for code in (301, 302, 303, 307, 308):
     Faux.code = code
     statut, donnees = cp.Explorateur(
         JETON, 2.0, 5, base + "/lichess", {}).interroger(["e2e4"])
-    print(code, statut, "redirection" in donnees.get("_error", ""))
+    print(code, statut, "redirect" in donnees.get("_error", ""))
 print("tiers", len(recu))
 statut, donnees = cp.Explorateur(
     JETON, 2.0, 5, base + "/echo", {}).interroger(["e2e4"])
@@ -1062,8 +1062,8 @@ print(r["arret"][:28])
 EOF
 cat > attendu-t56 <<'EOF'
 2 2 None
-[(3, '--', 'coup nul, non interrogé')]
-coup nul au demi-coup 3 : ce
+[(3, '--', 'null move, not queried')]
+null move at ply 3: it is no
 EOF
 verifier "T56 stop at the null move, two requests, no exit" \
     cmp -s attendu-t56 sortie-t56
@@ -1143,7 +1143,7 @@ verifier "T57 empty tag filled in with the username" \
     contient extrait '[White "Zoe42"]'
 cat analysis-italienne-*/context.md > extrait 2>/dev/null
 verifier "T57 usual time control suggested and written" \
-    contient extrait "- Cadence : rapid, 15 minutes + 10 seconds per move (défaut)"
+    contient extrait "- Time control: rapid, 15 minutes + 10 seconds per move (default)"
 grep -E 'Settings|Your|per |rror' sortie-pty > ligne 2>/dev/null
 joindre ligne
 
@@ -1158,13 +1158,13 @@ SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
     --settings t-reglages.ini > sortie-pty 2>&1
 cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T58 side deduced from the username of the settings" \
-    contient extrait "Camp du joueur : Noirs, déduit des en-têtes"
+    contient extrait "Player's side: Black, deduced from the headers"
 rm -rf analysis-t-noms-*
 SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
     --settings t-reglages.ini --usernames Alice > sortie-pty 2>&1
 cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T58 --usernames wins over the settings" \
-    contient extrait "Camp du joueur : Blancs, déduit des en-têtes"
+    contient extrait "Player's side: White, deduced from the headers"
 rm -rf analysis-t-noms-*
 
 titre "T59: outside a terminal, then username refused"
@@ -1244,7 +1244,7 @@ SCRIPT="$SCRIPT" python3 t-pty.py "r|5|0||||" t-noms.pgn $P \
     --settings t-cad.ini > sortie-pty 2>&1
 cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T62 time control of the game different from the usual one" \
-    contient extrait "- Cadence : blitz, 5 minutes without increment"
+    contient extrait "- Time control: blitz, 5 minutes without increment"
 rm -rf analysis-t-noms-*
 printf '[White "Alice"]\n[Black "Bob"]\n' > t-tc.pgn
 printf '[TimeControl "600+5"]\n\n1. e4 e5 *\n' >> t-tc.pgn
@@ -1254,8 +1254,8 @@ egal "T62 TimeControl tag: no question" 0 \
     "$(grep -c 'Time control of the game' sortie-pty)"
 cat analysis-t-tc-*/context.md > extrait 2>/dev/null
 verifier "T62 TimeControl tag translated" \
-    contient extrait "soit rapid, 10 minutes + 5 seconds per move"
-grep Cadence extrait > ligne 2>/dev/null
+    contient extrait "that is rapid, 10 minutes + 5 seconds per move"
+grep 'Time control' extrait > ligne 2>/dev/null
 joindre ligne
 rm -rf analysis-t-tc-*
 
@@ -1285,7 +1285,7 @@ SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
     --settings t-corr.ini > sortie-pty 2>&1
 cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T63 standard ICCF: 10 moves in 50 days" \
-    contient extrait "- Cadence : correspondence, 10 moves in 50 days (défaut)"
+    contient extrait "- Time control: correspondence, 10 moves in 50 days (default)"
 rm -rf analysis-t-noms-*
 printf '[player]\nusernames = Alice\nrating = unknown\n' > t-corr.ini
 printf 'time_control = 50d+3d, maximum 50d, bank 75d\n' >> t-corr.ini
@@ -1294,7 +1294,7 @@ SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
 cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T63 ICCF Triple Block: clock, increment, maximum, bank" \
     contient extrait "clock of 50 days + 3 days per move, maximum of 50 days, bank of 75 days"
-grep Cadence extrait > ligne 2>/dev/null
+grep 'Time control' extrait > ligne 2>/dev/null
 joindre ligne
 rm -rf analysis-t-noms-*
 # Settings file missing: the username is asked first, then, for lack
@@ -1360,7 +1360,7 @@ verifier "T64 name of the archive repeated" contient "$PR" "$ARCH"
 verifier "T64 username of the settings" \
     contient "$PR" "- pseudo, sur Lichess et en général : Alice"
 verifier "T64 side deduced outside a terminal" \
-    contient "$PR" "- camp dans cette partie : Blancs"
+    contient "$PR" "- camp dans cette partie : White"
 verifier "T64 declared rating" \
     contient "$PR" "- niveau : environ 1300 Elo, déclaré par le joueur"
 verifier "T64 usual time control written" \
@@ -1417,7 +1417,7 @@ egal "T65 outside a terminal, answers not collected" 1 \
 PR="$(head -n 1 sortie)"
 PR="${PR%.zip}.prompt.txt"
 egal "T65 masters database named in section 2" 1 \
-    "$(grep -c 'Section 2, "Explorateur maîtres"' "$PR")"
+    "$(grep -c 'Section 2, "Explorer of the masters database"' "$PR")"
 # The branches specific to each database are only written with the
 # explorer: the template is rendered here without a collection,
 # database by database.
@@ -1563,7 +1563,7 @@ rm -rf analysis-t-pr-*
     --venv "$VENV" --settings t-niv.ini > sortie 2> journal
 cat analysis-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T68 side deduced from the other username" \
-    contient extrait "- camp dans cette partie : Noirs"
+    contient extrait "- camp dans cette partie : Black"
 verifier "T68 without a declared rating, Elo of the tag" \
     contient extrait "- niveau : 1500 Elo, d'après la balise BlackElo de la partie"
 rm -rf analysis-t-pr-*
@@ -1608,7 +1608,7 @@ t-86/ianalyze.py t-pr.pgn --no-explorer --no-questions --depth 1 \
     --usernames Bob > sortie 2> journal
 cat analysis-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T86 side deduced from --usernames" \
-    contient extrait "- camp dans cette partie : Noirs"
+    contient extrait "- camp dans cette partie : Black"
 verifier "T86 rating taken from the Elo tag of that side" \
     contient extrait "- niveau : 1500 Elo, d'après la balise BlackElo de la partie"
 verifier "T86 settings file untouched" cmp -s t-86-avant.ini t-86/settings.ini
@@ -1627,7 +1627,7 @@ verifier "T86 on a terminal, no settings file created" \
     test ! -e t-86/settings.ini
 cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T86 on a terminal, side declared" \
-    contient extrait "Camp du joueur : Noirs, déclaré"
+    contient extrait "Player's side: Black, declared"
 egal "T86 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
 joindre sortie-pty
 rm -rf analysis-t-noms-*
@@ -1700,6 +1700,26 @@ joindre journal-t87 5
 rm -rf "$DEPOT/__pycache__"
 rm -rf analysis-t-pr-*
 
+titre "T88: ranks of the variations, English ordinals"
+# Section 3a numbers the variations of the engine 1st, 2nd, 3rd...: the
+# suffix follows the last two digits, "21st" and not "21th", "11th" and
+# not "11st".
+SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t88 2> journal-t88 <<'EOF'
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+print(" ".join(cp.ordinal(n) for n in (1, 2, 3, 4, 10, 11, 12, 13, 21, 22,
+                                       23, 101, 111, 112)))
+EOF
+egal "T88 from 1st to 112th" \
+    "1st 2nd 3rd 4th 10th 11th 12th 13th 21st 22nd 23rd 101st 111th 112th" \
+    "$(cat sortie-t88)"
+joindre journal-t88 5
+rm -rf "$DEPOT/__pycache__"
+
 titre "T74: prompt only, short, to be pasted without an attachment"
 
 # With --prompt-only, the prompt is drawn from a short template: a few
@@ -1728,7 +1748,7 @@ while IFS= read -r present; do
     verifier "T74 present: $present" contient "$PR" "$present"
 done <<'FIN'
 Vous êtes Maître International d'échecs.
-Le joueur avait les Blancs.
+Le joueur avait les White.
 dans un seul bloc de code
 hors des accolades
 La partie :
@@ -1741,7 +1761,7 @@ done <<'FIN'
 IAnalyze
 archive
 summary.md
-Données brutes
+Raw data
 CAS A
 FIN
 # The table has one line per ply, and the queen given away on move 3
@@ -1749,16 +1769,16 @@ FIN
 egal "T74 table: one line per ply" 6 \
     "$(grep -c -E '^[1-3]\.(\.\.)? [A-Za-z0-9+#x=-]+ +[+#-]' "$PR")"
 egal "T74 table: blunder, loss and best move" 1 \
-    "$(grep -c -E '^3\. Qxf7\+ .* gaffe \([0-9a-z]+\) : mieux 3\. ' "$PR")"
+    "$(grep -c -E '^3\. Qxf7\+ .* blunder \([0-9a-z]+\) : mieux 3\. ' "$PR")"
 # Scored 1-0, the game ends with White a queen down.
 egal "T74 result contrary to the evaluation, told to the LLM" 1 \
-    "$(grep -c '^Attention : Résultat et évaluation finale' "$PR")"
+    "$(grep -c '^Attention : Result and final evaluation' "$PR")"
 # The review asks for three errors. An LLM asked for three makes one up
 # when the player made fewer: the prompt then gives the number of weak
 # moves that its table carries. White played only three moves, and the
 # engine does not always judge the same ones weak from one machine to
 # another: the expected count is read in the table of the prompt.
-FAIBLES74="$(grep -c -E '^[0-9]+\. .* (imprécision|erreur|gaffe) \(' "$PR")"
+FAIBLES74="$(grep -c -E '^[0-9]+\. .* (inaccuracy|mistake|blunder) \(' "$PR")"
 if [ "$FAIBLES74" -lt 3 ]; then
     verifier "T74 review: the number of weak moves of the player is given" \
         contient "$PR" "Coups faibles du joueur dans le tableau : $FAIBLES74."
@@ -1807,17 +1827,18 @@ spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
 cp = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cp)
 print(cp.consignes_joueur(
-    "## Contexte\n"
-    "- Camp du joueur : Blancs\n"
-    "- Périmètre : la partie complète (défaut)\n"
-    "- Objectif : la sortie de la dame\n"
-    "- Contexte particulier : rien (défaut)\n"))
+    "## Context\n"
+    "- Player's side: White\n"
+    "- a. Scope: the whole game (default)\n"
+    "- b. What the player wants to understand: the early queen\n"
+    "- c. Particular context: nothing (default)\n"))
 print("[%s]" % cp.consignes_joueur(None))
 print("[%s]" % cp.consignes_joueur(
-    "- Cadence : balise TimeControl `600+5`, soit rapid\n"
-    "- Cadence : unspecified\n"))
+    "- Time control: TimeControl tag `600+5`, that is rapid\n"
+    "- Time control: unspecified\n"))
 EOF
-printf '%s\n' "- Objectif : la sortie de la dame" "[]" "[]" > attendu-t74
+printf '%s\n' "- b. What the player wants to understand: the early queen" \
+    "[]" "[]" > attendu-t74
 verifier "T74 answers of the player repeated, defaults, side and tag set aside" \
     cmp -s attendu-t74 sortie-t74
 joindre journal-t74 5
@@ -1840,14 +1861,14 @@ def coup(trait, nature, meilleurs=("x",)):
     return {"side_to_move": trait, "category": nature, "best": list(meilleurs)}
 
 
-resultats = [coup("Blancs", None), coup("Noirs", "gaffe"),
-             coup("Blancs", "erreur"), coup("Noirs", "imprécision"),
-             coup("Blancs", "gaffe"), coup("Blancs", "erreur", ()),
-             coup("Blancs", "imprécision")]
-print(cp.coups_faibles_joueur(resultats, "Blancs"),
-      cp.coups_faibles_joueur(resultats, "Noirs"),
+resultats = [coup("White", None), coup("Black", "blunder"),
+             coup("White", "mistake"), coup("Black", "inaccuracy"),
+             coup("White", "blunder"), coup("White", "mistake", ()),
+             coup("White", "inaccuracy")]
+print(cp.coups_faibles_joueur(resultats, "White"),
+      cp.coups_faibles_joueur(resultats, "Black"),
       cp.coups_faibles_joueur(resultats, None),
-      cp.coups_faibles_joueur([], "Blancs"))
+      cp.coups_faibles_joueur([], "White"))
 modele = pathlib.Path(os.environ["SCRIPT"]).with_name(
     cp.PROMPT_SEUL_MODELE).read_text(encoding="utf-8")
 # Four cases: no weak move, fewer than three, three or more, and an
@@ -2234,8 +2255,8 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
     egal "T51 exit code" 0 "$RC"
     extraire '*/summary.md'
     grep -E '^\| [34] \|' extrait > lignes 2>/dev/null
-    egal "T51 lines 3 and 4 carry mat and gaffe" 2 \
-        "$(grep -c '| mat | gaffe |' lignes)"
+    egal "T51 lines 3 and 4 carry mate and blunder" 2 \
+        "$(grep -c '| mate | blunder |' lignes)"
     # A mate is counted after the move of the line: 2. g4 leaves Black
     # a mate in one, "#-1", and the move that would give it, Qh4#, is "#-0".
     verifier "T51 Qh4# as first choice, mate given" \
@@ -2243,12 +2264,12 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
     egal "T51 after 2. g4, mate in one for Black" 1 \
         "$(grep -c -E '^\| 3 \|.*\| g4 \| #-1 \|' lignes)"
     verifier "T51 legend of the mates" contient extrait \
-        "le compte se lit après le coup de la ligne"
-    verifier "T51 sentence of explanation" contient extrait "Écart \`mat\`"
+        "the count reads after the move of the line"
+    verifier "T51 sentence of explanation" contient extrait "CP loss \`mate\`"
     verifier "T51 negative loss explained" contient extrait \
-        "Négatif, il ne signale aucune faute"
+        "Negative, it reports no fault"
     egal "T51 title of a game without a Site tag" 1 \
-        "$(grep -c "^# Dossier d'analyse : partie locale" extrait)"
+        "$(grep -c "^# Analysis folder: local game" extrait)"
     egal "T51 without the explorer, its folder is not announced" 0 \
         "$(grep -c 'explorer/NNN' extrait)"
     # Loss between the first choice and the played move, computed apart:
@@ -2268,10 +2289,10 @@ EOF
     cat > attendu-t51 <<'EOF'
 99999 99998 0 None
 -99998 -99999 0 None
-99999 300 mat gaffe
+99999 300 mate blunder
 50 80 -30 None
-120 -40 160 erreur
-300 -99999 mat gaffe
+120 -40 160 mistake
+300 -99999 mate blunder
 EOF
     verifier "T51 losses: two mates, missed mate, negative loss" \
         cmp -s attendu-t51 sortie-t51
@@ -2321,13 +2342,13 @@ EOF
     egal "T72 exit code" 0 "$RC"
     extraire '*/summary.md'
     egal "T72 contradiction reported" 1 \
-        "$(grep -c 'Résultat et évaluation finale se contredisent' extrait)"
+        "$(grep -c 'Result and final evaluation contradict each other' extrait)"
     verifier "T72 declared winner and side really better" \
-        contient extrait "victoire des Blancs, alors que Stockfish donne"
+        contient extrait "a win for White, while Stockfish gives"
     verifier "T72 last move and Termination tag quoted" \
-        contient extrait "3... Kxf7, soit un net avantage aux Noirs"
+        contient extrait "3... Kxf7, that is a clear advantage for Black"
     verifier "T72 Termination tag quoted" \
-        contient extrait 'La balise Termination vaut `Normal`.'
+        contient extrait 'The Termination tag reads `Normal`.'
     PR="${ARCH%.zip}.prompt.txt"
     egal "T72 prompt: instruction to tell the player" 1 \
         "$(grep -c 'le résultat contredit' "$PR")"
@@ -2337,9 +2358,9 @@ EOF
     : > extrait
     extraire '*/summary.md'
     verifier "T72 consistent result, summary produced" \
-        contient extrait "## 3. Évaluations Stockfish"
+        contient extrait "## 3. Stockfish evaluations"
     egal "T72 consistent result, nothing is reported" 0 \
-        "$(grep -c 'se contredisent' extrait)"
+        "$(grep -c 'contradict each other' extrait)"
 
     # The symmetric case: Black gives away their queen, the game is
     # scored 0-1.
@@ -2349,9 +2370,9 @@ EOF
     : > extrait
     extraire '*/summary.md'
     verifier "T72 win of Black contradicted, reported" contient extrait \
-        "victoire des Noirs, alors que Stockfish donne"
+        "a win for Black, while Stockfish gives"
     verifier "T72 win of Black contradicted, advantage to White" \
-        contient extrait "3. Nxh4, soit un net avantage aux Blancs"
+        contient extrait "3. Nxh4, that is a clear advantage for White"
 
     titre "T52: null move"
     printf '1. e4 e5 2. -- Nc6 3. Nf3 *\n' > t-nul-coup.pgn
@@ -2360,9 +2381,9 @@ EOF
     extraire '*/summary.md'
     grep -E '^\| [34] \|' extrait > lignes 2>/dev/null
     verifier "T52 line of the null move without evaluation" \
-        contient lignes "| 3 | 2 | Blancs | -- | - | - | - | - |"
-    verifier "T52 mention in section 3 bis" \
-        contient extrait "joué : coup nul, non évalué par le moteur"
+        contient lignes "| 3 | 2 | White | -- | - | - | - | - |"
+    verifier "T52 mention in section 3a" \
+        contient extrait "played: null move, not evaluated by the engine"
     joindre lignes
 
     egal "T52 no repeated notice from python-chess" 0 \
@@ -2384,9 +2405,9 @@ EOF
     egal "T25 exit code" 0 "$RC"
     extraire '*/summary.md'
     verifier "T25 six plies covered out of nine" contient extrait \
-        "profondeur 10, multipv 2, 6 demi-coups couverts sur 9"
+        "depth 10, multipv 2, 6 plies covered out of 9"
     egal "T25 six lines in the table" 6 \
-        "$(grep -c -E '^\| [1-9] \| [1-5] \| (Blancs|Noirs) \| [A-Za-z]' extrait)"
+        "$(grep -c -E '^\| [1-9] \| [1-5] \| (White|Black) \| [A-Za-z]' extrait)"
     PR="${ARCH%.zip}.prompt.txt"
     verifier "T25 prompt: partial coverage stated" contient "$PR" \
         "que les 6 premiers demi-coups sur 9"
@@ -2477,28 +2498,28 @@ FIN
         verifier "T70 game.pgn identical to test.pgn" cmp -s extrait test.pgn
         extraire '*/summary.md'
         verifier "T70 thirty-six plies" contient extrait \
-            "Nombre de demi-coups dans la ligne principale : 36."
+            "Number of plies in the main line: 36."
         verifier "T70 accented tag" \
             contient extrait "| Black | Müller, Noël |"
         verifier "T70 TimeControl tag repeated" \
             contient extrait "| TimeControl | 600+5 |"
         verifier "T70 long castling by White" contient extrait \
-            "Roque des Blancs : O-O-O au coup 14 (demi-coup 27)."
+            "White castling: O-O-O at move 14 (ply 27)."
         verifier "T70 short castling by Black" contient extrait \
-            "Roque des Noirs : O-O au coup 7 (demi-coup 14)."
+            "Black castling: O-O at move 7 (ply 14)."
         egal "T70 conceded mate then missed mate" 2 \
-            "$(grep -c -E '^\| [34] \| 2 \|.*\| mat \| gaffe \|' extrait)"
+            "$(grep -c -E '^\| [34] \| 2 \|.*\| mate \| blunder \|' extrait)"
         egal "T70 en passant capture" 1 \
-            "$(grep -c -E '^\| 9 \| 5 \| Blancs \| gxf6 \|' extrait)"
+            "$(grep -c -E '^\| 9 \| 5 \| White \| gxf6 \|' extrait)"
         egal "T70 promotion with capture and check" 1 \
-            "$(grep -c -E '^\| 17 \| 9 \| Blancs \| gxf8=Q\+ \|' extrait)"
+            "$(grep -c -E '^\| 17 \| 9 \| White \| gxf8=Q\+ \|' extrait)"
         egal "T70 null move not evaluated" 1 \
-            "$(grep -c -E '^\| 29 \| 15 \| Blancs \| -- \| - \| - \| - \| - \|' extrait)"
+            "$(grep -c -E '^\| 29 \| 15 \| White \| -- \| - \| - \| - \| - \|' extrait)"
         egal "T70 thirty-six lines in the table" 36 \
-            "$(grep -c -E '^\| [0-9]+ \| [0-9]+ \| (Blancs|Noirs) \| ' extrait)"
+            "$(grep -c -E '^\| [0-9]+ \| [0-9]+ \| (White|Black) \| ' extrait)"
         PR="${ARCH%.zip}.prompt.txt"
         verifier "T70 prompt: side deduced despite the case" \
-            contient "$PR" "- camp dans cette partie : Blancs"
+            contient "$PR" "- camp dans cette partie : White"
         grep -E '^\| (3|4|9|17|29) \|' extrait | cut -c1-110 > lignes
         joindre lignes
     else
@@ -2569,9 +2590,9 @@ def construire(fautif):
         suivant = noeud.add_main_variation(coup)
         # Ply 4, a missed mate, is a blunder for any engine: the
         # faulty PGN forgets it.
-        if e["category"] in ("erreur", "gaffe") and not (
+        if e["category"] in ("mistake", "blunder") and not (
                 fautif and e["ply"] == 4):
-            suivant.nags.add(chess.pgn.NAG_BLUNDER if e["category"] == "gaffe"
+            suivant.nags.add(chess.pgn.NAG_BLUNDER if e["category"] == "blunder"
                              else chess.pgn.NAG_MISTAKE)
             meilleur = e["best"][0]
             texte = ("Il fallait %s, que le moteur donne à %s contre %s "
@@ -2634,7 +2655,7 @@ for b in ("Event", "Site", "Date", "Round", "White", "Black", "Result"):
 noeud = court
 for e, coup in zip(evals, source.mainline_moves()):
     noeud = noeud.add_main_variation(coup)
-    if e["category"] in ("erreur", "gaffe"):
+    if e["category"] in ("mistake", "blunder"):
         noeud.comment = ("Ici tu devais jouer %s, bien meilleur d'après "
                          "le tableau : prends le temps de chercher ce coup "
                          "avant de pousser un pion." % e["best"][0]["san"])
@@ -2863,10 +2884,10 @@ import os
 spec = importlib.util.spec_from_file_location("va", os.environ["VERIF"])
 va = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(va)
-for reponse in ("les 20 premiers coups", "12", "la partie complète (défaut)",
-                "jusqu'au milieu de partie", "0"):
-    print(va.perimetre_convenu("## Consignes d'analyse\n"
-                               "- a. Périmètre : %s\n" % reponse))
+for reponse in ("the first 20 moves", "12", "the whole game (default)",
+                "up to the middlegame", "0"):
+    print(va.perimetre_convenu("## Analysis instructions\n"
+                               "- a. Scope: %s\n" % reponse))
 print(va.perimetre_convenu("Aucune consigne."))
 EOF
         printf '20\n12\nNone\nNone\nNone\nNone\n' > attendu-t82
@@ -2879,7 +2900,7 @@ EOF
         # scope given at the startup question bounds the check without
         # --scope. The line written by the script was never read before.
         mkdir -p t-82-p
-        SCRIPT="$SCRIPT" python3 t-pty.py "w||les 4 premiers coups|||" \
+        SCRIPT="$SCRIPT" python3 t-pty.py "w||the first 4 moves|||" \
             t-legal.pgn $P --settings "$REGL" --output-dir t-82-p \
             > sortie-pty 2>&1
         ARCH82P=$(find t-82-p -name 'analysis-*.zip' | head -n 1)
@@ -2979,8 +3000,8 @@ FIN
     egal "M2 exit code" 0 "$RC"
     extraire '*/summary.md'
     egal "M2 nine lines in the Stockfish table" 9 \
-        "$(grep -c -E '^\| [1-9] \| [1-5] \| (Blancs|Noirs) \| [A-Za-z]' extrait)"
-    grep -E '^Moteur' extrait | cut -c1-110 > ligne
+        "$(grep -c -E '^\| [1-9] \| [1-5] \| (White|Black) \| [A-Za-z]' extrait)"
+    grep -E '^Engine' extrait | cut -c1-110 > ligne
     joindre ligne
     # One second of delay: the engine has just received "quit".
     sleep 1
@@ -2989,8 +3010,8 @@ FIN
         "$(grep -c 'Les chiffres de la section 3 font foi' "$PR")"
     egal "M2 prompt: Stockfish useless to the analyst" 1 \
         "$(grep -c 'Stockfish est inutile' "$PR")"
-    egal "M2 prompt: the mention mat is explained" 1 \
-        "$(grep -c 'porte .mat. quand le coup' "$PR")"
+    egal "M2 prompt: the mention mate is explained" 1 \
+        "$(grep -c 'porte .mate. quand le coup' "$PR")"
     egal "M2 no engine process left by the tests" \
         "[$MOTEURS_AVANT]" "[$(processus_moteur)]"
 fi
@@ -3143,7 +3164,7 @@ verifier "T28 warning about mode 644" \
 titre "T14: Italian, masters database"
 collecter italienne.pgn $EXPL --database masters
 sain "T14"
-verifier "T14 log: masters database" contient journal "Explorer: database maîtres"
+verifier "T14 log: masters database" contient journal "Explorer: database masters"
 egal "T14 nine lines in the table" 9 "$(lignes table)"
 verifier "T14 line 1: B00 King's Pawn Game" \
     contient table "| B00 King's Pawn Game |"
@@ -3151,9 +3172,9 @@ verifier "T14 line 5: C50 Italian Game" contient table "| C50 Italian Game |"
 verifier "T14 line 9: Giuoco Pianissimo" \
     contient table "Giuoco Pianissimo |"
 verifier "T14 stop at the end of the game" \
-    contient section2 "Arrêt de l'interrogation : fin de la partie."
+    contient section2 "Stop of the querying: end of the game."
 verifier "T14 no exit from theory" \
-    contient section2 "Aucun coup interrogé ne passe sous le seuil de 10.0 % hors catalogue."
+    contient section2 "No move queried goes below the threshold of 10.0 % outside the catalog."
 joindre table
 
 titre "T15: Polish, masters database"
@@ -3173,13 +3194,13 @@ collecter polonaise.pgn $EXPL --database lichess
 sain "T16"
 head -n 1 table > ligne
 verifier "T16 line 1: A00 Polish Opening" contient ligne "| A00 Polish Opening |"
-verifier "T16 Lichess database announced" contient section2 "Base interrogée : **Lichess**"
-verifier "T16 starting window announced" contient section2 "Fenêtre de départ"
-verifier "T16 first exit: g6" contient section2 "**Noirs joue g6**"
+verifier "T16 Lichess database announced" contient section2 "Database queried: **Lichess**"
+verifier "T16 starting window announced" contient section2 "Starting window"
+verifier "T16 first exit: g6" contient section2 "**Black plays g6**"
 verifier "T16 last named position: Polish" \
-    contient section2 "dernière position nommée avant la sortie : A00 Polish Opening"
+    contient section2 "last named position before the exit: A00 Polish Opening"
 joindre table
-grep -E 'Arrêt de l|Premier coup sous|fréquence du coup' section2 > ligne 2>/dev/null
+grep -E 'Stop of the querying|First move below|frequency of the move' section2 > ligne 2>/dev/null
 joindre ligne
 
 titre "T17: stop at the first exit"
@@ -3187,7 +3208,7 @@ collecter polonaise.pgn $EXPL --database lichess --min-moves 0
 sain "T17"
 egal "T17 two lines in the table" 2 "$(lignes table)"
 verifier "T17 stop on the exit from theory" \
-    contient section2 "sortie de théorie au demi-coup 2 : g6 joué à"
+    contient section2 "exit from theory at ply 2: g6 played at"
 grep 'Arrêt de l' section2 > ligne 2>/dev/null
 joindre ligne
 
@@ -3199,7 +3220,7 @@ unzip -p "$ARCH" '*/collection.json' > json 2>/dev/null
 verifier "T18 speeds normalized" contient json '"speeds": "rapid,classical"'
 verifier "T18 ratings normalized" contient json '"ratings": "0,1000"'
 verifier "T18 filters repeated in the summary" \
-    contient section2 'Cadences : `rapid,classical`'
+    contient section2 'Speeds: `rapid,classical`'
 head -n 1 table > ligne
 joindre ligne
 
@@ -3209,15 +3230,15 @@ titre "T19: unreachable game threshold"
 collecter italienne.pgn $EXPL --database lichess --min-games 100000000000
 sain "T19"
 verifier "T19 sample too small at ply 1" \
-    contient section2 "échantillon insuffisant au demi-coup 1"
+    contient section2 "insufficient sample at ply 1"
 verifier "T19 section 4 filled in" \
-    contient synthese "ne dit plus rien d'exploitable"
+    contient synthese "says nothing usable any more"
 
 titre "T20: frequency threshold at zero"
 collecter polonaise.pgn $EXPL --database lichess --min-moves 0 --min-frequency 0
 sain "T20"
 verifier "T20 no exit below 0.0 %" \
-    contient section2 "Aucun coup interrogé ne passe sous le seuil de 0.0 %"
+    contient section2 "No move queried goes below the threshold of 0.0 %"
 grep 'Arrêt de l' section2 > ligne 2>/dev/null
 joindre ligne
 
@@ -3225,7 +3246,7 @@ titre "T21: until exhaustion"
 collecter polonaise.pgn $EXPL --database lichess --exhaustive
 sain "T21"
 verifier "T21 mode announced" contient section2 'Mode `--exhaustive`'
-verifier "T21 first exit still g6" contient section2 "**Noirs joue g6**"
+verifier "T21 first exit still g6" contient section2 "**Black plays g6**"
 noter "  note   lines in the table: $(lignes table)"
 grep 'Arrêt de l' section2 > ligne 2>/dev/null
 joindre ligne
@@ -3235,7 +3256,7 @@ collecter italienne.pgn $EXPL --exhaustive --max-plies 4
 sain "T22"
 egal "T22 four lines in the table" 4 "$(lignes table)"
 verifier "T22 cap reached" \
-    contient section2 "plafond de 4 demi-coups atteint (option --max-plies)"
+    contient section2 "cap of 4 plies reached (option --max-plies)"
 
 titre "T23: pause between two requests"
 collecter italienne.pgn $EXPL --pause 3 --max-plies 3
@@ -3264,7 +3285,7 @@ sain "T33"
 grep -E '\| O-O \|' table > roques 2>/dev/null
 egal "T33 two castling moves in the table" 2 "$(lignes roques)"
 # A castling move not found came out at rank "-", at 0.0 %.
-egal "T33 no castling at rank hors base" 0 \
+egal "T33 no castling at rank outside the database" 0 \
     "$(grep -c -E '\| O-O \| - \|' roques)"
 egal "T33 no castling at 0.0 %" 0 "$(grep -c -E '\| O-O \| [0-9-]+ \| 0\.0 %' roques)"
 joindre roques
@@ -3314,10 +3335,10 @@ collecter nul.pgn $EXPL --database lichess --exhaustive
 sain "N1"
 egal "N1 two lines in the table" 2 "$(lignes table)"
 verifier "N1 stop on the null move" \
-    contient section2 "Arrêt de l'interrogation : coup nul au demi-coup 3"
+    contient section2 "Stop of the querying: null move at ply 3"
 egal "N1 no request refused" 0 "$(grep -c 'HTTP 400' journal)"
 verifier "N1 section 4: null move, not queried" \
-    contient synthese "coup nul, non interrogé"
+    contient synthese "null move, not queried"
 grep 'Explorer:' journal > ligne 2>/dev/null
 joindre ligne
 joindre table
@@ -3332,7 +3353,7 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
         contient liste "/explorer/001-e2e4.json"
     verifier "N2 evaluations of the engine in the archive" \
         contient liste "/stockfish/evaluations.json"
-    awk '/^## 3\./ {dedans = 1} /^### 3 bis/ {dedans = 0} dedans' synthese \
+    awk '/^## 3\./ {dedans = 1} /^### 3a/ {dedans = 0} dedans' synthese \
         | grep -E '^\| [0-9]+ \|' > table3
     egal "N2 twelve lines in the engine table" 12 "$(lignes table3)"
     unzip -p "$ARCH" > contenu 2>/dev/null

@@ -145,7 +145,7 @@ NAG_BLANCS_MIEUX = {14, 16, 18, 20}
 NAG_NOIRS_MIEUX = {15, 17, 19, 21}
 
 #: NAG expected by default for each category of move, from the prompt.
-NAG_NATURE = {"imprécision": 6, "erreur": 2, "gaffe": 4}
+NAG_NATURE = {"inaccuracy": 6, "mistake": 2, "blunder": 4}
 
 #: A FEN position in a text: six fields, the first one with eight ranks.
 RE_FEN = re.compile(
@@ -553,15 +553,15 @@ def perimetre_convenu(synthese_archive: str) -> int | None:
     None for the whole game.
 
     The answer is in the instructions of summary.md, on the line
-    "- a. Périmètre : ...", which ianalyze.py writes from the label of
-    its first startup question (QUESTIONS_CONTEXTE): the label carries
-    its letter, and a pattern without it never matched a real summary.
-    It is free text: the first number it carries is taken for the
-    number of moves, "the first 20 moves" giving 20. An answer left at
-    its default, or without a number, means the whole game.
+    "- a. Scope: ...", which ianalyze.py writes from the label of its
+    first startup question (QUESTIONS_CONTEXTE): the label carries its
+    letter, and a pattern without it never matched a real summary. It
+    is free text: the first number it carries is taken for the number
+    of moves, "the first 20 moves" giving 20. An answer left at its
+    default, or without a number, means the whole game.
     """
-    m = re.search(r"(?m)^- a\. Périmètre : (.*)$", synthese_archive)
-    if m is None or m.group(1).rstrip().endswith("(défaut)"):
+    m = re.search(r"(?m)^- a\. Scope: (.*)$", synthese_archive)
+    if m is None or m.group(1).rstrip().endswith("(default)"):
         return None
     nombre = re.search(r"\d+", m.group(1))
     return int(nombre.group()) if nombre and int(nombre.group()) else None
@@ -606,7 +606,7 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
                 % perimetre)
     oublies, sans_nag, fautes = [], [], 0
     for e in evaluations:
-        if e.get("category") not in ("erreur", "gaffe"):
+        if e.get("category") not in ("mistake", "blunder"):
             continue
         if perimetre and e["move_number"] > perimetre:
             continue
@@ -615,7 +615,7 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
         if indice >= len(noeuds):
             continue
         lieu = "%d%s %s (%s)" % (
-            e["move_number"], "." if e["side_to_move"] == "Blancs" else "...",
+            e["move_number"], "." if e["side_to_move"] == "White" else "...",
             e["played"]["san"], e["category"])
         if not noeuds[indice].comment.strip():
             oublies.append(lieu)
@@ -641,7 +641,7 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
             continue
         nags = noeuds[indice].nags
         lieu = "%d%s %s" % (
-            e["move_number"], "." if e["side_to_move"] == "Blancs" else "...",
+            e["move_number"], "." if e["side_to_move"] == "White" else "...",
             e["played"]["san"])
         score = e["played"].get("score") or ""
         signe = 0

@@ -369,12 +369,11 @@ EXPLORER_URL = "https://explorer.lichess.org/masters"
 EXPLORER_LICHESS_URL = "https://explorer.lichess.org/lichess"
 
 #: Databases that --database can query: endpoint, and label repeated in the
-#: summary. The label of the masters database reproduces exactly the
-#: titles of the summaries produced before this option was added.
+#: summary and the prompt, where it reads "the masters database".
 BASES_EXPLORATEUR = {
-    "masters": {"url": EXPLORER_URL, "libelle": "maîtres"},
+    "masters": {"url": EXPLORER_URL, "libelle": "masters"},
     "lichess": {"url": EXPLORER_LICHESS_URL,
-                "libelle": "Lichess (tous joueurs)"},
+                "libelle": "Lichess (all players)"},
 }
 
 #: Speeds accepted by the /lichess endpoint, Speed schema of the API.
@@ -558,19 +557,19 @@ CADENCE_INCONNUE = {"type": "inconnue"}
 #: Startup questions, with the default that an empty answer keeps: label
 #: in context.md, question, default.
 QUESTIONS_CONTEXTE = (
-    ("a. Périmètre",
-     "Périmètre : les N premiers coups, ou la partie complète ?",
-     "la partie complète"),
-    ("b. Ce que le joueur cherche à comprendre",
-     "Ce que vous cherchez à comprendre dans cette partie ?",
-     "laissé ouvert"),
-    ("c. Contexte particulier",
-     ("Contexte particulier : zeitnot, fatigue, ouverture inconnue, "
-      "adversaire particulier ?"),
-     "rien"),
-    ("d. Autres commentaires à inclure dans le PGN final",
-     "Autres commentaires à inclure dans le PGN final ?",
-     "rien"),
+    ("a. Scope",
+     "Scope: the first N moves, or the whole game?",
+     "the whole game"),
+    ("b. What the player wants to understand",
+     "What do you want to understand in this game?",
+     "left open"),
+    ("c. Particular context",
+     ("Particular context: time trouble, fatigue, unknown opening, "
+      "particular opponent?"),
+     "nothing"),
+    ("d. Other comments to include in the final PGN",
+     "Other comments to include in the final PGN?",
+     "nothing"),
 )
 
 #: Category of a move according to its loss against the engine's first
@@ -822,21 +821,21 @@ def decoder_octets(brut: bytes) -> tuple[str, str, list[str]]:
         # The mark is removed, the rest follows the normal path: it does not
         # guarantee that what follows is valid UTF-8.
         brut = brut[len(codecs.BOM_UTF8):]
-        remarques.append("marque d'ordre des octets (BOM) UTF-8 retirée")
+        remarques.append("UTF-8 byte order mark (BOM) removed")
     else:
         large = None
         for marque, codec in BOMS_LARGES:
             if brut.startswith(marque):
                 brut = brut[len(marque):]
                 large = codec
-                remarques.append("marque d'ordre des octets (BOM) détectée, "
-                                 "encodage retenu : %s" % codec)
+                remarques.append("byte order mark (BOM) detected, encoding "
+                                 "used: %s" % codec)
                 break
         if large is None:
             large = utf16_sans_bom(brut)
             if large is not None:
-                remarques.append("un octet nul sur deux et pas de marque "
-                                 "d'ordre des octets, encodage retenu : %s"
+                remarques.append("one null byte out of two and no byte "
+                                 "order mark, encoding used: %s"
                                  % large)
         if large is not None:
             encodage = large
@@ -844,7 +843,7 @@ def decoder_octets(brut: bytes) -> tuple[str, str, list[str]]:
                 texte = brut.decode(large)
             except UnicodeDecodeError:
                 texte = brut.decode(large, errors="replace")
-                remarques.append("séquences %s invalides remplacées par "
+                remarques.append("invalid %s sequences replaced by "
                                  "U+FFFD" % large)
 
     if texte is None:
@@ -856,8 +855,8 @@ def decoder_octets(brut: bytes) -> tuple[str, str, list[str]]:
             valides = sum(1 for c in essai if ord(c) > 127) - invalides
             if valides > 0 and invalides <= UTF8_TOLERANCE * valides:
                 texte = essai
-                remarques.append("UTF-8 abîmé, %d octet(s) invalide(s) "
-                                 "remplacé(s) par U+FFFD, encodage retenu : "
+                remarques.append("damaged UTF-8, %d invalid byte(s) "
+                                 "replaced by U+FFFD, encoding used: "
                                  "utf-8" % invalides)
             else:
                 try:
@@ -866,15 +865,15 @@ def decoder_octets(brut: bytes) -> tuple[str, str, list[str]]:
                 except UnicodeDecodeError:
                     texte = brut.decode("latin-1")
                     encodage = "latin-1"
-                remarques.append("le contenu n'est pas en UTF-8, encodage "
-                                 "retenu : %s" % encodage)
+                remarques.append("the content is not UTF-8, encoding used: "
+                                 "%s" % encodage)
 
     texte = texte.replace("\r\n", "\n").replace("\r", "\n")
     controles = RE_CONTROLES.findall(texte)
     if controles:
         texte = RE_CONTROLES.sub(
             lambda m: " " if m.group() in "\x0b\x0c" else "", texte)
-        remarques.append("%d caractère(s) de contrôle retiré(s), dont %d NUL"
+        remarques.append("%d control character(s) removed, %d of them NUL"
                          % (len(controles), controles.count("\x00")))
     return texte, encodage, remarques
 
@@ -1515,6 +1514,21 @@ def pluriel(nombre: int, mot: str) -> str:
     return "%d %s%s" % (nombre, mot, "s" if nombre != 1 else "")
 
 
+def ordinal(nombre: int) -> str:
+    """
+    English ordinal of a rank: "1st", "2nd", "3rd", "4th", then "11th",
+    "12th" and "13th", but "21st", "22nd", "23rd" and "101st". A list
+    followed by a single suffix, as French allows ("1er", then "2e" and
+    beyond), would write "21th" in English: the rule follows the last
+    two digits.
+    """
+    if 11 <= nombre % 100 <= 13:
+        suffixe = "th"
+    else:
+        suffixe = {1: "st", 2: "nd", 3: "rd"}.get(nombre % 10, "th")
+    return "%d%s" % (nombre, suffixe)
+
+
 def categorie_cadence(initial: int, increment: int) -> str:
     """Lichess category of a real-time time control (CATEGORIES_CADENCE)."""
     estimee = initial + COUPS_ESTIMES * increment
@@ -1662,14 +1676,14 @@ def demander_niveau() -> int | None:
 def deduire_camp(partie: chess.pgn.Game, pseudos: list[str]) -> str | None:
     """
     Side of the player from their usernames, without asking any question:
-    "Blancs", "Noirs", or None if no tag, or both, carry a username.
+    "White", "Black", or None if no tag, or both, carry a username.
     Used outside a terminal, where completer_entetes is not called.
     """
     moi_blancs = est_pseudo(partie.headers.get("White", "?"), pseudos)
     moi_noirs = est_pseudo(partie.headers.get("Black", "?"), pseudos)
     if moi_blancs == moi_noirs:
         return None
-    return "Blancs" if moi_blancs else "Noirs"
+    return "White" if moi_blancs else "Black"
 
 
 def demander_correspondance() -> dict | None:
@@ -1759,7 +1773,7 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
 
     Only empty tags or tags set to "?" are filled in: the first username
     for the player's side, the name given for the opponent. A name already
-    present is never replaced. Returns the side ("Blancs", "Noirs" or
+    present is never replaced. Returns the side ("White", "Black" or
     None), the origin of the information and the list of modified tags.
 
     `pseudos` may be empty, when neither --usernames nor the settings give
@@ -1769,8 +1783,8 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
     moi_blancs = est_pseudo(partie.headers.get("White", "?"), pseudos)
     moi_noirs = est_pseudo(partie.headers.get("Black", "?"), pseudos)
     if moi_blancs != moi_noirs:
-        return {"side": "Blancs" if moi_blancs else "Noirs",
-                "origin": "déduit des en-têtes", "modified_tags": []}
+        return {"side": "White" if moi_blancs else "Black",
+                "origin": "deduced from the headers", "modified_tags": []}
 
     # No username found, or both: only the player can decide. An unreadable
     # answer makes the question come again, Ctrl-D gives up on it.
@@ -1778,15 +1792,16 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
     while camp is None:
         reponse = demander("Did you play White or Black? [w/b]")
         if reponse is None:
-            return {"side": None, "origin": "non déclaré", "modified_tags": []}
+            return {"side": None, "origin": "not declared",
+                    "modified_tags": []}
         choix = reponse.casefold()
         if choix in ("w", "white"):
-            camp = "Blancs"
+            camp = "White"
         elif choix in ("b", "black"):
-            camp = "Noirs"
+            camp = "Black"
 
     modifiees = []
-    mienne, autre = (("White", "Black") if camp == "Blancs"
+    mienne, autre = (("White", "Black") if camp == "White"
                      else ("Black", "White"))
     if partie.headers.get(mienne, "?").strip() in ("", "?"):
         if pseudos:
@@ -1805,7 +1820,7 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
         if nom and nom != "?":
             partie.headers[autre] = nom
             modifiees.append(autre)
-    return {"side": camp, "origin": "déclaré", "modified_tags": modifiees}
+    return {"side": camp, "origin": "declared", "modified_tags": modifiees}
 
 
 def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
@@ -1818,7 +1833,7 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
     "unspecified". A TimeControl tag of a common form is quoted, then
     translated.
 
-    "(défaut)" marks an answer confirmed with Enter: the analyst thus
+    "(default)" marks an answer confirmed with Enter: the analyst thus
     tells a choice of the player from a default value. After an end of
     stream, the remaining questions take their default without being
     asked.
@@ -1833,14 +1848,14 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
             return defaut, True
         return reponse, reponse == defaut
 
-    lignes = [("Réponses du joueur aux questions de démarrage, recueillies "
-               "par le script avant la collecte. \"(défaut)\" signale une "
-               "réponse validée par Entrée."), ""]
+    lignes = [("The player's answers to the startup questions, asked by "
+               "the script before the collection. \"(default)\" marks "
+               "an answer confirmed with Enter."), ""]
     if camp.get("side"):
-        lignes.append("- Camp du joueur : %s, %s"
+        lignes.append("- Player's side: %s, %s"
                       % (camp["side"], camp["origin"]))
     else:
-        lignes.append("- Camp du joueur : inconnu, non déclaré")
+        lignes.append("- Player's side: unknown, not declared")
 
     # "-" is the value that TimeControl sometimes takes for a correspondence
     # game: it does not tell the real time control, so we ask for it.
@@ -1849,9 +1864,10 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
         # "600+5" reads badly: ten minutes, or six hundred? The tag is
         # quoted as it is, then translated when its form allows it.
         lue = cadence_de_balise(controle)
-        lignes.append("- Cadence : balise TimeControl `%s`%s"
+        lignes.append("- Time control: TimeControl tag `%s`%s"
                       % (controle,
-                         ", soit %s" % decrire_cadence(lue) if lue else ""))
+                         ", that is %s" % decrire_cadence(lue) if lue
+                         else ""))
     else:
         habituelle = cadence_habituelle or dict(CADENCE_INCONNUE)
         saisie = (None if fin_de_flux
@@ -1860,13 +1876,13 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
         if saisie is None:
             fin_de_flux = True
             saisie = (habituelle, True)
-        lignes.append("- Cadence : %s%s"
+        lignes.append("- Time control: %s%s"
                       % (decrire_cadence(saisie[0]),
-                         " (défaut)" if saisie[1] else ""))
+                         " (default)" if saisie[1] else ""))
     for libelle, question, valeur in QUESTIONS_CONTEXTE:
         reponse, defaut = poser(question, valeur)
-        lignes.append("- %s : %s%s"
-                      % (libelle, reponse, " (défaut)" if defaut else ""))
+        lignes.append("- %s: %s%s"
+                      % (libelle, reponse, " (default)" if defaut else ""))
     return "\n".join(lignes) + "\n"
 
 
@@ -2245,7 +2261,7 @@ def decrire_niveau(niveau: int, partie: chess.pgn.Game,
     """
     if niveau:
         return "environ %d Elo, déclaré par le joueur" % niveau
-    balise = {"Blancs": "WhiteElo", "Noirs": "BlackElo"}.get(camp or "")
+    balise = {"White": "WhiteElo", "Black": "BlackElo"}.get(camp or "")
     if balise:
         elo = partie.headers.get(balise, "").strip()
         if re.fullmatch(r"[0-9]{3,4}", elo):
@@ -2544,9 +2560,9 @@ class Explorateur:
 
         # All the moves of the database, and not the first ten: a move
         # played beyond the tenth rank otherwise passed for absent (0
-        # games, rank "hors base") while it was only rarer. The server
-        # truncates at this value without a cap of its own, and 256
-        # amply covers all the legal moves of a position.
+        # games, rank "outside the database") while it was only rarer.
+        # The server truncates at this value without a cap of its own,
+        # and 256 amply covers all the legal moves of a position.
         parametres = {"topGames": "0", "moves": "256"}
 
         # Filters of the Lichess database. For the masters database the
@@ -2573,14 +2589,14 @@ class Explorateur:
                     # token would not get in.
                     donnees = json.loads(expurger(corps, self.jeton))
                     if not isinstance(donnees, dict):
-                        return 0, {"_error": "réponse JSON inattendue, "
-                                             "objet attendu"}
+                        return 0, {"_error": "unexpected JSON answer, an "
+                                             "object was expected"}
                     return r.status, donnees
             except urllib.error.HTTPError as err:
                 if 300 <= err.code < 400:
-                    return err.code, {"_error": "redirection refusée : le "
-                                      "jeton n'est envoyé qu'à l'adresse "
-                                      "de l'explorateur"}
+                    return err.code, {"_error": "redirect refused: the "
+                                      "token is only sent to the address "
+                                      "of the explorer"}
                 # The body of the error is only read for the message: if it
                 # is cut or too slow, the HTTP error stays what it
                 # is, and only the query stops.
@@ -2597,12 +2613,12 @@ class Explorateur:
                 return 0, {"_error": expurger(
                     str(getattr(err, "reason", err)), self.jeton)}
             except ValueError as err:
-                return 0, {"_error": "réponse non JSON : %s" % err}
+                return 0, {"_error": "answer not in JSON: %s" % err}
             except RecursionError:
                 # A JSON nested thousands of levels deep.
-                return 0, {"_error": "réponse non JSON : imbrication "
-                                     "démesurée"}
-        return 0, {"_error": "échec après reprise"}
+                return 0, {"_error": "answer not in JSON: nesting too "
+                                     "deep"}
+        return 0, {"_error": "failure after a retry"}
 
 
 # ===========================================================================
@@ -2681,12 +2697,12 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
 
     for indice, coup in enumerate(coups):
         if indice >= plafond_demicoups:
-            arret = ("plafond de %d demi-coups atteint (option "
+            arret = ("cap of %d plies reached (option "
                      "--max-plies)" % plafond_demicoups)
             break
 
         numero = plateau.fullmove_number
-        trait = "Blancs" if plateau.turn == chess.WHITE else "Noirs"
+        trait = "White" if plateau.turn == chess.WHITE else "Black"
         san_joue = plateau.san(coup)
         uci_joue = coup.uci()
 
@@ -2698,14 +2714,14 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
         # was then blamed on a network error. We stop here, without
         # asking anything, giving the real reason.
         if not coup:
-            arret = ("coup nul au demi-coup %d : ce n'est pas un coup des "
-                     "échecs, l'explorateur ne peut pas suivre la partie au "
-                     "delà" % (indice + 1))
+            arret = ("null move at ply %d: it is not a chess move, the "
+                     "explorer cannot follow the game beyond it"
+                     % (indice + 1))
             journal("Explorer: %s." % arret)
             non_exploitables.append({
                 "ply": indice + 1, "move_number": numero,
                 "side_to_move": trait,
-                "san": san_joue, "motif": "coup nul, non interrogé",
+                "san": san_joue, "motif": "null move, not queried",
             })
             break
 
@@ -2713,7 +2729,8 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
         # e1h1 for White's short castling, where python-chess writes e1g1.
         # Both forms are accepted to find the played move in the answer,
         # otherwise a castling move passed for absent from the database (0
-        # games, rank "hors base") and triggered a false exit from theory.
+        # games, rank "outside the database") and triggered a false exit
+        # from theory.
         # For any other move, they are identical. The move list sent to
         # the explorer, for its part, does not change.
         uci_admis = (uci_joue, plateau.uci(coup, chess960=True))
@@ -2729,10 +2746,10 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
 
         if code != 200:
             if code == 0:
-                motif = "réponse inexploitable : %s" % donnees.get("_error")
+                motif = "unusable answer: %s" % donnees.get("_error")
             else:
                 motif = "HTTP %s" % code
-            arret = "%s au demi-coup %d" % (motif, indice + 1)
+            arret = "%s at ply %d" % (motif, indice + 1)
             journal("Explorer: %s, the collection stops." % arret)
             non_exploitables.append({
                 "ply": indice + 1, "move_number": numero,
@@ -2746,13 +2763,14 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
         # Position unknown to the database: the explorer answers 200 with an
         # empty sample, there is nothing more to get from it.
         if total == 0:
-            arret = ("position inconnue de la base au demi-coup %d, "
-                     "échantillon nul" % (indice + 1))
+            arret = ("position unknown to the database at ply %d, "
+                     "empty sample" % (indice + 1))
             journal("Explorer: %s." % arret)
             non_exploitables.append({
                 "ply": indice + 1, "move_number": numero,
                 "side_to_move": trait,
-                "san": san_joue, "motif": "position absente de la base",
+                "san": san_joue, "motif": "position missing from the "
+                "database",
             })
             break
 
@@ -2760,10 +2778,10 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
             non_exploitables.append({
                 "ply": indice + 1, "move_number": numero,
                 "side_to_move": trait, "san": san_joue,
-                "motif": "%d parties, seuil %d" % (total, seuil_parties),
+                "motif": "%d games, threshold %d" % (total, seuil_parties),
             })
-            arret = ("échantillon insuffisant au demi-coup %d : %d parties "
-                     "pour un seuil de %d"
+            arret = ("insufficient sample at ply %d: %d games for a "
+                     "threshold of %d"
                      % (indice + 1, total, seuil_parties))
             journal("Explorer: %s." % arret)
             break
@@ -2826,16 +2844,16 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
             if premiere_sortie is None:
                 premiere_sortie = dict(ligne)
             if not jusqu_a_epuisement and indice + 1 > demicoups_min:
-                arret = ("sortie de théorie au demi-coup %d : %s joué à "
-                         "%.1f %%, seuil %.1f %%%s"
+                arret = ("exit from theory at ply %d: %s played at "
+                         "%.1f %%, threshold %.1f %%%s"
                          % (indice + 1, san_joue, frequence, seuil_frequence,
-                            ", hors catalogue" if catalogue is not None
+                            ", outside the catalog" if catalogue is not None
                             else ""))
                 journal("Explorer: %s." % arret)
                 break
 
     if arret is None:
-        arret = "fin de la partie"
+        arret = "end of the game"
 
     return {
         "lignes": lignes,
@@ -2919,11 +2937,11 @@ def nature_coup(ecart: float | None) -> str | None:
     if ecart is None:
         return None
     if ecart >= SEUIL_GAFFE:
-        return "gaffe"
+        return "blunder"
     if ecart >= SEUIL_ERREUR:
-        return "erreur"
+        return "mistake"
     if ecart >= SEUIL_IMPRECISION:
-        return "imprécision"
+        return "inaccuracy"
     return None
 
 
@@ -3153,7 +3171,7 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
             resultats.append({
                 "ply": indice + 1,
                 "move_number": numero,
-                "side_to_move": "Blancs" if trait == chess.WHITE else "Noirs",
+                "side_to_move": "White" if trait == chess.WHITE else "Black",
                 "played": eval_joue,
                 "best": meilleurs,
                 "cp_loss": ecart,
@@ -3214,7 +3232,7 @@ def resultat_contredit(partie: chess.pgn.Game,
     of the blunder, to report only the clear cases, and nothing is said if
     the engine did not evaluate the last move.
     """
-    vainqueur = {"1-0": "Blancs", "0-1": "Noirs"}.get(
+    vainqueur = {"1-0": "White", "0-1": "Black"}.get(
         partie.headers.get("Result", ""))
     if vainqueur is None or not resultats:
         return None
@@ -3226,41 +3244,42 @@ def resultat_contredit(partie: chess.pgn.Game,
     if valeur is None or dernier["ply"] != joues:
         return None
     # value_for_side is read from the side of the one who has just played.
-    pour_blancs = valeur if dernier["side_to_move"] == "Blancs" else -valeur
-    pour_vainqueur = pour_blancs if vainqueur == "Blancs" else -pour_blancs
+    pour_blancs = valeur if dernier["side_to_move"] == "White" else -valeur
+    pour_vainqueur = pour_blancs if vainqueur == "White" else -pour_blancs
     if pour_vainqueur > -SEUIL_GAFFE:
         return None
-    perdant = "Noirs" if vainqueur == "Blancs" else "Blancs"
+    perdant = "Black" if vainqueur == "White" else "White"
     phrase = (
-        "**Résultat et évaluation finale se contredisent.** La partie est "
-        "notée `%s`, victoire des %s, alors que Stockfish donne %s après "
-        "le dernier coup, %d%s %s, soit un net avantage aux %s. Le "
-        "résultat ne vient donc pas de la position sur l'échiquier : "
-        "abandon, temps écoulé, ou autre cause que le PGN ne dit pas."
+        "**Result and final evaluation contradict each other.** The game "
+        "is scored `%s`, a win for %s, while Stockfish gives %s after the "
+        "last move, %d%s %s, that is a clear advantage for %s. The result "
+        "therefore does not come from the position on the board: "
+        "resignation, time out, or another cause that the PGN does not "
+        "tell."
         % (partie.headers["Result"], vainqueur, dernier["played"]["score"],
            dernier["move_number"],
-           "." if dernier["side_to_move"] == "Blancs" else "...",
+           "." if dernier["side_to_move"] == "White" else "...",
            dernier["played"]["san"], perdant))
     fin = nettoyer_valeur(partie.headers.get("Termination", ""))
     if fin and fin != "?":
-        phrase += " La balise Termination vaut `%s`." % fin
+        phrase += " The Termination tag reads `%s`." % fin
     return phrase
 
 
 def _ecart(ecart: float | None) -> str:
     """
-    "Écart cp" cell of the Stockfish table.
+    "CP loss" cell of the Stockfish table.
 
     A missing loss gives a dash. From SEUIL_ECART_MAT on, the loss comes
     from a mate brought down to a bounded value, whether the played move
-    misses a mate or concedes one: the cell carries "mat" instead of a
-    number of centipawns that would make no sense, the Éval and 1er
+    misses a mate or concedes one: the cell carries "mate" instead of a
+    number of centipawns that would make no sense, the Eval and 1st
     columns giving both scores.
     """
     if ecart is None:
         return "-"
     if ecart >= SEUIL_ECART_MAT:
-        return "mat"
+        return "mate"
     return "%.0f" % ecart
 
 
@@ -3303,24 +3322,24 @@ def reperes_phase(partie: chess.pgn.Game) -> list[str]:
             finale = (indice + 1, numero, materiel_hors_pions(plateau))
 
     lignes = []
-    for couleur, nom in ((chess.WHITE, "Blancs"), (chess.BLACK, "Noirs")):
+    for couleur, nom in ((chess.WHITE, "White"), (chess.BLACK, "Black")):
         r = roques[couleur]
-        lignes.append("- Roque des %s : %s au coup %d (demi-coup %d)."
+        lignes.append("- %s castling: %s at move %d (ply %d)."
                       % (nom, r[2], r[1], r[0]) if r
-                      else "- Les %s n'ont pas roqué." % nom)
-    lignes.append("- Plus aucune dame sur l'échiquier après le coup %d "
-                  "(demi-coup %d)." % (sans_dames[1], sans_dames[0])
+                      else "- %s did not castle." % nom)
+    lignes.append("- No queen left on the board after move %d "
+                  "(ply %d)." % (sans_dames[1], sans_dames[0])
                   if sans_dames
-                  else "- Des dames restent sur l'échiquier jusqu'à la fin.")
-    lignes.append("- Entrée en finale après le coup %d (demi-coup %d), "
-                  "matériel hors pions de %d." % (finale[1], finale[0],
-                                                  finale[2])
+                  else "- Queens remain on the board until the end.")
+    lignes.append("- Entry into the endgame after move %d (ply %d), "
+                  "material other than pawns of %d." % (finale[1], finale[0],
+                                                        finale[2])
                   if finale else
-                  "- Pas d'entrée en finale selon ce repère.")
+                  "- No entry into the endgame according to this marker.")
     lignes.append("")
-    lignes.append("Repère de finale : matériel hors pions et rois des deux "
-                  "camps réunis à %d ou moins, avec N = B = 3, R = 5, "
-                  "Q = 9." % SEUIL_FINALE)
+    lignes.append("Endgame marker: material other than pawns and kings of "
+                  "both sides together at %d or less, with N = B = 3, "
+                  "R = 5, Q = 9." % SEUIL_FINALE)
     return lignes
 
 
@@ -3357,7 +3376,7 @@ def tableau_compact(partie: chess.pgn.Game, resultats: list[dict],
     plateau = partie.board()
     for r, coup in zip(resultats, partie.mainline_moves(), strict=False):
         tete = "%d%s %s" % (r["move_number"],
-                            "." if r["side_to_move"] == "Blancs" else "...",
+                            "." if r["side_to_move"] == "White" else "...",
                             r["played"]["san"])
         ligne = "%-13s %7s" % (tete, r["played"]["score"])
         if r.get("category") and r["best"]:
@@ -3424,26 +3443,26 @@ def consignes_joueur(contexte: str | None) -> str:
         return ""
     return "\n".join(
         ligne for ligne in contexte.split("\n")
-        if ligne.startswith("- ") and not ligne.endswith("(défaut)")
-        and not ligne.startswith(("- Camp du joueur",
-                                  "- Cadence : balise TimeControl",
-                                  "- Cadence : unspecified")))
+        if ligne.startswith("- ") and not ligne.endswith("(default)")
+        and not ligne.startswith(("- Player's side",
+                                  "- Time control: TimeControl tag",
+                                  "- Time control: unspecified")))
 
 
 def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
                     source: str, consignes: str | None,
                     explorateur: dict | None, motif_sans_explorateur: str | None,
                     stockfish: dict, longueur_pv: int,
-                    libelle_base: str = "maîtres",
+                    libelle_base: str = "masters",
                     filtres: dict[str, str] | None = None,
                     annexes: list[str] | None = None,
                     pgn_complete: bool = False) -> None:
     """
     Assembles the summary file in markdown, in the expected order.
 
-    `libelle_base` names the database queried in the titles and the text;
-    its default value reproduces word for word the summary of the masters
-    database. `filtres`, given only for the Lichess database, is
+    `libelle_base` names the database queried in the titles and the text,
+    the masters database by default. `filtres`, given only for the
+    Lichess database, is
     reproduced in section 2 so that the analyst knows which population of
     games the frequencies are about. `annexes` adds to section 5 the files
     produced in addition, context.md for example, and `pgn_complete`
@@ -3456,35 +3475,34 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     if identifiant == "?":
         # python-chess gives "?" to a missing Site tag.
         identifiant = ""
-    a("# Dossier d'analyse : %s"
-      % (nettoyer_valeur(identifiant) or "partie locale"))
+    a("# Analysis folder: %s"
+      % (nettoyer_valeur(identifiant) or "local game"))
     a("")
-    a("Collecte du %s. Source : `%s`."
+    a("Collected on %s. Source: `%s`."
       % (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
          nettoyer_valeur(source)))
-    a("Ce fichier ne contient aucune analyse, uniquement des données "
-      "collectées.")
+    a("This file contains no analysis, only collected data.")
     a("")
 
     # -- 0. Analysis instructions, if given ---------------------------------
     if consignes is not None:
-        a("## Consignes d'analyse")
+        a("## Analysis instructions")
         a("")
-        a("Les consignes ci-dessous accompagnent les données : elles "
-          "décrivent l'analyse attendue à partir de ce dossier.")
+        a("The instructions below come with the data: they describe the "
+          "analysis expected from this folder.")
         a("")
         a(consignes.strip())
         a("")
 
     # -- 1. Headers and moves of the game -----------------------------------
-    a("## 1. En-têtes et coups de la partie")
+    a("## 1. Headers and moves of the game")
     a("")
-    a("| Champ | Valeur |")
+    a("| Field | Value |")
     a("|---|---|")
     for cle, valeur in partie.headers.items():
         a("| %s | %s |" % (cle, nettoyer_valeur(valeur).replace("|", "\\|")))
     a("")
-    a("Nombre de demi-coups dans la ligne principale : %d."
+    a("Number of plies in the main line: %d."
       % len(list(partie.mainline_moves())))
     a("")
     # The main line is reproduced without comments or variations, so
@@ -3498,80 +3516,79 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     a("")
     # Phase markers, computed from castling and material: they locate
     # the ends of phases that the analyst must comment on.
-    a("Repères de phase, indicatifs :")
+    a("Phase markers, for guidance:")
     a("")
     for ligne in reperes_phase(partie):
         a(ligne)
     a("")
 
     # -- 2. Exit from theory ------------------------------------------------
-    a("## 2. Explorateur %s, sortie de théorie" % libelle_base)
+    a("## 2. Explorer of the %s database, exit from theory" % libelle_base)
     a("")
     if explorateur is None:
-        a("Collecte de l'explorateur non effectuée : %s."
-          % (motif_sans_explorateur or "désactivée"))
+        a("Explorer collection not done: %s."
+          % (motif_sans_explorateur or "disabled"))
         a("")
     else:
         if filtres:
             # Lichess database: the frequencies depend entirely on the
             # filtered population, the analyst must know it.
-            a("Base interrogée : **Lichess**, parties classées de "
-              "l'ensemble des joueurs du site, et non la base maîtres. "
-              "Cadences : `%s`. Tranches de classement : `%s` (moyenne des "
-              "deux joueurs ; chaque tranche court de sa valeur à la "
-              "suivante, `0` couvre 0 à 999, `2500` tout ce qui dépasse). "
-              "Parties jouées depuis : `%s`."
-              % (filtres.get("speeds", "toutes"),
-                 filtres.get("ratings", "toutes"),
-                 filtres.get("since", "le début")))
+            a("Database queried: **Lichess**, rated games of all the "
+              "players of the site, and not the masters database. "
+              "Speeds: `%s`. Rating bands: `%s` (average of the two "
+              "players; each band runs from its value to the next one, "
+              "`0` covers 0 to 999, `2500` everything above). Games "
+              "played since: `%s`."
+              % (filtres.get("speeds", "all"),
+                 filtres.get("ratings", "all"),
+                 filtres.get("since", "the start")))
             a("")
-        a("La base de l'explorateur est indexée **par position** et non par "
-          "ordre des coups. Les transpositions sont donc fusionnées, et le "
-          "nombre de parties peut parfaitement **augmenter** d'un demi-coup "
-          "au suivant. Ne lisez pas la colonne des parties comme une suite "
-          "décroissante.")
+        a("The database of the explorer is indexed **by position** and not "
+          "by order of the moves. Transpositions are therefore merged, and "
+          "the number of games may very well **increase** from one ply to "
+          "the next. Do not read the column of the games as a decreasing "
+          "sequence.")
         a("")
         if explorateur["jusqu_a_epuisement"]:
-            a("Mode `--exhaustive` : aucun seuil n'a été appliqué, "
-              "l'interrogation est descendue aussi loin que la base a "
-              "répondu.")
+            a("Mode `--exhaustive`: no threshold was applied, the querying "
+              "went as deep as the database answered.")
         else:
-            a("Seuils appliqués : arrêt sous **%d parties** pour la "
-              "position, et arrêt sous **%.1f %%** de fréquence pour le coup "
-              "joué%s."
+            a("Thresholds applied: stop below **%d games** for the "
+              "position, and stop below **%.1f %%** of frequency for the "
+              "move played%s."
               % (explorateur["seuil_parties"], explorateur["seuil_frequence"],
-                 ", sauf si ce coup reste dans une ligne du catalogue des "
-                 "ouvertures nommées" if explorateur.get("catalogue")
+                 ", unless this move stays within a line of the catalog of "
+                 "named openings" if explorateur.get("catalogue")
                  else ""))
             if explorateur.get("demicoups_min", 0) > 0:
                 a("")
-                a("Fenêtre de départ (`--min-moves`) : aucun arrêt sur la "
-                  "fréquence avant la fin du coup %d (demi-coup %d), le seuil "
-                  "de parties restant actif. La table peut donc continuer "
-                  "après la première sortie de théorie."
+                a("Starting window (`--min-moves`): no stop on frequency "
+                  "before the end of move %d (ply %d), the threshold of "
+                  "games staying active. The table may therefore go on "
+                  "after the first exit from theory."
                   % ((explorateur["demicoups_min"] + 1) // 2,
                      explorateur["demicoups_min"]))
         cat = explorateur.get("catalogue")
         if cat:
             a("")
-            a("Catalogue des ouvertures de Lichess, téléchargé le %s : %s "
-              "positions nommées, %s positions connues en comptant les "
-              "positions intermédiaires des lignes. La colonne Ouverture "
-              "nomme la position atteinte par le coup joué ; "
-              "`(intermédiaire)` signale une position de passage d'une "
-              "ligne nommée, `-` une position hors catalogue."
+            a("Catalog of the Lichess openings, downloaded on %s: %s "
+              "named positions, %s known positions counting the "
+              "intermediate positions of the lines. The Opening column "
+              "names the position reached by the move played; "
+              "`(intermediate)` marks a position along a named line, `-` "
+              "a position outside the catalog."
               % (cat.get("date", "?"), cat.get("named", "?"),
                  cat.get("known", "?")))
         a("")
-        a("| # | Coup | Trait | Parties pos. | Joué | Rang | Fréq. | "
-          "Score B. | Majoritaire | Fréq. majo | Score B. majo | "
-          "Ouverture |")
+        a("| # | Move | Side | Pos. games | Played | Rank | Freq. | "
+          "White score | Top move | Top freq. | Top White score | "
+          "Opening |")
         a("|---:|---:|---|---:|---|---:|---:|---:|---|---:|---:|---|")
         for lg in explorateur["lignes"]:
             if lg.get("ouverture"):
                 ouverture = lg["ouverture"].replace("|", "\\|")
             elif lg.get("connue"):
-                ouverture = "(intermédiaire)"
+                ouverture = "(intermediate)"
             else:
                 ouverture = "-"
             a("| %d | %d | %s | %d | %s | %s | %s %% | %s | %s | %s %% | %s "
@@ -3586,19 +3603,20 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
                  _cellule(lg["majo_score_blancs"], "%.1f %%"),
                  ouverture))
         a("")
-        a("Arrêt de l'interrogation : %s." % explorateur["arret"])
+        a("Stop of the querying: %s." % explorateur["arret"])
         a("")
 
         ps = explorateur["premiere_sortie"]
-        a("### Première sortie de théorie")
+        a("### First exit from theory")
         a("")
-        hors_cat = " hors catalogue" if explorateur.get("catalogue") else ""
+        hors_cat = (" outside the catalog" if explorateur.get("catalogue")
+                    else "")
         if ps is None:
-            a("Aucun coup interrogé ne passe sous le seuil de %.1f %%%s."
+            a("No move queried goes below the threshold of %.1f %%%s."
               % (explorateur["seuil_frequence"], hors_cat))
         else:
-            a("Premier coup sous le seuil de %.1f %%%s : **%s joue %s** au "
-              "coup **%d** (demi-coup %d)."
+            a("First move below the threshold of %.1f %%%s: **%s plays "
+              "%s** at move **%d** (ply %d)."
               % (explorateur["seuil_frequence"], hors_cat, ps["side_to_move"],
                  ps["san"], ps["move_number"], ps["ply"]))
             a("")
@@ -3608,56 +3626,56 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
                        if lg["ply"] < ps["ply"]
                        and lg.get("ouverture")]
             if nommees:
-                a("- dernière position nommée avant la sortie : %s"
+                a("- last named position before the exit: %s"
                   % nommees[-1])
-            a("- fréquence du coup joué : %s %% (%d parties sur %d)"
+            a("- frequency of the move played: %s %% (%d games out of %d)"
               % (_cellule(ps["frequence"]), ps["parties_coup"],
                  ps["parties_position"]))
-            a("- rang parmi les réponses : %s"
-              % ("hors base" if ps["rang"] is None else ps["rang"]))
-            a("- coup majoritaire : %s à %s %%"
+            a("- rank among the answers: %s"
+              % ("outside the database" if ps["rang"] is None
+                 else ps["rang"]))
+            a("- most played move: %s at %s %%"
               % (ps["majo_san"] or "-", _cellule(ps["majo_frequence"])))
         a("")
 
     # -- 3. Stockfish -------------------------------------------------------
-    a("## 3. Évaluations Stockfish")
+    a("## 3. Stockfish evaluations")
     a("")
-    a("Moteur : `%s`, profondeur %d, multipv %d, %d demi-coups "
-      "couverts sur %d. Les évaluations sont exprimées **du point de "
-      "vue des Blancs**. L'écart est exprimé en centipions **du point "
-      "de vue du joueur au trait** : positif, il mesure ce que le coup "
-      "joué perd par rapport au premier choix du moteur. Négatif, il ne "
-      "signale aucune faute : le coup joué, évalué à part quand il n'est "
-      "pas parmi les premiers choix, sort un peu au-dessus du premier, "
-      "et les deux se valent."
+    a("Engine: `%s`, depth %d, multipv %d, %d plies covered out of %d. "
+      "The evaluations are given **from White's point of view**. The "
+      "loss is given in centipawns **from the point of view of the side "
+      "to move**: positive, it measures what the move played loses "
+      "against the first choice of the engine. Negative, it reports no "
+      "fault: the move played, evaluated apart when it is not among the "
+      "first choices, comes out slightly above the first one, and the "
+      "two are worth the same."
       % (stockfish["binaire"], stockfish["depth"],
          stockfish["multipv"], len(stockfish["resultats"]),
          len(list(partie.mainline_moves()))))
     a("")
-    a("Nature : imprécision à partir de %d cp d'écart, erreur à partir "
-      "de %d, gaffe à partir de %d."
+    a("Category: inaccuracy from a loss of %d cp, mistake from %d, "
+      "blunder from %d."
       % (SEUIL_IMPRECISION, SEUIL_ERREUR, SEUIL_GAFFE))
     if any(r["played"].get("not_evaluated") for r in stockfish["resultats"]):
-        a("Coup nul `--` : le trait passe sans qu'une pièce ne bouge. Ce "
-          "n'est pas un coup des échecs, le moteur ne l'évalue pas : "
-          "ses colonnes Éval, G/N/P, Écart et Nature portent `-`, les "
-          "meilleurs coups de la position restant donnés.")
-    a("Mat : `#+2`, les Blancs matent en deux coups, `#-1`, les Noirs "
-      "matent en un coup. Comme toute évaluation de ce tableau, le compte "
-      "se lit après le coup de la ligne : `#+0` ou `#-0`, ce coup donne "
-      "mat.")
-    a("Écart `mat` : l'un des deux scores comparés est un mat, que le "
-      "coup joué manque un mat ou qu'il en concède un ; l'écart ne se "
-      "chiffre pas en centipions, comparez les colonnes Éval et 1er.")
+        a("Null move `--`: the turn passes without a piece moving. It is "
+          "not a chess move, the engine does not evaluate it: its Eval, "
+          "W/D/L, CP loss and Category columns carry `-`, the best moves "
+          "of the position being still given.")
+    a("Mate: `#+2`, White mates in two moves, `#-1`, Black mates in one "
+      "move. Like any evaluation of this table, the count reads after "
+      "the move of the line: `#+0` or `#-0`, this move gives mate.")
+    a("CP loss `mate`: one of the two scores compared is a mate, whether "
+      "the move played misses a mate or concedes one; the loss is not "
+      "counted in centipawns, compare the Eval and 1st columns.")
     if stockfish.get("wdl"):
-        a("G/N/P : chances de gain, de nulle et de perte des Blancs "
-          "après le coup joué, en pour cent arrondi, selon le modèle de "
-          "Stockfish. Ce modèle reflète le jeu du moteur : lisez-le "
-          "comme une tendance, non comme la probabilité réelle entre "
-          "deux joueurs humains.")
+        a("W/D/L: White's chances of a win, a draw and a loss after the "
+          "move played, as a rounded percentage, according to the model "
+          "of Stockfish. This model reflects the play of the engine: read "
+          "it as a trend, not as the real probability between two human "
+          "players.")
     a("")
-    a("| # | Coup | Trait | Joué | Éval | G/N/P | Écart cp | Nature "
-      "| 1er | 2e | 3e |")
+    a("| # | Move | Side | Played | Eval | W/D/L | CP loss | Category "
+      "| 1st | 2nd | 3rd |")
     a("|---:|---:|---|---|---:|---:|---:|---|---|---|---|")
     for r in stockfish["resultats"]:
         trois = list(r["best"][:3])
@@ -3684,52 +3702,51 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     # that the analyst has concrete lines computed by the engine
     # and does not have to make them up. The full variations are
     # in stockfish/evaluations.json.
-    a("### 3 bis. Variantes principales du moteur")
+    a("### 3a. Principal variations of the engine")
     a("")
     if longueur_pv > 0:
-        a("Variantes tronquées à %d demi-coups ; les variantes complètes "
-          "sont dans `stockfish/evaluations.json`." % longueur_pv)
+        a("Variations cut at %d plies; the full variations are in "
+          "`stockfish/evaluations.json`." % longueur_pv)
     else:
-        a("Variantes complètes, telles que renvoyées par le moteur.")
+        a("Full variations, as returned by the engine.")
     a("")
     plateau = partie.board()
     for r, coup in zip(stockfish["resultats"], partie.mainline_moves(),
                        strict=False):
-        a("- Demi-coup %d, %s jouent %s (position avant le coup)"
+        a("- Ply %d, %s plays %s (position before the move)"
           % (r["ply"], r["side_to_move"], r["played"]["san"]))
-        rangs = ("1er", "2e", "3e", "4e", "5e")
         joue_dans_liste = False
         for k, m in enumerate(r["best"]):
-            etiquette = rangs[k] if k < len(rangs) else "%de" % (k + 1)
+            etiquette = ordinal(k + 1)
             if m["uci"] == r["played"]["uci"]:
-                etiquette += ", joué"
+                etiquette += ", played"
                 joue_dans_liste = True
-            a("    - %s (%s) : %s" % (etiquette, m["score"],
-                                      tronquer_variante(
-                                          plateau, m["pv_uci"],
-                                          longueur_pv)))
+            a("    - %s (%s): %s" % (etiquette, m["score"],
+                                     tronquer_variante(
+                                         plateau, m["pv_uci"],
+                                         longueur_pv)))
         if r["played"].get("not_evaluated"):
-            a("    - joué : coup nul, non évalué par le moteur")
+            a("    - played: null move, not evaluated by the engine")
         elif not joue_dans_liste:
-            a("    - joué (%s) : %s" % (r["played"]["score"],
-                                        tronquer_variante(
-                                            plateau, r["played"]["pv_uci"],
-                                            longueur_pv)))
+            a("    - played (%s): %s" % (r["played"]["score"],
+                                         tronquer_variante(
+                                             plateau, r["played"]["pv_uci"],
+                                             longueur_pv)))
         plateau.push(coup)
     a("")
 
     # Ranking: the moves that cost the most, per side, with what should
     # have been played and the FEN, direct material for the mandatory
     # comments and the positions to review.
-    a("### 3 ter. Erreurs et gaffes par camp")
+    a("### 3b. Mistakes and blunders by side")
     a("")
-    a("Coups dont l'écart atteint %d cp, du plus coûteux au moins "
-      "coûteux, %d au plus par camp ; les imprécisions restent dans le "
-      "tableau. Les chances G/N/P sont celles du camp au trait, la FEN "
-      "celle de la position avant le coup."
+    a("Moves whose loss reaches %d cp, from the costliest to the least "
+      "costly, %d at most per side; the inaccuracies stay in the table. "
+      "The W/D/L chances are those of the side to move, the FEN that of "
+      "the position before the move."
       % (SEUIL_ERREUR, PALMARES_MAX))
     a("")
-    for camp in ("Blancs", "Noirs"):
+    for camp in ("White", "Black"):
         fautes = sorted((r for r in stockfish["resultats"]
                          if r["side_to_move"] == camp
                          and r["cp_loss"] is not None
@@ -3738,78 +3755,78 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
         a("**%s**" % camp)
         a("")
         if not fautes:
-            a("- Aucune erreur ni gaffe.")
-        pour_noirs = camp == "Noirs"
+            a("- No mistake and no blunder.")
+        pour_noirs = camp == "Black"
         for r in fautes[:PALMARES_MAX]:
             meilleur = r["best"][0] if r["best"] else None
             # From SEUIL_ECART_MAT on, the loss comes from a mate brought down
             # to a bounded value: the figure no longer makes sense, the
             # scores speak for themselves.
-            ecart = ("écart %.0f cp" % r["cp_loss"]
+            ecart = ("loss of %.0f cp" % r["cp_loss"]
                      if r["cp_loss"] < SEUIL_ECART_MAT else
-                     "écart lié à un mat, %s au lieu de %s"
+                     "loss linked to a mate, %s instead of %s"
                      % (r["played"]["score"],
                         meilleur["score"] if meilleur else "?"))
-            a("- Coup %d, %s jouent %s (demi-coup %d) : %s, %s."
+            a("- Move %d, %s plays %s (ply %d): %s, %s."
               % (r["move_number"], r["side_to_move"], r["played"]["san"],
                  r["ply"], r["category"], ecart))
             if meilleur is not None:
-                a("  Meilleur coup : %s (%s), ligne %s."
+                a("  Best move: %s (%s), line %s."
                   % (meilleur["san"], meilleur["score"],
                      tronquer_variante(chess.Board(r["fen"]),
                                        meilleur["pv_uci"], longueur_pv)))
                 if meilleur.get("wdl") and r["played"].get("wdl"):
-                    a("  Chances G/N/P : %s avec le meilleur coup, %s "
-                      "après le coup joué."
+                    a("  W/D/L chances: %s with the best move, %s after "
+                      "the move played."
                       % (_gnp(meilleur["wdl"], pour_noirs),
                          _gnp(r["played"]["wdl"], pour_noirs)))
-            a("  FEN : `%s`" % r["fen"])
+            a("  FEN: `%s`" % r["fen"])
         if len(fautes) > PALMARES_MAX:
-            a("- %d autres, voir le tableau."
+            a("- %d more, see the table."
               % (len(fautes) - PALMARES_MAX))
         a("")
 
     # -- 4. Unusable positions ----------------------------------------------
-    a("## 4. Positions à échantillon non exploitable")
+    a("## 4. Positions with an unusable sample")
     a("")
     if explorateur is None:
-        a("Sans objet, collecte de l'explorateur non effectuée.")
+        a("Not applicable, explorer collection not done.")
     elif not explorateur["non_exploitables"]:
-        a("Aucune : l'interrogation s'est arrêtée pour une autre raison "
-          "(%s)." % explorateur["arret"])
+        a("None: the querying stopped for another reason (%s)."
+          % explorateur["arret"])
     else:
-        a("| # | Coup | Trait | Coup joué | Motif |")
+        a("| # | Move | Side | Move played | Reason |")
         a("|---:|---:|---|---|---|")
         for n in explorateur["non_exploitables"]:
             a("| %d | %d | %s | %s | %s |"
               % (n["ply"], n["move_number"], n["side_to_move"], n["san"],
                  n["motif"]))
         a("")
-        a("Au delà de ce point, la base %s ne dit plus rien "
-          "d'exploitable : toute affirmation sur la théorie devra venir "
-          "d'ailleurs." % libelle_base)
+        a("Beyond this point, the %s database says nothing usable any "
+          "more: any statement about theory will have to come from "
+          "elsewhere." % libelle_base)
     a("")
 
     # -- 5. Reminder of the raw data ----------------------------------------
-    a("## 5. Données brutes de l'archive")
+    a("## 5. Raw data of the archive")
     a("")
     if pgn_complete:
-        a("- `game.pgn` : la partie avec ses en-têtes complétés, "
-          "réexportée par python-chess, commentaires d'origine compris.")
+        a("- `game.pgn`: the game with its headers filled in, re-exported "
+          "by python-chess, original comments included.")
     else:
-        a("- `game.pgn` : le PGN source, avec ses commentaires d'origine.")
+        a("- `game.pgn`: the source PGN, with its original comments.")
     for annexe in annexes or []:
         a(annexe)
     if explorateur is not None:
         # Without the explorer, the archive does not have this folder:
         # announcing it would send the analyst looking for files that do not
         # exist.
-        a("- `explorer/NNN-<uci>.json` : une réponse brute par "
-          "demi-coup interrogé, numérotée dans l'ordre de la partie.")
-    a("- `stockfish/evaluations.json` : les évaluations moteur "
-      "complètes, avec la variante principale entière de chaque coup, "
-      "en UCI et en notation algébrique.")
-    a("- `collection.json` : les paramètres exacts de cette collecte.")
+        a("- `explorer/NNN-<uci>.json`: one raw answer per ply queried, "
+          "numbered in the order of the game.")
+    a("- `stockfish/evaluations.json`: the full engine evaluations, "
+      "with the whole principal variation of each move, in UCI and in "
+      "algebraic notation.")
+    a("- `collection.json`: the exact parameters of this collection.")
     a("")
 
     ecrire_texte(chemin, "\n".join(out) + "\n")
@@ -4404,8 +4421,8 @@ def main(argv: list[str]) -> int:
         installer_catalogue(options.catalogue, options.delai)
         return 0
 
-    # Text of the "Consignes d'analyse" section of the summary: the answers
-    # to the startup questions, when they are asked.
+    # Text of the "Analysis instructions" section of the summary: the
+    # answers to the startup questions, when they are asked.
     consignes = None
 
     # -- User settings, read early as well ----------------------------------
@@ -4508,7 +4525,7 @@ def main(argv: list[str]) -> int:
     catalogue = None
     motif_sans_explorateur = None
     if options.sans_explorateur:
-        motif_sans_explorateur = "désactivée par --no-explorer"
+        motif_sans_explorateur = "disabled by --no-explorer"
     else:
         # The token is only read here and is neither written nor logged.
         JETON_COURANT = lire_jeton(options.jeton_fichier)
@@ -4588,21 +4605,22 @@ def main(argv: list[str]) -> int:
             # re-exported by python-chess, with its headers filled in.
             ecrire_texte(dossier / "game-original.pgn", texte_pgn)
             ecrire_texte(dossier / "game.pgn", str(partie) + "\n")
-            annexes.append("- `game-original.pgn` : le PGN tel que "
-                           "fourni, avant ajout des balises %s."
+            annexes.append("- `game-original.pgn`: the PGN as given, "
+                           "before the tags %s were added."
                            % ", ".join(camp["modified_tags"]))
         else:
             ecrire_texte(dossier / "game.pgn", texte_pgn)
         if remarques_pgn:
             # The PGN kept in the archive is no longer, byte for byte, the
             # file given: the analyst must know it.
-            annexes.append("- Encodage : le PGN fourni a été converti en "
-                           "UTF-8 avant d'être rangé dans l'archive (%s)."
-                           % " ; ".join(remarques_pgn))
+            annexes.append("- Encoding: the PGN given was converted to "
+                           "UTF-8 before being stored in the archive (%s)."
+                           % "; ".join(remarques_pgn))
         if contexte is not None:
             ecrire_texte(dossier / "context.md", contexte)
-            annexes.append("- `context.md` : les réponses aux questions de "
-                           "démarrage, reprises en tête de cette synthèse.")
+            annexes.append("- `context.md`: the answers to the startup "
+                           "questions, repeated at the top of this "
+                           "summary.")
     except OSError as err:
         raise SystemExit("Cannot write in %s: %s"
                          % (dossier, err)) from err

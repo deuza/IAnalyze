@@ -74,7 +74,7 @@ Aucun ne contient d'analyse, uniquement des données :
   coupe après quelques demi-coups. "fen" est la position avant le
   coup, "cp_loss" et "category" reprennent la section 3. Un "cp_loss"
   de 10000 ou plus n'est pas un nombre de centipions : c'est un mat
-  manqué ou concédé, que la section 3 écrit "mat". Ne le citez jamais
+  manqué ou concédé, que la section 3 écrit "mate". Ne le citez jamais
   comme un chiffre. Allez-y chercher la suite d'une variante avant de
   l'écrire.
 #! si EXPLORATEUR
@@ -99,27 +99,26 @@ autre fichier manque.
 
 Les sections de summary.md, désignées ci-dessous par leur titre :
 
-"Consignes d'analyse", en tête, si présente : les réponses du joueur aux
+"Analysis instructions", en tête, si présente : les réponses du joueur aux
    questions de démarrage, recueillies par le script (camp, cadence,
    a. périmètre, b. objectif, c. contexte particulier, d. commentaires à
-   inclure), "(défaut)" marquant une réponse par défaut. La cadence y
-   est rédigée par le script, toujours de la même façon : "rapide, 15
-   minutes + 10 secondes par coup", "correspondance, 14 jours par
-   coup", "correspondance, 10 coups en 50 jours", "correspondance,
-   capital de 5 jours + 36 heures par coup, plafonné à 20 jours", ou
-   "non précisée". Une balise TimeControl comptée en secondes est citée
-   puis traduite : "`600+5`, soit rapide, 10 minutes + 5 secondes par
-   coup".
-Section 1, "En-têtes et coups de la partie" : les balises PGN, que le
+   inclure), "(default)" marquant une réponse par défaut. La cadence y
+   est rédigée par le script, toujours de la même façon : "rapid, 15
+   minutes + 10 seconds per move", "correspondence, 14 days per move",
+   "correspondence, 10 moves in 50 days", "correspondence, clock of 5
+   days + 36 hours per move, maximum of 20 days", ou "unspecified".
+   Une balise TimeControl comptée en secondes est citée puis traduite :
+   "`600+5`, that is rapid, 10 minutes + 5 seconds per move".
+Section 1, "Headers and moves of the game" : les balises PGN, que le
    script a pu compléter avec le joueur ("?" signifie inconnu), la ligne
    principale complète, et des repères de phase indicatifs (roques,
    disparition des dames, entrée en finale). Ne demandez jamais le PGN.
 #! si EXPLORATEUR
-Section 2, "Explorateur {{BASE}}" :
+Section 2, "Explorer of the {{BASE}} database" :
    la base et ses filtres, puis, pour chaque
    demi-coup interrogé, les parties de la position, le coup joué, son
    rang, sa fréquence, le score des Blancs, le coup majoritaire et la
-   colonne Ouverture (nom ECO de la position atteinte, "(intermédiaire)"
+   colonne Opening (nom ECO de la position atteinte, "(intermediate)"
    pour une position de passage d'une ligne nommée, "-" hors catalogue).
    Viennent ensuite l'arrêt de l'interrogation et la première sortie de
    théorie : le premier coup sous le seuil de fréquence qui quitte le
@@ -128,30 +127,30 @@ Section 2, "Explorateur {{BASE}}" :
    départ). Un coup nul, noté "--", arrête l'interrogation : ce n'est
    pas une sortie de théorie, et la section 4 le signale.
 #! sinon
-Section 2, "Explorateur {{BASE}}" :
+Section 2, "Explorer of the {{BASE}} database" :
    pour cette partie, la collecte de l'explorateur n'a pas été
    effectuée, la section en donne la raison.
    Vous n'avez aucune donnée de théorie : dites-le, et annoncez comme
    tel ce que vous tirez de votre mémoire.
 #! fin
-Section 3, "Évaluations Stockfish" : pour chaque demi-coup,
-   l'évaluation du point de vue des Blancs, les chances G/N/P (gain,
+Section 3, "Stockfish evaluations" : pour chaque demi-coup,
+   l'évaluation du point de vue des Blancs, les chances W/D/L (gain,
    nulle, perte des Blancs selon le modèle du moteur), l'écart en
    centipions du point de vue du joueur au trait, la nature du coup
-   (imprécision dès {{SEUIL_IMPRECISION}} cp, erreur dès {{SEUIL_ERREUR}}, gaffe dès {{SEUIL_GAFFE}}) et les
-   meilleurs coups du moteur, {{MULTIPV}} par position. Section 3 bis : les
-   variantes principales du moteur. Section 3 ter : les erreurs et
+   ("inaccuracy" dès {{SEUIL_IMPRECISION}} cp, "mistake" dès {{SEUIL_ERREUR}}, "blunder" dès {{SEUIL_GAFFE}}) et les
+   meilleurs coups du moteur, {{MULTIPV}} par position. Section 3a : les
+   variantes principales du moteur. Section 3b : les erreurs et
    gaffes par camp, avec le meilleur coup, sa ligne et la FEN de la
    position. Deux cas particuliers.
-   L'écart porte "mat" quand le coup joué manque un mat ou en concède
-   un : il ne se chiffre pas en centipions, comparez les colonnes Éval
-   et 1er. Un coup nul, noté "--", n'est pas un coup des échecs : le
-   moteur ne l'évalue pas, ses colonnes Éval, G/N/P, Écart et Nature
+   L'écart porte "mate" quand le coup joué manque un mat ou en concède
+   un : il ne se chiffre pas en centipions, comparez les colonnes Eval
+   et 1st. Un coup nul, noté "--", n'est pas un coup des échecs : le
+   moteur ne l'évalue pas, ses colonnes Eval, W/D/L, CP loss et Category
    portent "-", les meilleurs coups de la position restant donnés.
    Un écart négatif n'est pas une faute : le coup joué, que le moteur
    évalue à part quand il n'est pas dans ses premiers choix, sort alors
    un peu au-dessus du premier, et les deux se valent. Sous le tableau,
-   une ligne "Résultat et évaluation finale se contredisent" apparaît
+   une ligne "Result and final evaluation contradict each other" apparaît
    quand le camp déclaré vainqueur est nettement moins bien après le
    dernier coup.
 #! si COUVERTURE_PARTIELLE
@@ -159,10 +158,10 @@ Section 3, "Évaluations Stockfish" : pour chaque demi-coup,
    collecte a été limitée par --stockfish-moves. Au delà, vous n'avez
    aucun chiffre : dites-le, et n'en avancez aucun.
 #! fin
-Section 4, "Positions à échantillon non exploitable" : là où la base
+Section 4, "Positions with an unusable sample" : là où la base
    interrogée ne dit plus rien, ou le demi-coup d'un coup nul.
-Section 5, "Données brutes de l'archive" : la liste des fichiers du
-   zip, décrits plus haut. Une ligne "Encodage" signale un PGN qui
+Section 5, "Raw data of the archive" : la liste des fichiers du
+   zip, décrits plus haut. Une ligne "Encoding" signale un PGN qui
    n'était pas en UTF-8 et que le script a converti.
 
 #! si EXPLORATEUR
@@ -175,7 +174,7 @@ mémoire.
 === DÉMARRAGE ===
 
 #! si REPONSES
-La section "Consignes d'analyse" contient les réponses du joueur : ne
+La section "Analysis instructions" contient les réponses du joueur : ne
 posez aucune question. Ouvrez votre réponse par un récapitulatif de
 cinq lignes au plus (camp, cadence, résultat, Elo, ouverture et
 #! si EXPLORATEUR
@@ -297,7 +296,7 @@ CONTRAINTES DE FORMAT. Rien ne vérifie alors vos coups à votre place :
 - recopiez la ligne principale de la section 1 sans la modifier ;
 - rejouez chaque variante coup par coup depuis la position où elle
   commence, et préférez une variante courte et sûre à une longue ;
-- reprenez de préférence les lignes de la section 3 bis ou les
+- reprenez de préférence les lignes de la section 3a ou les
   variantes pv_san de stockfish/evaluations.json, déjà légales ;
 - coupez vous-même chaque ligne avant 80 caractères ;
 - ne laissez aucune ligne vide dans le corps de la partie, et écrivez
@@ -306,12 +305,12 @@ CONTRAINTES DE FORMAT. Rien ne vérifie alors vos coups à votre place :
 === ÉVALUATION MOTEUR ===
 
 Les chiffres de la section 3 font foi : ne réévaluez aucun coup. La
-colonne Nature classe les coups : erreur et gaffe sont à commenter
-obligatoirement, l'imprécision quand elle éclaire la partie. La
-section 3 ter fournit pour chaque erreur et gaffe le meilleur coup, sa
+colonne Category classe les coups : "mistake" et "blunder" sont à
+commenter obligatoirement, "inaccuracy" quand elle éclaire la partie.
+La section 3b fournit pour chaque erreur et gaffe le meilleur coup, sa
 ligne et la FEN. Vos variantes entre parenthèses partent des lignes de
-la section 3 bis, ou des variantes entières de
-stockfish/evaluations.json. Les chances G/N/P
+la section 3a, ou des variantes entières de
+stockfish/evaluations.json. Les chances W/D/L
 peuvent illustrer un basculement, présentées comme une tendance du
 modèle de Stockfish, jamais comme la probabilité réelle entre deux
 joueurs humains.
@@ -394,7 +393,7 @@ Contenu de chaque commentaire, selon ce qui s'applique :
 
 Après une erreur, indiquez toujours ce qu'il fallait jouer et POURQUOI,
 avec la variante, en partant du premier choix du moteur et de sa ligne :
-sections 3 bis et 3 ter.
+sections 3a et 3b.
 
 === NAGs (glyphes d'annotation numériques) ===
 
@@ -406,9 +405,9 @@ Qualité du coup (valeurs 1 à 8) :
   $5 = !?   coup intéressant    $6 = ?!   coup douteux
   $7 = coup forcé               $8 = seul coup jouable
 
-Correspondance par défaut avec la colonne Nature : imprécision $6,
-erreur $2, gaffe $4. Votre jugement peut s'en écarter, par exemple pour
-une gaffe sans conséquence dans une position déjà perdue.
+Correspondance par défaut avec la colonne Category : "inaccuracy" $6,
+"mistake" $2, "blunder" $4. Votre jugement peut s'en écarter, par
+exemple pour une gaffe sans conséquence dans une position déjà perdue.
 
 Évaluation de la position (valeurs 10 à 21) :
   $10 = position nulle          $13 = position peu claire
@@ -489,7 +488,7 @@ Après le fichier, dans la conversation et en texte simple :
    rapporterait le plus de points, justifié par ce qui s'est passé dans
    CETTE partie.
 3. DEUX POSITIONS À REVOIR, données en FEN, avec la question à se poser
-   devant chacune. Reprenez les FEN de la section 3 ter, sinon
+   devant chacune. Reprenez les FEN de la section 3b, sinon
    générez-les avec python-chess, jamais à la main. Sans FEN sûre,
    désignez la position par son numéro de coup et le camp au trait.
 4. CE QUI A ÉTÉ BIEN JOUÉ.
@@ -510,7 +509,7 @@ Après le fichier, dans la conversation et en texte simple :
 #! fin
 - Une position trop complexe se tranche avec le moteur, si vous en
   avez un. Sinon, dites qu'elle reste ouverte.
-- Les repères de phase et les chances G/N/P sont indicatifs.
+- Les repères de phase et les chances W/D/L sont indicatifs.
 - Ne réécrivez pas l'histoire de la partie pour la rendre didactique.
 - Si la section 3 signale que le résultat contredit l'évaluation
   finale, dites-le au joueur dès le résumé : la partie ne s'est pas

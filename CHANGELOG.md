@@ -141,6 +141,32 @@ Icône de la licence CC-0
   `context.md`, stay in French for now.
 - `verifier-analyse.py` reads the new names and keys, and therefore no
   longer reads an archive made by an earlier version.
+- The four startup questions about the game are in English, with their
+  labels and defaults: "a. Scope" (the whole game), "b. What the player
+  wants to understand" (left open), "c. Particular context" (nothing)
+  and "d. Other comments to include in the final PGN" (nothing).
+  `context.md` is in English: "Player's side", "Time control",
+  "TimeControl tag ..., that is ...", and "(default)" for an answer
+  confirmed with Enter.
+- `summary.md` is in English: titles, tables, notes and sentences. Its
+  sections are "Analysis instructions", "1. Headers and moves of the
+  game", "2. Explorer of the ... database, exit from theory", "3.
+  Stockfish evaluations", "3a. Principal variations of the engine"
+  (formerly "3 bis"), "3b. Mistakes and blunders by side" (formerly "3
+  ter"), "4. Positions with an unusable sample" and "5. Raw data of the
+  archive". The engine table has the columns Move, Side, Played, Eval,
+  W/D/L (formerly G/N/P), CP loss, Category, 1st, 2nd and 3rd, and the
+  variations are ranked with English ordinals, "21st" included.
+- The values written in the archive are in English: the sides `White`
+  and `Black`, the move categories `inaccuracy`, `mistake` and
+  `blunder`, the origin of the side (`deduced from the headers`,
+  `declared`, `not declared`), a centipawn loss due to a mate `mate`,
+  the databases `masters` and `Lichess (all players)`, the remarks on
+  the encoding of the PGN, and the errors and stop reasons of the
+  explorer, which the log repeats. `verifier-analyse.py` reads them, and
+  the agreed scope from the line `- a. Scope: ...`. The prompt templates
+  quote the new titles, columns and values, and their text stays in
+  French for now.
 
 ### Fixed
 

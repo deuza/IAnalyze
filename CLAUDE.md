@@ -64,7 +64,9 @@ tests), CHANGELOG.md.
   constantes, et les dest d'argparse (--output-dir remplit toujours
   options.sortie). Les algorithmes ne changent pas : seuls les
   littéraux changent (chaînes, motifs des regex, mots des réponses),
-  sauf pluriel(), qui passe à la règle anglaise (!= 1).
+  sauf pluriel(), qui passe à la règle anglaise (!= 1), et les rangs
+  des variantes, confiés au 4b à ordinal() (1st, 2nd, 3rd, 11th, 21st)
+  à la place d'une liste suivie d'un suffixe unique.
 - Rupture de compatibilité, donc version majeure : 5.0.0, appliquée
   une seule fois, à la fusion dans main.
 - Pas de migration : l'ancien reglages.ini et l'ancien catalogue.tsv
@@ -130,6 +132,12 @@ tests), CHANGELOG.md.
   token_present, catalog_used, side (side, origin, modified_tags),
   context_collected, pgn_encoding, pgn_remarks, prompt_written ;
   _erreur -> _error ; `<JETON-EXPURGE>` -> `<TOKEN-REDACTED>`.
+- Renommages du lot 4b, faits : valeurs Blancs, Noirs, imprécision,
+  erreur, gaffe, mat, maîtres -> White, Black, inaccuracy, mistake,
+  blunder, mate, masters ; libellés de context.md (a. Scope, Player's
+  side...) et (défaut) -> (default) ; titres de summary.md, dont
+  3 bis et 3 ter -> 3a et 3b, et colonnes, dont G/N/P -> W/D/L. Le
+  modèle du prompt cite déjà ces noms, son texte attend le 4c.
 - Renommages du lot 5 : verifier-analyse.py -> verify-analysis.py,
   prompt-modele.txt -> prompt-template.txt, prompt-seul-modele.txt ->
   prompt-only-template.txt, parties-exemples/ -> example-games/
@@ -158,7 +166,10 @@ tests), CHANGELOG.md.
   exhaustive ; gain, nulle, perte = win, draw, loss (W/D/L) ;
   avertissement "Attention" = "Warning" ; aide = help ; code de retour
   = exit code ; inconnu = unknown ; cadence non précisée =
-  unspecified ; délai fixe = fixed delay ; dans le rapport des tests,
+  unspecified ; délai fixe = fixed delay ; repères de phase = phase
+  markers ; fenêtre de départ = starting window ; échantillon =
+  sample ; coup majoritaire = most played move (colonne Top move) ;
+  motif d'arrêt = stop reason ; dans le rapport des tests,
   réussi, échec, sauté = passed, failed, skipped, et les marqueurs
   ECHEC, SAUTE = FAIL, SKIP.
 - Correspondance à capital : capital, incrément, plafond, réserve =
