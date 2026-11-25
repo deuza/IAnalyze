@@ -17,7 +17,7 @@ This program produces no analysis. It collects and formats:
 
 Before the collection, on an interactive terminal, the script asks for
 your side if the headers do not give it, then for your answers to the
-startup questions, stored in contexte.md and repeated at the top of
+startup questions, stored in context.md and repeated at the top of
 the summary.
 
 Your username, your usual time control and your rating are not in the
@@ -556,7 +556,7 @@ RE_TIMECONTROL = re.compile(r"([0-9]{1,6})(?:\+([0-9]{1,5}))?")
 CADENCE_INCONNUE = {"type": "inconnue"}
 
 #: Startup questions, with the default that an empty answer keeps: label
-#: in contexte.md, question, default.
+#: in context.md, question, default.
 QUESTIONS_CONTEXTE = (
     ("a. Périmètre",
      "Périmètre : les N premiers coups, ou la partie complète ?",
@@ -721,7 +721,7 @@ def expurger(texte: str, jeton: str | None) -> str:
     want to take no risk with a traceback that may end up in a bug report.
     """
     if jeton:
-        texte = texte.replace(jeton, "<JETON-EXPURGE>")
+        texte = texte.replace(jeton, "<TOKEN-REDACTED>")
     return texte
 
 
@@ -969,7 +969,7 @@ def etiquette_sure(nom: str) -> str:
     # A cut in the middle of a character leaves orphan bytes: they are
     # dropped at decoding.
     sure = sure.decode("utf-8", errors="ignore").strip("-.")
-    return sure or "partie"
+    return sure or "game"
 
 
 def annoncer_archive(archive: pathlib.Path) -> None:
@@ -1280,7 +1280,7 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
                          "standard chess." % variante)
 
     # A single game per file. Analyzing the first one of a series would make
-    # no sense: nothing says it is the one you wanted, and partie.pgn,
+    # no sense: nothing says it is the one you wanted, and game.pgn,
     # copied into the archive, would carry them all.
     #
     # A result repeated at the end of the file is not a game. Some sites
@@ -1526,7 +1526,7 @@ def categorie_cadence(initial: int, increment: int) -> str:
 
 def decrire_cadence(cadence: dict) -> str:
     """
-    Sentence describing a time control, as it goes into contexte.md:
+    Sentence describing a time control, as it goes into context.md:
     "rapid, 15 minutes + 10 seconds per move", "blitz, 5 minutes
     without increment", "correspondence, 14 days per move",
     "correspondence, 10 moves in 50 days", "correspondence, clock of
@@ -1769,8 +1769,8 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
     moi_blancs = est_pseudo(partie.headers.get("White", "?"), pseudos)
     moi_noirs = est_pseudo(partie.headers.get("Black", "?"), pseudos)
     if moi_blancs != moi_noirs:
-        return {"camp": "Blancs" if moi_blancs else "Noirs",
-                "origine": "déduit des en-têtes", "modifiees": []}
+        return {"side": "Blancs" if moi_blancs else "Noirs",
+                "origin": "déduit des en-têtes", "modified_tags": []}
 
     # No username found, or both: only the player can decide. An unreadable
     # answer makes the question come again, Ctrl-D gives up on it.
@@ -1778,7 +1778,7 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
     while camp is None:
         reponse = demander("Did you play White or Black? [w/b]")
         if reponse is None:
-            return {"camp": None, "origine": "non déclaré", "modifiees": []}
+            return {"side": None, "origin": "non déclaré", "modified_tags": []}
         choix = reponse.casefold()
         if choix in ("w", "white"):
             camp = "Blancs"
@@ -1805,7 +1805,7 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
         if nom and nom != "?":
             partie.headers[autre] = nom
             modifiees.append(autre)
-    return {"camp": camp, "origine": "déclaré", "modifiees": modifiees}
+    return {"side": camp, "origin": "déclaré", "modified_tags": modifiees}
 
 
 def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
@@ -1813,7 +1813,7 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
     """
     Asks the time control question if the TimeControl tag does not give
     it, then the four startup questions of the project, and writes the
-    text of contexte.md. `cadence_habituelle`, taken from the settings, is
+    text of context.md. `cadence_habituelle`, taken from the settings, is
     the time control that the question suggests; without it, it is
     "unspecified". A TimeControl tag of a common form is quoted, then
     translated.
@@ -1836,9 +1836,9 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
     lignes = [("Réponses du joueur aux questions de démarrage, recueillies "
                "par le script avant la collecte. \"(défaut)\" signale une "
                "réponse validée par Entrée."), ""]
-    if camp.get("camp"):
+    if camp.get("side"):
         lignes.append("- Camp du joueur : %s, %s"
-                      % (camp["camp"], camp["origine"]))
+                      % (camp["side"], camp["origin"]))
     else:
         lignes.append("- Camp du joueur : inconnu, non déclaré")
 
@@ -2533,7 +2533,7 @@ class Explorateur:
 
         Returns the pair (HTTP code, decoded dictionary). Any unusable answer,
         code other than 200, non-JSON body or transport error, comes back with
-        a dictionary carrying the key "_erreur", the code being 0 when no HTTP
+        a dictionary carrying the key "_error", the code being 0 when no HTTP
         code could be obtained.
         """
         # Courtesy pause. The endpoint is strict about the rate, but there
@@ -2573,12 +2573,12 @@ class Explorateur:
                     # token would not get in.
                     donnees = json.loads(expurger(corps, self.jeton))
                     if not isinstance(donnees, dict):
-                        return 0, {"_erreur": "réponse JSON inattendue, "
-                                              "objet attendu"}
+                        return 0, {"_error": "réponse JSON inattendue, "
+                                             "objet attendu"}
                     return r.status, donnees
             except urllib.error.HTTPError as err:
                 if 300 <= err.code < 400:
-                    return err.code, {"_erreur": "redirection refusée : le "
+                    return err.code, {"_error": "redirection refusée : le "
                                       "jeton n'est envoyé qu'à l'adresse "
                                       "de l'explorateur"}
                 # The body of the error is only read for the message: if it
@@ -2592,17 +2592,17 @@ class Explorateur:
                     journal("429 received, pausing for 60 seconds.")
                     time.sleep(60)
                     continue
-                return err.code, {"_erreur": expurger(corps, self.jeton)[:500]}
+                return err.code, {"_error": expurger(corps, self.jeton)[:500]}
             except (OSError, http.client.HTTPException) as err:
-                return 0, {"_erreur": expurger(
+                return 0, {"_error": expurger(
                     str(getattr(err, "reason", err)), self.jeton)}
             except ValueError as err:
-                return 0, {"_erreur": "réponse non JSON : %s" % err}
+                return 0, {"_error": "réponse non JSON : %s" % err}
             except RecursionError:
                 # A JSON nested thousands of levels deep.
-                return 0, {"_erreur": "réponse non JSON : imbrication "
-                                      "démesurée"}
-        return 0, {"_erreur": "échec après reprise"}
+                return 0, {"_error": "réponse non JSON : imbrication "
+                                     "démesurée"}
+        return 0, {"_error": "échec après reprise"}
 
 
 # ===========================================================================
@@ -2668,7 +2668,7 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
     can neither count it nor follow the game beyond it. It is not held as
     leaving theory.
     """
-    brut = dossier / "explorateur"
+    brut = dossier / "explorer"
     brut.mkdir(parents=True, exist_ok=True)
 
     plateau = partie.board()
@@ -2703,7 +2703,8 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
                      "delà" % (indice + 1))
             journal("Explorer: %s." % arret)
             non_exploitables.append({
-                "demicoup": indice + 1, "numero": numero, "trait": trait,
+                "ply": indice + 1, "move_number": numero,
+                "side_to_move": trait,
                 "san": san_joue, "motif": "coup nul, non interrogé",
             })
             break
@@ -2728,13 +2729,14 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
 
         if code != 200:
             if code == 0:
-                motif = "réponse inexploitable : %s" % donnees.get("_erreur")
+                motif = "réponse inexploitable : %s" % donnees.get("_error")
             else:
                 motif = "HTTP %s" % code
             arret = "%s au demi-coup %d" % (motif, indice + 1)
             journal("Explorer: %s, the collection stops." % arret)
             non_exploitables.append({
-                "demicoup": indice + 1, "numero": numero, "trait": trait,
+                "ply": indice + 1, "move_number": numero,
+                "side_to_move": trait,
                 "san": san_joue, "motif": motif,
             })
             break
@@ -2748,15 +2750,16 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
                      "échantillon nul" % (indice + 1))
             journal("Explorer: %s." % arret)
             non_exploitables.append({
-                "demicoup": indice + 1, "numero": numero, "trait": trait,
+                "ply": indice + 1, "move_number": numero,
+                "side_to_move": trait,
                 "san": san_joue, "motif": "position absente de la base",
             })
             break
 
         if not jusqu_a_epuisement and total < seuil_parties:
             non_exploitables.append({
-                "demicoup": indice + 1, "numero": numero, "trait": trait,
-                "san": san_joue,
+                "ply": indice + 1, "move_number": numero,
+                "side_to_move": trait, "san": san_joue,
                 "motif": "%d parties, seuil %d" % (total, seuil_parties),
             })
             arret = ("échantillon insuffisant au demi-coup %d : %d parties "
@@ -2787,9 +2790,9 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
         n_majo = total_parties(majoritaire)
 
         ligne = {
-            "demicoup": indice + 1,
-            "numero": numero,
-            "trait": trait,
+            "ply": indice + 1,
+            "move_number": numero,
+            "side_to_move": trait,
             "parties_position": total,
             "san": san_joue,
             "uci": uci_joue,
@@ -2907,8 +2910,8 @@ def wdl_blancs(info: dict) -> dict | None:
     if wdl is None:
         return None
     blancs = wdl.white()
-    return {"gain": blancs.wins, "nulle": blancs.draws,
-            "perte": blancs.losses}
+    return {"win": blancs.wins, "draw": blancs.draws,
+            "loss": blancs.losses}
 
 
 def nature_coup(ecart: float | None) -> str | None:
@@ -3049,8 +3052,8 @@ def decrire_variante(plateau: chess.Board, info: dict, trait: bool) -> dict:
         "san": plateau.san(pv[0]),
         "uci": pv[0].uci(),
         "score": formater_score(info["score"], trait),
-        "valeur_trait": valeur_pour_trait(info["score"], trait),
-        "profondeur": info.get("depth"),
+        "value_for_side": valeur_pour_trait(info["score"], trait),
+        "depth": info.get("depth"),
         "pv_uci": [m.uci() for m in pv],
         "pv_san": pv_san,
         "wdl": wdl_blancs(info),
@@ -3126,9 +3129,9 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
                 # evaluated.
                 eval_joue = {
                     "san": san_joue, "uci": coup.uci(), "score": "-",
-                    "valeur_trait": None, "profondeur": None,
+                    "value_for_side": None, "depth": None,
                     "pv_uci": [], "pv_san": "", "wdl": None,
-                    "non_evalue": True,
+                    "not_evaluated": True,
                 }
             if eval_joue is None:
                 info = moteur.analyse(plateau, limite, root_moves=[coup])
@@ -3143,18 +3146,18 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
                 eval_joue = decrire_variante(plateau, info, trait)
 
             ecart = None
-            if meilleurs and eval_joue["valeur_trait"] is not None:
-                ecart = ecart_au_meilleur(meilleurs[0]["valeur_trait"],
-                                          eval_joue["valeur_trait"])
+            if meilleurs and eval_joue["value_for_side"] is not None:
+                ecart = ecart_au_meilleur(meilleurs[0]["value_for_side"],
+                                          eval_joue["value_for_side"])
 
             resultats.append({
-                "demicoup": indice + 1,
-                "numero": numero,
-                "trait": "Blancs" if trait == chess.WHITE else "Noirs",
-                "joue": eval_joue,
-                "meilleurs": meilleurs,
-                "ecart_cp": ecart,
-                "nature": nature_coup(ecart),
+                "ply": indice + 1,
+                "move_number": numero,
+                "side_to_move": "Blancs" if trait == chess.WHITE else "Noirs",
+                "played": eval_joue,
+                "best": meilleurs,
+                "cp_loss": ecart,
+                "category": nature_coup(ecart),
                 "fen": fen,
             })
             plateau.push(coup)
@@ -3182,7 +3185,7 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
 
     return {
         "resultats": resultats,
-        "profondeur": profondeur,
+        "depth": profondeur,
         "multipv": multipv,
         "binaire": binaire,
         "wdl": wdl,
@@ -3216,14 +3219,14 @@ def resultat_contredit(partie: chess.pgn.Game,
     if vainqueur is None or not resultats:
         return None
     dernier = resultats[-1]
-    valeur = dernier["joue"].get("valeur_trait")
+    valeur = dernier["played"].get("value_for_side")
     # The rank of the ply is compared with the number of moves played,
     # counted right here, and not with a numbering taken from the PGN.
     joues = sum(1 for _ in partie.mainline_moves())
-    if valeur is None or dernier["demicoup"] != joues:
+    if valeur is None or dernier["ply"] != joues:
         return None
-    # valeur_trait is read from the side of the one who has just played.
-    pour_blancs = valeur if dernier["trait"] == "Blancs" else -valeur
+    # value_for_side is read from the side of the one who has just played.
+    pour_blancs = valeur if dernier["side_to_move"] == "Blancs" else -valeur
     pour_vainqueur = pour_blancs if vainqueur == "Blancs" else -pour_blancs
     if pour_vainqueur > -SEUIL_GAFFE:
         return None
@@ -3234,9 +3237,10 @@ def resultat_contredit(partie: chess.pgn.Game,
         "le dernier coup, %d%s %s, soit un net avantage aux %s. Le "
         "résultat ne vient donc pas de la position sur l'échiquier : "
         "abandon, temps écoulé, ou autre cause que le PGN ne dit pas."
-        % (partie.headers["Result"], vainqueur, dernier["joue"]["score"],
-           dernier["numero"], "." if dernier["trait"] == "Blancs" else "...",
-           dernier["joue"]["san"], perdant))
+        % (partie.headers["Result"], vainqueur, dernier["played"]["score"],
+           dernier["move_number"],
+           "." if dernier["side_to_move"] == "Blancs" else "...",
+           dernier["played"]["san"], perdant))
     fin = nettoyer_valeur(partie.headers.get("Termination", ""))
     if fin and fin != "?":
         phrase += " La balise Termination vaut `%s`." % fin
@@ -3264,7 +3268,7 @@ def _gnp(wdl: dict | None, pour_noirs: bool = False) -> str:
     """Win, draw and loss as a rounded percentage, for White or for Black."""
     if not wdl:
         return "-"
-    gain, nulle, perte = wdl["gain"], wdl["nulle"], wdl["perte"]
+    gain, nulle, perte = wdl["win"], wdl["draw"], wdl["loss"]
     if pour_noirs:
         gain, perte = perte, gain
     return "%d/%d/%d" % (round(gain / 10), round(nulle / 10),
@@ -3352,14 +3356,14 @@ def tableau_compact(partie: chess.pgn.Game, resultats: list[dict],
     lignes = []
     plateau = partie.board()
     for r, coup in zip(resultats, partie.mainline_moves(), strict=False):
-        tete = "%d%s %s" % (r["numero"],
-                            "." if r["trait"] == "Blancs" else "...",
-                            r["joue"]["san"])
-        ligne = "%-13s %7s" % (tete, r["joue"]["score"])
-        if r.get("nature") and r["meilleurs"]:
-            meilleur = r["meilleurs"][0]
+        tete = "%d%s %s" % (r["move_number"],
+                            "." if r["side_to_move"] == "Blancs" else "...",
+                            r["played"]["san"])
+        ligne = "%-13s %7s" % (tete, r["played"]["score"])
+        if r.get("category") and r["best"]:
+            meilleur = r["best"][0]
             ligne += "   %s (%s) : mieux %s (%s)" % (
-                r["nature"], _ecart(r["ecart_cp"]),
+                r["category"], _ecart(r["cp_loss"]),
                 tronquer_variante(plateau, meilleur["pv_uci"], longueur_pv),
                 meilleur["score"])
         lignes.append(ligne.rstrip())
@@ -3381,7 +3385,8 @@ def coups_faibles_joueur(resultats: list[dict],
     if camp is None:
         return None
     return sum(1 for r in resultats
-               if r["trait"] == camp and r.get("nature") and r["meilleurs"])
+               if r["side_to_move"] == camp and r.get("category")
+               and r["best"])
 
 
 def phrase_ouverture(explorateur: dict | None, libelle_base: str) -> str:
@@ -3392,9 +3397,9 @@ def phrase_ouverture(explorateur: dict | None, libelle_base: str) -> str:
     if explorateur is None:
         return ""
     sortie = explorateur["premiere_sortie"]
-    limite = sortie["demicoup"] if sortie else len(explorateur["lignes"]) + 1
+    limite = sortie["ply"] if sortie else len(explorateur["lignes"]) + 1
     nommees = [lg["ouverture"] for lg in explorateur["lignes"]
-               if lg["demicoup"] < limite and lg.get("ouverture")]
+               if lg["ply"] < limite and lg.get("ouverture")]
     phrases = []
     if nommees:
         phrases.append("Ouverture : %s." % nommees[-1])
@@ -3402,7 +3407,7 @@ def phrase_ouverture(explorateur: dict | None, libelle_base: str) -> str:
         phrases.append(
             "La théorie est quittée au coup %d par les %s, avec %s, joué "
             "dans %s %% des parties de la base %s."
-            % (sortie["numero"], sortie["trait"], sortie["san"],
+            % (sortie["move_number"], sortie["side_to_move"], sortie["san"],
                _cellule(sortie["frequence"]), libelle_base))
     return " ".join(phrases)
 
@@ -3441,8 +3446,8 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     database. `filtres`, given only for the Lichess database, is
     reproduced in section 2 so that the analyst knows which population of
     games the frequencies are about. `annexes` adds to section 5 the files
-    produced in addition, contexte.md for example, and `pgn_complete`
-    reports a partie.pgn whose headers were filled in.
+    produced in addition, context.md for example, and `pgn_complete`
+    reports a game.pgn whose headers were filled in.
     """
     out: list[str] = []
     a = out.append
@@ -3484,7 +3489,7 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     a("")
     # The main line is reproduced without comments or variations, so
     # that this single file is enough for the analysis. The raw PGN, with
-    # its possible original comments, stays in partie.pgn.
+    # its possible original comments, stays in game.pgn.
     exporteur = chess.pgn.StringExporter(headers=False, comments=False,
                                          variations=False, columns=78)
     a("```")
@@ -3571,7 +3576,7 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
                 ouverture = "-"
             a("| %d | %d | %s | %d | %s | %s | %s %% | %s | %s | %s %% | %s "
               "| %s |"
-              % (lg["demicoup"], lg["numero"], lg["trait"],
+              % (lg["ply"], lg["move_number"], lg["side_to_move"],
                  lg["parties_position"], lg["san"],
                  "-" if lg["rang"] is None else str(lg["rang"]),
                  _cellule(lg["frequence"]),
@@ -3594,13 +3599,13 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
         else:
             a("Premier coup sous le seuil de %.1f %%%s : **%s joue %s** au "
               "coup **%d** (demi-coup %d)."
-              % (explorateur["seuil_frequence"], hors_cat, ps["trait"],
-                 ps["san"], ps["numero"], ps["demicoup"]))
+              % (explorateur["seuil_frequence"], hors_cat, ps["side_to_move"],
+                 ps["san"], ps["move_number"], ps["ply"]))
             a("")
             # Last named opening before the exit: it locates, for the
             # analyst, the theoretical line that the game has just left.
             nommees = [lg["ouverture"] for lg in explorateur["lignes"]
-                       if lg["demicoup"] < ps["demicoup"]
+                       if lg["ply"] < ps["ply"]
                        and lg.get("ouverture")]
             if nommees:
                 a("- dernière position nommée avant la sortie : %s"
@@ -3625,14 +3630,14 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
       "signale aucune faute : le coup joué, évalué à part quand il n'est "
       "pas parmi les premiers choix, sort un peu au-dessus du premier, "
       "et les deux se valent."
-      % (stockfish["binaire"], stockfish["profondeur"],
+      % (stockfish["binaire"], stockfish["depth"],
          stockfish["multipv"], len(stockfish["resultats"]),
          len(list(partie.mainline_moves()))))
     a("")
     a("Nature : imprécision à partir de %d cp d'écart, erreur à partir "
       "de %d, gaffe à partir de %d."
       % (SEUIL_IMPRECISION, SEUIL_ERREUR, SEUIL_GAFFE))
-    if any(r["joue"].get("non_evalue") for r in stockfish["resultats"]):
+    if any(r["played"].get("not_evaluated") for r in stockfish["resultats"]):
         a("Coup nul `--` : le trait passe sans qu'une pièce ne bouge. Ce "
           "n'est pas un coup des échecs, le moteur ne l'évalue pas : "
           "ses colonnes Éval, G/N/P, Écart et Nature portent `-`, les "
@@ -3655,16 +3660,16 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
       "| 1er | 2e | 3e |")
     a("|---:|---:|---|---|---:|---:|---:|---|---|---|---|")
     for r in stockfish["resultats"]:
-        trois = list(r["meilleurs"][:3])
+        trois = list(r["best"][:3])
         while len(trois) < 3:
             trois.append(None)
         colonnes = ["-" if m is None else "%s (%s)" % (m["san"], m["score"])
                     for m in trois]
         a("| %d | %d | %s | %s | %s | %s | %s | %s | %s | %s | %s |"
-          % (r["demicoup"], r["numero"], r["trait"], r["joue"]["san"],
-             r["joue"]["score"], _gnp(r["joue"].get("wdl")),
-             _ecart(r["ecart_cp"]),
-             r.get("nature") or "-",
+          % (r["ply"], r["move_number"], r["side_to_move"], r["played"]["san"],
+             r["played"]["score"], _gnp(r["played"].get("wdl")),
+             _ecart(r["cp_loss"]),
+             r.get("category") or "-",
              colonnes[0], colonnes[1], colonnes[2]))
     a("")
 
@@ -3691,24 +3696,24 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     for r, coup in zip(stockfish["resultats"], partie.mainline_moves(),
                        strict=False):
         a("- Demi-coup %d, %s jouent %s (position avant le coup)"
-          % (r["demicoup"], r["trait"], r["joue"]["san"]))
+          % (r["ply"], r["side_to_move"], r["played"]["san"]))
         rangs = ("1er", "2e", "3e", "4e", "5e")
         joue_dans_liste = False
-        for k, m in enumerate(r["meilleurs"]):
+        for k, m in enumerate(r["best"]):
             etiquette = rangs[k] if k < len(rangs) else "%de" % (k + 1)
-            if m["uci"] == r["joue"]["uci"]:
+            if m["uci"] == r["played"]["uci"]:
                 etiquette += ", joué"
                 joue_dans_liste = True
             a("    - %s (%s) : %s" % (etiquette, m["score"],
                                       tronquer_variante(
                                           plateau, m["pv_uci"],
                                           longueur_pv)))
-        if r["joue"].get("non_evalue"):
+        if r["played"].get("not_evaluated"):
             a("    - joué : coup nul, non évalué par le moteur")
         elif not joue_dans_liste:
-            a("    - joué (%s) : %s" % (r["joue"]["score"],
+            a("    - joué (%s) : %s" % (r["played"]["score"],
                                         tronquer_variante(
-                                            plateau, r["joue"]["pv_uci"],
+                                            plateau, r["played"]["pv_uci"],
                                             longueur_pv)))
         plateau.push(coup)
     a("")
@@ -3726,38 +3731,38 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     a("")
     for camp in ("Blancs", "Noirs"):
         fautes = sorted((r for r in stockfish["resultats"]
-                         if r["trait"] == camp
-                         and r["ecart_cp"] is not None
-                         and r["ecart_cp"] >= SEUIL_ERREUR),
-                        key=lambda r: -r["ecart_cp"])
+                         if r["side_to_move"] == camp
+                         and r["cp_loss"] is not None
+                         and r["cp_loss"] >= SEUIL_ERREUR),
+                        key=lambda r: -r["cp_loss"])
         a("**%s**" % camp)
         a("")
         if not fautes:
             a("- Aucune erreur ni gaffe.")
         pour_noirs = camp == "Noirs"
         for r in fautes[:PALMARES_MAX]:
-            meilleur = r["meilleurs"][0] if r["meilleurs"] else None
+            meilleur = r["best"][0] if r["best"] else None
             # From SEUIL_ECART_MAT on, the loss comes from a mate brought down
             # to a bounded value: the figure no longer makes sense, the
             # scores speak for themselves.
-            ecart = ("écart %.0f cp" % r["ecart_cp"]
-                     if r["ecart_cp"] < SEUIL_ECART_MAT else
+            ecart = ("écart %.0f cp" % r["cp_loss"]
+                     if r["cp_loss"] < SEUIL_ECART_MAT else
                      "écart lié à un mat, %s au lieu de %s"
-                     % (r["joue"]["score"],
+                     % (r["played"]["score"],
                         meilleur["score"] if meilleur else "?"))
             a("- Coup %d, %s jouent %s (demi-coup %d) : %s, %s."
-              % (r["numero"], r["trait"], r["joue"]["san"],
-                 r["demicoup"], r["nature"], ecart))
+              % (r["move_number"], r["side_to_move"], r["played"]["san"],
+                 r["ply"], r["category"], ecart))
             if meilleur is not None:
                 a("  Meilleur coup : %s (%s), ligne %s."
                   % (meilleur["san"], meilleur["score"],
                      tronquer_variante(chess.Board(r["fen"]),
                                        meilleur["pv_uci"], longueur_pv)))
-                if meilleur.get("wdl") and r["joue"].get("wdl"):
+                if meilleur.get("wdl") and r["played"].get("wdl"):
                     a("  Chances G/N/P : %s avec le meilleur coup, %s "
                       "après le coup joué."
                       % (_gnp(meilleur["wdl"], pour_noirs),
-                         _gnp(r["joue"]["wdl"], pour_noirs)))
+                         _gnp(r["played"]["wdl"], pour_noirs)))
             a("  FEN : `%s`" % r["fen"])
         if len(fautes) > PALMARES_MAX:
             a("- %d autres, voir le tableau."
@@ -3777,7 +3782,8 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
         a("|---:|---:|---|---|---|")
         for n in explorateur["non_exploitables"]:
             a("| %d | %d | %s | %s | %s |"
-              % (n["demicoup"], n["numero"], n["trait"], n["san"], n["motif"]))
+              % (n["ply"], n["move_number"], n["side_to_move"], n["san"],
+                 n["motif"]))
         a("")
         a("Au delà de ce point, la base %s ne dit plus rien "
           "d'exploitable : toute affirmation sur la théorie devra venir "
@@ -3788,22 +3794,22 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     a("## 5. Données brutes de l'archive")
     a("")
     if pgn_complete:
-        a("- `partie.pgn` : la partie avec ses en-têtes complétés, "
+        a("- `game.pgn` : la partie avec ses en-têtes complétés, "
           "réexportée par python-chess, commentaires d'origine compris.")
     else:
-        a("- `partie.pgn` : le PGN source, avec ses commentaires d'origine.")
+        a("- `game.pgn` : le PGN source, avec ses commentaires d'origine.")
     for annexe in annexes or []:
         a(annexe)
     if explorateur is not None:
         # Without the explorer, the archive does not have this folder:
         # announcing it would send the analyst looking for files that do not
         # exist.
-        a("- `explorateur/NNN-<uci>.json` : une réponse brute par "
+        a("- `explorer/NNN-<uci>.json` : une réponse brute par "
           "demi-coup interrogé, numérotée dans l'ordre de la partie.")
     a("- `stockfish/evaluations.json` : les évaluations moteur "
       "complètes, avec la variante principale entière de chaque coup, "
       "en UCI et en notation algébrique.")
-    a("- `collecte.json` : les paramètres exacts de cette collecte.")
+    a("- `collection.json` : les paramètres exacts de cette collecte.")
     a("")
 
     ecrire_texte(chemin, "\n".join(out) + "\n")
@@ -3819,8 +3825,8 @@ def chemin_archive(dossier: pathlib.Path) -> pathlib.Path:
 
     The name is built by appending and not with with_suffix(), which
     replaces everything after the last dot: for a PGN named
-    "partie-2026.11.18.pgn", the folder "analyse-partie-2026.11.18-..."
-    gave "analyse-partie-2026.11.zip", whereas shutil.make_archive does
+    "game-2026.11.18.pgn", the folder "analysis-game-2026.11.18-..."
+    gave "analysis-game-2026.11.zip", whereas shutil.make_archive does
     write "<folder>.zip".
     """
     return dossier.with_name(dossier.name + ".zip")
@@ -3869,7 +3875,7 @@ def archiver(dossier: pathlib.Path, garder: bool) -> pathlib.Path:
             raise SystemExit("Unreadable archive, folder kept: %s"
                              % err) from err
 
-        attendu = "%s/synthese.md" % dossier.name
+        attendu = "%s/summary.md" % dossier.name
         if corrompu is not None or attendu not in noms:
             raise SystemExit("Incomplete or corrupt archive (%s), folder "
                              "kept." % (corrompu or "summary missing"))
@@ -3986,13 +3992,13 @@ usage examples
 result
 ------
 
-  An archive analyse-<game>-<timestamp>.zip in the output directory,
-  containing synthese.md and the raw data. The path of the archive is
+  An archive analysis-<game>-<timestamp>.zip in the output directory,
+  containing summary.md and the raw data. The path of the archive is
   written alone on standard output, everything else goes to standard
   error. On failure, the working folder is kept as it is for diagnosis.
 
   Next to the archive, the analysis prompt of the game, under the name
-  analyse-<game>-<timestamp>.prompt.txt: paste it into the conversation,
+  analysis-<game>-<timestamp>.prompt.txt: paste it into the conversation,
   with the archive as an attachment. It is drawn from the template
   prompt-modele.txt, kept next to the script, which you can edit.
 
@@ -4038,7 +4044,7 @@ def valider_liste(p: argparse.ArgumentParser, option: str, valeur: str,
     Case is tolerated on input ("ultrabullet" is accepted) but the value
     passed on uses the exact spelling of the API. Stray spaces and
     duplicates are removed, and the list is put back in the order of the
-    enumeration, so that collecte.json and the summary stay comparable
+    enumeration, so that collection.json and the summary stay comparable
     from one collection to the next. An unknown value is rejected here,
     before any folder is created, rather than finding out its effect at
     the first ply queried.
@@ -4059,6 +4065,49 @@ def valider_liste(p: argparse.ArgumentParser, option: str, valeur: str,
         p.error("%s: empty list" % option)
     retenues.sort(key=admises.index)
     return ",".join(retenues)
+
+
+#: Key of each option in collection.json: the English name of the option,
+#: without its dashes. The dest of argparse stay French in the code,
+#: the archive is in English. A test checks that every option has its
+#: key: a dest missing from this table would stop the collection.
+CLEFS_COLLECTE = {
+    "source": "source",
+    "installer_venv": "install_venv",
+    "venv": "venv",
+    "sans_questions": "no_questions",
+    "pseudos": "usernames",
+    "reglages": "settings",
+    "sans_reglages": "no_settings",
+    "purge_reglages": "purge_settings",
+    "installer_catalogue": "install_catalog",
+    "catalogue": "catalog",
+    "sortie": "output_dir",
+    "garder_dossier": "keep_folder",
+    "prompt": "prompt",
+    "sans_prompt": "no_prompt",
+    "prompt_seul": "prompt_only",
+    "base": "database",
+    "cadences": "speeds",
+    "classements": "ratings",
+    "jeton_fichier": "token_file",
+    "seuil_parties": "min_games",
+    "seuil_frequence": "min_frequency",
+    "jusqu_a_epuisement": "exhaustive",
+    "coups_min": "min_moves",
+    "max_demicoups": "max_plies",
+    "pause": "pause",
+    "sans_explorateur": "no_explorer",
+    "coups_stockfish": "stockfish_moves",
+    "profondeur": "depth",
+    "multipv": "multipv",
+    "fils": "threads",
+    "hachage": "hash",
+    "stockfish": "stockfish",
+    "longueur_pv": "pv_length",
+    "delai": "timeout",
+    "debug": "debug",
+}
 
 
 def analyser_arguments(argv: list[str]) -> argparse.Namespace:
@@ -4316,7 +4365,7 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                         % option)
     else:
         # The default values are only set here, and only for the Lichess
-        # database: collecte.json thus records the filters actually
+        # database: collection.json thus records the filters actually
         # applied, and nothing for the masters database.
         if options.cadences is None:
             options.cadences = CADENCES_DEFAUT
@@ -4401,7 +4450,7 @@ def main(argv: list[str]) -> int:
 
     # -- Fetching the PGN ---------------------------------------------------
     # Encoding chosen for the PGN and decoding remarks, recorded in
-    # collecte.json and, if need be, in section 5 of the summary.
+    # collection.json and, if need be, in section 5 of the summary.
     encodage_pgn = "utf-8"
     remarques_pgn: list[str] = []
     chemin_local = pathlib.Path(os.path.expanduser(options.source))
@@ -4488,7 +4537,7 @@ def main(argv: list[str]) -> int:
         # leaves the file alone: its questions would write it.
         completer_reglages(options.reglages, reglages, options.pseudos)
     # --usernames wins over the settings. The list kept replaces the
-    # option: collecte.json thus records the usernames actually used,
+    # option: collection.json thus records the usernames actually used,
     # and it may be empty.
     if options.pseudos is None:
         options.pseudos = decouper_pseudos(reglage(reglages, "usernames"))
@@ -4511,7 +4560,7 @@ def main(argv: list[str]) -> int:
     # only file that remains, and a second run within the same second
     # overwrote it.
     horodatage = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    base = pathlib.Path(options.sortie) / ("analyse-%s-%s"
+    base = pathlib.Path(options.sortie) / ("analysis-%s-%s"
                                            % (etiquette, horodatage))
     dossier = base
     suffixe = 1
@@ -4534,16 +4583,16 @@ def main(argv: list[str]) -> int:
         dossier = base.with_name("%s-%d" % (base.name, suffixe))
     annexes: list[str] = []
     try:
-        if camp and camp["modifiees"]:
-            # The PGN given is kept as it is; partie.pgn holds the game,
+        if camp and camp["modified_tags"]:
+            # The PGN given is kept as it is; game.pgn holds the game,
             # re-exported by python-chess, with its headers filled in.
-            ecrire_texte(dossier / "partie-origine.pgn", texte_pgn)
-            ecrire_texte(dossier / "partie.pgn", str(partie) + "\n")
-            annexes.append("- `partie-origine.pgn` : le PGN tel que "
+            ecrire_texte(dossier / "game-original.pgn", texte_pgn)
+            ecrire_texte(dossier / "game.pgn", str(partie) + "\n")
+            annexes.append("- `game-original.pgn` : le PGN tel que "
                            "fourni, avant ajout des balises %s."
-                           % ", ".join(camp["modifiees"]))
+                           % ", ".join(camp["modified_tags"]))
         else:
-            ecrire_texte(dossier / "partie.pgn", texte_pgn)
+            ecrire_texte(dossier / "game.pgn", texte_pgn)
         if remarques_pgn:
             # The PGN kept in the archive is no longer, byte for byte, the
             # file given: the analyst must know it.
@@ -4551,8 +4600,8 @@ def main(argv: list[str]) -> int:
                            "UTF-8 avant d'être rangé dans l'archive (%s)."
                            % " ; ".join(remarques_pgn))
         if contexte is not None:
-            ecrire_texte(dossier / "contexte.md", contexte)
-            annexes.append("- `contexte.md` : les réponses aux questions de "
+            ecrire_texte(dossier / "context.md", contexte)
+            annexes.append("- `context.md` : les réponses aux questions de "
                            "démarrage, reprises en tête de cette synthèse.")
     except OSError as err:
         raise SystemExit("Cannot write in %s: %s"
@@ -4591,36 +4640,37 @@ def main(argv: list[str]) -> int:
         options.multipv, options.fils, options.hachage)
 
     # -- Record of the parameters, redacted of any sensitive data -----------
-    parametres = dict(vars(options))
-    parametres["jeton_present"] = JETON_COURANT is not None
-    parametres["catalogue_utilise"] = (catalogue.meta if catalogue is not None
-                                       else None)
-    parametres["camp"] = camp
-    parametres["contexte_recueilli"] = contexte is not None
-    parametres["pgn_encodage"] = encodage_pgn
-    parametres["pgn_remarques"] = remarques_pgn
+    parametres = {CLEFS_COLLECTE[nom]: valeur
+                  for nom, valeur in vars(options).items()}
+    parametres["token_present"] = JETON_COURANT is not None
+    parametres["catalog_used"] = (catalogue.meta if catalogue is not None
+                                  else None)
+    parametres["side"] = camp
+    parametres["context_collected"] = contexte is not None
+    parametres["pgn_encoding"] = encodage_pgn
+    parametres["pgn_remarks"] = remarques_pgn
     # Name of the prompt written next to the archive, or nothing if there
     # is none.
-    parametres["prompt_ecrit"] = (dossier.name + PROMPT_SUFFIXE
-                                  if modele_prompt is not None else None)
-    ecrire_texte(dossier / "collecte.json",
+    parametres["prompt_written"] = (dossier.name + PROMPT_SUFFIXE
+                                    if modele_prompt is not None else None)
+    ecrire_texte(dossier / "collection.json",
                  json.dumps(parametres, ensure_ascii=False, indent=1,
                             default=str))
 
     # -- Summary ------------------------------------------------------------
-    synthese = dossier / "synthese.md"
+    synthese = dossier / "summary.md"
     ecrire_synthese(synthese, partie, options.source, consignes,
                     resume_explorateur, motif_sans_explorateur,
                     resume_stockfish, options.longueur_pv,
                     base["libelle"], filtres, annexes,
-                    bool(camp and camp["modifiees"]))
+                    bool(camp and camp["modified_tags"]))
     journal("Summary written: %s" % synthese)
 
     # The prompt may include the PGN: it is read back here, before the
     # archiving that deletes the working folder.
     texte_partie = ""
     if modele_prompt is not None:
-        texte_partie = (dossier / "partie.pgn").read_text(encoding="utf-8")
+        texte_partie = (dossier / "game.pgn").read_text(encoding="utf-8")
 
     # -- Archive and cleanup ------------------------------------------------
     # With --prompt-only, the prompt is all that the player asks for: no
@@ -4637,7 +4687,7 @@ def main(argv: list[str]) -> int:
     # archive. The prompt does not go into the zip, it is pasted into the
     # conversation.
     if modele_prompt is not None:
-        camp_joueur = ((camp or {}).get("camp")
+        camp_joueur = ((camp or {}).get("side")
                        or deduire_camp(partie, options.pseudos))
         niveau = analyser_niveau(reglage(reglages, "rating")) or 0
         habituelle = (analyser_cadence(reglage(reglages, "time_control"))

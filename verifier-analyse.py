@@ -198,10 +198,10 @@ class Bilan:
 
 def lire_archive(chemin: pathlib.Path) -> dict[str, str]:
     """
-    Returns the useful files of the archive: partie.pgn, synthese.md and
+    Returns the useful files of the archive: game.pgn, summary.md and
     stockfish/evaluations.json, from a zip or an unzipped folder.
     """
-    voulus = ("partie.pgn", "synthese.md", "stockfish/evaluations.json")
+    voulus = ("game.pgn", "summary.md", "stockfish/evaluations.json")
     trouves: dict[str, str] = {}
     if chemin.is_dir():
         # The folder may be that of the collection or its parent. The
@@ -552,7 +552,7 @@ def perimetre_convenu(synthese_archive: str) -> int | None:
     Number of moves of the scope that the player gave to the script, or
     None for the whole game.
 
-    The answer is in the instructions of synthese.md, on the line
+    The answer is in the instructions of summary.md, on the line
     "- Périmètre : ...". It is free text: the first number it carries is
     taken for the number of moves, "the first 20 moves" giving 20. An
     answer left at its default, or without a number, means the whole
@@ -604,17 +604,17 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
                 % perimetre)
     oublies, sans_nag, fautes = [], [], 0
     for e in evaluations:
-        if e.get("nature") not in ("erreur", "gaffe"):
+        if e.get("category") not in ("erreur", "gaffe"):
             continue
-        if perimetre and e["numero"] > perimetre:
+        if perimetre and e["move_number"] > perimetre:
             continue
         fautes += 1
-        indice = e["demicoup"] - 1
+        indice = e["ply"] - 1
         if indice >= len(noeuds):
             continue
         lieu = "%d%s %s (%s)" % (
-            e["numero"], "." if e["trait"] == "Blancs" else "...",
-            e["joue"]["san"], e["nature"])
+            e["move_number"], "." if e["side_to_move"] == "Blancs" else "...",
+            e["played"]["san"], e["category"])
         if not noeuds[indice].comment.strip():
             oublies.append(lieu)
         elif not noeuds[indice].nags:
@@ -634,14 +634,14 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
     # on a move after which Stockfish gives White as clearly better.
     contraires, accords, ecarts = [], 0, []
     for e in evaluations:
-        indice = e["demicoup"] - 1
+        indice = e["ply"] - 1
         if indice >= len(noeuds):
             continue
         nags = noeuds[indice].nags
         lieu = "%d%s %s" % (
-            e["numero"], "." if e["trait"] == "Blancs" else "...",
-            e["joue"]["san"])
-        score = e["joue"].get("score") or ""
+            e["move_number"], "." if e["side_to_move"] == "Blancs" else "...",
+            e["played"]["san"])
+        score = e["played"].get("score") or ""
         signe = 0
         if score.startswith("#"):
             signe = -1 if "-" in score else 1
@@ -653,13 +653,13 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
                               % (lieu, min(nags & (NAG_BLANCS_MIEUX
                                                    | NAG_NOIRS_MIEUX)),
                                  score))
-        attendu = NAG_NATURE.get(e.get("nature") or "")
+        attendu = NAG_NATURE.get(e.get("category") or "")
         if attendu and nags & set(NAG_NATURE.values()):
             if attendu in nags:
                 accords += 1
             else:
                 ecarts.append("%s : %s pour le moteur, NAG $%d"
-                              % (lieu, e["nature"],
+                              % (lieu, e["category"],
                                  min(nags & set(NAG_NATURE.values()))))
     b.controle(not contraires, "aucun NAG de position contraire à "
                "l'évaluation du moteur", contraires)
@@ -673,7 +673,7 @@ def controler_chiffres(b: Bilan, textes: list[tuple[str, str]],
     b.titre(titre)
     connues = set()
     for e in evaluations:
-        for coup in [e["joue"]] + e["meilleurs"]:
+        for coup in [e["played"]] + e["best"]:
             score = coup.get("score") or ""
             connues.add(score)
             # An LLM readily rounds to one decimal: "+0.35" quoted as
@@ -707,8 +707,8 @@ def lignes_du_moteur(evaluations: list[dict]) -> dict[int, list[list[str]]]:
     """For each ply, the principal variations of the engine, in UCI."""
     lignes: dict[int, list[list[str]]] = {}
     for e in evaluations:
-        lignes[e["demicoup"]] = [
-            c["pv_uci"] for c in [e["joue"]] + e["meilleurs"] if c["pv_uci"]]
+        lignes[e["ply"]] = [
+            c["pv_uci"] for c in [e["played"]] + e["best"] if c["pv_uci"]]
     return lignes
 
 
@@ -943,15 +943,15 @@ def main(argv: list[str]) -> int:
         if options.synthese:
             synthese_llm = pathlib.Path(options.synthese).read_text(
                 encoding="utf-8", errors="replace")
-        origine = lire_partie(fichiers["partie.pgn"])
+        origine = lire_partie(fichiers["game.pgn"])
         evaluations = json.loads(fichiers["stockfish/evaluations.json"])
         if origine is None or not ligne_principale(origine):
-            raise ArchiveInutilisable("partie.pgn de l'archive ne "
+            raise ArchiveInutilisable("game.pgn de l'archive ne "
                                       "contient aucune partie")
         if not (isinstance(evaluations, list) and all(
-                isinstance(e, dict) and isinstance(e.get("joue"), dict)
-                and isinstance(e.get("meilleurs"), list)
-                and "demicoup" in e for e in evaluations)):
+                isinstance(e, dict) and isinstance(e.get("played"), dict)
+                and isinstance(e.get("best"), list)
+                and "ply" in e for e in evaluations)):
             raise ArchiveInutilisable("stockfish/evaluations.json n'a pas "
                                       "la forme écrite par IAnalyze")
     except (OSError, zipfile.BadZipFile, zlib.error, ValueError,
@@ -985,7 +985,7 @@ def main(argv: list[str]) -> int:
                 "objet")
         if synthese_llm is not None:
             controler_synthese(b, synthese_llm, evaluations,
-                               fichiers["synthese.md"], origine,
+                               fichiers["summary.md"], origine,
                                options.prompt_seul)
             controler_chiffres(b, [("conversation", synthese_llm)],
                                evaluations,
@@ -996,11 +996,11 @@ def main(argv: list[str]) -> int:
     identique = controler_partie(b, partie, origine)
     controler_format(b, texte, partie, origine,
                      len(ligne_principale(origine)), options.prompt_seul,
-                     balises_du_texte(fichiers["partie.pgn"]))
+                     balises_du_texte(fichiers["game.pgn"]))
     if identique:
         controler_couverture(
             b, partie, evaluations, options.prompt_seul,
-            options.perimetre or perimetre_convenu(fichiers["synthese.md"]))
+            options.perimetre or perimetre_convenu(fichiers["summary.md"]))
     else:
         # Without the same main line, the plies no longer
         # match: these checks would make no sense.
@@ -1012,7 +1012,7 @@ def main(argv: list[str]) -> int:
         controler_variantes(b, partie, evaluations, options.prompt_seul)
     if synthese_llm is not None:
         controler_synthese(b, synthese_llm, evaluations,
-                           fichiers["synthese.md"], origine,
+                           fichiers["summary.md"], origine,
                            options.prompt_seul)
         controler_chiffres(b, [("conversation", synthese_llm)],
                            evaluations,

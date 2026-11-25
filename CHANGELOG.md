@@ -112,15 +112,35 @@ Icône de la licence CC-0
   the new `[player]` section. `--purge-settings` refuses such a file,
   which lacks `[player]`: delete it by hand before the first run.
 - The sentence that describes a time control is in English, in
-  `contexte.md`, in the prompt and as the value suggested in the
+  `context.md`, in the prompt and as the value suggested in the
   terminal: "rapid, 15 minutes + 10 seconds per move", "correspondence,
   clock of 5 days + 36 hours per move, maximum of 20 days",
   "unspecified". The labels around it stay in French for now. Counts
   follow the English plural: `1 day`, `0 days`, `2 days`.
 - The opening catalog is `local/catalog.tsv`, in format 2, with English
   column names (`epd`, `eco`, `name`) and description keys (`lines`,
-  `named`, `known`), which `collecte.json` repeats. The former
+  `named`, `known`), which `collection.json` repeats. The former
   `catalogue.tsv` is ignored: run `--install-catalog` once.
+- The names in the archive are in English. The archive, its working
+  folder and the prompt are `analysis-<game>-<date>.zip`,
+  `analysis-<game>-<date>/` and `analysis-<game>-<date>.prompt.txt`,
+  and the archive holds `game.pgn`, `game-original.pgn`, `summary.md`,
+  `context.md`, `collection.json`, `explorer/NNN-<uci>.json` and
+  `stockfish/evaluations.json`.
+- The JSON keys are in English. In `stockfish/evaluations.json`, each
+  ply has `ply`, `move_number`, `side_to_move`, `played`, `best`,
+  `cp_loss`, `category` and `fen`, and each move `san`, `uci`, `score`,
+  `value_for_side`, `depth`, `pv_uci`, `pv_san`, `wdl` (`win`, `draw`,
+  `loss`) and, for a null move, `not_evaluated`. `collection.json` gives
+  each option under its English name (`output_dir`, `depth`,
+  `usernames`...), then `token_present`, `catalog_used`, `side` (with
+  `side`, `origin` and `modified_tags`), `context_collected`,
+  `pgn_encoding`, `pgn_remarks` and `prompt_written`. A failed explorer
+  query records `_error`, and a token found in a message becomes
+  `<TOKEN-REDACTED>`. The values, and the text of `summary.md` and
+  `context.md`, stay in French for now.
+- `verifier-analyse.py` reads the new names and keys, and therefore no
+  longer reads an archive made by an earlier version.
 
 ### Fixed
 

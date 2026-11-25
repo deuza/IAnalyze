@@ -4,7 +4,7 @@
 
 IAnalyze collecte les données d'une partie d'échecs (PGN, stats de
 l'explorateur Lichess, catalogue d'ouvertures, évaluations Stockfish)
-et produit un zip avec synthese.md, plus le prompt d'analyse de la
+et produit un zip avec summary.md, plus le prompt d'analyse de la
 partie, écrit à côté. Les deux alimentent une conversation avec un LLM,
 où l'analyse est faite. Le script ne produit lui-même aucune analyse.
 
@@ -71,7 +71,8 @@ tests), CHANGELOG.md.
   sont ignorés, sans message. Un settings.ini à l'ancien format garde
   sa section [joueur], recopiée comme section inconnue après [player].
 - Traduction faite directement, sans DeepL.
-- Huit lots, un patch chacun. Lot 0 : CLAUDE.md.
+- Huit lots, dont le 4 en quatre sous-lots ; un patch par lot ou
+  sous-lot. Lot 0 : CLAUDE.md.
 - Lot 1 : commentaires et docstrings, sans changer le code : l'AST, une
   fois les docstrings retirées, est identique avant et après.
 - Lot 2 : messages d'ianalyze.py sur la sortie d'erreur (journal,
@@ -85,14 +86,24 @@ tests), CHANGELOG.md.
 - Lot 3b : questions et réponses au terminal, réglages, catalogue. Les
   questions vont avec leurs réponses : elles portent les touches à
   taper. Les quatre questions de QUESTIONS_CONTEXTE, dont les réponses
-  partent dans contexte.md, attendent le lot 4. La phrase de cadence
+  partent dans context.md, attendent le lot 4. La phrase de cadence
   (decrire_cadence) passe au 3b : défaut affiché au terminal, elle
   partage pluriel() et duree_increment() avec settings.ini ; dans
-  contexte.md et le prompt, ses libellés restent français jusqu'au
+  context.md et le prompt, ses libellés restent français jusqu'au
   lot 4.
-- Lot 4 : archive et LLM, soit noms et contenu des fichiers (JSON,
-  synthèse, contexte), modèles de prompt, vérificateur en entier hors
-  ses options, renommées au lot 3a.
+- Lot 4 : archive et LLM, en quatre sous-lots, chacun avec la suite au
+  vert ; le vérificateur suit chaque changement de l'archive dans le
+  sous-lot qui le fait. 4a : noms de l'archive et clefs JSON. 4b :
+  context.md et summary.md, questions de démarrage comprises, et les
+  valeurs écrites dans leurs phrases (camps, natures des coups, origine
+  du camp, remarques d'encodage, erreurs et motifs d'arrêt de
+  l'explorateur). 4c : modèles de prompt, langage compris
+  (directives, conditions, valeurs). 4d : rapport et messages du
+  vérificateur, hors ses options, renommées au lot 3a.
+- Choix du lot 4 : l'analyse est demandée en anglais ; les clefs de
+  collection.json passent par une table dest -> clef (CLEFS_COLLECTE),
+  avec un test qui exige une clef par option ; le langage des modèles
+  passe en anglais, sans alias.
 - Lot 5 : renommage des fichiers du dépôt et documentation.
 - Dérogation : la documentation (README, EXEMPLES, TECHNIQUE, TESTS)
   est traduite et remise à jour au lot 5, une fois l'interface figée.
@@ -107,6 +118,18 @@ tests), CHANGELOG.md.
   colonnes epd eco name, clefs lines, named, known ; dans
   settings.ini, [joueur] -> [player], pseudos, cadence, niveau,
   annotateur -> usernames, time_control, rating, annotator.
+- Renommages du lot 4a, faits : `analyse-<partie>-<date>` ->
+  `analysis-<game>-<date>` ; partie.pgn, partie-origine.pgn,
+  synthese.md, contexte.md, collecte.json, explorateur/ -> game.pgn,
+  game-original.pgn, summary.md, context.md, collection.json,
+  explorer/ ; clefs d'evaluations.json demicoup, numero, trait, joue,
+  meilleurs, ecart_cp, nature, valeur_trait, profondeur, non_evalue,
+  gain, nulle, perte -> ply, move_number, side_to_move, played, best,
+  cp_loss, category, value_for_side, depth, not_evaluated, win, draw,
+  loss ; dans collection.json, les options sous leur nom anglais, puis
+  token_present, catalog_used, side (side, origin, modified_tags),
+  context_collected, pgn_encoding, pgn_remarks, prompt_written ;
+  _erreur -> _error ; `<JETON-EXPURGE>` -> `<TOKEN-REDACTED>`.
 - Renommages du lot 5 : verifier-analyse.py -> verify-analysis.py,
   prompt-modele.txt -> prompt-template.txt, prompt-seul-modele.txt ->
   prompt-only-template.txt, parties-exemples/ -> example-games/

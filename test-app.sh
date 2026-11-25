@@ -438,8 +438,8 @@ egal "T05 exit code" 0 "$RC"
 egal "T05 a single line on standard output" 1 "$(wc -l < sortie)"
 verifier "T05 the archive exists" test -f "$ARCH"
 unzip -l "$ARCH" > liste 2>/dev/null
-verifier "T05 synthese.md in the archive" contient liste "/synthese.md"
-verifier "T05 collecte.json in the archive" contient liste "/collecte.json"
+verifier "T05 summary.md in the archive" contient liste "/summary.md"
+verifier "T05 collection.json in the archive" contient liste "/collection.json"
 egal "T05 no .partiel file in the archive" 0 "$(grep -c partiel liste)"
 
 titre "T26: engine not found"
@@ -473,9 +473,9 @@ egal "T34 cp850, exit code" 1 "$RC"
 verifier "T34 cp850, encoding not recognized" \
     contient journal "PGN encoding not recognized"
 egal "T34 cp850, nothing is written" 0 \
-    "$(ls -d analyse-t-cp850* 2>/dev/null | wc -l)"
+    "$(ls -d analysis-t-cp850* 2>/dev/null | wc -l)"
 lancer t-latin1.pgn $O
-extraire '*/synthese.md'
+extraire '*/summary.md'
 verifier "T34 White José" contient extrait "| White | José |"
 verifier "T34 Black Müller" contient extrait "| Black | Müller |"
 verifier "T34 encoding line in section 5" contient extrait "- Encodage : le PGN"
@@ -488,7 +488,7 @@ lancer t-cp1252.pgn $O
 egal "T35 exit code" 0 "$RC"
 verifier "T35 encoding chosen: cp1252" \
     contient journal "encodage retenu : cp1252"
-extraire '*/synthese.md'
+extraire '*/summary.md'
 verifier "T35 curly apostrophe, dash and euro" \
     contient extrait "| Event | Coupe d’été – 5 € |"
 grep -F 'Event' extrait > ligne 2>/dev/null
@@ -499,8 +499,8 @@ printf '\357\273\277[White "Jos\303\251"]\n\n1. e4 e5 *\n' > t-bom.pgn
 lancer t-bom.pgn $O
 egal "T36 exit code" 0 "$RC"
 verifier "T36 UTF-8 BOM removed" contient journal "(BOM) UTF-8 retirée"
-extraire '*/partie.pgn'
-egal "T36 partie.pgn starts with a bracket" "[" "$(head -c 1 extrait)"
+extraire '*/game.pgn'
+egal "T36 game.pgn starts with a bracket" "[" "$(head -c 1 extrait)"
 
 titre "T37: UTF-16 with and without byte order mark"
 if command -v iconv >/dev/null 2>&1; then
@@ -511,13 +511,13 @@ if command -v iconv >/dev/null 2>&1; then
     egal "T37 with BOM, exit code" 0 "$RC"
     verifier "T37 with BOM, utf-16-le announced" \
         contient journal "(BOM) détectée, encodage retenu : utf-16-le"
-    extraire '*/synthese.md'
+    extraire '*/summary.md'
     verifier "T37 with BOM, White José" contient extrait "| White | José |"
     lancer t-utf16.pgn $O
     egal "T37 without BOM, exit code" 0 "$RC"
     verifier "T37 without BOM, utf-16-le recognized" \
         contient journal "un octet nul sur deux"
-    extraire '*/synthese.md'
+    extraire '*/summary.md'
     verifier "T37 without BOM, White José" contient extrait "| White | José |"
     joindre journal
 else
@@ -530,9 +530,9 @@ lancer t-abime.pgn $O
 egal "T38 exit code" 0 "$RC"
 verifier "T38 two invalid bytes replaced" \
     contient journal "UTF-8 abîmé, 2 octet(s) invalide(s)"
-extraire '*/synthese.md'
+extraire '*/summary.md'
 verifier "T38 White José intact" contient extrait "| White | José |"
-extraire '*/partie.pgn'
+extraire '*/game.pgn'
 egal "T38 comment kept" 1 "$(grep -c 's bon}' extrait)"
 
 titre "T39: NUL bytes"
@@ -549,8 +549,8 @@ printf '[White "A"]\r\n\r\n1. e4 e5 *\r\n' > t-crlf.pgn
 lancer t-crlf.pgn $O
 egal "T40 exit code" 0 "$RC"
 egal "T40 no warning" 0 "$(grep -c Warning journal)"
-egal "T40 no carriage return in partie.pgn" 0 \
-    "$(unzip -p "$ARCH" '*/partie.pgn' | od -c | grep -c '\\r')"
+egal "T40 no carriage return in game.pgn" 0 \
+    "$(unzip -p "$ARCH" '*/game.pgn' | od -c | grep -c '\\r')"
 
 titre "T41: C locale and ASCII output"
 LANG=C "$SCRIPT" t-latin1.pgn $O --venv "$VENV" --settings "$REGL" \
@@ -578,7 +578,7 @@ lancer t-ctrl.pgn $O
 egal "T42 exit code" 0 "$RC"
 verifier "T42 two control characters removed" \
     contient journal "2 caractère(s) de contrôle retiré(s), dont 0 NUL"
-extraire '*/synthese.md'
+extraire '*/summary.md'
 verifier "T42 tab turned into a space" contient extrait "| Event | Tour noi |"
 verifier "T42 ESC removed from Site" contient extrait "| Site | [31mParis |"
 egal "T42 neither ESC nor BEL in the archive" 0 \
@@ -629,7 +629,7 @@ verifier "M1 the displayed path does name the archive" test -f "$ARCH"
 # The spaces of the PGN name become hyphens in that of the archive,
 # those of the output directory are kept: it is yours.
 case "$ARCH" in
-    "$TRAVAIL/sorties d'été/analyse-t-été-à-Paris-"*.zip) vu=oui ;;
+    "$TRAVAIL/sorties d'été/analysis-t-été-à-Paris-"*.zip) vu=oui ;;
     *) vu=non ;;
 esac
 egal "M1 spaces of the name turned into hyphens" oui "$vu"
@@ -641,7 +641,7 @@ ARCH=$(head -n 1 sortie)
 verifier "M1 exact path even with an ASCII output" test -f "$ARCH"
 
 titre "T45: answer typed in latin-1 on a pseudo-terminal"
-rm -rf analyse-italienne-*
+rm -rf analysis-italienne-*
 SCRIPT="$SCRIPT" VENV="$VENV" REGL="$REGL" python3 - > sortie-pty 2>&1 \
     <<'EOF'
 import os
@@ -665,17 +665,17 @@ except OSError as err:
     print("lecture du pseudo-terminal :", err)
 os.waitpid(pid, 0)
 EOF
-cat analyse-italienne-*/partie.pgn > extrait 2>/dev/null
-verifier "T45 partie.pgn carries [Black \"Zoé\"]" contient extrait '[Black "Zoé"]'
+cat analysis-italienne-*/game.pgn > extrait 2>/dev/null
+verifier "T45 game.pgn carries [Black \"Zoé\"]" contient extrait '[Black "Zoé"]'
 egal "T45 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
 joindre sortie-pty
-rm -rf analyse-italienne-*
+rm -rf analysis-italienne-*
 
 titre "T79: refused answers, too long or carrying PGN signs"
 # The name of the opponent goes into a PGN tag: a quote or a bracket
 # would close it too early. The first two answers are refused and the
 # question asked again, the third one is kept.
-rm -rf analyse-italienne-*
+rm -rf analysis-italienne-*
 SCRIPT="$SCRIPT" VENV="$VENV" REGL="$REGL" python3 - > sortie-pty 2>&1 \
     <<'EOF'
 import os
@@ -709,14 +709,14 @@ print(texte.count("A name cannot contain"),
       texte.count("Answer too long: 255"),
       texte.count("Unexpected error"))
 EOF
-cat analyse-italienne-*/partie.pgn > extrait 2>/dev/null
+cat analysis-italienne-*/game.pgn > extrait 2>/dev/null
 verifier "T79 name kept after two refusals" contient extrait '[Black "Bob"]'
 egal "T79 a single White tag, no extra sign" "1 0" \
     "$(grep -c '^\[White ' extrait) $(grep -c 'Pirate' extrait)"
 egal "T79 one refusal for a sign, one for the length, no error" "1 1 0" \
     "$(tail -n 1 sortie-pty)"
 joindre sortie-pty
-rm -rf analyse-italienne-*
+rm -rf analysis-italienne-*
 
 titre "T80: long PGN name, in multibyte characters"
 # A hundred ideograms, three hundred bytes: the label is bounded in
@@ -734,7 +734,7 @@ print(len(longue.encode("utf-8")) <= cp.ETIQUETTE_MAX, len(longue))
 print(cp.etiquette_sure("  partie  contre\tmachin  "))
 print(cp.etiquette_sure(" . "), cp.etiquette_sure("a:b?"))
 EOF
-printf 'True 26\npartie-contre-machin\npartie a_b_\n' > attendu-t80
+printf 'True 26\npartie-contre-machin\ngame a_b_\n' > attendu-t80
 verifier "T80 label bounded in bytes, spaces as hyphens" \
     cmp -s attendu-t80 sortie-t80
 joindre sortie-t80
@@ -744,9 +744,9 @@ rm -rf "$DEPOT/__pycache__"
 titre "T46, T47: sound PGN and version"
 lancer italienne.pgn $O
 egal "T46 no warning" 0 "$(grep -c Warning journal)"
-extraire '*/collecte.json'
-verifier "T46 pgn_encodage utf-8" contient extrait '"pgn_encodage": "utf-8"'
-verifier "T46 pgn_remarques empty" contient extrait '"pgn_remarques": []'
+extraire '*/collection.json'
+verifier "T46 pgn_encoding utf-8" contient extrait '"pgn_encoding": "utf-8"'
+verifier "T46 pgn_remarks empty" contient extrait '"pgn_remarks": []'
 noter "  note   T47 $(grep -n '^VERSION' "$SCRIPT")"
 SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t47 2> journal-t47 <<'EOF'
 import importlib.util
@@ -771,14 +771,14 @@ cp italienne.pgn t-2026.11.18_A_vs_B.pgn
 lancer t-2026.11.18_A_vs_B.pgn $O
 egal "T48 exit code" 0 "$RC"
 case $ARCH in
-    analyse-t-2026.11.18_A_vs_B-*.zip) NOM_OK=oui ;;
+    analysis-t-2026.11.18_A_vs_B-*.zip) NOM_OK=oui ;;
     *) NOM_OK=non ;;
 esac
 egal "T48 full name of the archive" oui "$NOM_OK"
-egal "T48 synthese.md in the archive" 1 \
-    "$(unzip -l "$ARCH" 2>/dev/null | grep -c synthese.md)"
+egal "T48 summary.md in the archive" 1 \
+    "$(unzip -l "$ARCH" 2>/dev/null | grep -c summary.md)"
 egal "T48 working folder deleted" 0 \
-    "$(find . -maxdepth 1 -type d -name 'analyse-t-2026*' | wc -l)"
+    "$(find . -maxdepth 1 -type d -name 'analysis-t-2026*' | wc -l)"
 
 titre "T53: interruption during archiving, failing write"
 mkdir t-r1
@@ -793,9 +793,9 @@ import zipfile
 spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
 cp = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cp)
-d = pathlib.Path("analyse-essai-1")
+d = pathlib.Path("analysis-essai-1")
 d.mkdir()
-for nom in ("partie.pgn", "synthese.md", "collecte.json"):
+for nom in ("game.pgn", "summary.md", "collection.json"):
     (d / nom).write_text("x" * 5000, encoding="utf-8")
 origine = zipfile.ZipFile.write
 appels = [0]
@@ -816,9 +816,9 @@ except KeyboardInterrupt:
 zipfile.ZipFile.write = origine
 print(sorted(p.name for p in pathlib.Path(".").iterdir()))
 try:
-    cp.ecrire_texte(d / "synthese.md", 12345)
+    cp.ecrire_texte(d / "summary.md", 12345)
 except TypeError:
-    print((d / "synthese.md").stat().st_size)
+    print((d / "summary.md").stat().st_size)
 print(sorted(p.name for p in d.iterdir()))
 print(cp.archiver(d, False))
 print(sorted(p.name for p in pathlib.Path(".").iterdir()))
@@ -826,11 +826,11 @@ EOF
 )
 cat > attendu-r1 <<'EOF'
 archivage interrompu
-['analyse-essai-1']
+['analysis-essai-1']
 5000
-['collecte.json', 'partie.pgn', 'synthese.md']
-analyse-essai-1.zip
-['analyse-essai-1.zip']
+['collection.json', 'game.pgn', 'summary.md']
+analysis-essai-1.zip
+['analysis-essai-1.zip']
 EOF
 verifier "T53 six expected lines" cmp -s attendu-r1 sortie-r1
 joindre sortie-r1
@@ -955,7 +955,7 @@ for code in (301, 302, 303, 307, 308):
     Faux.code = code
     statut, donnees = cp.Explorateur(
         JETON, 2.0, 5, base + "/lichess", {}).interroger(["e2e4"])
-    print(code, statut, "redirection" in donnees.get("_erreur", ""))
+    print(code, statut, "redirection" in donnees.get("_error", ""))
 print("tiers", len(recu))
 statut, donnees = cp.Explorateur(
     JETON, 2.0, 5, base + "/echo", {}).interroger(["e2e4"])
@@ -975,9 +975,9 @@ cat > attendu-t76 <<'EOF'
 307 307 True
 308 308 True
 tiers 0
-200 False Bearer <JETON-EXPURGE>
-/coupe 500 ['_erreur']
-/profond 0 ['_erreur']
+200 False Bearer <TOKEN-REDACTED>
+/coupe 500 ['_error']
+/profond 0 ['_error']
 0 0 12 7
 EOF
 verifier "T76 redirects, redacted answer, damaged answers" \
@@ -993,7 +993,7 @@ for option in "--pause nan" "--pause inf" "--min-frequency nan"; do
     verifier "T50 $option, message" contient journal "must be a finite number"
 done
 egal "T50 no working folder created" 0 \
-    "$(find . -maxdepth 1 -type d -name 'analyse-italienne-*' | wc -l)"
+    "$(find . -maxdepth 1 -type d -name 'analysis-italienne-*' | wc -l)"
 
 titre "T54: URLs that are not games"
 for url in https://lichess.org/analysis/standard \
@@ -1057,7 +1057,7 @@ with tempfile.TemporaryDirectory() as d:
     r = cp.collecter_explorateur(
         partie, pathlib.Path(d), Faux(), 50, 10.0, 60, False)
 print(Faux.appels, len(r["lignes"]), r["premiere_sortie"])
-print([(n["demicoup"], n["san"], n["motif"]) for n in r["non_exploitables"]])
+print([(n["ply"], n["san"], n["motif"]) for n in r["non_exploitables"]])
 print(r["arret"][:28])
 EOF
 cat > attendu-t56 <<'EOF'
@@ -1121,7 +1121,7 @@ EOF
 P="--no-explorer --depth 1 --keep-folder --venv $VENV"
 
 titre "T57: first run, settings asked then saved"
-rm -rf analyse-italienne-*
+rm -rf analysis-italienne-*
 SCRIPT="$SCRIPT" python3 t-pty.py "Zoe42, zoe|r|15|10|1300|w||||||" \
     italienne.pgn $P --settings t-reglages.ini > sortie-pty 2>&1
 verifier "T57 three answers asked only once" \
@@ -1138,17 +1138,17 @@ grep -v '^#' t-reglages.ini > extrait 2>/dev/null
 printf '\n[player]\nusernames = Zoe42, zoe\ntime_control = 15+10\n' > attendu
 printf 'rating = 1300\n' >> attendu
 verifier "T57 content of the file" cmp -s attendu extrait
-cat analyse-italienne-*/partie.pgn > extrait 2>/dev/null
+cat analysis-italienne-*/game.pgn > extrait 2>/dev/null
 verifier "T57 empty tag filled in with the username" \
     contient extrait '[White "Zoe42"]'
-cat analyse-italienne-*/contexte.md > extrait 2>/dev/null
+cat analysis-italienne-*/context.md > extrait 2>/dev/null
 verifier "T57 usual time control suggested and written" \
     contient extrait "- Cadence : rapid, 15 minutes + 10 seconds per move (défaut)"
 grep -E 'Settings|Your|per |rror' sortie-pty > ligne 2>/dev/null
 joindre ligne
 
 titre "T58: second run, priority of --usernames"
-rm -rf analyse-italienne-*
+rm -rf analysis-italienne-*
 SCRIPT="$SCRIPT" python3 t-pty.py "w||||||" italienne.pgn $P \
     --settings t-reglages.ini > sortie-pty 2>&1
 egal "T58 no more settings question" 0 \
@@ -1156,16 +1156,16 @@ egal "T58 no more settings question" 0 \
 printf '[White "Alice"]\n[Black "Zoe42"]\n\n1. e4 e5 *\n' > t-noms.pgn
 SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
     --settings t-reglages.ini > sortie-pty 2>&1
-cat analyse-t-noms-*/contexte.md > extrait 2>/dev/null
+cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T58 side deduced from the username of the settings" \
     contient extrait "Camp du joueur : Noirs, déduit des en-têtes"
-rm -rf analyse-t-noms-*
+rm -rf analysis-t-noms-*
 SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
     --settings t-reglages.ini --usernames Alice > sortie-pty 2>&1
-cat analyse-t-noms-*/contexte.md > extrait 2>/dev/null
+cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T58 --usernames wins over the settings" \
     contient extrait "Camp du joueur : Blancs, déduit des en-têtes"
-rm -rf analyse-t-noms-*
+rm -rf analysis-t-noms-*
 
 titre "T59: outside a terminal, then username refused"
 "$SCRIPT" italienne.pgn $O --venv "$VENV" --settings t-abs/reglages.ini \
@@ -1177,7 +1177,7 @@ if [ -e t-abs ]; then
 else
     egal "T59 outside a terminal, no file created" absent absent
 fi
-rm -rf analyse-italienne-*
+rm -rf analysis-italienne-*
 SCRIPT="$SCRIPT" python3 t-pty.py "|||b|Moi|Lui|||||" italienne.pgn $P \
     --settings t-vide.ini > sortie-pty 2>&1
 verifier "T59 without a username, the player name is asked" \
@@ -1187,11 +1187,11 @@ printf '\n[player]\nusernames =\ntime_control = unknown\nrating = unknown\n' \
     > attendu
 verifier "T59 empty keys saved, hence no longer asked" \
     cmp -s attendu extrait
-cat analyse-italienne-*/partie.pgn > extrait 2>/dev/null
+cat analysis-italienne-*/game.pgn > extrait 2>/dev/null
 verifier "T59 tags filled in with the names typed" \
     contient extrait '[Black "Moi"]'
 egal "T59 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
-rm -rf analyse-italienne-*
+rm -rf analysis-italienne-*
 
 titre "T60: badly formed file, added keys kept"
 printf 'usernames = Alice\n' > t-mauvais.ini
@@ -1219,7 +1219,7 @@ EOF
 verifier "T60 keys and sections added by hand kept" \
     cmp -s attendu extrait
 joindre extrait
-rm -rf analyse-t-noms-*
+rm -rf analysis-t-noms-*
 
 titre "T62: time control checked, wrong answers refused"
 printf '[player]\nusernames = Alice\nrating = unknown\n' > t-cad.ini
@@ -1239,25 +1239,25 @@ verifier "T62 time control saved in its short form" \
 egal "T62 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
 grep -E 'be read|answer|exist' sortie-pty > ligne 2>/dev/null
 joindre ligne
-rm -rf analyse-t-noms-*
+rm -rf analysis-t-noms-*
 SCRIPT="$SCRIPT" python3 t-pty.py "r|5|0||||" t-noms.pgn $P \
     --settings t-cad.ini > sortie-pty 2>&1
-cat analyse-t-noms-*/contexte.md > extrait 2>/dev/null
+cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T62 time control of the game different from the usual one" \
     contient extrait "- Cadence : blitz, 5 minutes without increment"
-rm -rf analyse-t-noms-*
+rm -rf analysis-t-noms-*
 printf '[White "Alice"]\n[Black "Bob"]\n' > t-tc.pgn
 printf '[TimeControl "600+5"]\n\n1. e4 e5 *\n' >> t-tc.pgn
 SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-tc.pgn $P \
     --settings t-cad.ini > sortie-pty 2>&1
 egal "T62 TimeControl tag: no question" 0 \
     "$(grep -c 'Time control of the game' sortie-pty)"
-cat analyse-t-tc-*/contexte.md > extrait 2>/dev/null
+cat analysis-t-tc-*/context.md > extrait 2>/dev/null
 verifier "T62 TimeControl tag translated" \
     contient extrait "soit rapid, 10 minutes + 5 seconds per move"
 grep Cadence extrait > ligne 2>/dev/null
 joindre ligne
-rm -rf analyse-t-tc-*
+rm -rf analysis-t-tc-*
 
 titre "T63: correspondence, three systems checked"
 printf '[player]\nusernames = Alice\nrating = unknown\n' > t-corr.ini
@@ -1272,38 +1272,38 @@ egal "T63 inconsistent time control refused twice" 2 \
     "$(grep -c 'Inconsistent time control' sortie-pty)"
 verifier "T63 clock, increment and maximum saved" \
     contient t-corr.ini "time_control = 5 days + 36 hours, maximum 20 days"
-cat analyse-t-noms-*/contexte.md > extrait 2>/dev/null
+cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T63 chess-mail.com: clock 5 days + 36 hours, maximum 20" \
     contient extrait "clock of 5 days + 36 hours per move, maximum of 20 days"
 egal "T63 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
 grep -E 'answer|Inconsistent' sortie-pty > ligne 2>/dev/null
 joindre ligne
-rm -rf analyse-t-noms-*
+rm -rf analysis-t-noms-*
 printf '[player]\nusernames = Alice\nrating = unknown\n' > t-corr.ini
 printf 'time_control = 10 moves in 50 days\n' >> t-corr.ini
 SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
     --settings t-corr.ini > sortie-pty 2>&1
-cat analyse-t-noms-*/contexte.md > extrait 2>/dev/null
+cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T63 standard ICCF: 10 moves in 50 days" \
     contient extrait "- Cadence : correspondence, 10 moves in 50 days (défaut)"
-rm -rf analyse-t-noms-*
+rm -rf analysis-t-noms-*
 printf '[player]\nusernames = Alice\nrating = unknown\n' > t-corr.ini
 printf 'time_control = 50d+3d, maximum 50d, bank 75d\n' >> t-corr.ini
 SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
     --settings t-corr.ini > sortie-pty 2>&1
-cat analyse-t-noms-*/contexte.md > extrait 2>/dev/null
+cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T63 ICCF Triple Block: clock, increment, maximum, bank" \
     contient extrait "clock of 50 days + 3 days per move, maximum of 50 days, bank of 75 days"
 grep Cadence extrait > ligne 2>/dev/null
 joindre ligne
-rm -rf analyse-t-noms-*
+rm -rf analysis-t-noms-*
 # Settings file missing: the username is asked first, then, for lack
 # of a username, the side.
 SCRIPT="$SCRIPT" python3 t-pty.py "|c|p|10|40||w|||||" t-noms.pgn $P \
     --settings t-vide2.ini > sortie-pty 2>&1
 verifier "T63 moves per period typed on the keyboard" \
     contient t-vide2.ini "time_control = 10 moves in 40 days"
-rm -rf analyse-t-noms-*
+rm -rf analysis-t-noms-*
 # English plural, in the settings form and in the sentence: 0 and 2
 # take an s, 1 does not. The forms checked above never reach 0 or 1.
 SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t63 2> journal-t63 <<'EOF'
@@ -1365,8 +1365,8 @@ verifier "T64 declared rating" \
     contient "$PR" "- niveau : environ 1300 Elo, déclaré par le joueur"
 verifier "T64 usual time control written" \
     contient "$PR" "celle de la partie : correspondence, 14 days per move"
-unzip -p "$ARCH" '*/collecte.json' > extrait 2>/dev/null
-verifier "T64 collecte.json names the prompt" contient extrait '"prompt_ecrit": "analyse-t-pr-'
+unzip -p "$ARCH" '*/collection.json' > extrait 2>/dev/null
+verifier "T64 collection.json names the prompt" contient extrait '"prompt_written": "analysis-t-pr-'
 head -n 12 "$PR" > ligne
 joindre ligne
 noter "  note   lines of the prompt: $(lignes "$PR")"
@@ -1381,7 +1381,7 @@ egal "T65 all the files of the archive to be used" 1 \
 egal "T65 evaluations.json described" 1 \
     "$(grep -c '^- stockfish/evaluations.json :' "$PR")"
 egal "T65 without the explorer, its files are not announced" 0 \
-    "$(grep -c '^- explorateur/NNN' "$PR")"
+    "$(grep -c '^- explorer/NNN' "$PR")"
 egal "T65 comments cut at 75 columns, not at 76" "2 0" \
     "$(grep -c 'à 75' "$PR") $(grep -c 'à 76' "$PR")"
 # Instructions added after the trials on four LLMs: each one answers a
@@ -1451,7 +1451,7 @@ joindre journal-t65 5
 rm -rf "$DEPOT/__pycache__"
 
 titre "T66: faulty template refused before the collection"
-rm -f analyse-t-pr-*
+rm -f analysis-t-pr-*
 printf 'Bonjour {{PSEUDO}}\n' > t-modele.txt
 "$SCRIPT" t-pr.pgn $R --depth 1 --prompt t-modele.txt \
     > sortie 2> journal
@@ -1479,7 +1479,7 @@ verifier "T66 missing template, message" \
 "$SCRIPT" t-pr.pgn --prompt x --no-prompt > sortie 2> journal
 egal "T66 exclusive options, exit code" 2 $?
 egal "T66 no folder or archive created by these refusals" 0 \
-    "$(find . -maxdepth 1 -name 'analyse-t-pr-*' | wc -l)"
+    "$(find . -maxdepth 1 -name 'analysis-t-pr-*' | wc -l)"
 printf 'Pour {{PSEUDOS}}.\n#! si non EXPLORATEUR\nsans base\n' > t-modele.txt
 printf '#! si BASE_LICHESS\nlichess\n#! sinon\nmaitres\n#! fin\n' >> t-modele.txt
 printf '#! sinon\navec base\n#! fin\n\n\n\nfin\n' >> t-modele.txt
@@ -1491,11 +1491,11 @@ printf 'Pour Alice.\nsans base\nlichess\n\nfin\n' > attendu
 verifier "T66 nesting, negation and blank lines tightened" \
     cmp -s attendu "$PR"
 joindre "$PR"
-rm -f analyse-t-pr-*
+rm -f analysis-t-pr-*
 "$SCRIPT" t-pr.pgn $R --depth 1 --no-prompt > sortie 2> journal
 egal "T66 --no-prompt, exit code" 0 $?
 egal "T66 --no-prompt, no prompt written" 0 \
-    "$(find . -maxdepth 1 -name 'analyse-t-pr-*.prompt.txt' | wc -l)"
+    "$(find . -maxdepth 1 -name 'analysis-t-pr-*.prompt.txt' | wc -l)"
 
 # Three templates that the script wrongly accepted: a badly written
 # marker, which went as it is into the prompt, a template without a
@@ -1525,24 +1525,24 @@ verifier "T66 game under a false condition, said in the log" \
     contient journal "does not carry the game"
 egal "T66 game under a false condition, no contrary announcement" 0 \
     "$(grep -c 'it carries the game' journal)"
-rm -f analyse-t-pr-*
+rm -f analysis-t-pr-*
 
 titre "T67: script copied without its template"
 mkdir t-seul
 cp "$SCRIPT" t-seul/
-rm -f analyse-t-pr-*
+rm -f analysis-t-pr-*
 t-seul/ianalyze.py t-pr.pgn $R --depth 1 > sortie 2> journal
 egal "T67 exit code" 0 $?
 verifier "T67 the archive is produced" test -f "$(head -n 1 sortie)"
 verifier "T67 warning of the log" \
     contient journal "prompt template not found"
 egal "T67 no prompt written" 0 \
-    "$(find . -maxdepth 1 -name 'analyse-t-pr-*.prompt.txt' | wc -l)"
+    "$(find . -maxdepth 1 -name 'analysis-t-pr-*.prompt.txt' | wc -l)"
 
 titre "T68: rating in Elo points, checked"
 printf '[player]\nusernames = Alice\ntime_control = 14 days\nrating = strong\n' \
     > t-niv.ini
-rm -rf analyse-t-pr-*
+rm -rf analysis-t-pr-*
 SCRIPT="$SCRIPT" python3 t-pty.py "abc|50|9999|1450|||||" t-pr.pgn $P \
     --settings t-niv.ini > sortie-pty 2>&1
 verifier "T68 unreadable rating of the settings asked again" \
@@ -1550,7 +1550,7 @@ verifier "T68 unreadable rating of the settings asked again" \
 egal "T68 three answers refused" 3 \
     "$(grep -c 'between 100 and 3500' sortie-pty)"
 verifier "T68 rating saved" contient t-niv.ini "rating = 1450"
-cat analyse-t-pr-*.prompt.txt > extrait 2>/dev/null
+cat analysis-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T68 rating declared in the prompt" \
     contient extrait "- niveau : environ 1450 Elo, déclaré par le joueur"
 verifier "T68 on a terminal, answers collected" \
@@ -1558,15 +1558,15 @@ verifier "T68 on a terminal, answers collected" \
 egal "T68 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
 printf '[player]\nusernames = Bob\ntime_control = 14 days\nrating = unknown\n' \
     > t-niv.ini
-rm -rf analyse-t-pr-*
+rm -rf analysis-t-pr-*
 "$SCRIPT" t-pr.pgn --no-explorer --no-questions --depth 1 \
     --venv "$VENV" --settings t-niv.ini > sortie 2> journal
-cat analyse-t-pr-*.prompt.txt > extrait 2>/dev/null
+cat analysis-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T68 side deduced from the other username" \
     contient extrait "- camp dans cette partie : Noirs"
 verifier "T68 without a declared rating, Elo of the tag" \
     contient extrait "- niveau : 1500 Elo, d'après la balise BlackElo de la partie"
-rm -rf analyse-t-pr-*
+rm -rf analysis-t-pr-*
 
 titre "T86: --no-settings, settings neither read nor written"
 # A copy of the script looks for its settings file next to itself: the
@@ -1578,45 +1578,45 @@ cp "$SCRIPT" t-86/
 printf '[player]\nusernames = Bob\ntime_control = 14 days\nrating = 1300\n' \
     > t-86/settings.ini
 cp t-86/settings.ini t-86-avant.ini
-rm -rf analyse-t-pr-*
+rm -rf analysis-t-pr-*
 t-86/ianalyze.py t-pr.pgn --no-explorer --no-questions --depth 1 \
     --venv "$VENV" --prompt "$DEPOT/prompt-modele.txt" > sortie 2> journal
-cat analyse-t-pr-*.prompt.txt > extrait 2>/dev/null
+cat analysis-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T86 without the option, the copy reads its settings" \
     contient extrait "- niveau : environ 1300 Elo, déclaré par le joueur"
 verifier "T86 without the option, usual time control of the settings" \
     contient extrait "celle de la partie : correspondence, 14 days per move"
-rm -rf analyse-t-pr-*
+rm -rf analysis-t-pr-*
 t-86/ianalyze.py t-pr.pgn --no-explorer --no-questions --depth 1 \
     --venv "$VENV" --prompt "$DEPOT/prompt-modele.txt" --no-settings \
     > sortie 2> journal
 egal "T86 exit code" 0 "$?"
 verifier "T86 said in the log" \
     contient journal "Settings neither read nor written: option --no-settings."
-cat analyse-t-pr-*.prompt.txt > extrait 2>/dev/null
+cat analysis-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T86 usernames of the settings ignored, side unknown" \
     contient extrait "- camp dans cette partie : inconnu"
 verifier "T86 rating of the settings ignored" \
     contient extrait "- niveau : non précisé"
 verifier "T86 usual time control of the settings ignored" \
     contient extrait "celle de la partie : unspecified"
-unzip -p "$(head -n 1 sortie)" '*/collecte.json' > ligne 2>/dev/null
-verifier "T86 recorded in collecte.json" contient ligne '"sans_reglages": true'
-rm -rf analyse-t-pr-*
+unzip -p "$(head -n 1 sortie)" '*/collection.json' > ligne 2>/dev/null
+verifier "T86 recorded in collection.json" contient ligne '"no_settings": true'
+rm -rf analysis-t-pr-*
 t-86/ianalyze.py t-pr.pgn --no-explorer --no-questions --depth 1 \
     --venv "$VENV" --prompt "$DEPOT/prompt-modele.txt" --no-settings \
     --usernames Bob > sortie 2> journal
-cat analyse-t-pr-*.prompt.txt > extrait 2>/dev/null
+cat analysis-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T86 side deduced from --usernames" \
     contient extrait "- camp dans cette partie : Noirs"
 verifier "T86 rating taken from the Elo tag of that side" \
     contient extrait "- niveau : 1500 Elo, d'après la balise BlackElo de la partie"
 verifier "T86 settings file untouched" cmp -s t-86-avant.ini t-86/settings.ini
-rm -rf analyse-t-pr-*
+rm -rf analysis-t-pr-*
 # On a terminal, without a settings file: its questions, which would
 # create it, are not asked, and the side is asked instead.
 rm -f t-86/settings.ini
-rm -rf analyse-t-noms-*
+rm -rf analysis-t-noms-*
 SCRIPT=t-86/ianalyze.py python3 t-pty.py "b|||||" t-noms.pgn $P \
     --no-settings > sortie-pty 2>&1
 egal "T86 on a terminal, no settings question" 0 \
@@ -1625,12 +1625,12 @@ verifier "T86 on a terminal, the side is asked" \
     contient sortie-pty "Did you play White or Black? [w/b]"
 verifier "T86 on a terminal, no settings file created" \
     test ! -e t-86/settings.ini
-cat analyse-t-noms-*/contexte.md > extrait 2>/dev/null
+cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T86 on a terminal, side declared" \
     contient extrait "Camp du joueur : Noirs, déclaré"
 egal "T86 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
 joindre sortie-pty
-rm -rf analyse-t-noms-*
+rm -rf analysis-t-noms-*
 # Refused with --settings, whatever the path, and with --purge-settings,
 # which would delete what the option leaves alone.
 printf '[player]\nusernames = Bob\n' > t-86/settings.ini
@@ -1645,6 +1645,60 @@ verifier "T86 with --purge-settings, refused" \
     contient journal "--purge-settings and --no-settings are mutually exclusive"
 verifier "T86 with --purge-settings, file kept" test -f t-86/settings.ini
 joindre journal
+
+titre "T87: collection.json in English, a key for every option"
+# collection.json takes the keys of the options from CLEFS_COLLECTE: the
+# dest of argparse stay French in the code. A new option without its
+# key would stop the collection: this check names it first.
+SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t87 2> journal-t87 <<'EOF'
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+dests = set(vars(cp.analyser_arguments(["x.pgn"])))
+clefs = set(cp.CLEFS_COLLECTE)
+valeurs = list(cp.CLEFS_COLLECTE.values())
+print("missing:", sorted(dests - clefs))
+print("extra:", sorted(clefs - dests))
+print("repeated:", sorted({v for v in valeurs if valeurs.count(v) > 1}))
+print("lowercase ascii:", all(v.isascii() and v == v.lower() for v in valeurs))
+EOF
+printf '%s\n' "missing: []" "extra: []" "repeated: []" \
+    "lowercase ascii: True" > attendu-t87
+verifier "T87 one key for each option, none left over or repeated" \
+    cmp -s attendu-t87 sortie-t87
+joindre sortie-t87
+joindre journal-t87 5
+rm -rf "$DEPOT/__pycache__"
+# The keys actually written: those of the table, then those that the
+# collection adds, and no other one.
+rm -rf analysis-t-pr-*
+"$SCRIPT" t-pr.pgn --no-explorer --no-questions --depth 1 \
+    --venv "$VENV" --settings t-pr.ini --no-prompt > sortie 2> journal
+unzip -p "$(head -n 1 sortie)" '*/collection.json' > t87.json 2>/dev/null
+SCRIPT="$SCRIPT" "$PYVENV" - t87.json > sortie-t87 2> journal-t87 <<'EOF'
+import importlib.util
+import json
+import os
+import sys
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+with open(sys.argv[1], encoding="utf-8") as f:
+    donnees = json.load(f)
+ajoutees = {"token_present", "catalog_used", "side", "context_collected",
+            "pgn_encoding", "pgn_remarks", "prompt_written"}
+print(set(donnees) == set(cp.CLEFS_COLLECTE.values()) | ajoutees,
+      donnees.get("depth"), donnees.get("output_dir"))
+EOF
+egal "T87 keys of collection.json, depth and output directory" "True 1 ." \
+    "$(cat sortie-t87)"
+joindre journal-t87 5
+rm -rf "$DEPOT/__pycache__"
+rm -rf analysis-t-pr-*
 
 titre "T74: prompt only, short, to be pasted without an attachment"
 
@@ -1661,8 +1715,8 @@ egal "T74 exit code" 0 $?
 PR="$(head -n 1 sortie)"
 verifier "T74 standard output gives the prompt" test -f "$PR"
 egal "T74 a single file written, neither archive nor folder" \
-    "analyse-t-seul-.prompt.txt" \
-    "$(ls -d analyse-t-seul-* | sed 's/[0-9]\{8\}-[0-9]\{6\}//')"
+    "analysis-t-seul-.prompt.txt" \
+    "$(ls -d analysis-t-seul-* | sed 's/[0-9]\{8\}-[0-9]\{6\}//')"
 verifier "T74 the log says that no archive is written" \
     contient journal "no archive is written"
 verifier "T74 the log says to paste it alone" \
@@ -1686,7 +1740,7 @@ while IFS= read -r absent; do
 done <<'FIN'
 IAnalyze
 archive
-synthese.md
+summary.md
 Données brutes
 CAS A
 FIN
@@ -1718,7 +1772,7 @@ else
 fi
 # With --keep-folder, the working folder stays, without an archive:
 # verifier-analyse.py can read it, with the very figures of the prompt.
-rm -f analyse-t-seul-*
+rm -f analysis-t-seul-*
 "$SCRIPT" t-seul.pgn $S74 --prompt-only --keep-folder \
     > sortie 2> journal
 PR="$(head -n 1 sortie)"
@@ -1726,8 +1780,8 @@ DOSSIER74="${PR%.prompt.txt}"
 verifier "T74 --keep-folder, the evaluations stay" \
     test -f "$DOSSIER74/stockfish/evaluations.json"
 egal "T74 --keep-folder, still no archive" 0 \
-    "$(find . -maxdepth 1 -name 'analyse-t-seul-*.zip' | wc -l)"
-cp "$DOSSIER74/partie.pgn" t-partie.pgn
+    "$(find . -maxdepth 1 -name 'analysis-t-seul-*.zip' | wc -l)"
+cp "$DOSSIER74/game.pgn" t-partie.pgn
 rm -rf "$DOSSIER74"
 verifier "T74 PGN of the collection repeated as it is" \
     "$PYVENV" -c '
@@ -1741,7 +1795,7 @@ egal "T74 without instructions, nothing is specified" 0 \
 noter "  note   size of the prompt only: $(wc -c < "$PR") octets, $(lignes "$PR") lignes"
 head -n 6 "$PR" > ligne
 joindre ligne
-rm -f analyse-t-seul-*
+rm -f analysis-t-seul-*
 # What the short prompt takes from the player's answers: those that
 # they did not leave at their default, without the side, stated
 # elsewhere.
@@ -1783,7 +1837,7 @@ spec.loader.exec_module(cp)
 
 
 def coup(trait, nature, meilleurs=("x",)):
-    return {"trait": trait, "nature": nature, "meilleurs": list(meilleurs)}
+    return {"side_to_move": trait, "category": nature, "best": list(meilleurs)}
 
 
 resultats = [coup("Blancs", None), coup("Noirs", "gaffe"),
@@ -1827,7 +1881,7 @@ printf '[White "Alice"]\n[Black "Bob"]\n\n1. e4 e5 * ' > t-espace.pgn
 "$SCRIPT" t-espace.pgn $S74 --prompt-only > sortie 2> journal
 egal "T74 PGN ending with a space, no false alert" "0 1" \
     "$(grep -c 'does not carry the game' journal) $(grep -c 'to be pasted alone into the conversation' journal)"
-rm -f analyse-t-espace-*
+rm -f analysis-t-espace-*
 # Two runs within the same second bore the same name: the second
 # prompt overwrote the first one. Six runs, six files.
 mkdir -p t-meme-seconde
@@ -1861,7 +1915,7 @@ printf '1. e4 e5 2. Qh5 Nc6 3. Qxf7+ Kxf7 1-0\n' >> t-seul-inverse.pgn
 verifier "T74 checker: tags in another order, reported" \
     contient bilan "ECHEC     les balises obligatoires de la partie d'origine"
 rm -rf "$DEPOT/__pycache__"
-rm -f analyse-t-seul-*
+rm -f analysis-t-seul-*
 "$SCRIPT" t-seul.pgn $S74 --prompt-only --no-prompt > sortie 2> journal
 egal "T74 exclusive options, exit code" 2 $?
 verifier "T74 exclusive options, message" \
@@ -1881,7 +1935,7 @@ egal "T74 script copied without its template, exit code" 1 $?
 verifier "T74 script copied without its template, message" \
     contient journal "Prompt template not found"
 egal "T74 no folder or archive created by these refusals" 0 \
-    "$(find . -maxdepth 1 -name 'analyse-t-seul-*' | wc -l)"
+    "$(find . -maxdepth 1 -name 'analysis-t-seul-*' | wc -l)"
 
 titre "T03: refused options"
 
@@ -1947,7 +2001,7 @@ t-queue.pgn "Les"
 FIN
 joindre journal 3
 egal "T75 no folder or archive created by these refusals" 0 \
-    "$(ls -d analyse-t-francais* analyse-t-accolade* analyse-t-queue* 2>/dev/null | wc -l)"
+    "$(ls -d analysis-t-francais* analysis-t-accolade* analysis-t-queue* 2>/dev/null | wc -l)"
 # A file with several games is refused too, with their number.
 printf '[Event "a"]\n\n1. e4 e5 1-0\n\n[Event "b"]\n\n1. d4 d5 0-1\n' > t-deux.pgn
 printf '\n[Event "c"]\n\n1. c4 *\n' >> t-deux.pgn
@@ -1956,7 +2010,7 @@ egal "T75 several games, exit code" 1 "$RC"
 verifier "T75 several games, number announced" \
     contient journal "The PGN contains 3 games"
 egal "T75 several games, nothing is written" 0 \
-    "$(ls -d analyse-t-deux* 2>/dev/null | wc -l)"
+    "$(ls -d analysis-t-deux* 2>/dev/null | wc -l)"
 # A result repeated at the end of the file is not a second game: some
 # sites write "0-1", a blank line, then "0-1" again. The file is
 # accepted, and the log says what is ignored. Followed by a real game,
@@ -1967,7 +2021,7 @@ lancer t-repete.pgn $O
 egal "T75 repeated result, exit code" 0 "$RC"
 verifier "T75 repeated result, said in the log" \
     contient journal "Result repeated at the end of the file"
-rm -f analyse-t-repete-*
+rm -f analysis-t-repete-*
 printf '\n1. d4 d5 *\n' >> t-repete.pgn
 lancer t-repete.pgn $O
 egal "T75 repeated result then a real game, refused" 1 "$RC"
@@ -1989,7 +2043,7 @@ titre "T77: inputs that ended in an unexpected error"
 egal "T77 standard input closed, exit code" 0 "$?"
 verifier "T77 standard input closed, questions skipped" \
     contient journal "non-interactive terminal"
-rm -rf analyse-italienne-*
+rm -rf analysis-italienne-*
 # A file name that the system refuses to look at, here too long.
 lancer "$(printf '%0300d' 0).pgn" $O
 egal "T77 name too long, exit code" 1 "$RC"
@@ -2009,7 +2063,7 @@ egal "T77 game from a FEN, exit code" 1 "$RC"
 verifier "T77 game from a FEN, refused" \
     contient journal "does not start from the initial position"
 egal "T77 game from a FEN, nothing is written" 0 \
-    "$(ls -d analyse-t-depuis-fen* 2>/dev/null | wc -l)"
+    "$(ls -d analysis-t-depuis-fen* 2>/dev/null | wc -l)"
 printf '[SetUp "1"]\n' > t-fen-initiale.pgn
 printf '[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]\n\n' >> t-fen-initiale.pgn
 printf '1. e4 e5 *\n' >> t-fen-initiale.pgn
@@ -2043,17 +2097,17 @@ egal "T77 no unexpected error" 0 \
 
 titre "T06, T08: folder kept, output directory"
 
-rm -rf analyse-italienne-*
+rm -rf analysis-italienne-*
 lancer italienne.pgn $O --keep-folder
 egal "T06 exit code" 0 "$RC"
 verifier "T06 the folder stays next to the archive" test -d "${ARCH%.zip}"
-rm -rf analyse-italienne-*
+rm -rf analysis-italienne-*
 lancer italienne.pgn $O --output-dir "$TRAVAIL/t-sortie/neuf"
 egal "T08 exit code" 0 "$RC"
 verifier "T08 output directory created if needed" \
     test -d "$TRAVAIL/t-sortie/neuf"
 verifier "T08 archive written in this directory" test -f "$ARCH"
-rm -rf analyse-italienne-*
+rm -rf analysis-italienne-*
 
 titre "T81: combined purge, empty template, badly written token"
 cp "$REGL" t-purge.ini
@@ -2087,7 +2141,7 @@ lancer italienne.pgn --no-questions --depth 1 \
 egal "T27 exit code" 1 "$RC"
 verifier "T27 message" contient journal "Token missing: /nulle/part"
 egal "T27 no working folder created" 0 \
-    "$(find . -maxdepth 1 -type d -name 'analyse-italienne-*' | wc -l)"
+    "$(find . -maxdepth 1 -type d -name 'analysis-italienne-*' | wc -l)"
 
 titre "T69: purge of the settings"
 
@@ -2178,7 +2232,7 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
     printf '1. f3 e5 2. g4 Nc6 *\n' > t-mat.pgn
     lancer t-mat.pgn $MOTEUR $RAPIDE
     egal "T51 exit code" 0 "$RC"
-    extraire '*/synthese.md'
+    extraire '*/summary.md'
     grep -E '^\| [34] \|' extrait > lignes 2>/dev/null
     egal "T51 lines 3 and 4 carry mat and gaffe" 2 \
         "$(grep -c '| mat | gaffe |' lignes)"
@@ -2196,7 +2250,7 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
     egal "T51 title of a game without a Site tag" 1 \
         "$(grep -c "^# Dossier d'analyse : partie locale" extrait)"
     egal "T51 without the explorer, its folder is not announced" 0 \
-        "$(grep -c 'explorateur/NNN' extrait)"
+        "$(grep -c 'explorer/NNN' extrait)"
     # Loss between the first choice and the played move, computed apart:
     # two mates in the same direction do not give a loss of one centipawn.
     SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t51 2> journal-t51 <<'EOF'
@@ -2265,7 +2319,7 @@ EOF
     printf '1. e4 e5 2. Qh5 Nc6 3. Qxf7+ Kxf7 1-0\n' >> t-contre.pgn
     lancer t-contre.pgn $MOTEUR $RAPIDE
     egal "T72 exit code" 0 "$RC"
-    extraire '*/synthese.md'
+    extraire '*/summary.md'
     egal "T72 contradiction reported" 1 \
         "$(grep -c 'Résultat et évaluation finale se contredisent' extrait)"
     verifier "T72 declared winner and side really better" \
@@ -2281,7 +2335,7 @@ EOF
     lancer t-coherent.pgn $MOTEUR $RAPIDE
     egal "T72 consistent result, exit code" 0 "$RC"
     : > extrait
-    extraire '*/synthese.md'
+    extraire '*/summary.md'
     verifier "T72 consistent result, summary produced" \
         contient extrait "## 3. Évaluations Stockfish"
     egal "T72 consistent result, nothing is reported" 0 \
@@ -2293,7 +2347,7 @@ EOF
     lancer t-contre-noirs.pgn $MOTEUR $RAPIDE
     egal "T72 win of Black contradicted, exit code" 0 "$RC"
     : > extrait
-    extraire '*/synthese.md'
+    extraire '*/summary.md'
     verifier "T72 win of Black contradicted, reported" contient extrait \
         "victoire des Noirs, alors que Stockfish donne"
     verifier "T72 win of Black contradicted, advantage to White" \
@@ -2303,7 +2357,7 @@ EOF
     printf '1. e4 e5 2. -- Nc6 3. Nf3 *\n' > t-nul-coup.pgn
     lancer t-nul-coup.pgn $MOTEUR $RAPIDE
     egal "T52 exit code" 0 "$RC"
-    extraire '*/synthese.md'
+    extraire '*/summary.md'
     grep -E '^\| [34] \|' extrait > lignes 2>/dev/null
     verifier "T52 line of the null move without evaluation" \
         contient lignes "| 3 | 2 | Blancs | -- | - | - | - | - |"
@@ -2328,7 +2382,7 @@ EOF
     lancer italienne.pgn $MOTEUR --stockfish-moves 3 --depth 10 \
         --multipv 2 --pv-length 4 --threads 2 --hash 128
     egal "T25 exit code" 0 "$RC"
-    extraire '*/synthese.md'
+    extraire '*/summary.md'
     verifier "T25 six plies covered out of nine" contient extrait \
         "profondeur 10, multipv 2, 6 demi-coups couverts sur 9"
     egal "T25 six lines in the table" 6 \
@@ -2347,9 +2401,9 @@ EOF
         "$(grep -c 'après chaque coup joué' "$PR")"
     lancer italienne.pgn $MOTEUR --stockfish-moves 3 --depth 10 \
         --multipv 2 --pv-length 4 --threads 2 --hash 128
-    extraire '*/collecte.json'
-    verifier "T25 threads in collecte.json" contient extrait '"fils": 2'
-    verifier "T25 hash in collecte.json" contient extrait '"hachage": 128'
+    extraire '*/collection.json'
+    verifier "T25 threads in collection.json" contient extrait '"threads": 2'
+    verifier "T25 hash in collection.json" contient extrait '"hash": 128'
 
     titre "T78: engine that stops outside a search"
     # Fake engine: it announces its options, then dies at the first
@@ -2380,7 +2434,7 @@ FIN
     egal "T78 no unexpected error" 0 \
         "$(grep -c 'Unexpected error' journal)"
     joindre journal 6
-    rm -rf analyse-italienne-*
+    rm -rf analysis-italienne-*
 
     # The engine named by its bare name, or by a path with a tilde: the
     # check and the start now look for it at the same place.
@@ -2395,7 +2449,7 @@ FIN
         --venv "$VENV" --settings "$REGL" --stockfish moteur-essai \
         > sortie 2> journal
     egal "T55 --stockfish by its name, looked up in the PATH" 0 "$?"
-    rm -rf analyse-italienne-*
+    rm -rf analysis-italienne-*
 
     titre "T55: engine options out of bounds"
     lancer italienne.pgn $MOTEUR --depth 61
@@ -2411,7 +2465,7 @@ FIN
         joindre ligne
     done
     egal "T55 no working folder created" 0 \
-        "$(find . -maxdepth 1 -type d -name 'analyse-italienne-*' | wc -l)"
+        "$(find . -maxdepth 1 -type d -name 'analysis-italienne-*' | wc -l)"
 
     titre "T70: test.pgn, the test game of the repository"
     if [ -f "$DEPOT/test.pgn" ]; then
@@ -2419,9 +2473,9 @@ FIN
         lancer test.pgn $MOTEUR $RAPIDE --usernames "zoé blanche"
         egal "T70 exit code" 0 "$RC"
         egal "T70 no warning" 0 "$(grep -c 'Warning' journal)"
-        extraire '*/partie.pgn'
-        verifier "T70 partie.pgn identical to test.pgn" cmp -s extrait test.pgn
-        extraire '*/synthese.md'
+        extraire '*/game.pgn'
+        verifier "T70 game.pgn identical to test.pgn" cmp -s extrait test.pgn
+        extraire '*/summary.md'
         verifier "T70 thirty-six plies" contient extrait \
             "Nombre de demi-coups dans la ligne principale : 36."
         verifier "T70 accented tag" \
@@ -2470,8 +2524,8 @@ import chess
 import chess.pgn
 
 with zipfile.ZipFile(os.environ["ARCHIVE"]) as z:
-    nom = [n for n in z.namelist() if n.endswith("partie.pgn")][0]
-    racine = nom[:-len("partie.pgn")]
+    nom = [n for n in z.namelist() if n.endswith("game.pgn")][0]
+    racine = nom[:-len("game.pgn")]
     source = chess.pgn.read_game(io.StringIO(z.read(nom).decode("utf-8")))
     evals = json.loads(z.read(racine + "stockfish/evaluations.json"))
 
@@ -2480,7 +2534,7 @@ with zipfile.ZipFile(os.environ["ARCHIVE"]) as z:
 # evaluation of a move, on a machine where the test game is played
 # around +7, and the faulty PGN was no longer faulty on that point.
 connues = {coup.get("score") for e in evals
-           for coup in [e["joue"]] + e["meilleurs"]}
+           for coup in [e["played"]] + e["best"]}
 
 
 def invente(centiemes):
@@ -2515,16 +2569,16 @@ def construire(fautif):
         suivant = noeud.add_main_variation(coup)
         # Ply 4, a missed mate, is a blunder for any engine: the
         # faulty PGN forgets it.
-        if e["nature"] in ("erreur", "gaffe") and not (
-                fautif and e["demicoup"] == 4):
-            suivant.nags.add(chess.pgn.NAG_BLUNDER if e["nature"] == "gaffe"
+        if e["category"] in ("erreur", "gaffe") and not (
+                fautif and e["ply"] == 4):
+            suivant.nags.add(chess.pgn.NAG_BLUNDER if e["category"] == "gaffe"
                              else chess.pgn.NAG_MISTAKE)
-            meilleur = e["meilleurs"][0]
+            meilleur = e["best"][0]
             texte = ("Il fallait %s, que le moteur donne à %s contre %s "
                      "pour le coup joué." % (meilleur["san"],
                                              meilleur["score"],
-                                             e["joue"]["score"]))
-            if fautif and e["demicoup"] == 3:
+                                             e["played"]["score"]))
+            if fautif and e["ply"] == 3:
                 # Ply 3, a mate conceded: invented evaluation, percent,
                 # variation written in the comment, illegal variation,
                 # and NAG giving White as winning.
@@ -2580,10 +2634,10 @@ for b in ("Event", "Site", "Date", "Round", "White", "Black", "Result"):
 noeud = court
 for e, coup in zip(evals, source.mainline_moves()):
     noeud = noeud.add_main_variation(coup)
-    if e["nature"] in ("erreur", "gaffe"):
+    if e["category"] in ("erreur", "gaffe"):
         noeud.comment = ("Ici tu devais jouer %s, bien meilleur d'après "
                          "le tableau : prends le temps de chercher ce coup "
-                         "avant de pousser un pion." % e["meilleurs"][0]["san"])
+                         "avant de pousser un pion." % e["best"][0]["san"])
 open("t-court.pgn", "w", encoding="utf-8").write(
     court.accept(chess.pgn.StringExporter(columns=None)) + "\n")
 open("t-conversation.txt", "w", encoding="utf-8").write(
@@ -2673,7 +2727,7 @@ import os
 spec = importlib.util.spec_from_file_location("va", os.environ["VERIF"])
 va = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(va)
-dossier = [{"joue": {"score": "+0.35"}, "meilleurs": [{"score": "-1.25"}]}]
+dossier = [{"played": {"score": "+0.35"}, "best": [{"score": "-1.25"}]}]
 for cite in ("+0.35 et -1.25", "+0.4 et +0.3", "-1.3 et -1.2", "+0,35",
              "+ 0.35", "\u22121.25", "+0.5", "+ 7.77", "\u22127.77",
              "+7.777", "7.77 minutes"):
@@ -2718,8 +2772,8 @@ EOF
         egal "T73 illegal variation at the start, exit code" 1 "$?"
         cat bilan2 >> bilan
         mkdir -p t-abimee/stockfish
-        unzip -p "$ARCH" '*/partie.pgn' > t-abimee/partie.pgn
-        unzip -p "$ARCH" '*/synthese.md' > t-abimee/synthese.md
+        unzip -p "$ARCH" '*/game.pgn' > t-abimee/game.pgn
+        unzip -p "$ARCH" '*/summary.md' > t-abimee/summary.md
         "$PYVENV" "$VERIF" t-abimee t-conforme.pgn >> bilan 2>&1
         egal "T73 incomplete archive, exit code" 2 "$?"
         printf '{pas du JSON' > t-abimee/stockfish/evaluations.json
@@ -2747,10 +2801,10 @@ EOF
         egal "T82 exit code" 0 "$RC"
         DOSSIER82="${ARCH%.zip}"
         egal "T82 table: the mate is counted after the move" "1 1 1" \
-            "$(grep -c -E '\| Bxf7\+ \| #\+1 \|' "$DOSSIER82/synthese.md") $(grep -c -E '\| Ke7 \| #\+1 \|' "$DOSSIER82/synthese.md") $(grep -c -E '\| Nd5# \| #\+0 \|' "$DOSSIER82/synthese.md")"
+            "$(grep -c -E '\| Bxf7\+ \| #\+1 \|' "$DOSSIER82/summary.md") $(grep -c -E '\| Ke7 \| #\+1 \|' "$DOSSIER82/summary.md") $(grep -c -E '\| Nd5# \| #\+0 \|' "$DOSSIER82/summary.md")"
         # Three returned PGNs: quoted mates, comments limited to the
         # first four moves, a NAG contrary to the engine.
-        PARTIE="$DOSSIER82/partie.pgn" "$PYVENV" - 2> journal-t82 <<'EOF'
+        PARTIE="$DOSSIER82/game.pgn" "$PYVENV" - 2> journal-t82 <<'EOF'
 import os
 
 import chess.pgn
@@ -2835,15 +2889,15 @@ EOF
         # Parent folder: the only complete collection is taken and named,
         # an interrupted collection beside it does not get mixed in, and two
         # complete collections are refused rather than chosen.
-        mkdir -p t-parent/analyse-aaa-interrompue
-        cp "$DOSSIER82/partie.pgn" t-parent/analyse-aaa-interrompue/
-        printf '1. d4 d5 *\n' > t-parent/analyse-aaa-interrompue/partie.pgn
+        mkdir -p t-parent/analysis-aaa-interrompue
+        cp "$DOSSIER82/game.pgn" t-parent/analysis-aaa-interrompue/
+        printf '1. d4 d5 *\n' > t-parent/analysis-aaa-interrompue/game.pgn
         "$PYVENV" "$VERIF" t-parent t-82-mats.pgn --prompt-only > bilan 2>&1
         verifier "T82 parent folder, complete collection named" \
             contient bilan "collecte: $(basename "$DOSSIER82")"
         verifier "T82 parent folder, the right game is read" \
             contient bilan "OK        ligne principale identique"
-        cp -R "$DOSSIER82" t-parent/analyse-zzz-seconde
+        cp -R "$DOSSIER82" t-parent/analysis-zzz-seconde
         "$PYVENV" "$VERIF" t-parent t-82-mats.pgn --prompt-only > bilan 2>&1
         egal "T82 two complete collections, exit code" 2 "$?"
         verifier "T82 two complete collections, named" \
@@ -2866,7 +2920,7 @@ EOF
             lancer "$EX/$partie.pgn" $MOTEUR --depth 1 --threads 1 \
                 --hash 16
             egal "T83 $partie.pgn, collection done" "0 1" \
-                "$RC $(find . -maxdepth 1 -name "analyse-$partie-*.zip" | wc -l)"
+                "$RC $(find . -maxdepth 1 -name "analysis-$partie-*.zip" | wc -l)"
             # The log of the chess-mail.com export is kept: it must
             # say that the repeated result was ignored.
             [ "$partie" = partie-chess-mail ] && cp journal t-83-journal
@@ -2906,7 +2960,7 @@ FIN
     titre "M2: full analysis of the Italian, engine only"
     lancer italienne.pgn $MOTEUR --depth 10 --threads 2 --hash 64
     egal "M2 exit code" 0 "$RC"
-    extraire '*/synthese.md'
+    extraire '*/summary.md'
     egal "M2 nine lines in the Stockfish table" 9 \
         "$(grep -c -E '^\| [1-9] \| [1-5] \| (Blancs|Noirs) \| [A-Za-z]' extrait)"
     grep -E '^Moteur' extrait | cut -c1-110 > ligne
@@ -2951,7 +3005,7 @@ collecter() {
     : > section2
     : > table
     if [ -n "$ARCH" ] && [ -f "$ARCH" ]; then
-        unzip -p "$ARCH" '*/synthese.md' > synthese 2>/dev/null
+        unzip -p "$ARCH" '*/summary.md' > synthese 2>/dev/null
         awk '/^## 2\./ {dedans = 1} /^## 3\./ {dedans = 0} dedans' \
             synthese > section2
         grep -E '^\| [0-9]+ \|' section2 > table 2>/dev/null
@@ -3124,9 +3178,9 @@ titre "T18: speed and rating filters"
 collecter polonaise.pgn $EXPL --database lichess --min-moves 0 \
     --speeds ' Rapid,CLASSICAL,rapid' --ratings 1000,0
 sain "T18"
-unzip -p "$ARCH" '*/collecte.json' > json 2>/dev/null
-verifier "T18 speeds normalized" contient json '"cadences": "rapid,classical"'
-verifier "T18 ratings normalized" contient json '"classements": "0,1000"'
+unzip -p "$ARCH" '*/collection.json' > json 2>/dev/null
+verifier "T18 speeds normalized" contient json '"speeds": "rapid,classical"'
+verifier "T18 ratings normalized" contient json '"ratings": "0,1000"'
 verifier "T18 filters repeated in the summary" \
     contient section2 'Cadences : `rapid,classical`'
 head -n 1 table > ligne
@@ -3207,9 +3261,9 @@ titre "T29: the token is not in the archive"
 unzip -p "$ARCH" > contenu 2>/dev/null
 egal "T29 token absent from the archive of T33" 0 "$(compte_jeton contenu)"
 egal "T29 token absent from the log of T33" 0 "$(compte_jeton journal)"
-unzip -p "$ARCH" '*/collecte.json' > json 2>/dev/null
-verifier "T29 collecte.json only records its presence" \
-    contient json '"jeton_present": true'
+unzip -p "$ARCH" '*/collection.json' > json 2>/dev/null
+verifier "T29 collection.json only records its presence" \
+    contient json '"token_present": true'
 
 # --- Lichess source ------------------------------------------------------
 
@@ -3222,7 +3276,7 @@ if [ -n "$ID_PARTIE" ]; then
         contient journal "https://lichess.org/game/export/$ID_PARTIE"
     ARCH=$(head -n 1 sortie)
     case $ARCH in
-        analyse-"$ID_PARTIE"-*.zip) NOM_OK=oui ;;
+        analysis-"$ID_PARTIE"-*.zip) NOM_OK=oui ;;
         *) NOM_OK=non ;;
     esac
     egal "T24 by URL, name of the archive" oui "$NOM_OK"
@@ -3258,7 +3312,7 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
     sain "N2"
     unzip -l "$ARCH" > liste 2>/dev/null
     verifier "N2 answers of the explorer in the archive" \
-        contient liste "/explorateur/001-e2e4.json"
+        contient liste "/explorer/001-e2e4.json"
     verifier "N2 evaluations of the engine in the archive" \
         contient liste "/stockfish/evaluations.json"
     awk '/^## 3\./ {dedans = 1} /^### 3 bis/ {dedans = 0} dedans' synthese \

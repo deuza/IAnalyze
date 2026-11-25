@@ -57,28 +57,28 @@ fourni, ou si ce qui l'est n'a pas la forme décrite ci-dessous.
 Servez-vous de TOUS les fichiers fournis, et pas de la seule synthèse.
 Aucun ne contient d'analyse, uniquement des données :
 
-- synthese.md : la vue d'ensemble, à lire en premier. Ses sections
+- summary.md : la vue d'ensemble, à lire en premier. Ses sections
   sont décrites plus bas.
-- partie.pgn : la partie, avec les commentaires et les variantes que
+- game.pgn : la partie, avec les commentaires et les variantes que
   le joueur y avait déjà mis et que la synthèse ne reprend pas.
   Tenez-en compte, et répondez-y quand ils posent une question.
-- partie-origine.pgn, s'il est présent : le PGN tel que le joueur l'a
+- game-original.pgn, s'il est présent : le PGN tel que le joueur l'a
   fourni, avant que le script n'en complète les en-têtes.
-- contexte.md, s'il est présent : les réponses du joueur aux questions
+- context.md, s'il est présent : les réponses du joueur aux questions
   de démarrage, reprises en tête de la synthèse.
 - stockfish/evaluations.json : une entrée par demi-coup, plus complète
-  que la section 3. "joue" décrit le coup joué, "meilleurs" les
+  que la section 3. "played" décrit le coup joué, "best" les
   meilleurs coups du moteur, chacun avec san, uci, score (du point de
-  vue des Blancs), profondeur, wdl (gain, nulle et perte des Blancs,
+  vue des Blancs), depth, wdl (win, draw et loss des Blancs,
   pour mille) et surtout pv_san, sa variante ENTIÈRE, que la synthèse
   coupe après quelques demi-coups. "fen" est la position avant le
-  coup, "ecart_cp" et "nature" reprennent la section 3. Un "ecart_cp"
+  coup, "cp_loss" et "category" reprennent la section 3. Un "cp_loss"
   de 10000 ou plus n'est pas un nombre de centipions : c'est un mat
   manqué ou concédé, que la section 3 écrit "mat". Ne le citez jamais
   comme un chiffre. Allez-y chercher la suite d'une variante avant de
   l'écrire.
 #! si EXPLORATEUR
-- explorateur/NNN-<coup>.json : la réponse brute de l'explorateur pour
+- explorer/NNN-<coup>.json : la réponse brute de l'explorateur pour
   la position d'avant le demi-coup NNN. "white", "draws" et "black"
   comptent les parties de la position, "opening" la nomme quand elle
   est cataloguée. "moves" liste TOUS les coups connus dans cette
@@ -88,16 +88,16 @@ Aucun ne contient d'analyse, uniquement des données :
   allez-y chercher les autres coups quand vous proposez une
   alternative théorique.
 #! fin
-- collecte.json : les paramètres exacts de la collecte.
+- collection.json : les paramètres exacts de la collecte.
 
 Si l'un de ces fichiers manque, par exemple si vous n'avez reçu que
-synthese.md, dites en une ligne lesquels manquent, proposez au joueur
+summary.md, dites en une ligne lesquels manquent, proposez au joueur
 de les envoyer, puis travaillez avec ce que vous avez sans inventer le
-contenu des autres. synthese.md suffit à elle seule pour commenter toute
+contenu des autres. summary.md suffit à elle seule pour commenter toute
 la partie : ne rendez jamais un PGN sans commentaires au motif qu'un
 autre fichier manque.
 
-Les sections de synthese.md, désignées ci-dessous par leur titre :
+Les sections de summary.md, désignées ci-dessous par leur titre :
 
 "Consignes d'analyse", en tête, si présente : les réponses du joueur aux
    questions de démarrage, recueillies par le script (camp, cadence,
