@@ -1,68 +1,72 @@
 #!/usr/bin/env python3
 """
-verifier-analyse.py : contrôle le PGN annoté rendu par un LLM.
+verifier-analyse.py: checks the annotated PGN returned by an LLM.
 
-Le script compare ce qu'un LLM a produit à l'archive d'IAnalyze qu'il a
-reçue, et sort le même bilan pour chaque LLM essayé. Il ne juge pas la
-qualité du commentaire : il vérifie ce qui se vérifie à la machine.
+The script compares what an LLM produced with the IAnalyze archive it
+received, and gives the same report for each LLM tried. It does not
+judge the quality of the commentary: it checks what a machine can
+check.
 
     ./verifier-analyse.py ARCHIVE PGN [--synthese FICHIER] [--nom NOM]
                           [--prompt-seul] [--perimetre N]
 
-    ARCHIVE     le zip produit par ianalyze.py, ou son dossier
-                décompressé. Un dossier qui contient ce dernier convient
-                aussi, s'il ne contient qu'une collecte complète
-    PGN         le fichier .pgn rendu par le LLM, ou un tiret, "-", si le
-                LLM n'a rendu aucun fichier : seule la synthèse est alors
-                contrôlée
-    --synthese  facultatif : la synthèse finale du LLM, copiée de la
-                conversation dans un fichier texte. Les FEN et les
-                évaluations qu'elle cite sont alors contrôlées aussi
-    --nom       facultatif : nom du modèle essayé, repris en tête du bilan
+    ARCHIVE     the zip produced by ianalyze.py, or its unzipped
+                folder. A folder that contains the latter also does,
+                if it contains only one complete collection
+    PGN         the .pgn file returned by the LLM, or a dash, "-", if
+                the LLM returned no file: only the summary is then
+                checked
+    --synthese  optional: the final summary of the LLM, copied from the
+                conversation into a text file. The FEN and the
+                evaluations it quotes are then checked too
+    --nom       optional: name of the model tried, repeated at the top
+                of the report
     --prompt-seul
-                le PGN répond au prompt court de ianalyze.py --prompt-seul.
-                Ce prompt demande moins : les contrôles qu'il ne fonde pas
-                sont sautés (lignes de 79 caractères, résumé avant le coup
-                1, NAG, pour cent, tiret cadratin, balises Annotator et
-                PlyCount, longueur des variantes, nombre de FEN)
+                the PGN answers the short prompt of ianalyze.py
+                --prompt-seul. This prompt asks for less: the checks it
+                does not ground are skipped (lines of 79 characters,
+                summary before move 1, NAG, percent, em dash, Annotator
+                and PlyCount tags, length of the variations, number of
+                FEN)
     --perimetre N
-                périmètre convenu avec le LLM, en coups : les erreurs et
-                gaffes jouées après le coup N ne sont pas attendues. Sans
-                cette option, le périmètre est celui que le joueur a donné
-                au script, lu dans les consignes de l'archive
+                scope agreed with the LLM, in moves: the mistakes and
+                blunders played after move N are not expected. Without
+                this option, the scope is the one that the player gave
+                to the script, read in the instructions of the archive
 
-Ce qui est contrôlé :
+What is checked:
 
-  1. le PGN se lit, en UTF-8, sans coup illégal, variantes comprises ;
-  2. la ligne principale est celle de la partie d'origine ;
-  3. le format demandé par le prompt : longueur des lignes, accolades,
-     pour cent, tiret cadratin, notation suffixe, balises, résultat ;
-  4. chaque erreur et chaque gaffe relevée par Stockfish est commentée,
-     dans le périmètre convenu ;
-  5. chaque évaluation citée existe bien dans les données du moteur ;
-  6. les variantes : nombre, longueur, appui sur une ligne du moteur,
-     et celles qu'un LLM écrit à tort à l'intérieur d'un commentaire ;
-  7. avec --synthese : les FEN citées sont valides et viennent du dossier ;
-  8. avec --synthese : les évaluations citées dans la conversation
-     existent dans les données du moteur.
+  1. the PGN reads, in UTF-8, without an illegal move, variations
+     included;
+  2. the main line is that of the original game;
+  3. the format requested by the prompt: line length, braces, percent,
+     em dash, suffix notation, tags, result;
+  4. each mistake and each blunder found by Stockfish is commented on,
+     within the agreed scope;
+  5. each evaluation quoted does exist in the engine data;
+  6. the variations: number, length, support from an engine line, and
+     those that an LLM wrongly writes inside a comment;
+  7. with --synthese: the FEN quoted are valid and come from the folder;
+  8. with --synthese: the evaluations quoted in the conversation exist
+     in the engine data.
 
-Trois pièges relevés sur de vrais PGN de LLM sont nommés en clair : une
-ligne vide dans le corps de la partie, où python-chess arrête sa lecture,
-une variante écrite à l'intérieur d'un commentaire, qui n'est alors que
-du texte, et un NAG de position contraire à l'évaluation du moteur.
+Three traps found in real LLM PGNs are named plainly: a blank line in
+the body of the game, where python-chess stops reading, a variation
+written inside a comment, which is then only text, and a position NAG
+contrary to the engine evaluation.
 
-Chaque ligne du bilan porte l'un de ces repères :
+Each line of the report carries one of these markers:
 
-    OK         conforme
-    ECHEC      contraire à une consigne impérative du prompt
-    ATTENTION  à regarder de près, sans être forcément fautif
-    INFO       mesure donnée pour comparer les LLM entre eux
+    OK         compliant
+    ECHEC      contrary to a mandatory instruction of the prompt
+    ATTENTION  to be looked at closely, without being necessarily wrong
+    INFO       measure given to compare the LLMs with one another
 
-Code de retour : 0 sans ECHEC, 1 avec au moins un ECHEC, 2 si un fichier
-ne peut pas être lu ou si l'archive n'est pas celle d'IAnalyze.
+Exit code: 0 without ECHEC, 1 with at least one ECHEC, 2 if a file
+cannot be read or if the archive is not an IAnalyze one.
 
-Le script demande python-chess. S'il ne le trouve pas, il se relance avec
-l'environnement virtuel d'IAnalyze, ~/.local/share/IAnalyze/venv.
+The script needs python-chess. If it does not find it, it restarts
+with the virtual environment of IAnalyze, ~/.local/share/IAnalyze/venv.
 """
 
 from __future__ import annotations
@@ -85,8 +89,8 @@ try:
     import chess
     import chess.pgn
 except ImportError:
-    # Même principe que ianalyze.py : python-chess vit dans un
-    # environnement virtuel dédié, jamais dans le Python du système.
+    # Same principle as ianalyze.py: python-chess lives in a dedicated
+    # virtual environment, never in the system's Python.
     interpreteur = os.path.expanduser(VENV_IANALYZE)
     if os.path.exists(interpreteur) and sys.executable != interpreteur:
         os.execv(interpreteur, [interpreteur] + sys.argv)
@@ -94,61 +98,62 @@ except ImportError:
         "Module chess introuvable. Lancez d'abord, depuis le dépôt "
         "IAnalyze : ./ianalyze.py --installer-venv")
 
-# python-chess écrit lui-même chaque coup illégal sur la sortie d'erreur,
-# en anglais. Le bilan les reprend tous : ces lignes feraient doublon.
+# python-chess itself writes each illegal move on standard error, in
+# English. The report repeats all of them: these lines would be
+# duplicates.
 logging.getLogger("chess.pgn").setLevel(logging.CRITICAL)
 
-#: Les sept balises obligatoires du standard PGN, dans leur ordre.
+#: The seven mandatory tags of the PGN standard, in their order.
 SEPT_BALISES = ("Event", "Site", "Date", "Round", "White", "Black", "Result")
 
-#: Longueur maximale d'une ligne, demandée par le prompt.
+#: Maximum length of a line, requested by the prompt.
 LONGUEUR_MAX = 79
 
-#: Fourchettes données par le prompt, reprises ici pour situer un LLM.
+#: Ranges given by the prompt, repeated here to situate an LLM.
 VARIANTE_MAX = 5
 
-#: Clef sous laquelle lire_archive range le nom de la collecte retenue,
-#: quand l'archive donnée est le dossier parent de cette collecte.
+#: Key under which lire_archive stores the name of the collection chosen,
+#: when the archive given is the parent folder of that collection.
 COLLECTE = "collecte retenue"
 COMMENTES_MIN, COMMENTES_MAX = 15, 25
 
-#: Une évaluation écrite dans un commentaire : "+0.35", "-1,20", "#-3".
-#: Sont reconnus aussi le signe suivi d'une espace, "+ 0.35", le signe
-#: moins typographique, et une troisième décimale. Un nombre sans signe
-#: n'est pas pris pour une évaluation : ce serait confondre "7.5 minutes"
-#: avec un score. Un mat fait exception : IAnalyze écrit "#+2" celui des
-#: Blancs, et un LLM le cite aussi bien "#2".
+#: An evaluation written in a comment: "+0.35", "-1,20", "#-3". Also
+#: recognized: the sign followed by a space, "+ 0.35", the typographic
+#: minus sign, and a third decimal. A number without a sign is not taken
+#: for an evaluation: that would confuse "7.5 minutes" with a score. A
+#: mate is the exception: IAnalyze writes White's as "#+2", and an LLM
+#: quotes it as "#2" just as well.
 RE_EVALUATION = re.compile(
     r"(?<![\w.,])([+\-\u2212\u2013][ \u00a0]?\d+[.,]\d{1,3}"
     r"|#[+\-\u2212\u2013]?\d+)(?![\d])")
 
-#: Une variante écrite dans un commentaire : "(12... Nd4 13. Qd2 Nxe2)". Ce
-#: n'est alors que du texte, que SCID ne permet pas de rejouer.
+#: A variation written in a comment: "(12... Nd4 13. Qd2 Nxe2)". It is
+#: then only text, which SCID cannot replay.
 RE_VARIANTE_TEXTE = re.compile(r"\(\s*(\d+)\s*(\.{1,3})\s*([^()]*)\)")
 
-#: Un coup en notation algébrique, signes d'échec et d'appréciation compris.
+#: A move in algebraic notation, check and annotation signs included.
 RE_SAN = re.compile(
     r"(O-O(?:-O)?|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?)[+#]?[!?]*$")
 
-#: NAG d'évaluation de la position, selon le camp qu'ils donnent mieux.
+#: Position evaluation NAGs, according to the side they give as better.
 NAG_BLANCS_MIEUX = {14, 16, 18, 20}
 NAG_NOIRS_MIEUX = {15, 17, 19, 21}
 
-#: NAG attendu par défaut pour chaque nature de coup, d'après le prompt.
+#: NAG expected by default for each category of move, from the prompt.
 NAG_NATURE = {"imprécision": 6, "erreur": 2, "gaffe": 4}
 
-#: Une position FEN dans un texte : six champs, le premier à huit rangées.
+#: A FEN position in a text: six fields, the first one with eight ranks.
 RE_FEN = re.compile(
     r"((?:[pnbrqkPNBRQK1-8]{1,8}/){7}[pnbrqkPNBRQK1-8]{1,8}"
     r" [wb] (?:-|[KQkq]{1,4}) (?:-|[a-h][36]) \d+ \d+)")
 
 
 class ArchiveInutilisable(Exception):
-    """L'archive se lit, mais son contenu n'est pas celui d'IAnalyze."""
+    """The archive reads, but its content is not that of IAnalyze."""
 
 
 class Bilan:
-    """Recueille les lignes du bilan et compte les échecs."""
+    """Gathers the lines of the report and counts the failures."""
 
     def __init__(self) -> None:
         self.lignes: list[str] = []
@@ -165,7 +170,7 @@ class Bilan:
         elif repere == "ATTENTION":
             self.attentions += 1
         self.lignes.append("  %-9s %s" % (repere, texte))
-        # Dix détails au plus : au delà, le bilan devient illisible.
+        # Ten details at most: beyond that, the report becomes unreadable.
         details = list(details or [])
         for d in details[:10]:
             self.lignes.append("            - %s" % d)
@@ -175,7 +180,7 @@ class Bilan:
 
     def controle(self, vrai: bool, texte: str, details=None,
                  grave: bool = True) -> None:
-        """OK si vrai, sinon ECHEC, ou ATTENTION si grave est faux."""
+        """OK if true, otherwise ECHEC, or ATTENTION if grave is false."""
         if vrai:
             self.noter("OK", texte)
         else:
@@ -183,21 +188,21 @@ class Bilan:
 
 
 # ---------------------------------------------------------------------------
-# Lecture de l'archive
+# Reading the archive
 # ---------------------------------------------------------------------------
 
 def lire_archive(chemin: pathlib.Path) -> dict[str, str]:
     """
-    Rend les fichiers utiles de l'archive : partie.pgn, synthese.md et
-    stockfish/evaluations.json, depuis un zip ou un dossier décompressé.
+    Returns the useful files of the archive: partie.pgn, synthese.md and
+    stockfish/evaluations.json, from a zip or an unzipped folder.
     """
     voulus = ("partie.pgn", "synthese.md", "stockfish/evaluations.json")
     trouves: dict[str, str] = {}
     if chemin.is_dir():
-        # Le dossier peut être celui de la collecte ou son parent. Les
-        # trois fichiers viennent toujours du même dossier : pris un par
-        # un, ils mêlaient la partie d'une collecte interrompue aux
-        # évaluations d'une autre.
+        # The folder may be that of the collection or its parent. The
+        # three files always come from the same folder: taken one by
+        # one, they mixed the game of an interrupted collection with
+        # the evaluations of another one.
         dossier = chemin
         if not any((chemin / nom).is_file() for nom in voulus):
             completes = [d for d in sorted(chemin.iterdir()) if d.is_dir()
@@ -228,20 +233,20 @@ def lire_archive(chemin: pathlib.Path) -> dict[str, str]:
 
 
 def ligne_principale(partie: chess.pgn.Game) -> list[str]:
-    """Coups de la ligne principale, en UCI."""
+    """Moves of the main line, in UCI."""
     return [coup.uci() for coup in partie.mainline_moves()]
 
 
 # ---------------------------------------------------------------------------
-# Contrôles
+# Checks
 # ---------------------------------------------------------------------------
 
 def retirer_lignes_vides(texte: str) -> tuple[str, list[int]]:
     """
-    Retire les lignes vides du corps de la partie, après les balises.
+    Removes the blank lines from the body of the game, after the tags.
 
-    Rend le texte ainsi réparé et les numéros des lignes retirées. Les
-    lignes vides de fin de fichier ne comptent pas.
+    Returns the text thus repaired and the numbers of the lines removed.
+    The blank lines at the end of the file do not count.
     """
     lignes = texte.split("\n")
     debut = 0
@@ -258,12 +263,12 @@ def retirer_lignes_vides(texte: str) -> tuple[str, list[int]]:
 
 def lire_partie(texte: str) -> chess.pgn.Game | None:
     """
-    Lit la première partie du texte, ou rend None.
+    Reads the first game of the text, or returns None.
 
-    Sur certains PGN abîmés, un coup illégal suivi d'une parenthèse
-    fermante par exemple, python-chess ne consigne pas l'erreur : il
-    lève IndexError. Le fichier est alors tenu pour illisible, ce qui
-    donne un ECHEC au bilan et non une trace Python.
+    On some damaged PGNs, an illegal move followed by a closing
+    parenthesis for example, python-chess does not record the error: it
+    raises IndexError. The file is then held as unreadable, which gives an
+    ECHEC in the report and not a Python traceback.
     """
     try:
         return chess.pgn.read_game(io.StringIO(texte))
@@ -273,11 +278,10 @@ def lire_partie(texte: str) -> chess.pgn.Game | None:
 
 def san_ou_uci(noeud: chess.pgn.ChildNode) -> str:
     """
-    Le coup en notation algébrique, ou en UCI s'il n'est pas jouable.
+    The move in algebraic notation, or in UCI if it cannot be played.
 
-    Après une erreur de lecture, python-chess peut laisser dans l'arbre un
-    coup illégal dans sa position : san() s'arrête alors sur une
-    assertion.
+    After a reading error, python-chess may leave in the tree a move that
+    is illegal in its position: san() then stops on an assertion.
     """
     try:
         return noeud.san()
@@ -286,7 +290,7 @@ def san_ou_uci(noeud: chess.pgn.ChildNode) -> str:
 
 
 def controler_lecture(b: Bilan, brut: bytes) -> tuple[str, chess.pgn.Game]:
-    """Encodage, puis lecture par python-chess."""
+    """Encoding, then reading by python-chess."""
     b.titre("1. Lecture du PGN")
     try:
         texte = brut.decode("utf-8")
@@ -297,24 +301,24 @@ def controler_lecture(b: Bilan, brut: bytes) -> tuple[str, chess.pgn.Game]:
     if texte.startswith("\ufeff"):
         texte = texte[1:]
         b.noter("ATTENTION", "marque d'ordre des octets en tête de fichier")
-    # Fins de ligne ramenées à LF : un fichier venu de Windows garderait
-    # sinon un retour chariot en bout de chaque ligne, compté comme un
-    # caractère de plus dans le contrôle des 79 colonnes.
+    # Line ends turned into LF: a file coming from Windows would otherwise
+    # keep a carriage return at the end of each line, counted as one more
+    # character in the check of the 79 columns.
     texte = texte.replace("\r\n", "\n").replace("\r", "\n")
     partie = lire_partie(texte)
     if partie is None:
         b.noter("ECHEC", "aucune partie lisible dans le fichier")
         raise SystemExit(afficher(b, 1))
-    # Une ligne vide dans le corps de la partie : la spécification PGN en
-    # fait, au format d'export, la fin du corps, et python-chess y arrête
-    # sa lecture. Le reste du fichier devient une seconde partie, sans
-    # balises. Le défaut est nommé, puis les contrôles continuent sur le
-    # fichier réparé, pour mesurer tout de même le travail rendu.
+    # A blank line in the body of the game: the PGN specification makes it,
+    # in export format, the end of the body, and python-chess stops reading
+    # there. The rest of the file becomes a second game, without tags. The
+    # flaw is named, then the checks go on with the repaired file, to
+    # measure the work returned all the same.
     #
-    # Toute ligne vide du corps est relevée, et pas seulement celle qui
-    # raccourcit la ligne principale : placée avant une variante ou avant
-    # le marqueur de fin, elle cache la suite sans changer le compte des
-    # coups, et ce qui la suit ne serait jamais contrôlé.
+    # Every blank line of the body is reported, and not only the one that
+    # shortens the main line: placed before a variation or before the end
+    # marker, it hides what follows without changing the move count, and
+    # what follows it would never be checked.
     repare, retirees = retirer_lignes_vides(texte)
     if retirees:
         relue = lire_partie(repare)
@@ -332,8 +336,8 @@ def controler_lecture(b: Bilan, brut: bytes) -> tuple[str, chess.pgn.Game]:
             b.noter("INFO", "les contrôles suivants portent sur le fichier "
                     "une fois ces lignes retirées")
             texte, partie = repare, relue
-    # python-chess n'arrête pas la lecture sur un coup illégal : il le
-    # consigne dans errors et abandonne la variante à cet endroit.
+    # python-chess does not stop reading on an illegal move: it records
+    # it in errors and gives up on the variation at that point.
     erreurs = [str(e).split(" while parsing")[0] for e in partie.errors]
     b.controle(not erreurs, "aucun coup illégal, variantes comprises "
                "(%d erreur(s) de lecture)" % len(erreurs), erreurs)
@@ -342,7 +346,7 @@ def controler_lecture(b: Bilan, brut: bytes) -> tuple[str, chess.pgn.Game]:
 
 def controler_partie(b: Bilan, partie: chess.pgn.Game,
                      origine: chess.pgn.Game) -> bool:
-    """La ligne principale doit être celle de la partie d'origine."""
+    """The main line must be that of the original game."""
     b.titre("2. Ligne principale")
     rendue, attendue = ligne_principale(partie), ligne_principale(origine)
     identique = rendue == attendue
@@ -361,8 +365,8 @@ def controler_partie(b: Bilan, partie: chess.pgn.Game,
         details.append("%d demi-coups rendus, %d attendus"
                        % (len(rendue), len(attendue)))
         if partie.errors:
-            # Sur un coup illégal, python-chess abandonne la lecture de
-            # la suite : la ligne principale peut en sortir tronquée.
+            # On an illegal move, python-chess gives up reading what
+            # follows: the main line may come out truncated.
             details.append("peut découler d'un coup illégal relevé en 1")
     b.controle(identique, "ligne principale identique à la partie d'origine "
                "(%d demi-coups)" % len(attendue), details)
@@ -370,7 +374,7 @@ def controler_partie(b: Bilan, partie: chess.pgn.Game,
 
 
 def commentaires(partie: chess.pgn.Game) -> list[tuple[str, str]]:
-    """Tous les commentaires du PGN, avec l'endroit où ils se trouvent."""
+    """All the comments of the PGN, with the place where they are."""
     trouves = []
     if partie.comment:
         trouves.append(("avant le coup 1", partie.comment))
@@ -392,13 +396,13 @@ def commentaires(partie: chess.pgn.Game) -> list[tuple[str, str]]:
 
 def accolades_orphelines(texte: str) -> list[str]:
     """
-    Lignes où une accolade fermante apparaît hors de tout commentaire.
+    Lines where a closing brace appears outside any comment.
 
-    Une accolade fermante écrite dans un commentaire le termine trop
-    tôt : la fin du commentaire tombe dans le corps de la partie, où
-    python-chess l'ignore mot après mot, sans erreur. Ce qui reste d'elle
-    est une seconde accolade fermante, que rien n'a ouverte : c'est elle
-    que l'on cherche, dans le texte brut.
+    A closing brace written in a comment ends it too early: the end of the
+    comment falls into the body of the game, where python-chess ignores it
+    word after word, without an error. What remains of it is a second
+    closing brace, which nothing opened: that is the one we look for, in
+    the raw text.
     """
     trouvees = []
     ouvert = False
@@ -411,7 +415,7 @@ def accolades_orphelines(texte: str) -> list[str]:
             elif c == "{":
                 ouvert = True
             elif c == ";":
-                # Commentaire de fin de ligne.
+                # End-of-line comment.
                 break
             elif c == "}":
                 trouvees.append("ligne %d : accolade fermante en trop" % n)
@@ -420,11 +424,11 @@ def accolades_orphelines(texte: str) -> list[str]:
 
 def balises_du_texte(texte: str) -> list[str]:
     """
-    Noms des balises dans l'ordre où le fichier les écrit.
+    Names of the tags in the order in which the file writes them.
 
-    python-chess range toujours les sept balises obligatoires en tête,
-    quel que soit l'ordre du fichier, et crée celles qui manquent : son
-    dictionnaire ne dit donc rien de ce que le LLM a écrit.
+    python-chess always puts the seven mandatory tags first, whatever the
+    order of the file, and creates the missing ones: its dictionary
+    therefore says nothing of what the LLM wrote.
     """
     noms = []
     for ligne in texte.split("\n"):
@@ -441,14 +445,14 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
                      court: bool = False,
                      balises_origine: list[str] | None = None) -> None:
     """
-    Contraintes de format impératives du prompt.
+    Mandatory format constraints of the prompt.
 
-    `court` vaut vrai pour un PGN rendu d'après le prompt court de
-    --prompt-seul : seuls restent les contrôles que ce prompt fonde, les
-    accolades, les balises recopiées et le marqueur de fin.
-    `balises_origine` donne alors les noms des balises de la partie
-    d'origine, dans l'ordre où son fichier les écrit : parmi les sept
-    balises obligatoires du standard, seules celles-là sont attendues.
+    `court` is true for a PGN returned from the short prompt of
+    --prompt-seul: only the checks that this prompt grounds remain, the
+    braces, the tags copied and the end marker.
+    `balises_origine` then gives the names of the tags of the original
+    game, in the order in which its file writes them: among the seven
+    mandatory tags of the standard, only those are expected.
     """
     b.titre("3. Format")
     lignes = texte.split("\n")
@@ -459,8 +463,8 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
                    % LONGUEUR_MAX, longues)
 
     notes = commentaires(partie)
-    # Une accolade ouvrante dans un commentaire reste dans son texte ; une
-    # fermante le termine trop tôt, et ne se voit que dans le texte brut.
+    # An opening brace in a comment stays in its text; a closing one
+    # ends it too early, and only shows in the raw text.
     accolades = [lieu for lieu, t in notes if "{" in t or "}" in t]
     accolades += accolades_orphelines(texte)
     b.controle(not accolades, "aucune accolade dans un commentaire",
@@ -477,23 +481,23 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
         b.controle(not virgules, "aucun point-virgule dans un commentaire",
                    virgules, grave=False)
 
-        # Notation suffixe (Qxa8?) : cherchée hors des commentaires, où
-        # un point d'interrogation est simplement de la ponctuation.
+        # Suffix notation (Qxa8?): looked for outside the comments, where
+        # a question mark is simply punctuation.
         suffixes = sorted(set(re.findall(
             r"\b(?:[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?"
             r"|O-O(?:-O)?)[+#]?[!?]+", hors_commentaires)))
         b.controle(not suffixes, "pas de notation suffixe, les NAG seuls",
                    suffixes)
 
-    # Balises : les sept obligatoires d'abord, les autres par ordre
-    # alphabétique, et leurs valeurs reprises de la partie d'origine.
+    # Tags: the seven mandatory ones first, the others in alphabetical
+    # order, and their values taken from the original game.
     noms = balises_du_texte(texte)
     if court:
-        # Le prompt court demande de recopier les balises, sans plus :
-        # parmi les sept du standard, seules celles que porte la partie
-        # d'origine sont attendues, dans l'ordre où elle les écrit. Les
-        # exiger toutes donnait un échec à un PGN fidèle quand la partie
-        # fournie n'en portait que trois.
+        # The short prompt asks to copy the tags, nothing more:
+        # among the seven of the standard, only those that the original
+        # game carries are expected, in the order in which it writes them.
+        # Requiring all of them gave a failure to a faithful PGN when the
+        # game given carried only three.
         attendues = [n for n in (balises_origine or [])
                      if n in SEPT_BALISES]
         rendues = [n for n in noms if n in attendues]
@@ -530,7 +534,7 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
                    "balise PlyCount : \"%s\", attendu \"%d\""
                    % (compte, demi_coups), grave=False)
 
-    # Marqueur de fin : le dernier mot du fichier, hors commentaires.
+    # End marker: the last word of the file, outside the comments.
     mots = hors_commentaires.split()
     marqueur = mots[-1] if mots else ""
     b.controle(marqueur == partie.headers.get("Result"),
@@ -540,14 +544,14 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
 
 def perimetre_convenu(synthese_archive: str) -> int | None:
     """
-    Nombre de coups du périmètre que le joueur a donné au script, ou None
-    pour la partie complète.
+    Number of moves of the scope that the player gave to the script, or
+    None for the whole game.
 
-    La réponse est dans les consignes de synthese.md, sur la ligne
-    "- Périmètre : ...". C'est un texte libre : le premier nombre qu'il
-    porte est pris pour le nombre de coups, "les 20 premiers coups"
-    donnant 20. Une réponse laissée par défaut, ou sans nombre, vaut la
-    partie complète.
+    The answer is in the instructions of synthese.md, on the line
+    "- Périmètre : ...". It is free text: the first number it carries is
+    taken for the number of moves, "the first 20 moves" giving 20. An
+    answer left at its default, or without a number, means the whole
+    game.
     """
     m = re.search(r"(?m)^- Périmètre : (.*)$", synthese_archive)
     if m is None or m.group(1).rstrip().endswith("(défaut)"):
@@ -561,14 +565,14 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
                          court: bool = False,
                          perimetre: int | None = None) -> None:
     """
-    Chaque erreur et chaque gaffe doit être commentée.
+    Each mistake and each blunder must be commented on.
 
-    Le prompt court ne demande ni résumé avant le premier coup ni NAG :
-    avec `court`, ces deux points ne sont pas contrôlés.
+    The short prompt asks for neither a summary before the first move nor
+    NAGs: with `court`, these two points are not checked.
 
-    Le prompt limite les commentaires au périmètre convenu avec le
-    joueur : avec `perimetre`, en coups, une erreur jouée au-delà n'est
-    pas attendue, et son absence n'est pas une faute.
+    The prompt limits the comments to the scope agreed with the player:
+    with `perimetre`, in moves, a mistake played beyond it is not
+    expected, and its absence is not a fault.
     """
     b.titre("4. Coups commentés")
     if not court:
@@ -618,11 +622,11 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
                    "NAG", sans_nag, grave=False)
 
     if court:
-        # Le prompt court ne demande aucun NAG : ni leur accord avec le
-        # moteur ni leur nature ne sont contrôlés.
+        # The short prompt asks for no NAG: neither their agreement with the
+        # engine nor their category is checked.
         return
-    # NAG de position contraire au moteur : "léger avantage noir" posé sur
-    # un coup après lequel Stockfish donne les Blancs nettement mieux.
+    # Position NAG contrary to the engine: "slight advantage for Black" put
+    # on a move after which Stockfish gives White as clearly better.
     contraires, accords, ecarts = [], 0, []
     for e in evaluations:
         indice = e["demicoup"] - 1
@@ -660,16 +664,16 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
 
 def controler_chiffres(b: Bilan, textes: list[tuple[str, str]],
                        evaluations: list[dict], titre: str) -> None:
-    """Une évaluation citée doit exister dans les données du moteur."""
+    """A quoted evaluation must exist in the engine data."""
     b.titre(titre)
     connues = set()
     for e in evaluations:
         for coup in [e["joue"]] + e["meilleurs"]:
             score = coup.get("score") or ""
             connues.add(score)
-            # Un LLM arrondit volontiers à une décimale : "+0.35" cité
-            # "+0.4" ou "+0.3" reste fidèle au dossier. Le calcul se fait
-            # en décimal : en flottant, round(0.35, 1) rend 0.3.
+            # An LLM readily rounds to one decimal: "+0.35" quoted as
+            # "+0.4" or "+0.3" stays faithful to the folder. The computation is
+            # done in decimal: in floating point, round(0.35, 1) returns 0.3.
             m = re.fullmatch(r"([+-])(\d+\.\d\d)", score)
             if m:
                 valeur = decimal.Decimal(m.group(2))
@@ -680,12 +684,12 @@ def controler_chiffres(b: Bilan, textes: list[tuple[str, str]],
     for lieu, texte in textes:
         for brut in RE_EVALUATION.findall(texte):
             citees += 1
-            # Même écriture que le dossier avant de comparer : signe
-            # ASCII collé au nombre, point décimal.
+            # Same writing as the folder before comparing: ASCII sign
+            # stuck to the number, decimal point.
             lu = re.sub(r"[ \u00a0]", "", brut.replace(",", "."))
             lu = lu.replace("\u2212", "-").replace("\u2013", "-")
-            # Un mat cité sans signe est celui des Blancs : "#2" vaut
-            # "#+2", la forme du dossier.
+            # A mate quoted without a sign is White's: "#2" means
+            # "#+2", the form of the folder.
             lu = re.sub(r"^#(\d)", r"#+\1", lu)
             if lu not in connues:
                 inconnues.append("%s : %s" % (lieu, brut))
@@ -695,7 +699,7 @@ def controler_chiffres(b: Bilan, textes: list[tuple[str, str]],
 
 
 def lignes_du_moteur(evaluations: list[dict]) -> dict[int, list[list[str]]]:
-    """Pour chaque demi-coup, les variantes principales du moteur, en UCI."""
+    """For each ply, the principal variations of the engine, in UCI."""
     lignes: dict[int, list[list[str]]] = {}
     for e in evaluations:
         lignes[e["demicoup"]] = [
@@ -708,12 +712,12 @@ def controler_variantes_en_texte(b: Bilan, partie: chess.pgn.Game,
                                  jouables: int,
                                  court: bool = False) -> None:
     """
-    Variantes écrites à l'intérieur d'un commentaire.
+    Variations written inside a comment.
 
-    Entre accolades, une suite de coups entre parenthèses n'est que du
-    texte : SCID ne la rejoue pas, et rien n'en garantit la légalité. Le
-    script la rejoue donc lui-même, depuis la position que son numéro de
-    coup désigne.
+    Between braces, a sequence of moves in parentheses is only text: SCID
+    does not replay it, and nothing guarantees its legality. The script
+    therefore replays it itself, from the position that its move number
+    designates.
     """
     lignes_moteur = lignes_du_moteur(evaluations)
     trouvees, illegales, perdues, longues = 0, [], [], []
@@ -726,13 +730,13 @@ def controler_variantes_en_texte(b: Bilan, partie: chess.pgn.Game,
                 if mot and not mot.startswith("$"):
                     mots.append(mot)
             if not mots or not all(RE_SAN.match(x) for x in mots):
-                # Une parenthèse de prose, "(15 à 20 coups)" par exemple.
+                # A prose parenthesis, "(15 to 20 moves)" for example.
                 continue
             trouvees += 1
             numero = int(m.group(1))
             trait = chess.BLACK if len(m.group(2)) > 1 else chess.WHITE
             texte = "(%s%s %s)" % (m.group(1), m.group(2), " ".join(mots))
-            # La variante remplace le coup joué, ou le prolonge.
+            # The variation replaces the played move, or extends it.
             depart, moteur = None, []
             for plateau, indice in ((noeud.parent.board(), demicoup),
                                     (noeud.board(), demicoup + 1)):
@@ -785,15 +789,15 @@ def controler_variantes(b: Bilan, partie: chess.pgn.Game,
                         evaluations: list[dict],
                         court: bool = False) -> None:
     """
-    Nombre et longueur des variantes, appui sur une ligne du moteur.
+    Number and length of the variations, support from an engine line.
 
-    Le prompt court ne fixe aucune longueur : avec `court`, une variante
-    de plus de cinq demi-coups n'est pas relevée.
+    The short prompt sets no length: with `court`, a variation of more
+    than five plies is not reported.
     """
     b.titre("6. Variantes")
     lignes_moteur = lignes_du_moteur(evaluations)
 
-    variantes = []      # (lieu, longueur, appuyée sur le moteur ?)
+    variantes = []      # (place, length, backed by the engine?)
     for indice, noeud in enumerate([partie] + list(partie.mainline())):
         for autre in noeud.variations[1:]:
             coups, n = [], autre
@@ -806,8 +810,8 @@ def controler_variantes(b: Bilan, partie: chess.pgn.Game,
                 noeud.board().fullmove_number,
                 "." if noeud.board().turn == chess.WHITE else "...",
                 san_ou_uci(autre))
-            # Appuyée : ses premiers coups, deux au plus, sont ceux d'une
-            # ligne que le moteur donne pour ce demi-coup.
+            # Backed: its first moves, two at most, are those of a line
+            # that the engine gives for this ply.
             debut = coups[:2]
             appuyee = any(pv[:len(debut)] == debut
                           for pv in lignes_moteur.get(indice + 1, []))
@@ -835,23 +839,23 @@ def controler_synthese(b: Bilan, texte: str, evaluations: list[dict],
                        origine: chess.pgn.Game,
                        court: bool = False) -> None:
     """
-    FEN citées dans la synthèse finale du LLM, et tiret cadratin.
+    FEN quoted in the final summary of the LLM, and em dash.
 
-    Le prompt court ne demande ni FEN ni typographie : avec `court`, le
-    tiret cadratin et le nombre de FEN ne sont pas contrôlés. Une FEN
-    citée quand même doit rester valide et venir de la partie.
+    The short prompt asks for neither FEN nor typography: with `court`,
+    the em dash and the number of FEN are not checked. A FEN quoted
+    anyway must stay valid and come from the game.
     """
     b.titre("7. Conversation : positions citées, langue")
-    # Une FEN du dossier se reconnaît à ses quatre premiers champs : les
-    # compteurs de coups n'identifient pas la position.
+    # A FEN of the folder is recognized by its first four fields: the
+    # move counters do not identify the position.
 
     def clef(fen: str) -> str:
         return " ".join(fen.split()[:4])
 
     connues = {clef(e["fen"]) for e in evaluations}
-    # Toutes les positions de la partie, la dernière comprise, que les
-    # évaluations ne portent pas : elles donnent la position d'avant
-    # chaque coup.
+    # All the positions of the game, the last one included, which the
+    # evaluations do not carry: they give the position before
+    # each move.
     plateau = origine.board()
     connues.add(clef(plateau.fen()))
     for coup in origine.mainline_moves():
@@ -886,11 +890,11 @@ def controler_synthese(b: Bilan, texte: str, evaluations: list[dict],
 
 
 # ---------------------------------------------------------------------------
-# Programme principal
+# Main program
 # ---------------------------------------------------------------------------
 
 def afficher(b: Bilan, code: int) -> int:
-    """Écrit le bilan et rend le code de retour."""
+    """Writes the report and returns the exit code."""
     print("\n".join(b.lignes))
     print("")
     print("=== Bilan ===")
@@ -946,9 +950,9 @@ def main(argv: list[str]) -> int:
                                       "la forme écrite par IAnalyze")
     except (OSError, zipfile.BadZipFile, zlib.error, ValueError,
             ArchiveInutilisable) as e:
-        # ValueError couvre un fichier qui n'est pas en UTF-8 et un JSON
-        # invalide. Dans tous ces cas aucun contrôle n'a pu commencer :
-        # le code 2 le distingue d'un bilan avec des échecs.
+        # ValueError covers a file that is not in UTF-8 and an invalid JSON.
+        # In all these cases no check could start: the code 2 tells it
+        # apart from a report with failures.
         print("Lecture impossible : %s" % e, file=sys.stderr)
         return 2
 
@@ -956,8 +960,8 @@ def main(argv: list[str]) -> int:
     b.lignes.append("Contrôle d'une analyse rendue par un LLM")
     if options.nom:
         b.lignes.append("  modèle  : %s" % options.nom)
-    # Le nom d'un chemin comme "." est vide : le chemin donné est alors
-    # repris tel quel.
+    # The name of a path such as "." is empty: the path given is then
+    # used as it is.
     b.lignes.append("  archive : %s" % (pathlib.Path(options.archive).name
                                         or options.archive))
     if COLLECTE in fichiers:
@@ -969,7 +973,7 @@ def main(argv: list[str]) -> int:
                         "réduits à ce qu'il demande")
 
     if brut is None:
-        # Le LLM n'a rendu aucun fichier, ni aucun PGN dans la conversation.
+        # The LLM returned no file, and no PGN in the conversation.
         b.titre("1. Lecture du PGN")
         b.noter("ECHEC", "aucun PGN rendu : les contrôles 2 à 6 sont sans "
                 "objet")
@@ -992,8 +996,8 @@ def main(argv: list[str]) -> int:
             b, partie, evaluations, options.prompt_seul,
             options.perimetre or perimetre_convenu(fichiers["synthese.md"]))
     else:
-        # Sans la même ligne principale, les demi-coups ne se
-        # correspondent plus : ces contrôles n'auraient aucun sens.
+        # Without the same main line, the plies no longer
+        # match: these checks would make no sense.
         b.titre("4. Coups commentés")
         b.noter("ATTENTION", "non contrôlé, la ligne principale diffère")
     controler_chiffres(b, commentaires(partie), evaluations,

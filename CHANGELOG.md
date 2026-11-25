@@ -12,6 +12,14 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 Icône de la licence CC-0
 
+### Changed
+
+- The comments and docstrings of `ianalyze.py`, `verifier-analyse.py`
+  and `test-app.sh`, and the comments of `.gitignore`, are in English.
+  The code is unchanged: the Python syntax trees, docstrings set aside,
+  and the shell code, comments set aside, are identical to those of
+  version 4.0.2.
+
 ## [4.0.2] - 2026-11-21
 
 ### Added

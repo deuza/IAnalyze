@@ -97,16 +97,21 @@ tests), CHANGELOG.md.
   demi-coup = ply ; trait = side to move ; Blancs, Noirs = White,
   Black ; camp = side ; cadence = time control ; correspondance =
   correspondence ; classique, rapide = classical, rapid ; imprécision,
-  erreur, gaffe = inaccuracy, mistake, blunder ; centipion = centipawn ;
-  écart au meilleur coup = centipawn loss ; variante = variation
-  (variante principale = principal variation, PV) ; profondeur =
-  depth ; explorateur = explorer ; base maîtres = masters database ;
+  erreur, gaffe = inaccuracy, mistake, blunder ; erreur au sens large =
+  error ; centipion = centipawn ; écart au meilleur coup = centipawn
+  loss ; variante = variation (variante principale = principal
+  variation, PV) ; profondeur = depth ; explorateur = explorer ; base
+  maîtres = masters database ; sortie de théorie = exit from theory ;
   catalogue = catalog ; niveau, classement = rating ; pseudo =
-  username ; jeton = token ; réglages = settings ; synthèse = summary ;
-  journal = log ; modèle = template ; périmètre = scope ; gain, nulle,
-  perte = win, draw, loss (W/D/L). Capital, plafond et réserve des
-  cadences par correspondance : termes à reprendre du texte anglais
-  des ICCF Rules (section 2.4), vérifiés au lot 2.
+  username ; jeton = token ; réglages = settings ; questions de
+  démarrage = startup questions ; collecte = collection ; dossier de
+  travail = working folder ; synthèse = summary ; consignes =
+  instructions ; journal = log ; bilan = report ; palmarès = ranking ;
+  modèle = template ; périmètre = scope ; gain, nulle, perte = win,
+  draw, loss (W/D/L).
+- Correspondance à capital : capital, incrément, plafond, réserve =
+  clock, increment, maximum, bank, termes des ICCF Rules 2026 (§2.4 et
+  annexe 3), vérifiés au lot 1.
 
 ## Règles de modification
 

@@ -1,59 +1,58 @@
 #!/bin/sh
 # ===========================================================================
-# test-app.sh : tests de ianalyze.py, sous macOS et sous Debian
+# test-app.sh: tests of ianalyze.py, on macOS and on Debian
 #
-# Ce script joue tous les tests du projet, décrits un par un dans
-# TESTS.md, puis écrit un rapport que vous pouvez renvoyer tel quel.
+# This script runs all the tests of the project, described one by one in
+# TESTS.md, then writes a report that you can send back as it is.
 #
-#     sh test-app.sh             tests hors réseau : encodages, archive,
-#                                réglages, cadence, moteur, vérification
-#                                du PGN rendu. Ni jeton ni Lichess.
-#                                Environ 3 minutes sur un Mac récent, 6
-#                                sur un Raspberry Pi.
-#     sh test-app.sh --reseau    les mêmes, puis les tests qui demandent le
-#                                réseau et votre jeton : catalogue,
-#                                explorateur. Environ 3 minutes de plus.
+#     sh test-app.sh             offline tests: encodings, archive,
+#                                settings, time control, engine, check
+#                                of the returned PGN. Neither token nor
+#                                Lichess. About 3 minutes on a recent
+#                                Mac, 6 on a Raspberry Pi.
+#     sh test-app.sh --reseau    the same, then the tests that need the
+#                                network and your token: catalog,
+#                                explorer. About 3 more minutes.
 #     sh test-app.sh --reseau PARTIE
-#                                de même, avec en plus T24, qui télécharge
-#                                une partie depuis Lichess. PARTIE est
-#                                l'identifiant ou l'adresse de n'importe
-#                                quelle partie du site. Le dépôt n'en
-#                                fournit aucune : sans elle, T24 est sauté.
+#                                likewise, plus T24, which downloads a
+#                                game from Lichess. PARTIE is the
+#                                identifier or the address of any game
+#                                of the site. The repository provides
+#                                none: without it, T24 is skipped.
 #
-# Rien n'est écrit dans le dépôt, sauf le rapport, ni dans vos
-# répertoires : tout se passe dans un répertoire temporaire, supprimé à
-# la fin. Les tests désignent
-# leur propre fichier de réglages et, avec --reseau, leur propre catalogue :
-# les vôtres ne sont ni lus ni modifiés.
+# Nothing is written in the repository, except the report, nor in your
+# directories: everything happens in a temporary directory, deleted at
+# the end. The tests name their own settings file and, with --reseau,
+# their own catalog: yours are neither read nor modified.
 #
-# Votre jeton, avec --reseau : ce script ne l'affiche pas, ne le copie pas
-# et ne le passe dans aucune ligne de commande. C'est ianalyze.py
-# qui le lit. Le script ne s'en sert lui-même que comme fichier de motifs
-# pour grep (option -f), afin de vérifier qu'il n'apparaît ni dans une
-# archive ni dans le rapport. S'il était trouvé dans le rapport, celui-ci
-# ne serait pas écrit.
+# Your token, with --reseau: this script does not display it, does not
+# copy it and does not pass it in any command line. It is ianalyze.py
+# that reads it. The script itself only uses it as a pattern file for
+# grep (option -f), to check that it appears neither in an archive nor
+# in the report. If it were found in the report, the report would not be
+# written.
 #
-# Charge sur Lichess, avec --reseau : environ 70 requêtes à l'explorateur,
-# espacées de 2 secondes par ianalyze.py, 10 fichiers du catalogue chez
-# GitHub et, si vous donnez une partie, 2 exports de cette partie.
+# Load on Lichess, with --reseau: about 70 requests to the explorer,
+# spaced 2 seconds apart by ianalyze.py, 10 catalog files from GitHub
+# and, if you give a game, 2 exports of that game.
 #
-# Variables facultatives :
+# Optional variables:
 #
-#     VENV=/chemin/du/venv       environnement virtuel de python-chess
-#     STOCKFISH=/chemin/binaire  moteur utilisé par les tests du moteur
-#     JETON=/chemin/du/fichier   fichier du jeton (défaut : ~/.lichess_token)
-#     GARDER=1                   conserve le répertoire temporaire
+#     VENV=/path/to/venv         virtual environment of python-chess
+#     STOCKFISH=/path/to/binary  engine used by the engine tests
+#     JETON=/path/to/file        token file (default: ~/.lichess_token)
+#     GARDER=1                   keeps the temporary directory
 #
-# Le script est écrit en shell POSIX : pas de tableau, pas de [[ ]], pas de
-# "local". Il a été vérifié avec dash et bash, ainsi qu'avec deux outils
-# de contrôle : shellcheck et checkbashisms.
+# The script is written in POSIX shell: no arrays, no [[ ]], no "local".
+# It has been checked with dash and bash, as well as with two checking
+# tools: shellcheck and checkbashisms.
 # ===========================================================================
 
-# Trois avis de shellcheck sont écartés pour tout le fichier, à dessein :
-# SC2086, les variables d'options ($O, $P, $MOTEUR, $EXPL) devant être
-# découpées en plusieurs mots ; SC2012, ls ne servant ici qu'à afficher les
-# droits d'un fichier au nom connu ; SC2016, les accents graves cherchés
-# dans la synthèse étant du texte markdown et non une commande.
+# Three shellcheck notices are set aside for the whole file, on purpose:
+# SC2086, the option variables ($O, $P, $MOTEUR, $EXPL) having to be
+# split into several words; SC2012, ls only serving here to display the
+# permissions of a file with a known name; SC2016, the backquotes looked
+# for in the summary being markdown text and not a command.
 # shellcheck disable=SC2086,SC2012,SC2016
 
 set -u
@@ -62,8 +61,8 @@ set -u
 
 RESEAU=0
 PARTIE=""
-# Vrai juste après --reseau : l'argument suivant, s'il n'est pas une
-# option, est la partie de T24.
+# True right after --reseau: the next argument, if it is not an option,
+# is the game of T24.
 APRES_RESEAU=0
 for argument in "$@"; do
     if [ "$APRES_RESEAU" = 1 ]; then
@@ -94,7 +93,7 @@ for argument in "$@"; do
 done
 
 
-# --- Emplacements -----------------------------------------------------------
+# --- Locations --------------------------------------------------------------
 
 DEPOT=$(pwd)
 SCRIPT="$DEPOT/ianalyze.py"
@@ -107,8 +106,8 @@ fi
 
 SYSTEME=$(uname -s)
 
-# Environnement virtuel par défaut, selon la plateforme : les mêmes valeurs
-# que dans ianalyze.py.
+# Default virtual environment, according to the platform: the same
+# values as in ianalyze.py.
 if [ -z "${VENV:-}" ]; then
     VENV="$HOME/.local/share/IAnalyze/venv"
 fi
@@ -121,8 +120,8 @@ if ! "$PYVENV" -c "import chess" >/dev/null 2>&1; then
     exit 2
 fi
 
-# Moteur : celui que vous indiquez, sinon celui du PATH, sinon les
-# emplacements habituels de Homebrew et de Debian.
+# Engine: the one you give, otherwise the one in the PATH, otherwise the
+# usual locations of Homebrew and Debian.
 if [ -z "${STOCKFISH:-}" ]; then
     STOCKFISH=$(command -v stockfish 2>/dev/null || true)
     for candidat in /opt/homebrew/bin/stockfish /usr/local/bin/stockfish \
@@ -133,9 +132,9 @@ if [ -z "${STOCKFISH:-}" ]; then
     done
 fi
 
-# Sans moteur, aucune collecte n'aboutit : le moteur est obligatoire depuis
-# la version 4.0.0. Mieux vaut s'arrêter ici que d'afficher des centaines
-# d'échecs qui ne disent rien du script.
+# Without an engine, no collection succeeds: the engine has been
+# mandatory since version 4.0.0. It is better to stop here than to
+# display hundreds of failures that say nothing about the script.
 if [ -z "$STOCKFISH" ] || [ ! -x "$STOCKFISH" ]; then
     echo "Stockfish introuvable : les tests ne peuvent pas tourner sans lui." >&2
     echo "Installez-le, ou indiquez-le : STOCKFISH=/chemin sh test-app.sh" >&2
@@ -148,8 +147,8 @@ if [ "$RESEAU" = 1 ] && [ ! -f "$JETON" ]; then
     echo "Indiquez-le : JETON=/chemin sh test-app.sh --reseau" >&2
     exit 2
 fi
-# Identifiant de la partie de T24, tiré de ce que vous avez donné par la
-# fonction même du script : une adresse et un identifiant sont admis.
+# Identifier of the game of T24, taken from what you gave by the very
+# function of the script: an address and an identifier are accepted.
 ID_PARTIE=""
 if [ -n "$PARTIE" ]; then
     ID_PARTIE=$(SCRIPT="$SCRIPT" PARTIE="$PARTIE" "$PYVENV" -c '
@@ -176,9 +175,8 @@ fi
 
 RAPPORT="$DEPOT/rapport-tests-$SYSTEME-$(date +%Y%m%d-%H%M%S).txt"
 TRAVAIL=$(mktemp -d "${TMPDIR:-/tmp}/ianalyze-tests.XXXXXX") || exit 2
-# Chemin remis au propre : sous macOS, TMPDIR se termine par une barre et
-# le chemin fabriqué en porte deux, ce qui empêchait de le masquer dans le
-# rapport.
+# Path cleaned up: on macOS, TMPDIR ends with a slash and the path built
+# carries two of them, which prevented masking it in the report.
 TRAVAIL=$(cd "$TRAVAIL" && pwd)
 
 nettoyer() {
@@ -193,13 +191,13 @@ trap 'exit 130' INT TERM
 
 cd "$TRAVAIL" || exit 2
 
-# Options communes aux tests qui ne portent ni sur l'explorateur ni sur le
-# moteur. La variable est volontairement développée sans guillemets.
+# Options common to the tests that are about neither the explorer nor
+# the engine. The variable is deliberately expanded without quotes.
 O="--sans-explorateur --profondeur 1 --sans-questions --stockfish $STOCKFISH"
 
-# Fichier de réglages propre aux tests : le vôtre n'est ni lu ni modifié.
-# Il porte un pseudo, pour que les tests qui passent par un terminal ne
-# reçoivent pas les questions du premier lancement.
+# Settings file specific to the tests: yours is neither read nor
+# modified. It carries a username, so that the tests that go through a
+# terminal do not get the questions of the first run.
 REGL="$TRAVAIL/reglages-tests.ini"
 printf '[joueur]\npseudos = Moi\ncadence = 14 jours\nniveau = 1300\n' \
     > "$REGL"
@@ -210,9 +208,9 @@ NB_SAUTE=0
 BRUT="$TRAVAIL/rapport.brut"
 : > "$BRUT"
 
-# --- Outils du rapport ------------------------------------------------------
+# --- Report tools -----------------------------------------------------------
 
-# Écrit une ligne dans le rapport et, en abrégé, sur le terminal.
+# Writes a line in the report and, abridged, on the terminal.
 noter() {
     printf '%s\n' "$*" >> "$BRUT"
 }
@@ -223,14 +221,14 @@ titre() {
     printf '%s\n' "$*" >&2
 }
 
-# Le shell POSIX n'a pas de variables locales : une variable affectée dans
-# une fonction est celle du script entier. Les fonctions qui suivent
-# préfixent donc les leurs, pour qu'aucun test ne voie l'une des siennes
-# changer de valeur en les appelant. T75 lisait la cause attendue dans une
-# variable "attendu", que la fonction egal écrasait : il cherchait ensuite
-# le chiffre 1 dans le journal, et le trouvait ou non selon l'heure.
+# The POSIX shell has no local variables: a variable assigned in a
+# function is that of the whole script. The functions that follow
+# therefore prefix theirs, so that no test sees one of its own change
+# value by calling them. T75 read the expected cause in a variable
+# "attendu", which the function egal overwrote: it then looked for the
+# digit 1 in the log, and found it or not depending on the time of day.
 
-# verifier "libellé" commande... : la commande réussit-elle ?
+# verifier "label" command...: does the command succeed?
 verifier() {
     verifier_libelle=$1
     shift
@@ -241,18 +239,18 @@ verifier() {
         NB_ECHEC=$((NB_ECHEC + 1))
         noter "  ECHEC  $verifier_libelle"
         printf '    ECHEC : %s\n' "$verifier_libelle" >&2
-        # Un texte attendu qui manque : le fichier fouillé est joint au
-        # rapport, pour que l'échec se lise sans rejouer le test.
+        # An expected text that is missing: the file searched is attached
+        # to the report, so that the failure can be read without rerunning
+        # the test.
         if [ "$1" = contient ] && [ -f "$2" ]; then
             joindre "$2" 8
         fi
     fi
 }
 
-# egal "libellé" attendu obtenu : comparaison de deux valeurs. Les espaces
-# de bord sont ignorées (wc en ajoute sous macOS) et toute suite d'espaces
-# ou de tabulations vaut une seule espace. Les espaces intérieures comptent :
-# "1 0" n'est pas "10".
+# egal "label" expected obtained: comparison of two values. Spaces at
+# the edges are ignored (wc adds some on macOS) and any run of spaces or
+# tabs counts as a single space. Inner spaces count: "1 0" is not "10".
 egal() {
     egal_obtenu=$(printf '%s' "$3" | tr -s ' \t' '  ')
     egal_obtenu=${egal_obtenu# }
@@ -276,40 +274,40 @@ sauter() {
     printf '    sauté : %s\n' "$*" >&2
 }
 
-# Recopie un fichier dans le rapport, en retrait, limité à N lignes
-# (vingt par défaut), chaque ligne étant coupée à 200 caractères.
+# Copies a file into the report, indented, limited to N lines (twenty by
+# default), each line being cut at 200 characters.
 joindre() {
     if [ -s "$1" ]; then
         head -n "${2:-20}" "$1" | LC_ALL=C cut -c1-200 | LC_ALL=C sed 's/^/      | /' >> "$BRUT"
     fi
 }
 
-# lancer options... : lance le script, range la sortie standard dans
-# "sortie", le journal dans "journal", et le code de retour dans RC. --venv
-# est toujours passé : le script se relance ainsi dans l'environnement
-# virtuel contrôlé plus haut, même si ce n'est pas celui par défaut.
+# lancer options...: runs the script, stores standard output in
+# "sortie", the log in "journal", and the exit code in RC. --venv is
+# always passed: the script thus restarts in the virtual environment
+# checked above, even if it is not the default one.
 lancer() {
     "$SCRIPT" "$@" --venv "$VENV" --reglages "$REGL" > sortie 2> journal
     RC=$?
     ARCH=$(head -n 1 sortie)
 }
 
-# Nombre de lignes d'un fichier, sans les espaces que wc ajoute sous macOS.
+# Number of lines of a file, without the spaces that wc adds on macOS.
 lignes() {
     wc -l < "$1" | tr -d ' '
 }
 
-# Le fichier contient-il la chaîne, prise littéralement ?
+# Does the file contain the string, taken literally?
 contient() {
     grep -F -q -- "$2" "$1"
 }
 
-# Extrait un fichier de l'archive courante vers le fichier "extrait".
+# Extracts a file from the current archive into the file "extrait".
 extraire() {
     unzip -p "$ARCH" "$1" > extrait 2>/dev/null
 }
 
-# --- En-tête du rapport -----------------------------------------------------
+# --- Report header ----------------------------------------------------------
 
 titre "Environnement"
 noter "  date            : $(date '+%Y-%m-%d %H:%M:%S %z')"
@@ -348,7 +346,7 @@ fi
 
 printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 *\n' > italienne.pgn
 
-# --- Plateforme -------------------------------------------------------------
+# --- Platform ---------------------------------------------------------------
 
 titre "T01, T02 : compilation et aide"
 verifier "T01 py_compile" python3 -m py_compile "$SCRIPT"
@@ -391,20 +389,20 @@ if [ "$SYSTEME" = "Darwin" ]; then
 fi
 joindre journal
 
-# --- Encodages --------------------------------------------------------------
+# --- Encodings --------------------------------------------------------------
 
 titre "T34 : PGN en latin-1, puis dans un encodage non reconnu"
-# Un texte latin-1 se lit comme du cp1252 : les deux ne diffèrent que sur
-# des octets qu'aucun texte n'emploie.
+# A latin-1 text reads as cp1252: the two only differ on bytes that no
+# text uses.
 printf '[White "Jos\351"]\n[Black "M\374ller"]\n\n' > t-latin1.pgn
 printf '1. e4 e5 *\n' >> t-latin1.pgn
 lancer t-latin1.pgn $O
 egal "T34 code de retour" 0 "$RC"
 verifier "T34 encodage retenu : cp1252" \
     contient journal "encodage retenu : cp1252"
-# Le même en cp850 : "é" y vaut l'octet 0x82 et "ü" l'octet 0x81, que
-# cp1252 ne définit pas. Le script s'arrête au lieu de retirer les
-# lettres accentuées comme des caractères de contrôle.
+# The same in cp850: "é" is byte 0x82 there and "ü" byte 0x81, which
+# cp1252 does not define. The script stops instead of removing the
+# accented letters like control characters.
 printf '[White "Jos\202"]\n[Black "M\201ller"]\n\n1. e4 e5 *\n' > t-cp850.pgn
 lancer t-cp850.pgn $O
 egal "T34 cp850, code de retour" 1 "$RC"
@@ -541,7 +539,7 @@ egal "T44 deux-points et point d'interrogation, code de retour" 0 "$RC"
 verifier "T44 dossier assaini en t-a_b_" \
     contient journal "Nom du dossier assaini : t-a_b_"
 verifier "T44 l'archive existe" test -f "$ARCH"
-# Nom non UTF-8 : le système de fichiers de macOS le refuse en principe.
+# Non-UTF-8 name: the macOS file system refuses it in principle.
 NOM_LATIN=$(printf 't-\351t\351.pgn')
 if cp italienne.pgn "$NOM_LATIN" 2> journal-cp; then
     lancer "$NOM_LATIN" $O
@@ -559,8 +557,8 @@ cp italienne.pgn "t-été à Paris.pgn"
 lancer "t-été à Paris.pgn" $O --sortie "$TRAVAIL/sorties d'été"
 egal "M1 code de retour" 0 "$RC"
 verifier "M1 le chemin affiché désigne bien l'archive" test -f "$ARCH"
-# Les espaces du nom du PGN deviennent des tirets dans celui de l'archive,
-# ceux du répertoire de sortie sont gardés : il est à vous.
+# The spaces of the PGN name become hyphens in that of the archive,
+# those of the output directory are kept: it is yours.
 case "$ARCH" in
     "$TRAVAIL/sorties d'été/analyse-t-été-à-Paris-"*.zip) vu=oui ;;
     *) vu=non ;;
@@ -605,9 +603,9 @@ joindre sortie-pty
 rm -rf analyse-italienne-*
 
 titre "T79 : réponses refusées, trop longues ou porteuses de signes du PGN"
-# Le nom de l'adversaire part dans une balise du PGN : un guillemet ou un
-# crochet la fermerait trop tôt. Les deux premières réponses sont
-# refusées et la question reposée, la troisième est gardée.
+# The name of the opponent goes into a PGN tag: a quote or a bracket
+# would close it too early. The first two answers are refused and the
+# question asked again, the third one is kept.
 rm -rf analyse-italienne-*
 SCRIPT="$SCRIPT" VENV="$VENV" REGL="$REGL" python3 - > sortie-pty 2>&1 \
     <<'EOF'
@@ -652,8 +650,9 @@ joindre sortie-pty
 rm -rf analyse-italienne-*
 
 titre "T80 : nom de PGN long, en caractères de plusieurs octets"
-# Cent idéogrammes, trois cents octets : l'étiquette est bornée en octets,
-# faute de quoi l'archive échouait sur un nom trop long après l'analyse.
+# A hundred ideograms, three hundred bytes: the label is bounded in
+# bytes, otherwise the archive failed on a name too long after the
+# analysis.
 SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t80 2> journal-t80 <<'EOF'
 import importlib.util
 import os
@@ -768,7 +767,7 @@ verifier "T53 six lignes attendues" cmp -s attendu-r1 sortie-r1
 joindre sortie-r1
 rm -rf "$DEPOT/__pycache__"
 
-# --- Explorateur simulé et options -----------------------------------------
+# --- Simulated explorer and options ----------------------------------------
 
 titre "T49 : réponses inattendues de l'explorateur, simulé"
 SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t49 2> journal-t49 <<'EOF'
@@ -810,10 +809,10 @@ joindre sortie-t49
 rm -rf "$DEPOT/__pycache__"
 
 titre "T76 : le jeton ne quitte pas l'explorateur, serveurs simulés"
-# Deux serveurs locaux. Le premier tient lieu d'explorateur : il redirige
-# vers le second, puis renvoie dans sa réponse l'en-tête Authorization
-# qu'il a reçu. Le jeton, factice, ne doit ni suivre la redirection ni
-# entrer dans la réponse gardée.
+# Two local servers. The first one stands in for the explorer: it
+# redirects to the second one, then sends back in its answer the
+# Authorization header it received. The token, a dummy one, must
+# neither follow the redirect nor get into the answer kept.
 SCRIPT="$SCRIPT" no_proxy='*' NO_PROXY='*' "$PYVENV" - > sortie-t76 2> journal-t76 <<'EOF'
 import http.server
 import importlib.util
@@ -855,7 +854,7 @@ class Faux(http.server.BaseHTTPRequestHandler):
             self.wfile.write(corps)
             return
         if self.path.startswith("/coupe"):
-            # Erreur 500 dont le corps annoncé n'arrive jamais en entier.
+            # Error 500 whose announced body never arrives in full.
             self.send_response(500)
             self.send_header("Content-Length", "1000")
             self.end_headers()
@@ -892,8 +891,8 @@ print("tiers", len(recu))
 statut, donnees = cp.Explorateur(
     JETON, 2.0, 5, base + "/echo", {}).interroger(["e2e4"])
 print(statut, JETON in json.dumps(donnees), donnees.get("vu"))
-# Réponses qui faisaient avorter toute la collecte : erreur HTTP au corps
-# coupé, JSON imbriqué à l'excès. Puis les comptes aberrants.
+# Answers that made the whole collection abort: HTTP error with a cut
+# body, JSON nested too deep. Then the aberrant counts.
 for chemin in ("/coupe", "/profond"):
     statut, donnees = cp.Explorateur(
         JETON, 2.0, 5, base + chemin, {}).interroger(["e2e4"])
@@ -955,7 +954,7 @@ verifier "T54 identifiants extraits" cmp -s attendu-t54 sortie-t54
 joindre sortie-t54
 rm -rf "$DEPOT/__pycache__"
 
-# --- Coup nul et explorateur ------------------------------------------------
+# --- Null move and explorer -------------------------------------------------
 
 titre "T56 : coup nul, explorateur simulé"
 SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t56 2> journal-t56 <<'EOF'
@@ -1002,12 +1001,12 @@ verifier "T56 arrêt au coup nul, deux requêtes, pas de sortie" \
 joindre sortie-t56
 rm -rf "$DEPOT/__pycache__"
 
-# --- Réglages ---------------------------------------------------------------
+# --- Settings ---------------------------------------------------------------
 
-# Pilote de pseudo-terminal : lance le script avec les options données,
-# répond aux questions dans l'ordre (réponses séparées par des barres
-# verticales), puis affiche ce que le terminal a montré. Les questions de
-# réglages ne sont posées que sur un terminal.
+# Pseudo-terminal driver: runs the script with the options given,
+# answers the questions in order (answers separated by vertical bars),
+# then displays what the terminal showed. The settings questions are
+# only asked on a terminal.
 cat > t-pty.py <<'EOF'
 import os
 import pty
@@ -1036,9 +1035,9 @@ def lire():
 for reponse in sys.argv[1].split("|"):
     lire()
     os.write(fd, reponse.encode() + b"\n")
-# S'il manque une réponse, une fin de flux part après quinze secondes de
-# silence : le script prend alors ses valeurs par défaut au lieu
-# d'attendre sans fin.
+# If an answer is missing, an end of stream is sent after fifteen
+# seconds of silence: the script then takes its default values instead
+# of waiting forever.
 silences = 0
 while not os.waitpid(pid, os.WNOHANG)[0]:
     avant = len(vu)
@@ -1049,7 +1048,7 @@ while not os.waitpid(pid, os.WNOHANG)[0]:
         silences = 0
 sys.stdout.write(vu.decode("utf-8", "replace").replace("\r", ""))
 EOF
-# Options des lancements sur pseudo-terminal.
+# Options of the runs on a pseudo-terminal.
 P="--sans-explorateur --profondeur 1 --garder-dossier --venv $VENV"
 
 titre "T57 : premier lancement, réglages demandés puis enregistrés"
@@ -1229,8 +1228,8 @@ verifier "T63 ICCF Triple Block : capital, incrément, plafond, réserve" \
 grep Cadence extrait > ligne 2>/dev/null
 joindre ligne
 rm -rf analyse-t-noms-*
-# Fichier de réglages absent : le pseudo est demandé d'abord, puis, faute de
-# pseudo, le camp.
+# Settings file missing: the username is asked first, then, for lack
+# of a username, the side.
 SCRIPT="$SCRIPT" python3 t-pty.py "|c|p|10|40||b|||||" t-noms.pgn $P \
     --reglages t-vide2.ini > sortie-pty 2>&1
 verifier "T63 coups par période saisis au clavier" \
@@ -1242,13 +1241,14 @@ egal "T61 aide de --pseudos sans valeur en dur" 1 \
     "$(grep -c 'ceux de vos réglages' aide)"
 egal "T61 constante du pseudo retirée" 0 "$(grep -c 'PSEUDOS_DEFAUT' "$SCRIPT")"
 
-# --- Prompt d'analyse -------------------------------------------------------
+# --- Analysis prompt --------------------------------------------------------
 
 printf '[White "Alice"]\n[Black "Bob"]\n[BlackElo "1500"]\n\n' > t-pr.pgn
 printf '1. e4 e5 *\n' >> t-pr.pgn
 printf '[joueur]\npseudos = Alice\ncadence = 14 jours\nniveau = 1300\n' \
     > t-pr.ini
-# Options des tests du prompt, hors terminal, avec leurs propres réglages.
+# Options of the prompt tests, outside a terminal, with their own
+# settings.
 R="--sans-explorateur --sans-questions --venv $VENV --reglages t-pr.ini"
 
 titre "T64 : prompt écrit à côté de l'archive"
@@ -1293,8 +1293,8 @@ egal "T65 sans explorateur, ses fichiers ne sont pas annoncés" 0 \
     "$(grep -c '^- explorateur/NNN' "$PR")"
 egal "T65 commentaires coupés à 75 colonnes, pas à 76" "2 0" \
     "$(grep -c 'à 75' "$PR") $(grep -c 'à 76' "$PR")"
-# Consignes ajoutées après les essais sur quatre LLM : chacune répond à
-# un défaut relevé sur un PGN réellement rendu.
+# Instructions added after the trials on four LLMs: each one answers a
+# flaw found in a PGN actually returned.
 for consigne in "9. LIGNES VIDES" \
     "N'écrivez jamais la variante à l'intérieur des accolades" \
     "vous êtes en cas B" \
@@ -1314,8 +1314,8 @@ egal "T65 sans explorateur, seule la section 3 fait foi" 1 \
     "$(grep -c 'Seuls les chiffres de la section 3 font foi' "$PR")"
 egal "T65 sans explorateur, la section 2 ne fait pas foi" 0 \
     "$(grep -c 'Les chiffres des sections 2 et 3 font foi' "$PR")"
-# Le récapitulatif, la balise Opening et la consigne finale renvoyaient
-# encore à la section 2, que cette collecte n'a pas.
+# The recap, the Opening tag and the final instruction still referred
+# to section 2, which this collection does not have.
 egal "T65 sans explorateur, aucun renvoi à la section 2" "0 0 0" \
     "$(grep -c 'sortie de théorie)' "$PR") $(grep -c 'sections 2 et 3' "$PR") $(grep -c 'position nommée' "$PR")"
 verifier "T65 sans explorateur, la section 3 prime seule" \
@@ -1327,8 +1327,9 @@ PR="$(head -n 1 sortie)"
 PR="${PR%.zip}.prompt.txt"
 egal "T65 base maîtres nommée en section 2" 1 \
     "$(grep -c 'Section 2, "Explorateur maîtres"' "$PR")"
-# Les branches propres à chaque base ne s'écrivent qu'avec l'explorateur :
-# le modèle est rendu ici sans collecte, base par base.
+# The branches specific to each database are only written with the
+# explorer: the template is rendered here without a collection,
+# database by database.
 SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t65 2> journal-t65 <<'EOF'
 import importlib.util
 import os
@@ -1405,9 +1406,10 @@ egal "T66 --sans-prompt, code de retour" 0 $?
 egal "T66 --sans-prompt, aucun prompt écrit" 0 \
     "$(find . -maxdepth 1 -name 'analyse-t-pr-*.prompt.txt' | wc -l)"
 
-# Trois modèles que le script acceptait à tort : un repère mal écrit, qui
-# partait tel quel dans le prompt, un modèle sans une ligne de texte, et
-# un modèle de prompt seul dont la partie n'est citée que dans une note.
+# Three templates that the script wrongly accepted: a badly written
+# marker, which went as it is into the prompt, a template without a
+# single line of text, and a prompt-only template whose game is only
+# quoted in a note.
 printf 'Camp : {{ CAMP }}\n' > t-modele-espace.txt
 printf 'Camp : {{CAMP1}}\n' > t-modele-chiffre.txt
 printf '#! note rien\n\n' > t-modele-vide.txt
@@ -1423,8 +1425,8 @@ lancer t-pr.pgn $R --profondeur 1 --prompt-seul --prompt t-modele-note.txt
 egal "T66 partie citée dans une note, code de retour" 1 "$RC"
 verifier "T66 partie citée dans une note, message" \
     contient journal "ne contient pas {{PARTIE_PGN}}"
-# La partie placée sous une condition fausse : le prompt est écrit, mais
-# le journal dit qu'il ne peut pas être collé seul.
+# The game placed under a false condition: the prompt is written, but
+# the log says that it cannot be pasted alone.
 printf '#! si BASE_MAITRES\n{{PARTIE_PGN}}\n#! fin\nAnalysez.\n' > t-modele-branche.txt
 lancer t-pr.pgn $R --profondeur 1 --prompt-seul --prompt t-modele-branche.txt
 egal "T66 partie sous une condition fausse, code de retour" 0 "$RC"
@@ -1477,10 +1479,10 @@ rm -rf analyse-t-pr-*
 
 titre "T74 : prompt seul, court, à coller sans pièce jointe"
 
-# Avec --prompt-seul, le prompt est tiré d'un modèle court : quelques
-# consignes, la partie, puis les évaluations du moteur. Il se colle seul
-# dans la conversation. Rien d'autre n'est écrit : ni archive, ni
-# dossier de travail, et la sortie standard donne le chemin du prompt.
+# With --prompt-seul, the prompt is drawn from a short template: a few
+# instructions, the game, then the engine evaluations. It is pasted
+# alone into the conversation. Nothing else is written: neither archive
+# nor working folder, and standard output gives the path of the prompt.
 printf '[White "Alice"]\n[Black "Bob"]\n[Result "1-0"]\n\n' > t-seul.pgn
 printf '1. e4 e5 2. Qh5 Nc6 3. Qxf7+ Kxf7 1-0\n' >> t-seul.pgn
 S74="--sans-explorateur --sans-questions --venv $VENV --reglages t-pr.ini"
@@ -1519,20 +1521,20 @@ synthese.md
 Données brutes
 CAS A
 FIN
-# Le tableau compte une ligne par demi-coup, et la dame donnée au coup 3
-# y est une gaffe, suivie du meilleur coup et de sa suite.
+# The table has one line per ply, and the queen given away on move 3
+# is a blunder there, followed by the best move and its continuation.
 egal "T74 tableau : une ligne par demi-coup" 6 \
     "$(grep -c -E '^[1-3]\.(\.\.)? [A-Za-z0-9+#x=-]+ +[+#-]' "$PR")"
 egal "T74 tableau : gaffe, écart et meilleur coup" 1 \
     "$(grep -c -E '^3\. Qxf7\+ .* gaffe \([0-9a-z]+\) : mieux 3\. ' "$PR")"
-# Notée 1-0, la partie finit avec une dame de moins pour les Blancs.
+# Scored 1-0, the game ends with White a queen down.
 egal "T74 résultat contraire à l'évaluation, dit au LLM" 1 \
     "$(grep -c '^Attention : Résultat et évaluation finale' "$PR")"
-# Le bilan demande trois erreurs. Un LLM à qui l'on en réclame trois en
-# invente une quand le joueur en a commis moins : le prompt donne alors le
-# nombre de coups faibles que porte son tableau. Les Blancs n'ont joué que
-# trois coups, et le moteur ne juge pas toujours les mêmes faibles d'une
-# machine à l'autre : le compte attendu se lit dans le tableau du prompt.
+# The review asks for three errors. An LLM asked for three makes one up
+# when the player made fewer: the prompt then gives the number of weak
+# moves that its table carries. White played only three moves, and the
+# engine does not always judge the same ones weak from one machine to
+# another: the expected count is read in the table of the prompt.
 FAIBLES74="$(grep -c -E '^[0-9]+\. .* (imprécision|erreur|gaffe) \(' "$PR")"
 if [ "$FAIBLES74" -lt 3 ]; then
     verifier "T74 bilan : le nombre de coups faibles du joueur est donné" \
@@ -1545,8 +1547,8 @@ else
     egal "T74 bilan : une seule des deux phrases" 0 \
         "$(grep -c 'Coups faibles du joueur' "$PR")"
 fi
-# Avec --garder-dossier, le dossier de travail reste, sans archive :
-# verifier-analyse.py peut le lire, avec les chiffres mêmes du prompt.
+# With --garder-dossier, the working folder stays, without an archive:
+# verifier-analyse.py can read it, with the very figures of the prompt.
 rm -f analyse-t-seul-*
 "$SCRIPT" t-seul.pgn $S74 --prompt-seul --garder-dossier \
     > sortie 2> journal
@@ -1571,8 +1573,9 @@ noter "  note   taille du prompt seul : $(wc -c < "$PR") octets, $(lignes "$PR")
 head -n 6 "$PR" > ligne
 joindre ligne
 rm -f analyse-t-seul-*
-# Ce que le prompt court reprend des réponses du joueur : celles qu'il
-# n'a pas laissées par défaut, sans le camp, dit ailleurs.
+# What the short prompt takes from the player's answers: those that
+# they did not leave at their default, without the side, stated
+# elsewhere.
 SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t74 2> journal-t74 <<'EOF'
 import importlib.util
 import os
@@ -1596,9 +1599,10 @@ verifier "T74 réponses du joueur reprises, défauts, camp et balise écartés" 
     cmp -s attendu-t74 sortie-t74
 joindre journal-t74 5
 rm -rf "$DEPOT/__pycache__"
-# Le compte des coups faibles, sans moteur. Sa règle est celle du tableau :
-# un coup n'y est marqué que s'il a une nature et un meilleur coup. Le
-# modèle court change de phrase quand le joueur en compte moins de trois.
+# The count of weak moves, without the engine. Its rule is that of the
+# table: a move is only marked there if it has a category and a better
+# move. The short template changes its sentence when the player has
+# fewer than three.
 SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t74 2> journal-t74 <<'EOF'
 import importlib.util
 import os
@@ -1623,8 +1627,8 @@ print(cp.coups_faibles_joueur(resultats, "Blancs"),
       cp.coups_faibles_joueur([], "Blancs"))
 modele = pathlib.Path(os.environ["SCRIPT"]).with_name(
     cp.PROMPT_SEUL_MODELE).read_text(encoding="utf-8")
-# Quatre cas : aucun coup faible, moins de trois, trois ou plus, et un
-# camp inconnu, où "le joueur" n'est d'aucun camp.
+# Four cases: no weak move, fewer than three, three or more, and an
+# unknown side, where "le joueur" belongs to no side.
 for cas, vraies in (("aucun", ("CAMP_CONNU", "PEU_DE_COUPS_FAIBLES",
                                "AUCUN_COUP_FAIBLE")),
                     ("peu", ("CAMP_CONNU", "PEU_DE_COUPS_FAIBLES")),
@@ -1648,15 +1652,15 @@ verifier "T74 bilan : compte des coups faibles, phrase selon le compte" \
 joindre sortie-t74
 joindre journal-t74 5
 rm -rf "$DEPOT/__pycache__"
-# Un PGN terminé par une espace : le prompt porte bien la partie, et le
-# journal ne doit pas annoncer le contraire.
+# A PGN ending with a space: the prompt does carry the game, and the
+# log must not announce the opposite.
 printf '[White "Alice"]\n[Black "Bob"]\n\n1. e4 e5 * ' > t-espace.pgn
 "$SCRIPT" t-espace.pgn $S74 --prompt-seul > sortie 2> journal
 egal "T74 PGN fini par une espace, aucune fausse alerte" "0 1" \
     "$(grep -c 'ne porte pas la partie' journal) $(grep -c 'à coller seul dans la conversation' journal)"
 rm -f analyse-t-espace-*
-# Deux lancements dans la même seconde portaient le même nom : le second
-# prompt écrasait le premier. Six lancements, six fichiers.
+# Two runs within the same second bore the same name: the second
+# prompt overwrote the first one. Six runs, six files.
 mkdir -p t-meme-seconde
 for essai in 1 2 3 4 5 6; do
     "$SCRIPT" t-espace.pgn --sans-explorateur --sans-questions \
@@ -1672,10 +1676,10 @@ PR="$(head -n 1 sortie)"
 PR="${PR%.zip}.prompt.txt"
 egal "T74 sans l'option, le prompt complet" "0 1" \
     "$(grep -c '^La partie :' "$PR") $(grep -c 'PIÈCES JOINTES ATTENDUES' "$PR")"
-# verifier-analyse.py --prompt-seul attend les balises de la partie
-# d'origine, et non les sept du standard : t-seul.pgn n'en porte que trois,
-# et sa copie fidèle ne doit pas être prise en faute. Les mêmes balises
-# rendues dans un autre ordre, elles, le sont.
+# verifier-analyse.py --prompt-seul expects the tags of the original
+# game, and not the seven of the standard: t-seul.pgn carries only
+# three, and its faithful copy must not be found at fault. The same
+# tags returned in another order, for their part, are.
 ARCH74="$(head -n 1 sortie)"
 "$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH74" t-seul.pgn --prompt-seul \
     > bilan 2>&1
@@ -1693,8 +1697,8 @@ rm -f analyse-t-seul-*
 egal "T74 options exclusives, code de retour" 2 $?
 verifier "T74 options exclusives, message" \
     contient journal "--prompt-seul et --sans-prompt s'excluent"
-# Un modèle personnel qui ne place pas la partie est refusé avant la
-# collecte : le prompt n'aurait rien à faire analyser.
+# A personal template that does not place the game is refused before
+# the collection: the prompt would have nothing to have analyzed.
 printf 'Bonjour {{PSEUDOS}}.\n' > t-modele.txt
 "$SCRIPT" t-seul.pgn $S74 --prompt t-modele.txt --prompt-seul \
     > sortie 2> journal
@@ -1712,10 +1716,11 @@ egal "T74 aucun dossier ni archive créés par ces refus" 0 \
 
 titre "T03 : options refusées"
 
-# Une option sans effet ou hors bornes est refusée, code 2, avant toute
-# lecture de la partie. Chaque ligne donne les options, puis le message.
+# An option without effect or out of bounds is refused, code 2, before
+# any reading of the game. Each line gives the options, then the
+# message.
 while IFS='|' read -r refusees message; do
-    # Les options sont découpées en mots, d'où l'absence de guillemets.
+    # The options are split into words, hence the missing quotes.
     # shellcheck disable=SC2086
     "$SCRIPT" italienne.pgn $refusees --venv "$VENV" > sortie 2> journal
     egal "T03 $refusees, code de retour" 2 "$?"
@@ -1743,10 +1748,10 @@ verifier "T04 nom relatif, pris pour un fichier et non pour un identifiant" \
 
 titre "T75 : PGN que python-chess lirait de travers, refusés"
 
-# Chacun de ces fichiers est lu sans erreur par python-chess, qui saute ce
-# qu'il ne reconnaît pas : notation française lue comme des coups de pion,
-# partie tronquée à l'accolade jamais fermée. Le script doit les refuser
-# avant la lecture, et nommer ce qui l'arrête.
+# Each of these files is read without error by python-chess, which
+# skips what it does not recognize: French notation read as pawn moves,
+# game truncated at the brace never closed. The script must refuse them
+# before the reading, and name what stops it.
 printf '1. e4 e5 2. Cf3 Cc6 3. Fc4 Fc5 *\n' > t-francais.pgn
 printf '1. e4 e5 2. \342\231\230f3 *\n' > t-figurines.pgn
 printf '1. e4 e5 2. nf3 nc6 *\n' > t-minuscules.pgn
@@ -1774,7 +1779,7 @@ FIN
 joindre journal 3
 egal "T75 aucun dossier ni archive créés par ces refus" 0 \
     "$(ls -d analyse-t-francais* analyse-t-accolade* analyse-t-queue* 2>/dev/null | wc -l)"
-# Un fichier à plusieurs parties est refusé lui aussi, avec leur nombre.
+# A file with several games is refused too, with their number.
 printf '[Event "a"]\n\n1. e4 e5 1-0\n\n[Event "b"]\n\n1. d4 d5 0-1\n' > t-deux.pgn
 printf '\n[Event "c"]\n\n1. c4 *\n' >> t-deux.pgn
 lancer t-deux.pgn $O
@@ -1783,10 +1788,10 @@ verifier "T75 plusieurs parties, nombre annoncé" \
     contient journal "Le PGN contient 3 parties"
 egal "T75 plusieurs parties, rien n'est écrit" 0 \
     "$(ls -d analyse-t-deux* 2>/dev/null | wc -l)"
-# Un résultat répété en fin de fichier n'est pas une seconde partie :
-# certains sites écrivent "0-1", une ligne vide, puis "0-1" encore. Le
-# fichier est accepté, et le journal dit ce qui est ignoré. Suivi d'une
-# vraie partie, le même fichier reste refusé.
+# A result repeated at the end of the file is not a second game: some
+# sites write "0-1", a blank line, then "0-1" again. The file is
+# accepted, and the log says what is ignored. Followed by a real game,
+# the same file stays refused.
 printf '[White "Alice"]\n[Black "Bob"]\n[Result "0-1"]\n1.e4 e5\n0-1\n\n0-1\n' \
     > t-repete.pgn
 lancer t-repete.pgn $O
@@ -1799,9 +1804,8 @@ lancer t-repete.pgn $O
 egal "T75 résultat répété puis vraie partie, refusé" 1 "$RC"
 verifier "T75 résultat répété puis vraie partie, deux parties" \
     contient journal "Le PGN contient 2 parties"
-# Ce qui doit continuer à passer : coups collés au numéro, signes
-# d'appréciation, NAG, roque écrit avec des zéros, commentaire de fin de
-# ligne.
+# What must keep getting through: moves stuck to the number, annotation
+# symbols, NAG, castling written with zeros, end-of-line comment.
 printf '1.e4 e5 2.Nf3! Nc6?! 3.Bc4 $1 Bc5 { ok } 4. c3 ; fin\n' > t-formes.pgn
 printf '4... Nf6 5. 0-0 0-0 *\n' >> t-formes.pgn
 lancer t-formes.pgn $O
@@ -1809,26 +1813,26 @@ egal "T75 formes admises, code de retour" 0 "$RC"
 
 titre "T77 : entrées qui finissaient en erreur inattendue"
 
-# Entrée standard fermée par l'appelant, sans --sans-questions : ce n'est
-# pas un terminal, aucune question n'est posée et la collecte se fait.
+# Standard input closed by the caller, without --sans-questions: it is
+# not a terminal, no question is asked and the collection is done.
 "$SCRIPT" italienne.pgn --sans-explorateur --profondeur 1 \
     --venv "$VENV" --reglages "$REGL" <&- > sortie 2> journal
 egal "T77 entrée standard fermée, code de retour" 0 "$?"
 verifier "T77 entrée standard fermée, questions sautées" \
     contient journal "terminal non interactif"
 rm -rf analyse-italienne-*
-# Un nom de fichier que le système refuse de regarder, ici trop long.
+# A file name that the system refuses to look at, here too long.
 lancer "$(printf '%0300d' 0).pgn" $O
 egal "T77 nom trop long, code de retour" 1 "$RC"
 verifier "T77 nom trop long, fichier introuvable" \
     contient journal "Fichier PGN introuvable"
-# Une URL aux crochets mal placés.
+# A URL with misplaced brackets.
 lancer 'https://[lichess.org]/abcdefgh' $O
 egal "T77 URL mal formée, code de retour" 1 "$RC"
 verifier "T77 URL mal formée, refusée" contient journal "URL non reconnue"
-# Une partie qui part d'une balise FEN n'est pas une partie entière :
-# elle est refusée, quelle que soit la position. La position initiale
-# écrite en toutes lettres, elle, reste une partie entière.
+# A game that starts from a FEN tag is not a whole game: it is refused,
+# whatever the position. The initial position written out in full, for
+# its part, stays a whole game.
 printf '[SetUp "1"]\n[FEN "6k1/5ppp/8/8/8/8/5PPP/3Q2K1 b - - 0 30"]\n\n' > t-depuis-fen.pgn
 printf '30... h6 31. Qd8+ Kh7 *\n' >> t-depuis-fen.pgn
 lancer t-depuis-fen.pgn $O
@@ -1842,9 +1846,9 @@ printf '[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]\n\n' >>
 printf '1. e4 e5 *\n' >> t-fen-initiale.pgn
 lancer t-fen-initiale.pgn $O
 egal "T77 FEN de la position initiale, acceptée" 0 "$RC"
-# Chemins et sources mal reconnus : tilde non développé, adresse au
-# schéma en majuscules, rubrique de Lichess ou répertoire de huit lettres
-# pris pour une partie.
+# Paths and sources badly recognized: tilde not expanded, address with
+# an uppercase scheme, Lichess section or eight-letter directory taken
+# for a game.
 HOME="$TRAVAIL/maison" "$SCRIPT" italienne.pgn $O --venv "$VENV" \
     --reglages "$REGL" --sortie='~/analyses' > sortie 2> journal
 egal "T77 tilde de --sortie, code de retour" 0 "$?"
@@ -1893,8 +1897,8 @@ verifier "T81 purge avec une autre action, fichier intact" test -f t-purge.ini
 lancer italienne.pgn $O --prompt ""
 egal "T81 --prompt vide, code de retour" 2 "$RC"
 verifier "T81 --prompt vide, message" contient journal "--prompt : chemin vide"
-# Le jeton est factice. Les collectes s'arrêtent à sa lecture, avant le
-# catalogue et avant toute requête.
+# The token is a dummy one. The collections stop at its reading, before
+# the catalog and before any request.
 for contenu in 'LICHESS_TOKEN=lip_factice' '"lip_factice"' "'lip_factice'"; do
     printf '%s\n' "$contenu" > t-jeton-faux
     chmod 600 t-jeton-faux
@@ -1934,8 +1938,8 @@ verifier "T69 fichier absent, annoncé" \
 egal "T69 répertoire, code de retour" 1 "$?"
 verifier "T69 répertoire refusé" contient journal "n'est pas un fichier"
 verifier "T69 le répertoire est toujours là" test -d t-rep
-# Une faute de frappe derrière --reglages ne doit pas détruire un autre
-# fichier : seul un fichier portant la section [joueur], ou vide, part.
+# A typo after --reglages must not destroy another file: only a file
+# carrying the [joueur] section, or an empty one, goes.
 printf '[White "Alice"]\n\n1. e4 e5 *\n' > t-pas-reglages.pgn
 "$SCRIPT" --purge-reglages --reglages t-pas-reglages.pgn > sortie 2> journal
 egal "T69 autre fichier, code de retour" 1 "$?"
@@ -1967,8 +1971,8 @@ verifier "T71 option inconnue" \
 egal "T71 aide muette sur l'option" 0 \
     "$("$SCRIPT" --help 2>/dev/null | grep -c -- --avec-stockfish)"
 
-# --consignes, retirée à son tour : le prompt porte les consignes, et les
-# questions de démarrage le contexte.
+# --consignes, removed in its turn: the prompt carries the
+# instructions, and the startup questions the context.
 echo "Annotez en français." > t-consignes.md
 "$SCRIPT" italienne.pgn --consignes t-consignes.md > sortie 2> journal
 egal "T71 --consignes, code de retour" 2 "$?"
@@ -1978,21 +1982,22 @@ egal "T71 --consignes, aide muette" 0 \
     "$("$SCRIPT" --help 2>/dev/null | grep -c -- --consignes)"
 
 
-# --- Moteur -----------------------------------------------------------------
+# --- Engine -----------------------------------------------------------------
 
-# Liste des processus du moteur, sur une ligne. Elle est relevée avant et
-# après les tests du moteur : seule une différence trahit un processus
-# laissé par le script. Un moteur déjà lancé par un autre programme, une
-# interface d'échecs par exemple, ne fausse ainsi plus le contrôle.
+# List of the engine processes, on one line. It is taken before and
+# after the engine tests: only a difference betrays a process left by
+# the script. An engine already started by another program, a chess
+# interface for example, thus no longer skews the check.
 processus_moteur() {
-    # Par le nom du processus, et non par sa ligne de commande : pgrep -f
-    # retenait aussi tout shell dont la commande citait le chemin du
-    # moteur, d'où de faux échecs.
+    # By the name of the process, and not by its command line: pgrep -f
+    # also caught any shell whose command quoted the path of the
+    # engine, hence false failures.
     pgrep -x "$(basename "$STOCKFISH")" 2>/dev/null | sort | tr '\n' ' '
 }
 
-# La condition est toujours vraie depuis que le script s'arrête au départ
-# sans moteur. Elle est gardée pour ne pas réindenter tout le bloc.
+# The condition has always been true since the script stops at the
+# start without an engine. It is kept so as not to reindent the whole
+# block.
 if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
     MOTEUR="--sans-explorateur --sans-questions --stockfish $STOCKFISH"
     MOTEURS_AVANT=$(processus_moteur)
@@ -2008,8 +2013,8 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
     grep -E '^\| [34] \|' extrait > lignes 2>/dev/null
     egal "T51 lignes 3 et 4 portent mat et gaffe" 2 \
         "$(grep -c '| mat | gaffe |' lignes)"
-    # Un mat se compte après le coup de la ligne : 2. g4 laisse aux Noirs
-    # un mat en un, "#-1", et le coup qui le donnerait, Qh4#, vaut "#-0".
+    # A mate is counted after the move of the line: 2. g4 leaves Black
+    # a mate in one, "#-1", and the move that would give it, Qh4#, is "#-0".
     verifier "T51 Qh4# en premier choix, mat donné" \
         contient lignes "Qh4# (#-0)"
     egal "T51 après 2. g4, mat en un pour les Noirs" 1 \
@@ -2023,8 +2028,8 @@ if [ -n "$STOCKFISH" ] && [ -x "$STOCKFISH" ]; then
         "$(grep -c "^# Dossier d'analyse : partie locale" extrait)"
     egal "T51 sans explorateur, son dossier n'est pas annoncé" 0 \
         "$(grep -c 'explorateur/NNN' extrait)"
-    # Écart entre le premier choix et le coup joué, calculé à part : deux
-    # mats de même sens ne donnent pas un écart d'un centipion.
+    # Loss between the first choice and the played move, computed apart:
+    # two mates in the same direction do not give a loss of one centipawn.
     SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t51 2> journal-t51 <<'EOF'
 import importlib.util
 import os
@@ -2049,9 +2054,9 @@ EOF
         cmp -s attendu-t51 sortie-t51
     joindre sortie-t51
     joindre journal-t51 5
-    # Le moteur compte un mat avant le coup, celui-ci compris : le camp
-    # qui mate en a un de moins à jouer une fois son coup joué, le camp
-    # maté n'en retire aucun. Sans camp donné, le compte du moteur reste.
+    # The engine counts a mate before the move, that move included: the
+    # mating side has one fewer to play once its move is played, the
+    # mated side removes none. Without a side given, the engine count stays.
     SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t51 2> journal-t51 <<'EOF'
 import importlib.util
 import os
@@ -2085,8 +2090,8 @@ EOF
     joindre journal
 
     titre "T72 : résultat contraire à l'évaluation finale"
-    # Les Blancs donnent leur dame et la partie est pourtant notée 1-0 :
-    # la synthèse doit le dire. Notée 0-1, la même partie est cohérente.
+    # White gives away their queen and the game is still scored 1-0: the
+    # summary must say so. Scored 0-1, the same game is consistent.
     printf '[Result "1-0"]\n[Termination "Normal"]\n\n' > t-contre.pgn
     printf '1. e4 e5 2. Qh5 Nc6 3. Qxf7+ Kxf7 1-0\n' >> t-contre.pgn
     lancer t-contre.pgn $MOTEUR $RAPIDE
@@ -2113,8 +2118,8 @@ EOF
     egal "T72 résultat cohérent, rien n'est signalé" 0 \
         "$(grep -c 'se contredisent' extrait)"
 
-    # Le cas symétrique : les Noirs donnent leur dame, la partie est
-    # notée 0-1.
+    # The symmetric case: Black gives away their queen, the game is
+    # scored 0-1.
     printf '[Result "0-1"]\n\n1. e4 e5 2. Nf3 Qh4 3. Nxh4 0-1\n' > t-contre-noirs.pgn
     lancer t-contre-noirs.pgn $MOTEUR $RAPIDE
     egal "T72 victoire des Noirs contredite, code de retour" 0 "$RC"
@@ -2178,9 +2183,9 @@ EOF
     verifier "T25 hachage dans collecte.json" contient extrait '"hachage": 128'
 
     titre "T78 : moteur qui s'arrête hors d'une recherche"
-    # Faux moteur : il annonce ses options, puis meurt au premier
-    # réglage, comme Stockfish quand la mémoire de sa table de hachage
-    # lui est refusée.
+    # Fake engine: it announces its options, then dies at the first
+    # setting, like Stockfish when the memory of its hash table
+    # is refused to it.
     cat > faux-moteur <<'FIN'
 #!/bin/sh
 while read -r ligne; do
@@ -2208,8 +2213,8 @@ FIN
     joindre journal 6
     rm -rf analyse-italienne-*
 
-    # Le moteur désigné par son nom nu, ou par un chemin à tilde : le
-    # contrôle et le lancement le cherchent maintenant au même endroit.
+    # The engine named by its bare name, or by a path with a tilde: the
+    # check and the start now look for it at the same place.
     mkdir -p "$TRAVAIL/maison/bin"
     ln -sf "$STOCKFISH" "$TRAVAIL/maison/bin/moteur-essai"
     HOME="$TRAVAIL/maison" "$SCRIPT" italienne.pgn --sans-explorateur \
@@ -2282,9 +2287,9 @@ FIN
         VERIF="$DEPOT/verifier-analyse.py"
         cp "$DEPOT/test.pgn" test.pgn
         lancer test.pgn $MOTEUR $RAPIDE
-        # Deux PGN sont fabriqués à partir de l'archive, comme le ferait un
-        # LLM : un conforme, construit avec python-chess, et un fautif, où
-        # sont injectés les défauts relevés sur de vrais PGN de LLM.
+        # Two PGNs are built from the archive, as an LLM would do: a
+        # compliant one, built with python-chess, and a faulty one, into
+        # which the flaws found in real LLM PGNs are injected.
         ARCHIVE="$ARCH" "$PYVENV" - > sortie-t73 2> journal-t73 <<'EOF'
 import io
 import json
@@ -2301,18 +2306,18 @@ with zipfile.ZipFile(os.environ["ARCHIVE"]) as z:
     source = chess.pgn.read_game(io.StringIO(z.read(nom).decode("utf-8")))
     evals = json.loads(z.read(racine + "stockfish/evaluations.json"))
 
-# Les évaluations "inventées" doivent réellement manquer aux données du
-# moteur. Un chiffre fixe ne le garantit pas : +7.77 a été un jour la
-# vraie évaluation d'un coup, sur une machine où la partie d'essai se
-# joue autour de +7, et le PGN fautif ne l'était plus sur ce point.
+# The "invented" evaluations must really be missing from the engine
+# data. A fixed figure does not guarantee it: +7.77 was once the real
+# evaluation of a move, on a machine where the test game is played
+# around +7, and the faulty PGN was no longer faulty on that point.
 connues = {coup.get("score") for e in evals
            for coup in [e["joue"]] + e["meilleurs"]}
 
 
 def invente(centiemes):
     """
-    Première évaluation, à partir de la valeur donnée en centièmes de
-    pion, que le moteur n'a rendue pour aucun coup de cette collecte.
+    First evaluation, from the value given in hundredths of a pawn, that
+    the engine returned for no move of this collection.
     """
     while "+%d.%02d" % divmod(centiemes, 100) in connues:
         centiemes += 1
@@ -2321,8 +2326,8 @@ def invente(centiemes):
 
 INVENTE_PGN = invente(777)
 INVENTE_CONVERSATION = invente(999)
-# Le chiffre retenu pour le PGN est rendu au script : c'est lui que le
-# bilan doit nommer.
+# The figure chosen for the PGN is returned to the script: it is the
+# one that the report must name.
 open("t-invente-pgn", "w", encoding="utf-8").write(INVENTE_PGN + "\n")
 
 
@@ -2339,8 +2344,8 @@ def construire(fautif):
     noeud = jeu
     for e, coup in zip(evals, source.mainline_moves()):
         suivant = noeud.add_main_variation(coup)
-        # Le demi-coup 4, mat manqué, est une gaffe pour tout moteur : le
-        # PGN fautif l'oublie.
+        # Ply 4, a missed mate, is a blunder for any engine: the
+        # faulty PGN forgets it.
         if e["nature"] in ("erreur", "gaffe") and not (
                 fautif and e["demicoup"] == 4):
             suivant.nags.add(chess.pgn.NAG_BLUNDER if e["nature"] == "gaffe"
@@ -2351,16 +2356,16 @@ def construire(fautif):
                                              meilleur["score"],
                                              e["joue"]["score"]))
             if fautif and e["demicoup"] == 3:
-                # Demi-coup 3, mat concédé : évaluation inventée, pour
-                # cent, variante écrite dans le commentaire, variante
-                # illégale, et NAG donnant les Blancs gagnants.
+                # Ply 3, a mate conceded: invented evaluation, percent,
+                # variation written in the comment, illegal variation,
+                # and NAG giving White as winning.
                 texte += (" Chiffre inventé : %s, soit 50 %% de gain. (%s)"
                           " (2. Ke3 Nc6)"
                           % (INVENTE_PGN,
                              " ".join(meilleur["pv_san"].split()[:4])))
                 suivant.nags.add(18)
             suivant.comment = textwrap.fill(texte, 75)
-            # Variante tirée de la ligne du moteur, quatre demi-coups.
+            # Variation taken from the engine line, four plies.
             var = noeud
             for uci in meilleur["pv_uci"][:4]:
                 m = chess.Move.from_uci(uci)
@@ -2371,8 +2376,8 @@ def construire(fautif):
         noeud = suivant
     texte = jeu.accept(chess.pgn.StringExporter(columns=79)) + "\n"
     if fautif:
-        # Défauts de qui écrit le PGN à la main : ligne vide après le
-        # résumé, notation suffixe, marqueur de fin faux.
+        # Flaws of someone who writes the PGN by hand: blank line after the
+        # summary, suffix notation, wrong end marker.
         texte = texte.replace("\n1. f3", "\n\n1. f3", 1)
         texte = texte.replace("2. g4 $4", "2. g4??", 1)
         fin = source.headers["Result"]
@@ -2381,9 +2386,9 @@ def construire(fautif):
 
 
 open("t-conforme.pgn", "w", encoding="utf-8").write(construire(False))
-# Trois défauts que le PGN conforme ne porte pas, un par fichier, pour
-# que chacun soit relevé seul : ils ne changent ni les coups ni leur
-# nombre, et passaient donc inaperçus.
+# Three flaws that the compliant PGN does not carry, one per file, so
+# that each one is reported alone: they change neither the moves nor
+# their number, and thus went unnoticed.
 conforme = construire(False)
 lignes = conforme.rstrip("\n").split("\n")
 lignes.insert(len(lignes) - 1, "")
@@ -2396,10 +2401,10 @@ noirs = '[Black "%s"]\n' % source.headers["Black"]
 open("t-balises.pgn", "w", encoding="utf-8").write(
     conforme.replace(blancs + noirs, noirs + blancs, 1))
 open("t-fautif.pgn", "w", encoding="utf-8").write(construire(True))
-# Ce que rend un LLM d'après le prompt court de --prompt-seul : les
-# balises et les coups recopiés, un commentaire sur chaque erreur ou
-# gaffe, sur une seule ligne, sans résumé, sans NAG, sans balise
-# ajoutée.
+# What an LLM returns from the short prompt of --prompt-seul: the
+# tags and the moves copied, a comment on each mistake or
+# blunder, on a single line, without a summary, without NAGs,
+# without added tags.
 court = chess.pgn.Game()
 for b in ("Event", "Site", "Date", "Round", "White", "Black", "Result"):
     court.headers[b] = source.headers[b]
@@ -2426,7 +2431,7 @@ EOF
         "$PYVENV" "$VERIF" "$ARCH" t-fautif.pgn --nom "essai fautif" \
             --synthese t-conversation.txt > bilan 2>&1
         egal "T73 PGN fautif, code de retour" 1 "$?"
-        # Chaque ligne donne le défaut injecté, puis ce que le bilan en dit.
+        # Each line gives the injected flaw, then what the report says of it.
         while IFS='|' read -r defaut constat; do
             verifier "T73 défaut relevé : $defaut" \
                 grep -q -E "^  ECHEC .*$constat" bilan
@@ -2444,9 +2449,9 @@ FIN
         verifier "T73 variante écrite dans un commentaire" \
             contient bilan "écrite(s) à l'intérieur d'un commentaire"
         verifier "T73 coup illégal nommé" contient bilan "Ke3 est illégal"
-        # Les deux évaluations inventées, celle du PGN et celle de la
-        # conversation, donnent la même phrase au bilan : chacune est
-        # cherchée dans sa section, l'une passait sinon pour l'autre.
+        # The two invented evaluations, the one of the PGN and the one of the
+        # conversation, give the same sentence in the report: each one is
+        # looked for in its section, otherwise one passed for the other.
         sed -n '/^=== 5\. /,/^=== 6\. /p' bilan > section5
         sed -n '/^=== 8\. /,/^=== Bilan/p' bilan > section8
         INVENTE=$(cat t-invente-pgn 2>/dev/null)
@@ -2458,8 +2463,8 @@ FIN
             grep -q -E '^  ECHEC .*\(1 introuvable' section8
         grep -E '^  (ECHEC|ATTENTION)' bilan | cut -c1-110 > lignes
         joindre lignes 20
-        # Défauts qui ne changent pas les coups lus : chacun doit être
-        # relevé à lui seul, sur un PGN par ailleurs conforme.
+        # Flaws that do not change the moves read: each one must be
+        # reported on its own, on a PGN otherwise compliant.
         while IFS='|' read -r fichier constat; do
             "$PYVENV" "$VERIF" "$ARCH" "$fichier" > bilan 2>&1
             egal "T73 $fichier, code de retour" 1 "$?"
@@ -2471,9 +2476,9 @@ t-vide-fin.pgn|ligne vide dans le corps de la partie
 t-fermante.pgn|aucune accolade dans un commentaire
 t-balises.pgn|les sept balises obligatoires, dans l'ordre
 FIN
-        # Un PGN conforme au prompt court n'a ni résumé ni lignes de 79
-        # caractères : avec --prompt-seul il passe, sans l'option il
-        # échoue sur ces deux points, qui viennent du prompt complet.
+        # A PGN compliant with the short prompt has neither a summary nor
+        # lines of 79 characters: with --prompt-seul it passes, without the
+        # option it fails on these two points, which come from the full prompt.
         "$PYVENV" "$VERIF" "$ARCH" t-court.pgn --prompt-seul > bilan 2>&1
         egal "T73 --prompt-seul, code de retour" 0 "$?"
         egal "T73 --prompt-seul, aucun échec" 0 "$(grep -c '^  ECHEC' bilan)"
@@ -2488,10 +2493,10 @@ FIN
         egal "T73 aucun PGN rendu, code de retour" 1 "$?"
         verifier "T73 aucun PGN rendu, dit dans le bilan" \
             contient bilan "aucun PGN rendu"
-        # Évaluations citées : le contrôle est appelé seul, sur un dossier
-        # d'une seule évaluation, +0.35, dont l'arrondi se trompe en
-        # flottant. Chaque ligne donne le texte cité et le nombre
-        # d'échecs attendu.
+        # Quoted evaluations: the check is called alone, on a folder
+        # with a single evaluation, +0.35, whose rounding goes wrong in
+        # floating point. Each line gives the quoted text and the
+        # number of failures expected.
         VERIF="$VERIF" "$PYVENV" - > sortie-t73c 2> journal-t73c <<'EOF'
 import importlib.util
 import os
@@ -2527,13 +2532,13 @@ EOF
         rm -rf "$DEPOT/__pycache__"
         "$PYVENV" "$VERIF" /nulle/part.zip t-conforme.pgn > bilan 2>&1
         egal "T73 archive illisible, code de retour" 2 "$?"
-        # Un PGN venu de Windows, aux lignes de 79 caractères terminées
-        # par CRLF, reste conforme.
+        # A PGN coming from Windows, with lines of 79 characters ending
+        # with CRLF, stays compliant.
         awk '{ printf "%s\r\n", $0 }' t-conforme.pgn > t-crlf.pgn
         "$PYVENV" "$VERIF" "$ARCH" t-crlf.pgn > bilan 2>&1
         egal "T73 fins de ligne CRLF, code de retour" 0 "$?"
-        # Un PGN que python-chess ne sait pas lire donne un bilan, et une
-        # archive abîmée le code 2 : jamais une trace Python.
+        # A PGN that python-chess cannot read gives a report, and a
+        # damaged archive the code 2: never a Python traceback.
         printf '1. e5 ) 1. e4 *\n' > t-illisible.pgn
         "$PYVENV" "$VERIF" "$ARCH" t-illisible.pgn > bilan 2>&1
         egal "T73 PGN illisible, code de retour" 1 "$?"
@@ -2563,7 +2568,7 @@ EOF
     titre "T82 : vérificateur, mats, périmètre, mode court, dossier parent"
     if [ -f "$DEPOT/verifier-analyse.py" ]; then
         VERIF="$DEPOT/verifier-analyse.py"
-        # Le mat de Légal : 5... Bxd1 concède un mat, que 7. Nd5# donne.
+        # Légal's mate: 5... Bxd1 concedes a mate, which 7. Nd5# gives.
         printf '[White "Alice"]\n[Black "Bob"]\n[Result "1-0"]\n\n' > t-legal.pgn
         printf '1. e4 e5 2. Nf3 d6 3. Bc4 Bg4 4. Nc3 g6 5. Nxe5 Bxd1 ' \
             >> t-legal.pgn
@@ -2574,8 +2579,8 @@ EOF
         DOSSIER82="${ARCH%.zip}"
         egal "T82 tableau : le mat se compte après le coup" "1 1 1" \
             "$(grep -c -E '\| Bxf7\+ \| #\+1 \|' "$DOSSIER82/synthese.md") $(grep -c -E '\| Ke7 \| #\+1 \|' "$DOSSIER82/synthese.md") $(grep -c -E '\| Nd5# \| #\+0 \|' "$DOSSIER82/synthese.md")"
-        # Trois PGN rendus : des mats cités, des commentaires limités aux
-        # quatre premiers coups, un NAG contraire au moteur.
+        # Three returned PGNs: quoted mates, comments limited to the
+        # first four moves, a NAG contrary to the engine.
         PARTIE="$DOSSIER82/partie.pgn" "$PYVENV" - 2> journal-t82 <<'EOF'
 import os
 
@@ -2598,8 +2603,9 @@ for nom in ("mats", "quatre", "nag"):
         print(jeu, file=f)
 EOF
         joindre journal-t82 5
-        # Un mat des Blancs s'écrit "#+1" dans le dossier : cité tel quel
-        # ou sans signe, il est reconnu, et un mat inventé est relevé.
+        # A mate by White is written "#+1" in the folder: quoted as it
+        # is or without a sign, it is recognized, and an invented mate is
+        # reported.
         "$PYVENV" "$VERIF" "$ARCH" t-82-mats.pgn --prompt-seul > bilan 2>&1
         sed -n '/^=== 5\. /,/^=== 6\. /p' bilan > section5
         verifier "T82 mats cités : trois évaluations lues" \
@@ -2607,11 +2613,11 @@ EOF
         verifier "T82 mats cités : le mat inventé est le seul relevé" \
             contient section5 "(1 introuvable(s))"
         verifier "T82 mats cités : mat inventé nommé" contient section5 "#+7"
-        # Le périmètre convenu borne le contrôle : la gaffe du coup 5
-        # n'est pas attendue d'un PGN limité aux quatre premiers coups.
+        # The agreed scope bounds the check: the blunder of move 5
+        # is not expected from a PGN limited to the first four moves.
         "$PYVENV" "$VERIF" "$ARCH" t-82-quatre.pgn --prompt-seul > bilan 2>&1
-        # Le nombre d'erreurs relevées après le coup 4 varie avec le
-        # moteur : seul compte l'échec du contrôle.
+        # The number of mistakes found after move 4 varies with the
+        # engine: only the failure of the check counts.
         egal "T82 sans périmètre, la gaffe du coup 5 est attendue" "1 0" \
             "$(grep -c 'ECHEC     les .* sont toutes commentées' bilan) $(grep -c '(0 oubliée(s))' bilan)"
         "$PYVENV" "$VERIF" "$ARCH" t-82-quatre.pgn --prompt-seul \
@@ -2624,8 +2630,8 @@ EOF
         "$PYVENV" "$VERIF" "$ARCH" t-82-quatre.pgn --perimetre 0 \
             > bilan 2>&1
         egal "T82 --perimetre 0 refusé" 2 "$?"
-        # Le périmètre donné au script se lit dans les consignes de la
-        # synthèse : un nombre y vaut un nombre de coups.
+        # The scope given to the script is read in the instructions of
+        # the summary: a number there means a number of moves.
         VERIF="$VERIF" "$PYVENV" - > sortie-t82 2> journal-t82 <<'EOF'
 import importlib.util
 import os
@@ -2644,8 +2650,8 @@ EOF
         joindre sortie-t82
         joindre journal-t82 5
         rm -rf "$DEPOT/__pycache__"
-        # Mode court : ni NAG, ni tiret cadratin, ni nombre de FEN, que le
-        # prompt court ne demande pas. Sans l'option, ils sont relevés.
+        # Short mode: neither NAG, nor em dash, nor number of FEN, which the
+        # short prompt does not ask for. Without the option, they are reported.
         printf 'Synth\303\250se \342\200\224 sans position.\n' > t-82-conv.txt
         "$PYVENV" "$VERIF" "$ARCH" t-82-nag.pgn --prompt-seul \
             --synthese t-82-conv.txt > bilan 2>&1
@@ -2657,9 +2663,9 @@ EOF
             --synthese t-82-conv.txt > bilan 2>&1
         egal "T82 mode complet, les trois sont relevés" "1 1 1" \
             "$(grep -c 'ECHEC     aucun NAG de position' bilan) $(grep -c 'ECHEC     aucun tiret cadratin dans la conversation' bilan) $(grep -c 'ATTENTION 0 FEN' bilan)"
-        # Dossier parent : la seule collecte complète est prise et nommée,
-        # une collecte interrompue à côté ne s'y mêle pas, et deux
-        # collectes complètes sont refusées plutôt que choisies.
+        # Parent folder: the only complete collection is taken and named,
+        # an interrupted collection beside it does not get mixed in, and two
+        # complete collections are refused rather than chosen.
         mkdir -p t-parent/analyse-aaa-interrompue
         cp "$DOSSIER82/partie.pgn" t-parent/analyse-aaa-interrompue/
         printf '1. d4 d5 *\n' > t-parent/analyse-aaa-interrompue/partie.pgn
@@ -2680,9 +2686,9 @@ EOF
     fi
 
     titre "T83 : parties d'exemples du dépôt"
-    # EXEMPLES.md joue ses commandes sur les fichiers de parties-exemples :
-    # chacun doit rester ce que la page en dit, accepté ou refusé avec sa
-    # cause. Les collectes se font dans le répertoire des tests.
+    # EXEMPLES.md runs its commands on the files of parties-exemples:
+    # each one must stay what the page says of it, accepted or refused
+    # with its cause. The collections are done in the test directory.
     EX="$DEPOT/parties-exemples"
     if [ -d "$EX" ]; then
         for partie in ma-partie polonaise partie-lichess-org partie-commentee \
@@ -2692,8 +2698,8 @@ EOF
                 --hachage 16
             egal "T83 $partie.pgn, collecte faite" "0 1" \
                 "$RC $(find . -maxdepth 1 -name "analyse-$partie-*.zip" | wc -l)"
-            # Le journal de l'export de chess-mail.com est gardé : il doit
-            # dire que le résultat répété a été ignoré.
+            # The log of the chess-mail.com export is kept: it must
+            # say that the repeated result was ignored.
             [ "$partie" = partie-chess-mail ] && cp journal t-83-journal
         done
         while IFS='|' read -r partie cause; do
@@ -2707,9 +2713,9 @@ deux-parties|Le PGN contient 2 parties
 position|ne commence pas à la position initiale
 accolade|accolade
 FIN
-        # Les PGN annotés de la page passent par le vérificateur, sur
-        # l'archive de ma-partie.pgn : le premier sans échec, le second
-        # avec.
+        # The annotated PGNs of the page go through the checker, on
+        # the archive of ma-partie.pgn: the first one without a failure,
+        # the second one with.
         lancer "$EX/ma-partie.pgn" $MOTEUR --profondeur 1 --fils 1 \
             --hachage 16
         "$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH" "$EX/analyse-llm.pgn" \
@@ -2736,7 +2742,7 @@ FIN
         "$(grep -c -E '^\| [1-9] \| [1-5] \| (Blancs|Noirs) \| [A-Za-z]' extrait)"
     grep -E '^Moteur' extrait | cut -c1-110 > ligne
     joindre ligne
-    # Une seconde de délai : le moteur vient de recevoir "quit".
+    # One second of delay: the engine has just received "quit".
     sleep 1
     PR="${ARCH%.zip}.prompt.txt"
     egal "M2 prompt : les chiffres du moteur font foi" 1 \
@@ -2750,22 +2756,23 @@ FIN
 fi
 
 # ===========================================================================
-# Tests avec le réseau et le jeton, seulement avec --reseau
+# Tests with the network and the token, only with --reseau
 # ===========================================================================
 
 if [ "$RESEAU" = 1 ]; then
 
 CAT="$TRAVAIL/catalogue"
-# Options communes à toutes les collectes de cette partie : aucune
-# question. Collecte de l'explorateur seule, sans moteur, pour EXPL.
+# Options common to all the collections of this part: no
+# question. Collection of the explorer alone, without the engine, for
+# EXPL.
 BASE="--sans-questions"
 EXPL="$BASE --profondeur 1"
 
-# collecter options... : lance une collecte avec le catalogue temporaire
-# et votre jeton. Sortie standard dans "sortie", journal dans "journal",
-# code de retour dans RC, chemin de l'archive dans ARCH. La synthèse est
-# extraite dans "synthese", sa section 2 dans "section2" et les lignes du
-# tableau de l'explorateur dans "table".
+# collecter options...: runs a collection with the temporary catalog
+# and your token. Standard output in "sortie", log in "journal", exit
+# code in RC, path of the archive in ARCH. The summary is extracted
+# into "synthese", its section 2 into "section2" and the lines of the
+# explorer table into "table".
 collecter() {
     "$SCRIPT" "$@" --catalogue "$CAT" --jeton-fichier "$JETON" \
         --venv "$VENV" --reglages "$REGL" > sortie 2> journal
@@ -2782,8 +2789,8 @@ collecter() {
     fi
 }
 
-# Contrôles communs à toute collecte : elle aboutit, sans erreur
-# inattendue, et l'explorateur n'a pas refusé le jeton.
+# Checks common to every collection: it succeeds, without an
+# unexpected error, and the explorer did not refuse the token.
 sain() {
     egal "$1 code de retour" 0 "$RC"
     egal "$1 pas d'erreur inattendue" 0 "$(grep -c 'Erreur inattendue' journal)"
@@ -2795,26 +2802,27 @@ sain() {
 }
 
 
-# Le fichier contient-il le jeton ? Le jeton sert de fichier de motifs à
-# grep : il n'est ni lu par le shell ni affiché, seul un compte ressort.
+# Does the file contain the token? The token serves as a pattern file
+# for grep: it is neither read by the shell nor displayed, only a count
+# comes out.
 compte_jeton() {
     grep -a -c -F -f "$JETON" "$1" 2>/dev/null
 }
 
-# --- Parties d'essai --------------------------------------------------------
+# --- Test games -------------------------------------------------------------
 
-# Une ligne italienne entièrement cataloguée, celle des tests hors réseau.
+# An Italian line fully cataloged, the one of the offline tests.
 printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 *\n' > italienne.pgn
-# La Polonaise suivie de g6, coup rare et hors catalogue. Elle est
-# courte, pour borner le nombre de requêtes.
+# The Polish followed by g6, a rare move outside the catalog. It is
+# short, to bound the number of requests.
 printf '1. b4 g6 2. Bb2 Nf6 3. e3 Bg7 4. Nf3 O-O *\n' > polonaise.pgn
-# Une italienne où les deux camps roquent, pour T33.
+# An Italian where both sides castle, for T33.
 printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 d6 6. O-O O-O *\n' \
     > roques.pgn
-# Un coup nul au troisième demi-coup.
+# A null move on the third ply.
 printf '1. e4 e5 2. -- Nc6 *\n' > nul.pgn
 
-# --- Catalogue -----------------------------------------------------------
+# --- Catalog -------------------------------------------------------------
 
 titre "T09, T10 : installation du catalogue"
 "$SCRIPT" --installer-catalogue --catalogue "$CAT" --venv "$VENV" \
@@ -2863,11 +2871,11 @@ verifier "T13 catalogue tronqué signalé" contient journal "Catalogue tronqué 
 grep 'Catalogue tronqu' journal > ligne 2>/dev/null
 joindre ligne
 
-# --- Jeton, sans requête -------------------------------------------------
+# --- Token, without a request --------------------------------------------
 
 titre "T28 : fichier de jeton lisible par d'autres"
-# Un jeton factice : votre vrai jeton n'est pas recopié. Le catalogue
-# absent arrête le script juste après la lecture du jeton, sans réseau.
+# A dummy token: your real token is not copied. The missing catalog
+# stops the script right after the token is read, without network.
 printf 'lip_factice\n' > faux-jeton
 chmod 644 faux-jeton
 "$SCRIPT" italienne.pgn $EXPL --catalogue "$TRAVAIL/vide" \
@@ -2876,7 +2884,7 @@ chmod 644 faux-jeton
 verifier "T28 avertissement sur le mode 644" \
     contient journal "est lisible par d'autres (mode 644)"
 
-# --- Base maîtres --------------------------------------------------------
+# --- Masters database ----------------------------------------------------
 
 titre "T14 : italienne, base maîtres"
 collecter italienne.pgn $EXPL --base maitres
@@ -2904,7 +2912,7 @@ joindre table
 grep 'Arrêt de l' section2 > ligne 2>/dev/null
 joindre ligne
 
-# --- Base Lichess --------------------------------------------------------
+# --- Lichess database ----------------------------------------------------
 
 titre "T16 : Polonaise, base Lichess"
 collecter polonaise.pgn $EXPL --base lichess
@@ -2941,7 +2949,7 @@ verifier "T18 filtres repris dans la synthèse" \
 head -n 1 table > ligne
 joindre ligne
 
-# --- Seuils et modes -----------------------------------------------------
+# --- Thresholds and modes ------------------------------------------------
 
 titre "T19 : seuil de parties inatteignable"
 collecter italienne.pgn $EXPL --base lichess --seuil-parties 100000000000
@@ -2978,8 +2986,8 @@ verifier "T22 plafond atteint" \
 titre "T23 : pause entre deux requêtes"
 collecter italienne.pgn $EXPL --pause 3 --max-demicoups 3
 sain "T23"
-# Écart, en secondes, entre les horodatages des demi-coups 2 et 3 : la
-# première requête part sans attendre, la pause sépare les suivantes.
+# Gap, in seconds, between the timestamps of plies 2 and 3: the first
+# request goes without waiting, the pause separates the next ones.
 ECART=$(grep -E 'Explorateur : demi-coup [23] ' journal \
     | sed 's/^\[\([0-9]*\):\([0-9]*\):\([0-9]*\)\].*/\1 \2 \3/' \
     | awk 'NR == 1 {a = $1 * 3600 + $2 * 60 + $3}
@@ -2994,14 +3002,14 @@ fi
 grep 'Explorateur : demi-coup' journal > ligne 2>/dev/null
 joindre ligne
 
-# --- Roque ---------------------------------------------------------------
+# --- Castling ------------------------------------------------------------
 
 titre "T33 : le roque retrouvé dans la base"
 collecter roques.pgn $EXPL --base lichess
 sain "T33"
 grep -E '\| O-O \|' table > roques 2>/dev/null
 egal "T33 deux roques dans la table" 2 "$(lignes roques)"
-# Un roque non retrouvé ressortait au rang "-", à 0.0 %.
+# A castling move not found came out at rank "-", at 0.0 %.
 egal "T33 aucun roque au rang hors base" 0 \
     "$(grep -c -E '\| O-O \| - \|' roques)"
 egal "T33 aucun roque à 0.0 %" 0 "$(grep -c -E '\| O-O \| [0-9-]+ \| 0\.0 %' roques)"
@@ -3010,7 +3018,7 @@ noter "  note   lignes dans la table : $(lignes table)"
 grep 'Arrêt de l' section2 > ligne 2>/dev/null
 joindre ligne
 
-# --- Jeton dans l'archive ------------------------------------------------
+# --- Token in the archive ------------------------------------------------
 
 titre "T29 : le jeton n'est pas dans l'archive"
 unzip -p "$ARCH" > contenu 2>/dev/null
@@ -3020,7 +3028,7 @@ unzip -p "$ARCH" '*/collecte.json' > json 2>/dev/null
 verifier "T29 collecte.json note seulement sa présence" \
     contient json '"jeton_present": true'
 
-# --- Source Lichess ------------------------------------------------------
+# --- Lichess source ------------------------------------------------------
 
 titre "T24 : partie téléchargée depuis Lichess"
 if [ -n "$ID_PARTIE" ]; then
@@ -3042,12 +3050,12 @@ else
     sauter "T24 : aucune partie donnée. Pour le jouer : sh test-app.sh --reseau <identifiant ou adresse d'une partie de Lichess>"
 fi
 
-# --- Coup nul et collecte complète -----------------------------------------------------------
+# --- Null move and full collection -----------------------------------------------------------
 
 titre "N1 : coup nul, sur le vrai explorateur"
-# Depuis la version 3.5.9, la collecte s'arrête au coup nul, sans rien
-# demander pour ce demi-coup : auparavant, Lichess refusait par un HTTP
-# 400 la liste de coups portant 0000.
+# Since version 3.5.9, the collection stops at the null move, without
+# asking anything for that ply: before, Lichess refused with an HTTP
+# 400 the move list carrying 0000.
 collecter nul.pgn $EXPL --base lichess --jusqu-a-epuisement
 sain "N1"
 egal "N1 deux lignes dans la table" 2 "$(lignes table)"
@@ -3082,23 +3090,23 @@ fi
 
 fi
 
-# --- Bilan ------------------------------------------------------------------
+# --- Report -----------------------------------------------------------------
 
 titre "Bilan"
 noter "  réussis : $NB_OK"
 noter "  échecs  : $NB_ECHEC"
 noter "  sautés  : $NB_SAUTE"
 
-# Le répertoire personnel et le répertoire temporaire sont masqués : le
-# rapport ne contient alors ni votre nom d'utilisateur ni de chemin privé.
-# LC_ALL=C : le rapport peut contenir des octets qui ne sont pas de l'UTF-8,
-# le nom de fichier refusé par T44 par exemple. Sous une locale UTF-8, le
-# sed de macOS s'arrête alors sur "illegal byte sequence" et tronque le
-# rapport ; en locale C, il traite le fichier octet par octet.
-# Dernier garde-fou, avec --reseau : le rapport n'est écrit que si le jeton
-# n'y figure pas. Un fichier de jeton qui contiendrait une ligne vide ferait
-# échouer ce contrôle à tort, grep prenant alors tout pour une
-# correspondance : le rapport serait retenu, par prudence.
+# The home directory and the temporary directory are masked: the
+# report then contains neither your user name nor any private path.
+# LC_ALL=C: the report may contain bytes that are not UTF-8, the file
+# name refused by T44 for example. Under a UTF-8 locale, the macOS sed
+# then stops on "illegal byte sequence" and truncates the report; in
+# the C locale, it processes the file byte by byte.
+# Last safeguard, with --reseau: the report is only written if the
+# token does not appear in it. A token file that contained a blank line
+# would make this check fail wrongly, grep then taking everything for a
+# match: the report would be held back, out of caution.
 if [ "$RESEAU" = 1 ] &&
     [ "$(grep -a -c -F -f "$JETON" "$BRUT" 2>/dev/null)" != "0" ]; then
     printf '\nLe jeton apparaît dans le rapport : rapport NON écrit.\n' >&2

@@ -1,44 +1,43 @@
 #!/usr/bin/env python3
 """
-Collecte du matériel d'analyse d'une partie d'échecs.
+Gathers the material for the analysis of a chess game.
 
-Ce programme ne produit aucune analyse. Il rassemble et met en forme :
+This program produces no analysis. It collects and formats:
 
-  1. le PGN de la partie, lu depuis un fichier local ou téléchargé
-     depuis Lichess ;
-  2. les statistiques de l'explorateur Lichess, position par position,
-     afin de déterminer où la partie quitte la théorie : base de
-     l'ensemble des joueurs Lichess par défaut, ou base maîtres avec
-     --base maitres. Un coup rare qui reste dans une ligne du catalogue
-     des ouvertures nommées, gardé en local, ne compte pas comme une
-     sortie ;
-  3. l'évaluation Stockfish de la partie en multipv, calculée en local
-     pour épargner ce travail à l'analyste. Le moteur est obligatoire.
+  1. the PGN of the game, read from a local file or downloaded
+     from Lichess;
+  2. the statistics of the Lichess explorer, position by position,
+     to find where the game leaves theory: the database of all
+     Lichess players by default, or the masters database with
+     --base maitres. A rare move that stays within a line of the
+     catalog of named openings, kept locally, does not count as
+     leaving theory;
+  3. the Stockfish evaluation of the game in multipv, computed locally
+     to spare the analyst this work. The engine is mandatory.
 
-Avant la collecte, sur un terminal interactif, le script demande votre
-camp si les en-têtes ne le donnent pas, puis vos réponses aux questions
-de démarrage, rangées dans contexte.md et reprises en
-tête de la synthèse.
+Before the collection, on an interactive terminal, the script asks for
+your side if the headers do not give it, then for your answers to the
+startup questions, stored in contexte.md and repeated at the top of
+the summary.
 
-Votre pseudo, votre cadence habituelle et votre niveau ne sont pas dans
-le code : ils vous sont demandés une seule fois, au premier lancement sur
-un terminal, puis gardés dans un fichier de réglages que vous pouvez
-modifier à la main.
+Your username, your usual time control and your rating are not in the
+code: you are asked for them only once, on the first run in a
+terminal, and they are then kept in a settings file that you can edit
+by hand.
 
-À côté de l'archive, le script écrit le prompt d'analyse de la partie,
-tiré du modèle prompt-modele.txt : vous le collez dans la conversation,
-l'archive en pièce jointe. Avec --prompt-seul, c'est un prompt court,
-tiré de prompt-seul-modele.txt, qui porte la partie et les évaluations
-de Stockfish : il se colle seul, sans pièce jointe, et aucune archive
-n'est alors écrite.
+Next to the archive, the script writes the analysis prompt for the
+game, drawn from the template prompt-modele.txt: you paste it into the
+conversation, with the archive as an attachment. With --prompt-seul,
+it is a short prompt, drawn from prompt-seul-modele.txt, that carries
+the game and the Stockfish evaluations: it is pasted on its own,
+without an attachment, and no archive is written then.
 
-Le résultat est une archive zip contenant les données brutes ainsi qu'un
-fichier de synthèse unique, destiné à être joint à une conversation
-d'annotation. Le dossier de travail est supprimé une fois l'archive
-vérifiée, sauf demande contraire.
+The result is a zip archive containing the raw data and a single
+summary file, meant to be attached to an annotation conversation. The
+working folder is deleted once the archive has been checked, unless
+you ask otherwise.
 
-Lancez-le avec --help pour la liste des options et des exemples
-d'utilisation.
+Run it with --help for the list of options and usage examples.
 """
 
 from __future__ import annotations
@@ -70,29 +69,29 @@ import urllib.request
 import zipfile
 
 # ===========================================================================
-# Amorçage de l'environnement virtuel
+# Bootstrapping the virtual environment
 #
-# Le module python-chess n'est pas empaqueté par Debian. Vous devez donc
-# l'installer dans un environnement virtuel dédié plutôt que dans
-# l'environnement Python du système. Ce bloc gère trois cas :
+# The python-chess module is not packaged by Debian. You must therefore
+# install it in a dedicated virtual environment rather than in the
+# system's Python environment. This block handles three cases:
 #
-#   - le module est disponible, on continue normalement ;
-#   - il ne l'est pas mais l'environnement virtuel existe, on se relance
-#     automatiquement avec l'interpréteur de cet environnement ;
-#   - il ne l'est pas et l'environnement n'existe pas, on vous indique la
-#     marche à suivre, ou on le crée si vous avez passé --installer-venv.
+#   - the module is available: we carry on normally;
+#   - it is not, but the virtual environment exists: we restart
+#     automatically with the interpreter of that environment;
+#   - it is not and the environment does not exist: we tell you what to
+#     do, or we create it if you passed --installer-venv.
 # ===========================================================================
 
 
 def est_fichier(candidat: pathlib.Path) -> bool:
     """
-    Vrai si le chemin désigne un fichier, faux dans tous les autres cas.
+    True if the path names a file, false in every other case.
 
-    Path.is_file() rend faux pour un fichier absent, mais laisse passer
-    d'autres erreurs du système : nom trop long, répertoire interdit. Un
-    texte collé par mégarde à la place d'un nom de fichier finissait
-    ainsi en erreur inattendue. Ici, ce que le système refuse de
-    regarder n'est pas un fichier lisible, et le message habituel suit.
+    Path.is_file() returns false for a missing file, but lets other system
+    errors through: name too long, forbidden directory. Text pasted by
+    mistake instead of a file name thus ended in an unexpected error.
+    Here, what the system refuses to look at is not a readable file, and
+    the usual message follows.
     """
     try:
         return candidat.is_file()
@@ -101,27 +100,26 @@ def est_fichier(candidat: pathlib.Path) -> bool:
 
 
 def est_repertoire(candidat: pathlib.Path) -> bool:
-    """Vrai si le chemin désigne un répertoire, faux dans les autres cas."""
+    """True if the path names a directory, false in the other cases."""
     try:
         return candidat.is_dir()
     except OSError:
         return False
 
 
-#: Vrai sous macOS. Les commandes d'installation proposées dans les
-#: messages et l'emplacement du moteur en dépendent.
+#: True on macOS. The installation commands suggested in the messages
+#: and the location of the engine depend on it.
 EST_MACOS = sys.platform == "darwin"
 
-#: Répertoire des données du script, dans le répertoire personnel sous
-#: Debian comme sous macOS : l'environnement virtuel et le catalogue y
-#: vont, et vous n'avez besoin d'aucun droit root pour les installer.
-#: Jusqu'à la version 3.8.0, Debian les rangeait dans /opt/venv/lichess
-#: et dans /usr/local/share.
+#: Data directory of the script, in the home directory on Debian as on
+#: macOS: the virtual environment and the catalog go there, and you need
+#: no root rights to install them. Up to version 3.8.0, Debian kept them
+#: in /opt/venv/lichess and in /usr/local/share.
 DONNEES = "~/.local/share/IAnalyze"
 
-#: Commandes d'installation des prérequis, reprises dans les messages et
-#: dans l'aide. Sous macOS, le Python de Homebrew fournit déjà le module
-#: venv : il n'existe pas de paquet séparé à installer.
+#: Installation commands for the prerequisites, repeated in the messages
+#: and in the help. On macOS, the Homebrew Python already provides the
+#: venv module: there is no separate package to install.
 if EST_MACOS:
     CMD_PAQUET_VENV = "brew install python"
     CMD_PAQUET_STOCKFISH = "brew install stockfish"
@@ -129,18 +127,18 @@ else:
     CMD_PAQUET_VENV = "apt install python3-venv"
     CMD_PAQUET_STOCKFISH = "apt install stockfish"
 
-#: Emplacement par défaut de l'environnement virtuel dédié.
+#: Default location of the dedicated virtual environment.
 VENV_DEFAUT = DONNEES + "/venv"
 
-#: Variable d'environnement servant de garde-fou contre une relance en
-#: boucle si l'environnement virtuel existe mais reste incomplet.
+#: Environment variable that guards against an endless restart loop if
+#: the virtual environment exists but remains incomplete.
 MARQUEUR_RELANCE = "IANALYZE_DEJA_RELANCE"
 
-#: Jeton en cours d'utilisation, conservé uniquement pour que le gestionnaire
-#: d'erreurs de dernier recours puisse l'expurger d'un message inattendu.
+#: Token in use, kept only so that the last-resort error handler can
+#: redact it from an unexpected message.
 JETON_COURANT: str | None = None
 
-#: Avec --debug, les erreurs inattendues remontent avec leur trace complète.
+#: With --debug, unexpected errors come up with their full traceback.
 DEBUG = False
 
 try:
@@ -151,29 +149,29 @@ try:
 except ImportError:
     CHESS_DISPONIBLE = False
 
-#: Sur une partie qui contient un coup nul, python-chess écrit à chaque
-#: position suivante "Not transmitting history with null moves to UCI
-#: engine" : il prévient qu'il donne au moteur la position seule, sans
-#: l'historique des coups. Les évaluations n'en dépendent pas, et le coup
-#: nul est déjà signalé dans le journal et dans la synthèse : ce message,
-#: en anglais et répété, est écarté. Les autres avis de la bibliothèque
-#: continuent de s'afficher.
+#: On a game that contains a null move, python-chess writes at each
+#: following position "Not transmitting history with null moves to UCI
+#: engine": it warns that it gives the engine the position alone, without
+#: the move history. The evaluations do not depend on it, and the null
+#: move is already reported in the log and in the summary: this message,
+#: in English and repeated, is filtered out. The other notices of the
+#: library are still displayed.
 logging.getLogger("chess.engine").addFilter(
     lambda avis: "null moves" not in avis.getMessage())
 
 
 def python_du_venv(venv: str) -> pathlib.Path:
-    """Renvoie le chemin de l'interpréteur d'un environnement virtuel."""
+    """Returns the path of the interpreter of a virtual environment."""
     return pathlib.Path(os.path.expanduser(venv)) / "bin" / "python3"
 
 
 def venv_operationnel(venv: str) -> bool:
     """
-    Indique si l'environnement virtuel existe et fournit bien python-chess.
+    Tells whether the virtual environment exists and provides python-chess.
 
-    La vérification est faite en lançant réellement l'interpréteur de
-    l'environnement, et non en supposant qu'un répertoire présent est un
-    environnement fonctionnel.
+    The check is done by actually running the interpreter of the
+    environment, rather than by assuming that an existing directory is a
+    working environment.
     """
     interpreteur = python_du_venv(venv)
     if not est_fichier(interpreteur):
@@ -188,11 +186,10 @@ def venv_operationnel(venv: str) -> bool:
 
 def installer_venv(venv: str) -> None:
     """
-    Crée l'environnement virtuel s'il manque, puis y installe python-chess.
+    Creates the virtual environment if missing, then installs python-chess.
 
-    L'opération est idempotente : vous pouvez la relancer sans risque sur
-    un environnement déjà en place, elle se contentera alors de mettre le
-    module à jour.
+    The operation is idempotent: you can safely run it again on an
+    environment already in place, it will then simply update the module.
     """
     racine = pathlib.Path(os.path.expanduser(venv))
     interpreteur = python_du_venv(venv)
@@ -207,8 +204,8 @@ def installer_venv(venv: str) -> None:
             raise SystemExit("Impossible de créer %s : %s" % (racine, err)) \
                 from err
         except subprocess.CalledProcessError as err:
-            # Le texte affiché sous Debian est celui d'origine ; sous macOS
-            # il n'existe pas de paquet python3-venv à suggérer.
+            # The text displayed on Debian is the original one; on macOS
+            # there is no python3-venv package to suggest.
             raise SystemExit(
                 "Échec de la création de l'environnement virtuel. %s (%s)"
                 % ("Le Python installé fournit-il le module venv ?"
@@ -237,11 +234,11 @@ def installer_venv(venv: str) -> None:
 
 def relancer_dans_venv(venv: str, argv: list[str]) -> None:
     """
-    Se relance avec l'interpréteur de l'environnement virtuel.
+    Restarts with the interpreter of the virtual environment.
 
-    Cette fonction ne rend jamais la main en cas de succès : le processus
-    courant est remplacé. Si l'environnement est absent ou incomplet, elle
-    interrompt le programme avec les instructions à suivre.
+    This function never returns on success: the current process is
+    replaced. If the environment is missing or incomplete, it stops the
+    program with the instructions to follow.
     """
     interpreteur = python_du_venv(venv)
     script = os.path.abspath(__file__)
@@ -272,79 +269,78 @@ def relancer_dans_venv(venv: str, argv: list[str]) -> None:
 
 
 # ===========================================================================
-# Constantes
+# Constants
 # ===========================================================================
 
-#: Hôte de l'explorateur. L'ancien nom explorer.lichess.ovh ne répond plus.
+#: Explorer host. The old name explorer.lichess.ovh no longer answers.
 EXPLORER_URL = "https://explorer.lichess.org/masters"
 
-#: Base de l'ensemble des joueurs Lichess, parties classées uniquement. Même
-#: hôte et même exigence de jeton que la base maîtres. C'est cette base
-#: qu'affiche la page https://lichess.org/opening.
+#: Database of all Lichess players, rated games only. Same host and same
+#: token requirement as the masters database. This is the database shown
+#: on the page https://lichess.org/opening.
 EXPLORER_LICHESS_URL = "https://explorer.lichess.org/lichess"
 
-#: Bases interrogeables avec --base : endpoint, et libellé repris dans la
-#: synthèse. Le libellé de la base maîtres redonne à l'identique les titres
-#: des synthèses produites avant l'ajout de cette option.
+#: Databases that --base can query: endpoint, and label repeated in the
+#: summary. The label of the masters database reproduces exactly the
+#: titles of the summaries produced before this option was added.
 BASES_EXPLORATEUR = {
     "maitres": {"url": EXPLORER_URL, "libelle": "maîtres"},
     "lichess": {"url": EXPLORER_LICHESS_URL,
                 "libelle": "Lichess (tous joueurs)"},
 }
 
-#: Cadences admises par l'endpoint /lichess, schéma Speed de l'API.
+#: Speeds accepted by the /lichess endpoint, Speed schema of the API.
 CADENCES_LICHESS = ("ultraBullet", "bullet", "blitz", "rapid", "classical",
                     "correspondence")
 
-#: Tranches de classement admises par l'endpoint /lichess. Chacune court de
-#: sa valeur jusqu'à la suivante : 0 couvre 0 à 999 (tranche affichée "400"
-#: sur le site), 2500 couvre tout ce qui dépasse. Le serveur range chaque
-#: partie selon la moyenne des classements de ses deux joueurs.
+#: Rating bands accepted by the /lichess endpoint. Each one runs from its
+#: value up to the next: 0 covers 0 to 999 (band shown as "400" on the
+#: site), 2500 covers everything above. The server files each game under
+#: the average rating of its two players.
 CLASSEMENTS_LICHESS = ("0", "1000", "1200", "1400", "1600", "1800", "2000",
                        "2200", "2500")
 
-#: Filtres par défaut de la base Lichess, repris de la configuration par
-#: défaut de https://lichess.org/opening (OpeningConfig.default et
-#: OpeningQuery.firstMonth dans le source de lila) : toutes les cadences
-#: sauf l'UltraBullet, toutes les tranches sauf la plus basse, et seulement
-#: les parties jouées depuis janvier 2017. Vous retrouvez ainsi les mêmes
-#: pourcentages que sur cette page.
+#: Default filters of the Lichess database, taken from the default
+#: configuration of https://lichess.org/opening (OpeningConfig.default
+#: and OpeningQuery.firstMonth in the lila source): all speeds except
+#: UltraBullet, all bands except the lowest, and only the games played
+#: since January 2017. You thus get the same percentages as on that page.
 CADENCES_DEFAUT = "bullet,blitz,rapid,classical,correspondence"
 CLASSEMENTS_DEFAUT = "1000,1200,1400,1600,1800,2000,2200,2500"
 DEPUIS_LICHESS = "2017-01"
 
-#: Catalogue des ouvertures nommées de Lichess, dans le domaine public
-#: (CC0). Ce sont les cinq fichiers que charge aussi le serveur de
-#: l'explorateur pour nommer les positions.
+#: Catalog of the named openings of Lichess, in the public domain (CC0).
+#: These are the five files that the explorer server also loads to name
+#: the positions.
 CATALOGUE_SOURCE = ("https://raw.githubusercontent.com/lichess-org/"
                     "chess-openings/master/{partie}.tsv")
 CATALOGUE_PARTIES = ("a", "b", "c", "d", "e")
 
-#: Répertoire par défaut du catalogue local, et nom de son index.
+#: Default directory of the local catalog, and name of its index.
 CATALOGUE_DEFAUT = DONNEES
 CATALOGUE_INDEX = "catalogue.tsv"
 
-#: Version du format de l'index, vérifiée au chargement.
+#: Version of the index format, checked on loading.
 CATALOGUE_FORMAT = "1"
 
-#: Numéro de coup dans une ligne du catalogue, "1." ou "12." par exemple.
+#: Move number in a catalog line, "1." or "12." for example.
 RE_NUMERO_COUP = re.compile(r"\d+\.+")
 
-#: Fichier de réglages de l'utilisateur, au même endroit sous Debian et
-#: sous macOS. Il porte ce qui dépend de la personne et non de la partie :
-#: ses pseudos et sa cadence habituelle. Rien de personnel ne figure donc
-#: dans ce script, que chacun peut reprendre tel quel.
-#: Les répertoires portent le nom du projet, IAnalyze, et non celui du
-#: script : il en va de même du catalogue et des données sous macOS.
+#: User settings file, at the same place on Debian and on macOS. It holds
+#: what depends on the person and not on the game: their usernames and
+#: their usual time control. Nothing personal therefore appears in this
+#: script, which anyone can reuse as it is.
+#: The directories bear the name of the project, IAnalyze, and not that
+#: of the script: the same goes for the catalog and the data on macOS.
 REGLAGES_DEFAUT = "~/.config/IAnalyze/reglages.ini"
 
-#: Section du fichier de réglages qui décrit le joueur.
+#: Section of the settings file that describes the player.
 REGLAGES_SECTION = "joueur"
 
-#: Clefs connues de cette section, avec les lignes de commentaire écrites
-#: au-dessus de chacune dans le fichier. Les pseudos sont cherchés, sans
-#: tenir compte de la casse, dans les balises White et Black pour déduire
-#: le camp du joueur ; le premier sert à compléter une balise vide.
+#: Known keys of this section, with the comment lines written above each
+#: one in the file. The usernames are looked up, ignoring case, in the
+#: White and Black tags to deduce the player's side; the first one is
+#: used to fill in an empty tag.
 REGLAGES_CLEFS = (
     ("pseudos",
      ("Vos noms de joueur, séparés par des virgules. Ils sont cherchés,",
@@ -369,29 +365,30 @@ REGLAGES_CLEFS = (
       "c'est l'Elo de votre balise dans la partie qui sert.")),
 )
 
-#: Bornes d'un niveau exprimé en points Elo.
+#: Bounds of a rating expressed in Elo points.
 NIVEAU_MIN, NIVEAU_MAX = 100, 3500
 
-#: Modèle du prompt d'analyse, cherché à côté du script, et suffixe du
-#: prompt écrit à côté de l'archive.
+#: Template of the analysis prompt, looked up next to the script, and
+#: suffix of the prompt written next to the archive.
 PROMPT_MODELE = "prompt-modele.txt"
 PROMPT_SUFFIXE = ".prompt.txt"
 
-#: Modèle du prompt court de --prompt-seul : quelques consignes, la partie
-#: et les évaluations du moteur, à coller seul, sans pièce jointe.
+#: Template of the short prompt of --prompt-seul: a few instructions, the
+#: game and the engine evaluations, to be pasted alone, without an
+#: attachment.
 PROMPT_SEUL_MODELE = "prompt-seul-modele.txt"
 
-#: Valeur par laquelle un modèle place la partie. Avec --prompt-seul, un
-#: modèle qui ne la placerait pas ne donnerait rien à analyser.
+#: Value through which a template places the game. With --prompt-seul, a
+#: template that did not place it would give nothing to analyze.
 PROMPT_DONNEES = "{{PARTIE_PGN}}"
 
-#: Repères du modèle. Une ligne commençant par PROMPT_DIRECTIVE est une
-#: directive, jamais recopiée ; une valeur s'écrit entre doubles accolades.
+#: Markers of the template. A line starting with PROMPT_DIRECTIVE is a
+#: directive, never copied; a value is written between double braces.
 PROMPT_DIRECTIVE = "#!"
 RE_VALEUR_MODELE = re.compile(r"\{\{([A-Za-z_]+)\}\}")
 
-#: Conditions que connaît une directive "si", et valeurs remplaçables. Un
-#: nom absent de ces listes arrête le script avant la collecte.
+#: Conditions known to a "si" directive, and replaceable values. A name
+#: missing from these lists stops the script before the collection.
 PROMPT_CONDITIONS = ("STOCKFISH", "EXPLORATEUR", "BASE_LICHESS",
                      "BASE_MAITRES", "REPONSES",
                      "CAMP_CONNU", "PSEUDO_CONNU", "NIVEAU_DECLARE",
@@ -405,72 +402,72 @@ PROMPT_VALEURS = ("VERSION", "DEPOT", "ARCHIVE", "PSEUDOS", "CAMP", "NIVEAU",
                   "CONSIGNES_JOUEUR", "OUVERTURE", "DEMI_COUPS",
                   "DEMI_COUPS_EVALUES", "COUPS_FAIBLES_JOUEUR")
 
-#: Nombre d'erreurs que le prompt court demande dans son bilan. Quand le
-#: tableau du moteur en marque moins chez le joueur, le prompt donne leur
-#: nombre réel : un LLM à qui l'on en réclame trois en invente une.
+#: Number of errors that the short prompt asks for in its review. When
+#: the engine table marks fewer of them for the player, the prompt gives
+#: their real number: an LLM asked for three makes one up.
 ERREURS_DU_BILAN = 3
 
-#: Valeur de la balise Annotator quand les réglages n'en donnent pas : le
-#: script ignore quel modèle rédigera l'analyse.
+#: Value of the Annotator tag when the settings do not give one: the
+#: script does not know which model will write the analysis.
 ANNOTATEUR_DEFAUT = ("votre nom de modèle, suivi de son éditeur entre "
                      "parenthèses")
 
-#: Libellé d'une cadence inconnue, quand ni la balise TimeControl ni les
-#: réglages ne la donnent.
+#: Label of an unknown time control, when neither the TimeControl tag
+#: nor the settings give it.
 CADENCE_DEFAUT = "non précisée"
 
-#: Catégories de cadence de Lichess, de la plus lente à la plus rapide,
-#: chacune avec la durée estimée, en secondes, à partir de laquelle elle
-#: s'applique. La durée estimée d'une partie vaut le temps initial plus
-#: COUPS_ESTIMES fois l'incrément. Bornes et formule reprises du source de
-#: Lichess (scalachess : Speed.scala et Clock.scala). Au delà de six
-#: heures, Lichess parle de correspondance ; une cadence saisie comme du
-#: temps réel reste ici "classique".
+#: Lichess time control categories, from the slowest to the fastest, each
+#: with the estimated duration, in seconds, from which it applies. The
+#: estimated duration of a game is the initial time plus COUPS_ESTIMES
+#: times the increment. Bounds and formula taken from the Lichess source
+#: (scalachess: Speed.scala and Clock.scala). Beyond six hours, Lichess
+#: speaks of correspondence; a time control entered as real time stays
+#: "classique" here.
 CATEGORIES_CADENCE = ((1500, "classique"), (480, "rapide"), (180, "blitz"),
                       (30, "bullet"), (0, "ultrabullet"))
 COUPS_ESTIMES = 40
 
-#: Formes de cadence admises dans le fichier de réglages : "15+10", minutes
-#: par joueur puis incrément en secondes, à la manière de Lichess, et
-#: "14 jours" pour la correspondance. Les autres valeurs de
-#: CADENCES_INCONNUES désignent une cadence inconnue.
+#: Time control forms accepted in the settings file: "15+10", minutes per
+#: player then increment in seconds, the Lichess way, and "14 jours" for
+#: correspondence. The other values of CADENCES_INCONNUES denote an
+#: unknown time control.
 RE_CADENCE_REELLE = re.compile(r"([0-9]{1,5})\s*\+\s*([0-9]{1,5})")
 RE_CADENCE_JOURS = re.compile(r"([0-9]{1,4})\s*(?:j|jour|jours)")
 
-#: Correspondance par période : "10 coups en 50 jours". C'est la cadence
-#: dite standard de l'ICCF, le temps économisé sur une période étant
-#: reporté sur la suivante.
+#: Correspondence by period: "10 coups en 50 jours". This is the
+#: so-called standard ICCF time control, the time saved over a period
+#: being carried over to the next one.
 RE_CADENCE_PERIODE = re.compile(
     r"([0-9]{1,3})\s*coups?\s*en\s*([0-9]{1,4})\s*(?:j|jour|jours)")
 
-#: Correspondance à capital de temps : "5 jours + 36 heures", suivi au
-#: besoin de ", plafond 20 jours" et de ", réserve 50 jours". Un capital
-#: est donné au départ, un incrément s'y ajoute à chaque coup, un plafond
-#: peut le borner, et une réserve peut exister à côté, où le joueur puise
-#: à sa guise. chess-mail.com en est la forme simple (5 jours, 36 heures
-#: par coup, plafond de 20 jours), le Triple Block de l'ICCF la forme
-#: complète (50 jours, un incrément en jours, plafond de 50 jours, réserve
-#: de 50 ou 75 jours). L'incrément porte son unité, heures ou jours : un
-#: jour et demi ne s'écrit pas en jours entiers.
+#: Correspondence with a clock: "5 jours + 36 heures", followed if need be
+#: by ", plafond 20 jours" and by ", réserve 50 jours". A clock is given at
+#: the start, an increment is added to it at each move, a maximum may cap
+#: it, and a bank may exist beside it, which the player draws from at
+#: will. chess-mail.com is its simple form (5 days, 36 hours per move,
+#: maximum of 20 days), the ICCF Triple Block its full form (50 days, an
+#: increment in days, maximum of 50 days, bank of 50 or 75 days). The
+#: increment carries its unit, hours or days: a day and a half cannot be
+#: written in whole days.
 RE_CADENCE_CAPITAL = re.compile(
     r"([0-9]{1,4})\s*(?:j|jour|jours)\s*\+\s*([0-9]{1,4})\s*"
     r"(h|heure|heures|j|jour|jours)"
     r"(?:\s*,?\s*plafond\s*([0-9]{1,4})\s*(?:j|jour|jours))?"
     r"(?:\s*,?\s*r[ée]serve\s*([0-9]{1,4})\s*(?:j|jour|jours))?")
 
-#: Incrément saisi avec son unité : "36h" ou "3j".
+#: Increment entered with its unit: "36h" or "3j".
 RE_INCREMENT = re.compile(r"([0-9]{1,4})\s*(h|heure|heures|j|jour|jours)")
 CADENCES_INCONNUES = ("", "?", "inconnue", "non précisée")
 
-#: Balise TimeControl du standard PGN, dans ses deux formes les plus
-#: courantes : "600+5", secondes puis incrément, et "300", temps seul.
+#: TimeControl tag of the PGN standard, in its two most common forms:
+#: "600+5", seconds then increment, and "300", time only.
 RE_TIMECONTROL = re.compile(r"([0-9]{1,6})(?:\+([0-9]{1,5}))?")
 
-#: Cadence inconnue, valeur de repli.
+#: Unknown time control, fallback value.
 CADENCE_INCONNUE = {"type": "inconnue"}
 
-#: Questions de démarrage, avec le défaut que retient
-#: une réponse vide : libellé dans contexte.md, question, défaut.
+#: Startup questions, with the default that an empty answer keeps: label
+#: in contexte.md, question, default.
 QUESTIONS_CONTEXTE = (
     ("a. Périmètre",
      "Périmètre : les N premiers coups, ou la partie complète ?",
@@ -487,98 +484,98 @@ QUESTIONS_CONTEXTE = (
      "rien"),
 )
 
-#: Nature d'un coup selon son écart au premier choix du moteur, en
-#: centipions du point de vue du joueur au trait. 100 est le seuil de
-#: commentaire obligatoire des instructions du projet.
+#: Category of a move according to its loss against the engine's first
+#: choice, in centipawns from the point of view of the side to move. 100
+#: is the threshold of the mandatory comment in the project instructions.
 SEUIL_IMPRECISION = 50
 SEUIL_ERREUR = 100
 SEUIL_GAFFE = 300
 
-#: Écart, en centipions, à partir duquel il ne mesure plus rien : l'un des
-#: deux scores est un mat, que valeur_pour_trait ramène à une valeur
-#: bornée voisine de 100000 pour pouvoir classer les coups. Ce nombre est
-#: une convention de calcul, non une évaluation du moteur : il n'est pas
-#: affiché.
+#: Loss, in centipawns, from which it no longer measures anything: one of
+#: the two scores is a mate, which valeur_pour_trait brings down to a
+#: bounded value close to 100000 so that the moves can be ranked. This
+#: number is a computing convention, not an engine evaluation: it is not
+#: displayed.
 SEUIL_ECART_MAT = 10000
 
-#: Valeur à partir de laquelle une évaluation bornée est celle d'un mat :
-#: valeur_pour_trait ramène un mat en n coups à 100000 - n.
+#: Value from which a bounded evaluation is that of a mate:
+#: valeur_pour_trait turns a mate in n moves into 100000 - n.
 SEUIL_MAT = 90000
 
-#: Erreurs et gaffes reprises au plus, par camp, dans le palmarès.
+#: Maximum number of mistakes and blunders listed, per side, in the
+#: ranking.
 PALMARES_MAX = 5
 
-#: Repère d'entrée en finale : matériel hors pions et rois des deux camps
-#: réunis, au plus SEUIL_FINALE avec les valeurs de VALEUR_PIECES. Les
-#: lettres sont celles de la FEN, en minuscules.
+#: Marker of the entry into the endgame: material other than pawns and
+#: kings of both sides together, at most SEUIL_FINALE with the values of
+#: VALEUR_PIECES. The letters are those of the FEN, in lowercase.
 SEUIL_FINALE = 26
 VALEUR_PIECES = {"n": 3, "b": 3, "r": 5, "q": 9}
 
-#: Export PGN public, ne demande aucune authentification.
+#: Public PGN export, requires no authentication.
 EXPORT_URL = "https://lichess.org/game/export/{id}"
 
-#: Emplacement du binaire Stockfish sous Debian : il n'est pas dans le PATH.
-#: Sous macOS, Homebrew le place dans le PATH : on l'y cherche, avec repli
-#: sur l'emplacement de Homebrew pour Apple Silicon s'il est introuvable.
+#: Location of the Stockfish binary on Debian: it is not in the PATH. On
+#: macOS, Homebrew puts it in the PATH: we look for it there, falling
+#: back on the Homebrew location for Apple Silicon if it cannot be found.
 STOCKFISH_DEFAUT = ((shutil.which("stockfish")
                      or "/opt/homebrew/bin/stockfish") if EST_MACOS
                     else "/usr/games/stockfish")
 
-#: Indication d'installation du moteur, reprise dans le message d'erreur.
+#: Hint for installing the engine, repeated in the error message.
 AIDE_STOCKFISH = (CMD_PAQUET_STOCKFISH if EST_MACOS
                   else CMD_PAQUET_STOCKFISH + ", dans /usr/games")
 
-#: Fichier contenant le jeton personnel, en mode 600, et rien d'autre.
+#: File holding the personal token, in mode 600, and nothing else.
 JETON_DEFAUT = "~/.lichess_token"
 
-#: Identifiant tel qu'on le saisit : 8 caractères pour la partie, 12 pour
-#: la vue d'un joueur. Exiger la longueur exacte évite de prendre un nom
-#: de fichier inexistant, "inexistant.pgn" par exemple, pour l'identifiant
-#: "inexista", et de l'envoyer à Lichess.
+#: Identifier as it is typed: 8 characters for the game, 12 for the view
+#: of one player. Requiring the exact length avoids taking a missing file
+#: name, "inexistant.pgn" for example, for the identifier "inexista", and
+#: sending it to Lichess.
 RE_ID_SOURCE = re.compile(r"[A-Za-z0-9]{8}(?:[A-Za-z0-9]{4})?")
 
-#: Version du script, selon le versionnage sémantique. Elle est reprise
-#: dans l'en-tête d'agent : c'est le seul endroit à modifier.
+#: Version of the script, following semantic versioning. It is repeated
+#: in the user agent header: this is the only place to change.
 VERSION = "4.0.2"
 
-#: Adresse du dépôt du projet, citée en tête du prompt d'analyse pour
-#: que l'analyste, ou toute personne à qui le prompt est transmis,
-#: sache d'où viennent le prompt et l'archive.
+#: Address of the project repository, quoted at the top of the analysis
+#: prompt so that the analyst, or anyone the prompt is passed on to,
+#: knows where the prompt and the archive come from.
 DEPOT = "https://github.com/deuza/IAnalyze"
 
-#: En-tête d'agent, par politesse envers l'API.
+#: User agent header, out of courtesy towards the API.
 UA = "IAnalyze/%s (+%s)" % (VERSION, DEPOT)
 
 
 # ===========================================================================
-# Utilitaires généraux
+# General utilities
 # ===========================================================================
 
-#: Caractères de contrôle retirés d'un texte avant affichage : jeu C0 hors
-#: tabulation et saut de ligne, DEL, puis jeu C1. Une séquence
-#: d'échappement venue d'un PGN ou d'un nom de fichier ne doit jamais
-#: atteindre votre terminal.
+#: Control characters removed from a text before display: C0 set except
+#: tab and line feed, DEL, then C1 set. An escape sequence coming from a
+#: PGN or from a file name must never reach your terminal.
 RE_CONTROLES = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
 
 
-#: Séparateurs qu'une valeur tenant sur une ligne ne doit pas contenir :
-#: tabulations, fins de ligne, séparateurs de ligne et de paragraphe
-#: Unicode. Ils deviennent une espace.
+#: Separators that a value fitting on one line must not contain: tabs,
+#: line ends, Unicode line and paragraph separators. They become a
+#: space.
 RE_BLANCS_VALEUR = re.compile(r"[\t\n\x0b\x0c\r\x85\u2028\u2029]")
 
-#: Substituts isolés, traces d'octets que l'encodage attendu n'a pas su
-#: décoder (nom de fichier, saisie au clavier).
+#: Lone surrogates, traces of bytes that the expected encoding could not
+#: decode (file name, keyboard input).
 RE_SUBSTITUTS = re.compile(r"[\ud800-\udfff]")
 
 
 def nettoyer_valeur(texte: str) -> str:
     """
-    Nettoie une valeur courte avant de l'écrire ou de l'afficher : nom de
-    joueur, balise Event ou Site, réponse à une question.
+    Cleans a short value before writing or displaying it: player name,
+    Event or Site tag, answer to a question.
 
-    Les séparateurs deviennent une espace, les substituts isolés U+FFFD,
-    et les autres caractères de contrôle ainsi que la marque d'ordre des
-    octets sont retirés. Une valeur saine ressort inchangée.
+    Separators become a space, lone surrogates U+FFFD, and the other
+    control characters as well as the byte order mark are removed. A sound
+    value comes out unchanged.
     """
     texte = RE_BLANCS_VALEUR.sub(" ", texte)
     texte = RE_SUBSTITUTS.sub("\ufffd", texte)
@@ -587,28 +584,27 @@ def nettoyer_valeur(texte: str) -> str:
 
 def configurer_console() -> None:
     """
-    Rend la sortie standard et la sortie d'erreur tolérantes à l'encodage.
+    Makes standard output and standard error tolerant of the encoding.
 
-    Un caractère que l'encodage du terminal ne sait pas représenter est
-    remplacé par "?" au lieu de lever UnicodeEncodeError : c'est le cas
-    des accents des messages avec PYTHONIOENCODING=ascii, ou sous une
-    locale C quand le mode UTF-8 de Python est désactivé (PYTHONUTF8=0).
-    L'encodage lui-même n'est pas modifié, seul le traitement des erreurs
-    l'est.
+    A character that the terminal encoding cannot represent is replaced
+    by "?" instead of raising UnicodeEncodeError: this is the case of the
+    accents of the messages with PYTHONIOENCODING=ascii, or under a C
+    locale when the UTF-8 mode of Python is disabled (PYTHONUTF8=0). The
+    encoding itself is not changed, only the error handling is.
 
-    L'entrée standard passe en "surrogateescape" : un octet que l'encodage
-    du terminal ne sait pas décoder, un "é" saisi en latin-1 sur une
-    console UTF-8 par exemple, est gardé de côté au lieu de lever
-    UnicodeDecodeError, et demander() le redécode ensuite.
+    Standard input switches to "surrogateescape": a byte that the terminal
+    encoding cannot decode, an "é" typed in latin-1 on a UTF-8 console for
+    example, is set aside instead of raising UnicodeDecodeError, and
+    demander() decodes it again afterwards.
     """
     reconfigurer = getattr(sys.stdin, "reconfigure", None)
     if reconfigurer is not None:
         with contextlib.suppress(ValueError, OSError):
             reconfigurer(errors="surrogateescape")
     for flux in (sys.stdout, sys.stderr):
-        # Un flux fermé (None) ou remplacé par un objet sans reconfigure()
-        # est laissé tel quel : mieux vaut un affichage dégradé qu'un
-        # échec avant d'avoir commencé.
+        # A closed stream (None) or one replaced by an object without
+        # reconfigure() is left as it is: a degraded display is better than a
+        # failure before even starting.
         reconfigurer = getattr(flux, "reconfigure", None)
         if reconfigurer is None:
             continue
@@ -618,9 +614,9 @@ def configurer_console() -> None:
 
 def journal(message: str) -> None:
     """
-    Écrit une ligne d'avancement horodatée sur la sortie d'erreur.
+    Writes a timestamped progress line on standard error.
 
-    Les caractères de contrôle du message sont retirés au passage.
+    The control characters of the message are removed on the way.
     """
     message = RE_CONTROLES.sub("", message)
     heure = datetime.datetime.now().strftime("%H:%M:%S")
@@ -630,51 +626,49 @@ def journal(message: str) -> None:
 
 def expurger(texte: str, jeton: str | None) -> str:
     """
-    Retire toute occurrence du jeton d'une chaîne avant affichage.
+    Removes every occurrence of the token from a string before display.
 
-    Aucun message ni aucune exception n'est censé contenir le jeton, mais
-    vous ne voulez prendre aucun risque sur une trace d'exécution qui
-    finira peut-être dans un rapport de bogue.
+    No message and no exception is supposed to contain the token, but you
+    want to take no risk with a traceback that may end up in a bug report.
     """
     if jeton:
         texte = texte.replace(jeton, "<JETON-EXPURGE>")
     return texte
 
 
-#: Profondeur de recherche la plus grande admise. Au delà, une seule
-#: position occuperait le moteur des heures, sans rien apporter à
-#: l'analyse d'une partie : une faute de frappe, "180" pour "18", ne
-#: doit pas bloquer la machine.
+#: Largest search depth accepted. Beyond it, a single position would keep
+#: the engine busy for hours, without adding anything to the analysis of
+#: a game: a typo, "180" for "18", must not lock up the machine.
 PROFONDEUR_MAX = 60
 
-#: Plus grand compte de parties tenu pour plausible dans une réponse de
-#: l'explorateur. La base Lichess en compte quelques milliards.
+#: Largest game count held as plausible in an answer of the explorer.
+#: The Lichess database counts a few billion games.
 COMPTE_MAX = 10 ** 15
 
 
 def entier(valeur) -> int:
     """
-    Convertit prudemment une valeur venue d'un JSON externe en entier.
+    Cautiously converts a value from an external JSON into an integer.
 
-    Une valeur absente, nulle ou d'un type inattendu vaut zéro : on préfère
-    un chiffre manquant à une interruption sur un détail de schéma. Il en
-    va de même d'un nombre infini : json.loads lit "1e999" comme l'infini,
-    que int() refuse par une OverflowError.
+    A missing, null or unexpectedly typed value counts as zero: a missing
+    figure is better than a stop over a detail of the schema. The same
+    goes for an infinite number: json.loads reads "1e999" as infinity,
+    which int() rejects with an OverflowError.
     """
     try:
         nombre = int(valeur)
     except (TypeError, ValueError, OverflowError):
         return 0
-    # Un compte de parties est positif, et aucune base n'en tient plus de
-    # quelques milliards. Hors de ces bornes la valeur est tenue pour
-    # absente : négative, elle donnerait une fréquence de -5 %, énorme,
-    # elle ferait échouer la division qui suit.
+    # A game count is positive, and no database holds more than a few
+    # billion games. Outside these bounds the value is held as missing:
+    # negative, it would give a frequency of -5 %; huge, it would make the
+    # division that follows fail.
     return nombre if 0 <= nombre <= COMPTE_MAX else 0
 
 
-#: Marques d'ordre des octets reconnues en tête de fichier. Celles de
-#: l'UTF-32 passent d'abord : la marque UTF-32 petit-boutiste commence par
-#: celle de l'UTF-16 petit-boutiste.
+#: Byte order marks recognized at the start of a file. Those of UTF-32
+#: come first: the little-endian UTF-32 mark starts with the
+#: little-endian UTF-16 one.
 BOMS_LARGES = (
     (codecs.BOM_UTF32_LE, "utf-32-le"),
     (codecs.BOM_UTF32_BE, "utf-32-be"),
@@ -682,21 +676,22 @@ BOMS_LARGES = (
     (codecs.BOM_UTF16_BE, "utf-16-be"),
 )
 
-#: Octets examinés pour reconnaître un UTF-16 sans marque d'ordre.
+#: Bytes examined to recognize UTF-16 without a byte order mark.
 ECHANTILLON_UTF16 = 4096
 
-#: Octets invalides tolérés, par caractère non ASCII correctement codé,
-#: pour qu'un texte soit encore tenu pour de l'UTF-8 abîmé.
+#: Invalid bytes tolerated, per correctly encoded non-ASCII character,
+#: for a text to still be held as damaged UTF-8.
 UTF8_TOLERANCE = 4
 
 
 def utf16_sans_bom(brut: bytes) -> str | None:
     """
-    Reconnaît un texte UTF-16 dépourvu de marque d'ordre des octets.
+    Recognizes a UTF-16 text that has no byte order mark.
 
-    Un texte surtout ASCII codé en UTF-16 porte un octet nul sur deux :
-    aux rangs impairs en petit-boutiste, aux rangs pairs en gros-boutiste.
-    Renvoie le nom du codec, ou None si le motif n'apparaît pas.
+    A mostly ASCII text encoded in UTF-16 carries a null byte in every
+    other position: at odd positions in little-endian, at even positions
+    in big-endian. Returns the name of the codec, or None if the pattern
+    does not appear.
     """
     echantillon = brut[:ECHANTILLON_UTF16]
     pairs, impairs = echantillon[0::2], echantillon[1::2]
@@ -712,32 +707,31 @@ def utf16_sans_bom(brut: bytes) -> str | None:
 
 def decoder_octets(brut: bytes) -> tuple[str, str, list[str]]:
     """
-    Décode le contenu d'un fichier texte sans jamais lever d'exception.
+    Decodes the content of a text file without ever raising an exception.
 
-    Ordre des essais : marque d'ordre des octets (UTF-8, UTF-16, UTF-32),
-    UTF-16 sans marque, UTF-8 strict, puis repli sur cp1252 et enfin sur
-    latin-1, qui accepte n'importe quel octet. Un texte manifestement en
-    UTF-8 mais abîmé par quelques octets invalides reste décodé en UTF-8,
-    ces octets devenant U+FFFD : le passer en cp1252 abîmerait tous ses
-    accents pour en sauver quelques-uns. Le critère : au moins un
-    caractère non ASCII correctement codé, et au plus UTF8_TOLERANCE
-    octets invalides pour chacun d'eux. Un texte latin-1 n'y satisfait
-    pas, ses lettres accentuées étant presque toutes invalides en UTF-8.
+    Order of the attempts: byte order mark (UTF-8, UTF-16, UTF-32), UTF-16
+    without a mark, strict UTF-8, then fallback on cp1252 and finally on
+    latin-1, which accepts any byte. A text plainly in UTF-8 but damaged
+    by a few invalid bytes stays decoded as UTF-8, those bytes becoming
+    U+FFFD: switching it to cp1252 would damage all its accents to save a
+    few of them. The criterion: at least one correctly encoded non-ASCII
+    character, and at most UTF8_TOLERANCE invalid bytes for each of them.
+    A latin-1 text does not meet it, its accented letters being almost all
+    invalid in UTF-8.
 
-    Les fins de ligne CRLF et CR sont ramenées à LF, et les caractères de
-    contrôle sont retirés, NUL compris ; la tabulation verticale et le
-    saut de page deviennent une espace.
+    CRLF and CR line ends are turned into LF, and the control characters
+    are removed, NUL included; vertical tab and form feed become a space.
 
-    Renvoie le texte, le nom de l'encodage retenu et la liste des
-    remarques à signaler, vide pour un fichier UTF-8 sans défaut.
+    Returns the text, the name of the encoding chosen and the list of the
+    remarks to report, empty for a UTF-8 file without a flaw.
     """
     remarques: list[str] = []
     texte: str | None = None
     encodage = "utf-8"
 
     if brut.startswith(codecs.BOM_UTF8):
-        # La marque est retirée, le reste suit le chemin normal : elle ne
-        # garantit pas que la suite soit de l'UTF-8 valide.
+        # The mark is removed, the rest follows the normal path: it does not
+        # guarantee that what follows is valid UTF-8.
         brut = brut[len(codecs.BOM_UTF8):]
         remarques.append("marque d'ordre des octets (BOM) UTF-8 retirée")
     else:
@@ -799,11 +793,11 @@ def decoder_octets(brut: bytes) -> tuple[str, str, list[str]]:
 def lire_fichier_texte(chemin: pathlib.Path,
                        role: str) -> tuple[str, str, list[str]]:
     """
-    Lit un fichier texte quel que soit son encodage, et signale ce qui
-    s'en écarte de l'UTF-8 par une ligne "Attention" du journal.
+    Reads a text file whatever its encoding, and reports what departs from
+    UTF-8 with an "Attention" line in the log.
 
-    Renvoie le texte, l'encodage retenu et les remarques, comme
-    decoder_octets. Seule une erreur d'accès au fichier arrête le script.
+    Returns the text, the encoding chosen and the remarks, like
+    decoder_octets. Only an error accessing the file stops the script.
     """
     try:
         brut = chemin.read_bytes()
@@ -817,29 +811,29 @@ def lire_fichier_texte(chemin: pathlib.Path,
 
 def lire_texte(chemin: pathlib.Path, role: str) -> str:
     """
-    Lit un fichier texte, avec un message clair en cas d'échec.
+    Reads a text file, with a clear message on failure.
 
-    L'encodage est détecté par lire_fichier_texte ; cette forme courte
-    sert quand seul le texte importe, pour les consignes par exemple.
+    The encoding is detected by lire_fichier_texte; this short form is
+    used when only the text matters, for the instructions for example.
     """
     return lire_fichier_texte(chemin, role)[0]
 
 
 def ecrire_texte(chemin: pathlib.Path, texte: str) -> None:
     """
-    Écrit un fichier texte en UTF-8, quelle que soit la locale.
+    Writes a text file in UTF-8, whatever the locale.
 
-    Un caractère impossible à coder en UTF-8, un substitut isolé venu
-    d'un nom de fichier ou d'une saisie mal encodés par exemple, est
-    remplacé par "?" au lieu de lever UnicodeEncodeError au milieu de la
-    collecte. Les fins de ligne restent des LF sur toutes les plateformes.
-    Les erreurs d'accès (OSError) remontent à l'appelant.
+    A character that cannot be encoded in UTF-8, a lone surrogate coming
+    from a badly encoded file name or input for example, is replaced by
+    "?" instead of raising UnicodeEncodeError in the middle of the
+    collection. Line ends stay LF on every platform. Access errors
+    (OSError) go up to the caller.
 
-    L'écriture passe par un fichier voisin, ".<nom>.partiel", renommé une
-    fois complet : une interruption (Ctrl-C) ou une erreur en cours de
-    route ne laisse jamais un fichier tronqué sous son nom définitif. Le
-    fichier qui existait déjà, s'il y en avait un, reste alors intact, et
-    le fichier partiel est retiré.
+    The writing goes through a neighboring file, ".<name>.partiel", renamed
+    once complete: an interruption (Ctrl-C) or an error along the way
+    never leaves a truncated file under its final name. The file that
+    already existed, if there was one, then stays intact, and the partial
+    file is removed.
     """
     partiel = chemin.with_name(".%s.partiel" % chemin.name)
     try:
@@ -848,57 +842,55 @@ def ecrire_texte(chemin: pathlib.Path, texte: str) -> None:
             f.write(texte)
         partiel.replace(chemin)
     except BaseException:
-        # BaseException et non Exception : KeyboardInterrupt doit lui aussi
-        # déclencher le ménage, avant de remonter tel quel.
+        # BaseException and not Exception: KeyboardInterrupt must also trigger
+        # the cleanup, before going up unchanged.
         with contextlib.suppress(OSError):
             partiel.unlink()
         raise
 
 
-#: Caractères écartés d'un nom de dossier, donc des noms rangés dans le
-#: zip : caractères de contrôle, séparateurs de chemin, caractères
-#: interdits par Windows, substituts isolés et U+FFFD. Les espaces et les
-#: lettres accentuées sont conservés.
+#: Characters dropped from a folder name, hence from the names stored in
+#: the zip: control characters, path separators, characters forbidden by
+#: Windows, lone surrogates and U+FFFD. Spaces and accented letters are
+#: kept.
 RE_NOM_RISQUE = re.compile(
     r'[\x00-\x1f\x7f-\x9f/\\:*?"<>|\ud800-\udfff\ufffd]')
 
-#: Longueur maximale, en octets, de l'étiquette reprise dans le nom du
-#: dossier.
+#: Maximum length, in bytes, of the label repeated in the folder name.
 ETIQUETTE_MAX = 80
 
 
 def etiquette_sure(nom: str) -> str:
     """
-    Tire d'un nom de fichier une étiquette sûre pour le dossier de
-    travail et pour les chemins de l'archive.
+    Derives from a file name a safe label for the working folder and for
+    the paths of the archive.
 
-    Chaque caractère à risque devient "_", chaque suite d'espaces un
-    tiret : un nom d'archive sans espace se passe de guillemets dans une
-    ligne de commande. Les points et les tirets de bord sont retirés, et
-    une étiquette vide devient "partie".
+    Each risky character becomes "_", each run of spaces a hyphen: an
+    archive name without spaces needs no quotes in a command line. Dots
+    and hyphens at the edges are removed, and an empty label becomes
+    "partie".
 
-    La longueur est bornée en octets, non en caractères : c'est en
-    octets que le système de fichiers compte, et quatre-vingts
-    idéogrammes en font deux cent quarante. Bornée en caractères,
-    l'étiquette laissait passer des noms que l'archive, une fois
-    l'horodatage ajouté, ne pouvait plus porter.
+    The length is bounded in bytes, not in characters: the file system
+    counts in bytes, and eighty ideograms make two hundred and forty of
+    them. Bounded in characters, the label let through names that the
+    archive, once the timestamp was added, could no longer carry.
     """
     sure = RE_NOM_RISQUE.sub("_", re.sub(r"\s+", "-", nom.strip()))
     sure = sure.encode("utf-8", errors="surrogateescape")[:ETIQUETTE_MAX]
-    # Une coupe en plein caractère laisse des octets orphelins : ils sont
-    # écartés au décodage.
+    # A cut in the middle of a character leaves orphan bytes: they are
+    # dropped at decoding.
     sure = sure.decode("utf-8", errors="ignore").strip("-.")
     return sure or "partie"
 
 
 def annoncer_archive(archive: pathlib.Path) -> None:
     """
-    Écrit le chemin de l'archive, seul, sur la sortie standard.
+    Writes the path of the archive, alone, on standard output.
 
-    Le chemin est écrit en octets, tel que le système de fichiers le
-    connaît : ARCHIVE=$(...) reçoit ainsi un chemin utilisable même si le
-    terminal ne sait pas en afficher tous les caractères. Sans accès aux
-    octets de la sortie, l'écriture en texte d'origine est conservée.
+    The path is written in bytes, as the file system knows it:
+    ARCHIVE=$(...) thus receives a usable path even if the terminal cannot
+    display all its characters. Without access to the bytes of the output,
+    the original text writing is kept.
     """
     tampon = getattr(sys.stdout, "buffer", None)
     if tampon is None:
@@ -911,11 +903,10 @@ def annoncer_archive(archive: pathlib.Path) -> None:
 
 def lire_jeton(chemin: str) -> str:
     """
-    Lit le jeton personnel depuis un fichier ne contenant que lui.
+    Reads the personal token from a file that holds only the token.
 
-    Le fichier n'est pas un script shell, il ne contient aucune affectation
-    de variable : on le lit directement, on ne le source pas. Les droits
-    sont contrôlés au passage.
+    The file is not a shell script, it holds no variable assignment: it is
+    read directly, not sourced. Its permissions are checked on the way.
     """
     p = pathlib.Path(os.path.expanduser(chemin))
     if not est_fichier(p):
@@ -927,9 +918,9 @@ def lire_jeton(chemin: str) -> str:
     except (OSError, UnicodeDecodeError) as err:
         raise SystemExit("Jeton illisible dans %s : %s" % (p, err)) from err
 
-    # Même décodage que pour le PGN : un fichier enregistré par un éditeur
-    # Windows, avec marque d'ordre des octets ou en UTF-16, reste lisible.
-    # Les remarques ne citent jamais le contenu du fichier.
+    # Same decoding as for the PGN: a file saved by a Windows editor, with a
+    # byte order mark or in UTF-16, stays readable. The remarks never quote
+    # the content of the file.
     contenu, _encodage, remarques = decoder_octets(brut)
     for remarque in remarques:
         journal("Attention, jeton (%s) : %s." % (p, remarque))
@@ -939,16 +930,16 @@ def lire_jeton(chemin: str) -> str:
                 % (p, mode & 0o777))
 
     jeton = contenu.strip()
-    # Une affectation, LICHESS_TOKEN=lip_..., ou des guillemets autour du
-    # jeton tiennent en un seul mot : sans ce contrôle, ils passaient, et
-    # Lichess répondait 401 sans que rien ne désigne le fichier.
+    # An assignment, LICHESS_TOKEN=lip_..., or quotes around the token fit in
+    # a single word: without this check, they got through, and Lichess
+    # answered 401 without anything pointing to the file.
     if (not jeton or any(c.isspace() for c in jeton)
             or any(c in jeton for c in "=\"'")):
         raise SystemExit("Le fichier %s doit contenir le jeton seul, sans "
                          "espace ni affectation de variable." % p)
-    # Le jeton part dans un en-tête HTTP : hors de l'ASCII imprimable, il
-    # serait refusé par http.client avec une erreur d'encodage que rien ne
-    # relie au fichier. Le message ne reproduit pas le jeton.
+    # The token goes into an HTTP header: outside printable ASCII, it would
+    # be rejected by http.client with an encoding error that nothing links
+    # to the file. The message does not reproduce the token.
     if not jeton.isascii() or not jeton.isprintable():
         raise SystemExit("Le jeton lu dans %s contient des caractères hors "
                          "de l'ASCII imprimable : recopiez-le depuis "
@@ -956,12 +947,12 @@ def lire_jeton(chemin: str) -> str:
     return jeton
 
 
-#: Hôtes dont une URL de partie est acceptée.
+#: Hosts from which a game URL is accepted.
 HOTES_LICHESS = ("lichess.org", "www.lichess.org")
 
-#: Rubriques du site dont le nom fait huit lettres : elles ont la forme
-#: d'un identifiant de partie sans en être un. https://lichess.org/analysis
-#: était pris pour la partie "analysis" et demandé à Lichess.
+#: Sections of the site whose name has eight letters: they look like a
+#: game identifier without being one. https://lichess.org/analysis was
+#: taken for the game "analysis" and requested from Lichess.
 RUBRIQUES_LICHESS = ("analysis", "training", "practice", "streamer",
                      "features", "insights", "learning", "username",
                      "patron", "calendar", "storm", "racer", "coach",
@@ -969,26 +960,25 @@ RUBRIQUES_LICHESS = ("analysis", "training", "practice", "streamer",
                      "forum", "player", "games", "editor", "variant",
                      "paste", "contact", "mobile", "about", "account")
 
-#: Préfixes de chemin admis devant l'identifiant, en plus de la forme
-#: directe /<identifiant> : la partie embarquée et l'export PGN.
+#: Path prefixes accepted before the identifier, besides the direct form
+#: /<identifier>: the embedded game and the PGN export.
 PREFIXES_PARTIE = (("embed", "game"), ("embed",), ("game", "export"))
 
 
 def extraire_id(source: str) -> str | None:
     """
-    Extrait l'identifiant de partie d'une URL ou d'une chaîne brute.
+    Extracts the game identifier from a URL or from a raw string.
 
-    Accepte https://lichess.org/<identifiant>, la même adresse suivie de
-    /black, l'identifiant
-    seul, ainsi que les identifiants de coup à douze caractères dont seuls
-    les huit premiers sont conservés. L'identifiant, seul ou dans l'URL,
-    doit faire exactement 8 ou 12 caractères alphanumériques.
+    Accepts https://lichess.org/<identifier>, the same address followed by
+    /black, the identifier alone, as well as the twelve-character move
+    identifiers, of which only the first eight are kept. The identifier,
+    alone or in the URL, must be exactly 8 or 12 alphanumeric characters.
 
-    Une URL doit viser lichess.org et porter l'identifiant en tête de
-    chemin, ou derrière /embed/game/, /embed/ ou /game/export/. Tout autre
-    hôte, toute autre page du site (étude, analyse, exercices) et les
-    rubriques de RUBRIQUES_LICHESS donnent None : rien n'est alors demandé
-    à Lichess.
+    A URL must point to lichess.org and carry the identifier at the start
+    of the path, or after /embed/game/, /embed/ or /game/export/. Any other
+    host, any other page of the site (study, analysis, puzzles) and the
+    sections of RUBRIQUES_LICHESS give None: nothing is then requested
+    from Lichess.
     """
     source = source.strip()
     if source.lower().startswith(("http://", "https://")):
@@ -996,8 +986,8 @@ def extraire_id(source: str) -> str | None:
             url = urllib.parse.urlparse(source)
             hote = (url.hostname or "").lower()
         except ValueError:
-            # Crochets mal placés, par exemple : urlparse y voit une
-            # adresse IPv6 invalide. Ce n'est pas une partie Lichess.
+            # Misplaced brackets, for example: urlparse sees an invalid IPv6
+            # address in them. This is not a Lichess game.
             return None
         if hote not in HOTES_LICHESS:
             return None
@@ -1006,9 +996,9 @@ def extraire_id(source: str) -> str | None:
             if tuple(morceaux[:len(prefixe)]) == prefixe:
                 morceaux = morceaux[len(prefixe):]
                 break
-        # Seul le premier segment compte : l'ancienne boucle retenait le
-        # premier segment de huit caractères où qu'il soit, l'identifiant
-        # d'une étude par exemple.
+        # Only the first segment counts: the old loop kept the first
+        # eight-character segment wherever it was, the identifier of a study
+        # for example.
         if (morceaux and RE_ID_SOURCE.fullmatch(morceaux[0])
                 and morceaux[0].lower() not in RUBRIQUES_LICHESS):
             return morceaux[0][:8]
@@ -1020,11 +1010,11 @@ def extraire_id(source: str) -> str | None:
 
 
 # ===========================================================================
-# Récupération du PGN
+# Fetching the PGN
 # ===========================================================================
 
 def telecharger_pgn(identifiant: str, delai: int) -> str:
-    """Télécharge le PGN brut. Cet endpoint répond 200 sans jeton."""
+    """Downloads the raw PGN. This endpoint answers 200 without a token."""
     url = EXPORT_URL.format(id=identifiant)
     requete = urllib.request.Request(url, headers={
         "User-Agent": UA,
@@ -1033,8 +1023,8 @@ def telecharger_pgn(identifiant: str, delai: int) -> str:
     journal("Téléchargement du PGN : %s" % url)
     try:
         with urllib.request.urlopen(requete, timeout=delai) as reponse:
-            # Même décodage que pour un fichier local : Lichess répond en
-            # UTF-8, mais rien ne doit dépendre de cette hypothèse.
+            # Same decoding as for a local file: Lichess answers in UTF-8, but
+            # nothing must depend on this assumption.
             texte, _encodage, remarques = decoder_octets(reponse.read())
             for remarque in remarques:
                 journal("Attention, PGN téléchargé : %s." % remarque)
@@ -1043,17 +1033,16 @@ def telecharger_pgn(identifiant: str, delai: int) -> str:
         raise SystemExit("Export PGN : HTTP %d pour la partie %s."
                          % (err.code, identifiant)) from err
     except (OSError, http.client.HTTPException) as err:
-        # URLError est une sous-classe d'OSError : ce bloc couvre aussi bien
-        # une résolution DNS ratée qu'un délai dépassé ou une coupure.
+        # URLError is a subclass of OSError: this block covers a failed DNS
+        # resolution as well as a timeout or a dropped connection.
         raise SystemExit("Export PGN injoignable : %s"
                          % getattr(err, "reason", err)) from err
 
 
-#: Ce que le corps d'une partie peut contenir hors des commentaires : un
-#: résultat, un numéro de coup, un NAG, un coup en notation anglaise ou un
-#: signe d'appréciation. L'ordre compte : le résultat puis le roque écrit
-#: avec des zéros passent avant le numéro de coup, qui commence lui aussi
-#: par un chiffre.
+#: What the body of a game may contain outside the comments: a result, a
+#: move number, a NAG, a move in English notation or an annotation
+#: symbol. The order matters: the result, then castling written with
+#: zeros, come before the move number, which also starts with a digit.
 RE_JETON_PGN = re.compile(
     r"(?:1-0|0-1|1/2-1/2|\*)(?![\w/-])"
     r"|(?:O-O-O|O-O|0-0-0|0-0|--|Z0|0000|@@@@"
@@ -1066,19 +1055,19 @@ RE_JETON_PGN = re.compile(
 
 def controler_lexique(texte_pgn: str) -> None:
     """
-    Refuse un PGN dont le corps contient autre chose que des coups.
+    Rejects a PGN whose body contains something other than moves.
 
-    python-chess saute sans rien dire les caractères qu'il ne reconnaît
-    pas. Un coup écrit en notation française, "Cf3", est alors lu "f3",
-    un coup de pion : la partie analysée n'est plus celle qui a été
-    jouée, et rien ne le signale. De même, une accolade jamais fermée
-    avale toute la suite de la partie. Ce contrôle passe donc avant la
-    lecture : il ne joue aucun coup, il vérifie seulement que chaque mot
-    du corps a la forme d'un mot de PGN.
+    python-chess silently skips the characters it does not recognize. A
+    move written in French notation, "Cf3", is then read as "f3", a pawn
+    move: the game analyzed is no longer the one that was played, and
+    nothing reports it. Likewise, a brace never closed swallows the whole
+    rest of the game. This check therefore comes before the reading: it
+    plays no move, it only checks that each word of the body has the form
+    of a PGN word.
 
-    Sont admis hors des commentaires : les balises en début de ligne, les
-    numéros de coup, les coups en notation anglaise, les NAG, les signes
-    d'appréciation, les parenthèses de variante et le résultat.
+    Accepted outside the comments: the tags at the start of a line, the
+    move numbers, the moves in English notation, the NAGs, the annotation
+    symbols, the variation parentheses and the result.
     """
     i, n = 0, len(texte_pgn)
     profondeur = 0
@@ -1102,8 +1091,8 @@ def controler_lexique(texte_pgn: str) -> None:
             i = fin + 1
             debut_de_ligne = False
         elif c == ";" or (debut_de_ligne and c in "[%"):
-            # Commentaire de fin de ligne, balise, ou ligne d'échappement :
-            # tout va jusqu'au saut de ligne.
+            # End-of-line comment, tag, or escape line: everything runs
+            # to the line feed.
             fin = texte_pgn.find("\n", i)
             i = n if fin < 0 else fin
         elif c == "(":
@@ -1139,10 +1128,10 @@ def controler_lexique(texte_pgn: str) -> None:
 
 def resultat_orphelin(partie: chess.pgn.Game) -> bool:
     """
-    Vrai pour une "partie" que python-chess tire d'un résultat isolé :
-    aucun coup, aucun commentaire, aucune variante, et pas une balise
-    renseignée hors Result. Ce n'est pas une partie, seulement la marque
-    de fin de la précédente, écrite une seconde fois.
+    True for a "game" that python-chess derives from a lone result: no
+    move, no comment, no variation, and no tag filled in except Result.
+    This is not a game, only the end marker of the previous one, written a
+    second time.
     """
     if partie.variations or partie.comment.strip():
         return False
@@ -1152,19 +1141,19 @@ def resultat_orphelin(partie: chess.pgn.Game) -> bool:
 
 def charger_partie(texte_pgn: str) -> chess.pgn.Game:
     """
-    Analyse le PGN et renvoie la partie qu'il contient, qui doit être seule.
+    Parses the PGN and returns the game it contains, which must be alone.
 
-    Le parseur de python-chess est tolérant : sur un coup illégal il
-    s'arrête sans lever d'exception et consigne l'erreur dans la partie. On
-    refuse un tel PGN plutôt que d'analyser une partie tronquée en silence.
+    The python-chess parser is tolerant: on an illegal move it stops
+    without raising an exception and records the error in the game. Such a
+    PGN is rejected rather than silently analyzing a truncated game.
     """
     controler_lexique(texte_pgn)
     flux = io.StringIO(texte_pgn)
     try:
         partie = chess.pgn.read_game(flux)
     except (IndexError, ValueError) as err:
-        # Filet : le contrôle lexical écarte les cas connus, mais aucune
-        # entrée ne doit finir en erreur inattendue.
+        # Safety net: the lexical check rules out the known cases, but no input
+        # must end in an unexpected error.
         raise SystemExit("PGN corrompu : python-chess n'a pas pu le lire "
                          "(%s)." % type(err).__name__) from err
     if partie is None:
@@ -1175,11 +1164,11 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
                                      for e in partie.errors))
     if not list(partie.mainline_moves()):
         raise SystemExit("PGN sans aucun coup dans la ligne principale.")
-    # IAnalyze analyse une partie entière, du premier coup au dernier :
-    # l'explorateur, le catalogue des ouvertures et les consignes du
-    # prompt supposent tous la position initiale. Une partie reprise d'une
-    # position, donnée par une balise FEN, est donc refusée ici, plutôt
-    # qu'analysée à moitié avec un prompt qui ne lui correspond pas.
+    # IAnalyze analyzes a whole game, from the first move to the last: the
+    # explorer, the opening catalog and the instructions of the prompt all
+    # assume the initial position. A game resumed from a position, given by
+    # a FEN tag, is therefore rejected here, rather than half analyzed with
+    # a prompt that does not fit it.
     if partie.board().fen() != chess.STARTING_FEN:
         raise SystemExit(
             "La partie ne commence pas à la position initiale, elle part "
@@ -1187,10 +1176,10 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
             "premier coup au dernier : pour étudier une position, "
             "chargez-la dans un échiquier d'analyse.")
 
-    # Les valeurs des balises partent dans les en-têtes de la synthèse et
-    # dans le journal : on en retire tabulations et caractères de contrôle
-    # dès maintenant, une fois pour toutes. La liste est figée avant la
-    # boucle, les balises étant modifiées en cours de route.
+    # The values of the tags go into the headers of the summary and into
+    # the log: tabs and control characters are removed from them right now,
+    # once and for all. The list is frozen before the loop, as the tags are
+    # modified along the way.
     for cle, valeur in list(partie.headers.items()):
         propre = nettoyer_valeur(valeur)
         if propre != valeur:
@@ -1201,14 +1190,14 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
         raise SystemExit("Variante non prise en charge : %s. Ce script ne "
                          "traite que les échecs standard." % variante)
 
-    # Une seule partie par fichier. Analyser la première d'une série
-    # n'aurait pas de sens : rien ne dit que c'est celle que vous vouliez,
-    # et partie.pgn, recopié dans l'archive, les porterait toutes.
+    # A single game per file. Analyzing the first one of a series would make
+    # no sense: nothing says it is the one you wanted, and partie.pgn,
+    # copied into the archive, would carry them all.
     #
-    # Un résultat répété en fin de fichier n'est pas une partie. Certains
-    # sites écrivent "0-1", une ligne vide, puis "0-1" encore : python-chess
-    # y lit une seconde partie, sans une balise ni un coup. Elle est
-    # ignorée, et le journal le dit.
+    # A result repeated at the end of the file is not a game. Some sites
+    # write "0-1", a blank line, then "0-1" again: python-chess reads a
+    # second game there, without a single tag or move. It is ignored, and
+    # the log says so.
     autres = 0
     orphelins = 0
     try:
@@ -1232,48 +1221,48 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
 
 
 # ===========================================================================
-# Questions de démarrage
+# Startup questions
 #
-# Les questions passent par la sortie d'erreur et l'entrée standard, jamais
-# par la sortie standard, réservée au chemin de l'archive : la forme
-# ARCHIVE=$(./ianalyze.py ...) continue de fonctionner, questions
-# comprises. Elles ne sont posées que sur un terminal interactif.
+# The questions go through standard error and standard input, never
+# through standard output, which is reserved for the path of the
+# archive: the form ARCHIVE=$(./ianalyze.py ...) keeps working,
+# questions included. They are only asked on an interactive terminal.
 # ===========================================================================
 
 def questions_possibles(sans_questions: bool) -> bool:
     """
-    Vrai si l'on peut poser des questions : terminal des deux côtés.
+    True if questions can be asked: a terminal on both sides.
 
-    Un flux fermé par l'appelant, "<&-" dans un script, vaut None en
-    Python : ce n'est pas un terminal, et aucune question n'est posée.
+    A stream closed by the caller, "<&-" in a script, is None in Python:
+    it is not a terminal, and no question is asked.
     """
     return (not sans_questions
             and sys.stdin is not None and sys.stderr is not None
             and sys.stdin.isatty() and sys.stderr.isatty())
 
 
-#: Longueur maximale d'une réponse à une question de démarrage. Aucune
-#: n'en demande autant : au delà, c'est un texte collé par mégarde.
+#: Maximum length of an answer to a startup question. None of them needs
+#: that much: beyond it, it is text pasted by mistake.
 REPONSE_MAX = 255
 
-#: Signes qu'un nom de joueur ne peut pas porter : le nom part dans une
-#: balise du PGN, où un guillemet ou un crochet la fermerait trop tôt, et
-#: où une accolade ouvrirait un commentaire aux yeux d'un lecteur strict.
+#: Characters that a player name cannot contain: the name goes into a PGN tag,
+#: where a quote or a bracket would close it too early, and where a brace
+#: would open a comment in the eyes of a strict reader.
 SIGNES_INTERDITS_NOM = '"\\[]{}'
 
 
 def demander(question: str, defaut: str | None = None,
              nom: bool = False) -> str | None:
     """
-    Pose une question et renvoie la réponse nettoyée.
+    Asks a question and returns the cleaned answer.
 
-    Une réponse vide donne le défaut, ou une chaîne vide sans défaut. La
-    fin de flux (Ctrl-D) renvoie None : l'appelant applique alors ses
-    défauts sans insister.
+    An empty answer gives the default, or an empty string without a
+    default. The end of the stream (Ctrl-D) returns None: the caller then
+    applies its defaults without insisting.
 
-    Une réponse de plus de REPONSE_MAX caractères est refusée et la
-    question reposée, de même, avec `nom`, qu'une réponse portant l'un
-    des signes de SIGNES_INTERDITS_NOM.
+    An answer longer than REPONSE_MAX characters is rejected and the
+    question asked again; so is, with `nom`, an answer carrying one of the
+    characters of SIGNES_INTERDITS_NOM.
     """
     invite = (question if defaut is None
               else "%s (Entrée : %s)" % (question, defaut))
@@ -1285,9 +1274,9 @@ def demander(question: str, defaut: str | None = None,
             sys.stderr.write("\n")
             return None
         if RE_SUBSTITUTS.search(ligne):
-            # Saisie que l'encodage du terminal n'a pas su décoder : on
-            # retrouve les octets tapés et on leur applique le même repli
-            # que pour un fichier, cp1252 puis latin-1.
+            # Input that the terminal encoding could not decode: we
+            # recover the typed bytes and apply to them the same fallback
+            # as for a file, cp1252 then latin-1.
             ligne = decoder_octets(
                 ligne.encode("utf-8", errors="surrogateescape"))[0]
         reponse = nettoyer_valeur(ligne).strip()
@@ -1304,45 +1293,43 @@ def demander(question: str, defaut: str | None = None,
 
 
 # ---------------------------------------------------------------------------
-# Cadence
+# Time control
 #
-# Une cadence est un petit dictionnaire, de l'une de ces cinq formes :
+# A time control is a small dictionary, in one of these five forms:
 #
-#     {"type": "reel", "initial": 900, "increment": 10}    en secondes
-#     {"type": "correspondance", "jours": 14}              délai par coup
-#     {"type": "correspondance", "coups": 10,              coups par
-#      "periode": 50}                                      période, en jours
-#     {"type": "correspondance", "capital": 5,             jours au départ,
-#      "increment": 36, "plafond": 20, "reserve": 0}       heures par coup,
-#                                                          plafond et
-#                                                          réserve en jours,
-#                                                          0 s'il n'y en a
-#                                                          pas
+#     {"type": "reel", "initial": 900, "increment": 10}    in seconds
+#     {"type": "correspondance", "jours": 14}              delay per move
+#     {"type": "correspondance", "coups": 10,              moves per
+#      "periode": 50}                                      period, in days
+#     {"type": "correspondance", "capital": 5,             days at the start,
+#      "increment": 36, "plafond": 20, "reserve": 0}       hours per move,
+#                                                          maximum and bank
+#                                                          in days, 0 if
+#                                                          there is none
 #     {"type": "inconnue"}
 #
-# La correspondance connaît en effet trois systèmes :
+# Correspondence indeed has three systems:
 #
-#   - un délai fixe pour chaque coup, rien n'étant reporté d'un coup au
-#     suivant : Lichess, chess.com ;
-#   - un nombre de coups à jouer par période, le temps économisé étant
-#     reporté : cadence standard de l'ICCF, "10 coups en 50 jours" ;
-#   - un capital de temps qui grossit d'un incrément à chaque coup, avec
-#     un plafond et une réserve facultatifs : chess-mail.com, et le Triple
-#     Block de l'ICCF.
+#   - a fixed delay for each move, nothing being carried over from one
+#     move to the next: Lichess, chess.com;
+#   - a number of moves to play per period, the time saved being carried
+#     over: standard ICCF time control, "10 coups en 50 jours";
+#   - a clock that grows by an increment at each move, with an optional
+#     maximum and bank: chess-mail.com, and the ICCF Triple Block.
 #
-# Les deux derniers suivent les ICCF Rules en vigueur depuis le 1er janvier
-# 2026 (section 2.4). Le premier n'existe pas à l'ICCF.
+# The last two follow the ICCF Rules in force since 1 January 2026
+# (section 2.4). The first one does not exist at the ICCF.
 #
-# Elle n'est jamais un texte libre : la phrase que lit l'analyste est
-# rédigée ici, toujours de la même façon, à partir de nombres vérifiés.
+# It is never free text: the sentence that the analyst reads is written
+# here, always in the same way, from checked numbers.
 # ---------------------------------------------------------------------------
 
 def analyser_cadence(texte: str) -> dict | None:
     """
-    Lit une cadence écrite dans le fichier de réglages.
+    Reads a time control written in the settings file.
 
-    Renvoie None si le texte n'a aucune des formes admises, "0+0" compris :
-    une partie sans temps ni incrément n'existe pas.
+    Returns None if the text has none of the accepted forms, "0+0"
+    included: a game with neither time nor increment does not exist.
     """
     texte = texte.strip().casefold()
     if texte in CADENCES_INCONNUES:
@@ -1371,12 +1358,12 @@ def analyser_cadence(texte: str) -> dict | None:
 
 
 def heures_increment(nombre: int, unite: str) -> int:
-    """Incrément en heures, d'après un nombre et son unité, h ou j."""
+    """Increment in hours, from a number and its unit, h or j."""
     return nombre * 24 if unite.startswith("j") else nombre
 
 
 def duree_increment(heures: int) -> str:
-    """ "36 heures", ou "3 jours" quand le compte tombe juste en jours."""
+    """ "36 heures", or "3 jours" when the count falls exactly in days."""
     if heures and heures % 24 == 0:
         return pluriel(heures // 24, "jour")
     return pluriel(heures, "heure")
@@ -1385,10 +1372,10 @@ def duree_increment(heures: int) -> str:
 def cadence_a_capital(capital: int, increment: int, plafond: int,
                       reserve: int = 0) -> dict | None:
     """
-    Cadence par correspondance à capital de temps, ou None si elle est
-    incohérente : ni capital ni incrément, ou plafond sous le capital de
-    départ. `increment` est en heures, les autres durées en jours. Un
-    plafond ou une réserve nuls signifient qu'il n'y en a pas.
+    Correspondence time control with a clock, or None if it is
+    inconsistent: neither clock nor increment, or a maximum below the
+    starting clock. `increment` is in hours, the other durations in days.
+    A zero maximum or bank means that there is none.
     """
     if capital == 0 and increment == 0:
         return None
@@ -1400,10 +1387,10 @@ def cadence_a_capital(capital: int, increment: int, plafond: int,
 
 def cadence_de_balise(controle: str) -> dict | None:
     """
-    Lit une balise TimeControl de la forme "600+5" ou "300", en secondes.
+    Reads a TimeControl tag of the form "600+5" or "300", in seconds.
 
-    Les autres formes du standard (coups par période, sablier) et les
-    valeurs libres donnent None : la balise est alors citée telle quelle.
+    The other forms of the standard (moves per period, hourglass) and the
+    free values give None: the tag is then quoted as it is.
     """
     trouve = RE_TIMECONTROL.fullmatch(controle.strip())
     if not trouve:
@@ -1415,7 +1402,7 @@ def cadence_de_balise(controle: str) -> dict | None:
 
 
 def noter_cadence(cadence: dict) -> str:
-    """Forme d'une cadence dans le fichier de réglages."""
+    """Form of a time control in the settings file."""
     if cadence["type"] == "reel":
         return "%d+%d" % (cadence["initial"] // 60, cadence["increment"])
     if cadence["type"] == "correspondance" and "capital" in cadence:
@@ -1435,12 +1422,12 @@ def noter_cadence(cadence: dict) -> str:
 
 
 def pluriel(nombre: int, mot: str) -> str:
-    """ "1 jour", "14 jours" : le nombre suivi du mot accordé."""
+    """ "1 jour", "14 jours": the number followed by the word, in agreement."""
     return "%d %s%s" % (nombre, mot, "s" if nombre > 1 else "")
 
 
 def categorie_cadence(initial: int, increment: int) -> str:
-    """Catégorie Lichess d'une cadence en temps réel (CATEGORIES_CADENCE)."""
+    """Lichess category of a real-time time control (CATEGORIES_CADENCE)."""
     estimee = initial + COUPS_ESTIMES * increment
     for seuil, nom in CATEGORIES_CADENCE:
         if estimee >= seuil:
@@ -1450,11 +1437,11 @@ def categorie_cadence(initial: int, increment: int) -> str:
 
 def decrire_cadence(cadence: dict) -> str:
     """
-    Phrase décrivant une cadence, telle qu'elle part dans contexte.md :
+    Sentence describing a time control, as it goes into contexte.md:
     "rapide, 15 minutes + 10 secondes par coup", "blitz, 5 minutes sans
     incrément", "correspondance, 14 jours par coup", "correspondance,
     10 coups en 50 jours", "correspondance, capital de 5 jours + 36
-    heures par coup, plafonné à 20 jours", ou "non précisée".
+    heures par coup, plafonné à 20 jours", or "non précisée".
     """
     if cadence["type"] == "correspondance" and "capital" in cadence:
         phrase = ("correspondance, capital de %s + %s par coup"
@@ -1490,9 +1477,9 @@ def decrire_cadence(cadence: dict) -> str:
 def demander_entier(question: str, minimum: int,
                     vide: int | None = None) -> int | None:
     """
-    Demande un nombre entier d'au moins `minimum`, et repose la question
-    tant que la réponse n'en est pas un. La fin de flux renvoie None. Si
-    `vide` est donné, c'est la valeur que retient la touche Entrée seule.
+    Asks for an integer of at least `minimum`, and asks the question again
+    as long as the answer is not one. The end of the stream returns None.
+    If `vide` is given, it is the value kept by the Enter key alone.
     """
     while True:
         reponse = demander(question)
@@ -1508,15 +1495,15 @@ def demander_entier(question: str, minimum: int,
 
 def demander_cadence(libelle: str, defaut: dict) -> tuple[dict, bool] | None:
     """
-    Demande une cadence en deux ou trois questions, toutes vérifiées.
+    Asks for a time control in two or three questions, all checked.
 
-    Le type d'abord, temps réel, correspondance ou inconnue ; puis les
-    minutes par joueur et l'incrément en secondes, ou, par correspondance,
-    le système et ses nombres (voir demander_correspondance).
-    Entrée, à la première question, retient `defaut`. Renvoie la cadence
-    et un booléen disant si c'est le défaut, ou None à la fin de flux.
-    Aucun texte libre n'est accepté : une réponse hors des formes prévues
-    fait reposer la question.
+    The type first, real time, correspondence or unknown; then the minutes
+    per player and the increment in seconds, or, for correspondence, the
+    system and its numbers (see demander_correspondance).
+    Enter, at the first question, keeps `defaut`. Returns the time control
+    and a boolean saying whether it is the default, or None at the end of
+    the stream. No free text is accepted: an answer outside the expected
+    forms makes the question come again.
     """
     propose = decrire_cadence(defaut)
     while True:
@@ -1553,9 +1540,9 @@ def demander_cadence(libelle: str, defaut: dict) -> tuple[dict, bool] | None:
 
 def analyser_niveau(texte: str) -> int | None:
     """
-    Lit un niveau écrit dans le fichier de réglages : un nombre de points
-    Elo entre NIVEAU_MIN et NIVEAU_MAX. Renvoie 0 pour un niveau inconnu,
-    et None pour une valeur d'une autre forme.
+    Reads a rating written in the settings file: a number of Elo points
+    between NIVEAU_MIN and NIVEAU_MAX. Returns 0 for an unknown rating,
+    and None for a value of another form.
     """
     texte = texte.strip().casefold()
     if texte in ("", "?", "inconnu"):
@@ -1568,9 +1555,9 @@ def analyser_niveau(texte: str) -> int | None:
 
 def demander_niveau() -> int | None:
     """
-    Demande le niveau du joueur en points Elo, Entrée valant "inconnu" (0).
-    La question est reposée tant que la réponse n'est pas un nombre entier
-    dans les bornes. Renvoie None à la fin de flux.
+    Asks for the player's rating in Elo points, Enter meaning "inconnu"
+    (0). The question is asked again as long as the answer is not an
+    integer within the bounds. Returns None at the end of the stream.
     """
     while True:
         reponse = demander("Votre niveau, en points Elo approximatifs ? "
@@ -1586,9 +1573,9 @@ def demander_niveau() -> int | None:
 
 def deduire_camp(partie: chess.pgn.Game, pseudos: list[str]) -> str | None:
     """
-    Camp du joueur d'après ses pseudos, sans poser de question : "Blancs",
-    "Noirs", ou None si aucune balise, ou les deux, portent un pseudo.
-    Sert hors terminal, où completer_entetes n'est pas appelée.
+    Side of the player from their usernames, without asking any question:
+    "Blancs", "Noirs", or None if no tag, or both, carry a username.
+    Used outside a terminal, where completer_entetes is not called.
     """
     moi_blancs = est_pseudo(partie.headers.get("White", "?"), pseudos)
     moi_noirs = est_pseudo(partie.headers.get("Black", "?"), pseudos)
@@ -1599,14 +1586,13 @@ def deduire_camp(partie: chess.pgn.Game, pseudos: list[str]) -> str | None:
 
 def demander_correspondance() -> dict | None:
     """
-    Demande une cadence par correspondance, dans l'un de ses trois
-    systèmes.
+    Asks for a correspondence time control, in one of its three systems.
 
-    Délai fixe : un nombre de jours pour chaque coup. Coups par période :
-    un nombre de coups et une durée en jours. Capital de temps : des jours
-    au départ, un incrément par coup saisi avec son unité, puis un plafond
-    et une réserve facultatifs. Une saisie incohérente fait reprendre au
-    choix du système. Renvoie None à la fin de flux.
+    Fixed delay: a number of days for each move. Moves per period: a
+    number of moves and a duration in days. Clock: days at the start, an
+    increment per move entered with its unit, then an optional maximum and
+    bank. An inconsistent input goes back to the choice of the system.
+    Returns None at the end of the stream.
     """
     while True:
         reponse = demander("  Correspondance : [d]élai fixe par coup, "
@@ -1656,9 +1642,10 @@ def demander_correspondance() -> dict | None:
 
 def demander_increment() -> int | None:
     """
-    Demande l'incrément par coup, avec son unité, et le renvoie en heures :
-    "36h" donne 36, "3j" donne 72. La question est reposée tant que la
-    réponse n'a pas cette forme. Renvoie None à la fin de flux.
+    Asks for the increment per move, with its unit, and returns it in
+    hours: "36h" gives 36, "3j" gives 72. The question is asked again as
+    long as the answer does not have this form. Returns None at the end of
+    the stream.
     """
     while True:
         reponse = demander("  Incrément par coup, avec son unité, 36h ou 3j "
@@ -1673,23 +1660,23 @@ def demander_increment() -> int | None:
 
 
 def est_pseudo(nom: str, pseudos: list[str]) -> bool:
-    """Vrai si la balise contient l'un des pseudos, casse ignorée."""
+    """True if the tag contains one of the usernames, ignoring case."""
     nom = nom.casefold()
     return any(pseudo.casefold() in nom for pseudo in pseudos)
 
 
 def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
     """
-    Déduit le camp du joueur des balises White et Black, ou le demande.
+    Gets the player's side from the White and Black tags, or asks for it.
 
-    Seules les balises vides ou à "?" sont complétées : le premier pseudo
-    pour le camp du joueur, le nom donné pour l'adversaire. Un nom déjà
-    présent n'est jamais remplacé. Renvoie le camp ("Blancs", "Noirs" ou
-    None), l'origine de l'information et la liste des balises modifiées.
+    Only empty tags or tags set to "?" are filled in: the first username
+    for the player's side, the name given for the opponent. A name already
+    present is never replaced. Returns the side ("Blancs", "Noirs" or
+    None), the origin of the information and the list of modified tags.
 
-    `pseudos` peut être vide, quand ni --pseudos ni les réglages n'en
-    donnent : le camp est alors toujours demandé, et le nom du joueur
-    aussi si sa balise est vide.
+    `pseudos` may be empty, when neither --pseudos nor the settings give
+    any: the side is then always asked, and so is the player's name if
+    its tag is empty.
     """
     moi_blancs = est_pseudo(partie.headers.get("White", "?"), pseudos)
     moi_noirs = est_pseudo(partie.headers.get("Black", "?"), pseudos)
@@ -1697,8 +1684,8 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
         return {"camp": "Blancs" if moi_blancs else "Noirs",
                 "origine": "déduit des en-têtes", "modifiees": []}
 
-    # Aucun pseudo trouvé, ou les deux : seul le joueur peut trancher. Une
-    # réponse illisible fait reposer la question, Ctrl-D y renonce.
+    # No username found, or both: only the player can decide. An unreadable
+    # answer makes the question come again, Ctrl-D gives up on it.
     camp = None
     while camp is None:
         reponse = demander("Avez-vous joué les Blancs ou les Noirs ? [b/n]")
@@ -1718,8 +1705,9 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
             partie.headers[mienne] = pseudos[0]
             modifiees.append(mienne)
         else:
-            # Aucun pseudo connu : pseudos[0] levait IndexError. On demande
-            # le nom, comme pour l'adversaire, et "?" laisse la balise.
+            # No known username: pseudos[0] raised IndexError. We ask
+            # for the name, as for the opponent, and "?" leaves the tag
+            # as it is.
             nom = demander("Votre nom de joueur ?", "?", nom=True)
             if nom and nom != "?":
                 partie.headers[mienne] = nom
@@ -1735,16 +1723,17 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
 def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
                         cadence_habituelle: dict | None = None) -> str:
     """
-    Pose la question de cadence si la balise TimeControl ne la donne pas,
-    puis les quatre questions de démarrage du projet, et rédige le texte
-    de contexte.md. `cadence_habituelle`, tirée des réglages, est la
-    cadence que propose la question ; sans elle, c'est "non précisée".
-    Une balise TimeControl de forme courante est citée, puis traduite.
+    Asks the time control question if the TimeControl tag does not give
+    it, then the four startup questions of the project, and writes the
+    text of contexte.md. `cadence_habituelle`, taken from the settings, is
+    the time control that the question suggests; without it, it is "non
+    précisée". A TimeControl tag of a common form is quoted, then
+    translated.
 
-    "(défaut)" signale une réponse validée par Entrée : l'analyste
-    distingue ainsi un choix du joueur d'une valeur par défaut. Après une
-    fin de flux, les questions restantes prennent leur défaut sans être
-    posées.
+    "(défaut)" marks an answer confirmed with Enter: the analyst thus
+    tells a choice of the player from a default value. After an end of
+    stream, the remaining questions take their default without being
+    asked.
     """
     fin_de_flux = False
 
@@ -1765,12 +1754,12 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
     else:
         lignes.append("- Camp du joueur : inconnu, non déclaré")
 
-    # "-" est la valeur que prend parfois TimeControl pour une partie par
-    # correspondance : elle ne dit pas la cadence réelle, on la demande.
+    # "-" is the value that TimeControl sometimes takes for a correspondence
+    # game: it does not tell the real time control, so we ask for it.
     controle = partie.headers.get("TimeControl", "?").strip()
     if controle not in ("", "?", "-"):
-        # "600+5" se lit mal : dix minutes, ou six cents ? La balise est
-        # citée telle quelle, puis traduite quand sa forme le permet.
+        # "600+5" reads badly: ten minutes, or six hundred? The tag is
+        # quoted as it is, then translated when its form allows it.
         lue = cadence_de_balise(controle)
         lignes.append("- Cadence : balise TimeControl `%s`%s"
                       % (controle,
@@ -1793,40 +1782,40 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
 
 
 # ===========================================================================
-# Réglages de l'utilisateur
+# User settings
 #
-# Ce qui dépend de la personne, et non de la partie, vit dans un petit
-# fichier au format INI, lisible et modifiable à la main :
+# What depends on the person, and not on the game, lives in a small file
+# in INI format, readable and editable by hand:
 #
 #     [joueur]
 #     pseudos = MonPseudo, AutrePseudo
 #     cadence = rapide, 15 minutes
 #
-# Il est créé au premier lancement sur un terminal, par deux questions
-# posées une seule fois. Hors terminal, rien n'est demandé ni écrit : le
-# script se contente de ce que le fichier contient déjà.
+# It is created on the first run in a terminal, by two questions asked
+# only once. Outside a terminal, nothing is asked or written: the script
+# makes do with what the file already contains.
 # ===========================================================================
 
 def chemin_reglages(chemin: str) -> pathlib.Path:
-    """Chemin du fichier de réglages, le tilde étant développé."""
+    """Path of the settings file, with the tilde expanded."""
     return pathlib.Path(os.path.expanduser(chemin))
 
 
 def purger_reglages(chemin: str) -> None:
     """
-    Supprime le fichier de réglages, et lui seul : son répertoire reste en
-    place, il peut contenir autre chose.
+    Deletes the settings file, and that file only: its directory stays in
+    place, it may contain something else.
 
-    Les questions de réglages seront reposées au prochain lancement sur un
-    terminal. Un fichier absent n'est pas une erreur : le but, ne plus
-    avoir de réglages, est déjà atteint. Un répertoire, ou tout ce qui
-    n'est pas un fichier, est refusé plutôt que supprimé.
+    The settings questions will be asked again on the next run in a
+    terminal. A missing file is not an error: the goal, having no settings
+    any more, is already reached. A directory, or anything that is not a
+    file, is refused rather than deleted.
 
-    Avec --reglages, le chemin vient de la ligne de commande : une faute
-    de frappe ne doit pas détruire un autre fichier. Seul un fichier qui
-    porte la section [joueur], ou un fichier vide, est supprimé. La
-    section se cherche dans le texte brut : un fichier de réglages abîmé,
-    que configparser refuserait, reste ainsi supprimable.
+    With --reglages, the path comes from the command line: a typo must not
+    destroy another file. Only a file that carries the [joueur] section,
+    or an empty file, is deleted. The section is looked up in the raw
+    text: a damaged settings file, which configparser would reject, thus
+    stays deletable.
     """
     p = chemin_reglages(chemin)
     if not p.exists() and not p.is_symlink():
@@ -1858,15 +1847,15 @@ def purger_reglages(chemin: str) -> None:
 
 def lire_reglages(chemin: str) -> configparser.ConfigParser:
     """
-    Charge le fichier de réglages, ou des réglages vides s'il n'existe pas.
+    Loads the settings file, or empty settings if it does not exist.
 
-    Le fichier passe par le même décodage que le PGN : son encodage n'a
-    pas d'importance. Un fichier que configparser refuse arrête le script
-    par un message clair, plutôt que d'être ignoré en silence. La section
-    [joueur] existe toujours dans l'objet renvoyé.
+    The file goes through the same decoding as the PGN: its encoding does
+    not matter. A file that configparser rejects stops the script with a
+    clear message, rather than being silently ignored. The [joueur]
+    section always exists in the returned object.
     """
-    # interpolation=None : le signe pour cent d'une valeur reste un simple
-    # caractère, il ne déclenche aucune substitution.
+    # interpolation=None: the percent sign of a value stays a plain
+    # character, it triggers no substitution.
     reglages = configparser.ConfigParser(interpolation=None)
     p = chemin_reglages(chemin)
     if est_fichier(p):
@@ -1885,28 +1874,28 @@ def lire_reglages(chemin: str) -> configparser.ConfigParser:
 
 
 def reglage(reglages: configparser.ConfigParser, clef: str) -> str:
-    """Valeur d'une clef de la section [joueur], vide si elle manque."""
+    """Value of a key of the [joueur] section, empty if it is missing."""
     return reglages.get(REGLAGES_SECTION, clef, fallback="").strip()
 
 
 def decouper_pseudos(texte: str) -> list[str]:
-    """Liste de pseudos tirée d'une chaîne séparée par des virgules."""
+    """List of usernames taken from a comma-separated string."""
     return [x.strip() for x in texte.split(",") if x.strip()]
 
 
 def ecrire_reglages(chemin: str, reglages: configparser.ConfigParser) -> bool:
     """
-    Écrit le fichier de réglages, commentaires compris.
+    Writes the settings file, comments included.
 
-    Les clefs connues viennent d'abord, chacune sous son commentaire ; les
-    autres clefs de [joueur] et les autres sections, que vous auriez
-    ajoutées, sont recopiées à la suite. Un échec d'écriture n'arrête pas
-    la collecte : il est signalé, et la question sera reposée au prochain
-    lancement. Renvoie vrai si le fichier a été écrit.
+    The known keys come first, each one under its comment; the other keys
+    of [joueur] and the other sections, which you may have added, are
+    copied after them. A failure to write does not stop the collection: it
+    is reported, and the question will be asked again on the next run.
+    Returns true if the file was written.
     """
     def ligne(clef: str, valeur: str) -> str:
-        # Une valeur sur plusieurs lignes se poursuit par des lignes en
-        # retrait : c'est la forme que configparser sait relire.
+        # A value on several lines continues with indented lines: this is
+        # the form that configparser can read back.
         valeur = valeur.replace("\n", "\n\t")
         return "%s = %s" % (clef, valeur) if valeur else "%s =" % clef
 
@@ -1942,25 +1931,25 @@ def ecrire_reglages(chemin: str, reglages: configparser.ConfigParser) -> bool:
 def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
                        pseudos_cli: list[str] | None) -> None:
     """
-    Demande, une seule fois, les réglages que le fichier ne donne pas.
+    Asks, only once, for the settings that the file does not give.
 
-    Appelée seulement sur un terminal interactif. Chaque clef absente de
-    [joueur] fait l'objet d'une question ; une clef présente, même vide,
-    n'est jamais redemandée. Les pseudos passés par --pseudos servent de
-    réponse proposée. Une fin de flux (Ctrl-D) abandonne sans rien
-    écrire : les questions reviendront au prochain lancement.
+    Called only on an interactive terminal. Each key missing from
+    [joueur] gets a question; a key that is present, even empty, is never
+    asked for again. The usernames passed with --pseudos serve as the
+    suggested answer. An end of stream (Ctrl-D) gives up without writing
+    anything: the questions will come back on the next run.
     """
     manquantes = [clef for clef, _ in REGLAGES_CLEFS
                   if not reglages.has_option(REGLAGES_SECTION, clef)]
-    # Une cadence présente mais illisible, écrite à la main ou héritée
-    # d'une version qui acceptait un texte libre, est redemandée elle
-    # aussi : elle ne doit pas partir telle quelle vers l'analyste.
+    # A time control that is present but unreadable, written by hand or
+    # inherited from a version that accepted free text, is asked for
+    # again too: it must not go to the analyst as it is.
     brute = reglages.get(REGLAGES_SECTION, "cadence", fallback=None)
     if brute is not None and analyser_cadence(brute) is None:
         journal("Réglages : la cadence enregistrée, \"%s\", n'est pas "
                 "lisible, elle est redemandée." % nettoyer_valeur(brute))
         manquantes.append("cadence")
-    # Il en va de même du niveau, qui doit être un nombre de points Elo.
+    # The same goes for the rating, which must be a number of Elo points.
     brute = reglages.get(REGLAGES_SECTION, "niveau", fallback=None)
     if brute is not None and analyser_niveau(brute) is None:
         journal("Réglages : le niveau enregistré, \"%s\", n'est pas "
@@ -2003,34 +1992,36 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
 
 
 # ===========================================================================
-# Prompt d'analyse
+# Analysis prompt
 #
-# Les données de l'archive ne suffisent pas : il faut dire à l'analyste ce
-# qu'il doit en faire. Ce texte vit dans un modèle, prompt-modele.txt, que
-# vous retouchez sans ouvrir ce script. À chaque collecte, le script en
-# tire le prompt de la partie : il remplit les valeurs (pseudo, niveau,
-# nom de l'archive) et ne garde que les passages qui s'appliquent (base
-# interrogée, moteur présent ou non). Le prompt décrit ainsi, toujours, la
-# synthèse que cette version du script vient d'écrire.
+# The data of the archive are not enough: the analyst must be told what
+# to do with them. This text lives in a template, prompt-modele.txt,
+# which you edit without opening this script. At each collection, the
+# script derives the prompt of the game from it: it fills in the values
+# (username, rating, archive name) and keeps only the passages that apply
+# (database queried, engine present or not). The prompt thus always
+# describes the summary that this version of the script has just
+# written.
 #
-# Deux repères dans le modèle :
+# Two kinds of markers in the template:
 #
-#     {{NOM}}             une valeur, remplacée
-#     #! si CONDITION     garde ce qui suit si la condition est vraie
-#     #! si non CONDITION garde ce qui suit si elle est fausse
-#     #! sinon            bascule
-#     #! fin              ferme le dernier "si" ouvert
-#     #! note ...         commentaire du modèle, jamais recopié
+#     {{NAME}}            a value, replaced
+#     #! si CONDITION     keeps what follows if the condition is true
+#     #! si non CONDITION keeps what follows if it is false
+#     #! sinon            switches
+#     #! fin              closes the last open "si"
+#     #! note ...         comment of the template, never copied
 #
-# Les "si" peuvent s'emboîter.
+# The "si" can be nested.
 # ===========================================================================
 
 def chemin_modele(option: str | None, seul: bool = False) -> pathlib.Path:
     """
-    Chemin du modèle de prompt : celui de --prompt, sinon, à côté du
-    script, prompt-modele.txt ou, avec --prompt-seul, le modèle court
-    prompt-seul-modele.txt. Le chemin réel du script est suivi, afin qu'un
-    lien symbolique posé ailleurs retrouve le modèle du dépôt.
+    Path of the prompt template: the one of --prompt, otherwise, next to
+    the script, prompt-modele.txt or, with --prompt-seul, the short
+    template prompt-seul-modele.txt. The real path of the script is
+    followed, so that a symbolic link placed elsewhere finds the template
+    of the repository.
     """
     if option:
         return pathlib.Path(os.path.expanduser(option))
@@ -2039,7 +2030,7 @@ def chemin_modele(option: str | None, seul: bool = False) -> pathlib.Path:
 
 
 def lire_directive(ligne: str) -> list[str] | None:
-    """Mots d'une ligne de directive, ou None pour une ligne ordinaire."""
+    """Words of a directive line, or None for an ordinary line."""
     ligne = ligne.strip()
     if not ligne.startswith(PROMPT_DIRECTIVE):
         return None
@@ -2049,21 +2040,21 @@ def lire_directive(ligne: str) -> list[str] | None:
 def rendre_modele(texte: str, conditions: dict[str, bool],
                   valeurs: dict[str, str], source: str) -> str:
     """
-    Tire un prompt du modèle : applique les directives, remplace les
-    valeurs.
+    Derives a prompt from the template: applies the directives, replaces
+    the values.
 
-    Tout le modèle est contrôlé, passages écartés compris : une directive
-    inconnue, un "si" jamais fermé, une condition ou une valeur que le
-    script ne connaît pas arrêtent le script avec le numéro de la ligne.
-    Les lignes vides en trop que laisse un passage retiré sont resserrées.
+    The whole template is checked, discarded passages included: an
+    unknown directive, a "si" never closed, a condition or a value that
+    the script does not know stop the script with the line number. The
+    extra blank lines left by a removed passage are tightened.
     """
     def erreur(numero: int, message: str) -> SystemExit:
         return SystemExit("Modèle de prompt %s, ligne %d : %s"
                           % (source, numero, message))
 
     sortie: list[str] = []
-    # Pile des "si" ouverts : la ligne du "si", la valeur de sa condition,
-    # et si un "sinon" a déjà été rencontré.
+    # Stack of the open "si": the line of the "si", the value of its
+    # condition, and whether a "sinon" has already been met.
     pile: list[tuple[int, bool, bool]] = []
     for numero, ligne in enumerate(texte.split("\n"), start=1):
         mots = lire_directive(ligne)
@@ -2073,9 +2064,9 @@ def rendre_modele(texte: str, conditions: dict[str, bool],
                     raise erreur(numero, "valeur inconnue {{%s}}, valeurs "
                                  "admises : %s"
                                  % (nom, ", ".join(PROMPT_VALEURS)))
-            # Des accolades doubles qui restent une fois les repères
-            # reconnus retirés : un repère mal écrit, {{ NIVEAU }} ou
-            # {{CAMP1}}, qui partirait tel quel dans le prompt.
+            # Double braces that remain once the recognized markers
+            # are removed: a badly written marker, {{ NIVEAU }} or
+            # {{CAMP1}}, which would go as it is into the prompt.
             reste = RE_VALEUR_MODELE.sub("", ligne)
             if "{{" in reste or "}}" in reste:
                 raise erreur(numero, "repère mal formé, forme attendue : "
@@ -2111,7 +2102,7 @@ def rendre_modele(texte: str, conditions: dict[str, bool],
     if pile:
         raise erreur(pile[-1][0], "ce \"si\" n'est jamais fermé par \"fin\"")
 
-    # Lignes vides : au plus une de suite, aucune en tête ni en queue.
+    # Blank lines: at most one in a row, none at the start or at the end.
     resserre: list[str] = []
     for ligne in sortie:
         if ligne or (resserre and resserre[-1]):
@@ -2120,21 +2111,21 @@ def rendre_modele(texte: str, conditions: dict[str, bool],
 
 
 def lignes_de_texte(modele: str) -> list[str]:
-    """Lignes du modèle qui iront dans le prompt : ni vides, ni directives."""
+    """Template lines bound for the prompt: neither blank nor directives."""
     return [ligne for ligne in modele.split("\n")
             if ligne.strip() and not ligne.lstrip().startswith("#!")]
 
 
 def verifier_modele(texte: str, source: str) -> None:
     """
-    Contrôle le modèle avant la collecte, pour échouer tôt : un repère
-    inconnu ne doit pas se révéler après dix minutes de moteur. Le rendu
-    est fait à blanc, son résultat n'est pas gardé.
+    Checks the template before the collection, to fail early: an unknown
+    marker must not show up after ten minutes of engine. The rendering is
+    a dry run, its result is not kept.
     """
     rendre_modele(texte, dict.fromkeys(PROMPT_CONDITIONS, False),
                   dict.fromkeys(PROMPT_VALEURS, ""), source)
-    # Un modèle vide, ou fait de seules directives, donnerait un prompt
-    # sans une ligne, annoncé comme écrit.
+    # An empty template, or one made only of directives, would give a prompt
+    # without a single line, announced as written.
     if not lignes_de_texte(texte):
         raise SystemExit("Modèle de prompt %s : il ne contient aucune "
                          "ligne de texte." % source)
@@ -2143,9 +2134,9 @@ def verifier_modele(texte: str, source: str) -> None:
 def decrire_niveau(niveau: int, partie: chess.pgn.Game,
                    camp: str | None) -> str:
     """
-    Phrase du niveau du joueur. Le niveau déclaré dans les réglages
-    l'emporte ; à défaut, l'Elo de la balise du joueur dans cette partie,
-    si son camp est connu ; sinon rien de précis.
+    Sentence of the player's rating. The rating declared in the settings
+    wins; failing that, the Elo of the player's tag in this game, if their
+    side is known; otherwise nothing precise.
     """
     if niveau:
         return "environ %d Elo, déclaré par le joueur" % niveau
@@ -2159,26 +2150,26 @@ def decrire_niveau(niveau: int, partie: chess.pgn.Game,
 
 
 # ===========================================================================
-# Catalogue des ouvertures nommées
+# Catalog of the named openings
 #
-# Le catalogue sert à distinguer deux sortes de coups rares : celui qui
-# reste dans une ligne répertoriée, comme 1.b4, la Polonaise, joué dans
-# moins d'un pour cent des parties, et celui qui quitte toute ligne connue.
-# Seul le second marque la sortie de théorie. Le catalogue dit "connu",
-# jamais "bon" : "Barnes Opening: Fool's Mate" y figure.
+# The catalog serves to tell apart two kinds of rare moves: the one that
+# stays within a listed line, such as 1.b4, the Polish, played in less
+# than one percent of the games, and the one that leaves every known
+# line. Only the second one marks leaving theory. The catalog says
+# "known", never "good": "Barnes Opening: Fool's Mate" is in it.
 #
-# Le serveur de l'explorateur ne nomme que la position finale de chaque
-# ligne. L'index local retient en plus toutes les positions intermédiaires,
-# sans nom : une ligne nommée est ainsi connue sur toute sa longueur.
+# The explorer server only names the final position of each line. The
+# local index also keeps all the intermediate positions, without a name:
+# a named line is thus known along its whole length.
 # ===========================================================================
 
 class Catalogue:
     """
-    Index des positions du catalogue, chargé depuis le fichier local.
+    Index of the positions of the catalog, loaded from the local file.
 
-    Les positions sont repérées par leur EPD, prise en passant comprise
-    seulement si elle est jouable, ce qui correspond au hachage du serveur
-    (EnPassantMode::Legal). Une position intermédiaire a un nom vide.
+    The positions are identified by their EPD, en passant capture included
+    only if it is playable, which matches the hashing of the server
+    (EnPassantMode::Legal). An intermediate position has an empty name.
     """
 
     def __init__(self, positions: dict[str, tuple[str, str]],
@@ -2187,22 +2178,22 @@ class Catalogue:
         self.meta = meta
 
     def connue(self, plateau: chess.Board) -> bool:
-        """Indique si la position appartient à une ligne du catalogue."""
+        """Tells whether the position belongs to a line of the catalog."""
         return plateau.epd() in self.positions
 
     def nom(self, plateau: chess.Board) -> str | None:
-        """Renvoie "ECO nom" si la position est nommée, sinon None."""
+        """Returns "ECO name" if the position is named, otherwise None."""
         eco, nom = self.positions.get(plateau.epd(), ("", ""))
         return "%s %s" % (eco, nom) if nom else None
 
 
 def chemin_catalogue(repertoire: str) -> pathlib.Path:
-    """Chemin de l'index dans le répertoire du catalogue."""
+    """Path of the index in the catalog directory."""
     return pathlib.Path(os.path.expanduser(repertoire)) / CATALOGUE_INDEX
 
 
 def commande_catalogue(repertoire: str) -> str:
-    """Commande d'installation à proposer dans les messages d'erreur."""
+    """Installation command to suggest in the error messages."""
     supplement = ("" if repertoire == CATALOGUE_DEFAUT
                   else " --catalogue %s" % repertoire)
     return "%s --installer-catalogue%s" % (os.path.abspath(__file__),
@@ -2211,16 +2202,16 @@ def commande_catalogue(repertoire: str) -> str:
 
 def installer_catalogue(repertoire: str, delai: int) -> None:
     """
-    Télécharge le catalogue, le valide, puis écrit l'index local.
+    Downloads the catalog, validates it, then writes the local index.
 
-    Chaque ligne est rejouée avec python-chess : un coup illisible ou
-    illégal arrête l'installation, et l'index déjà en place n'est pas
-    touché. Comme le serveur, on refuse une position nommée deux fois.
+    Each line is replayed with python-chess: an unreadable or illegal move
+    stops the installation, and the index already in place is not
+    touched. Like the server, we reject a position named twice.
 
-    L'index est écrit dans un fichier temporaire du même répertoire, mis
-    sur disque, puis renommé : le remplacement est atomique, une collecte
-    lancée pendant une mise à jour lit l'ancien index ou le nouveau, jamais
-    un mélange des deux. Relancer l'option met le catalogue à jour.
+    The index is written to a temporary file in the same directory, synced
+    to disk, then renamed: the replacement is atomic, a collection started
+    during an update reads the old index or the new one, never a mix of
+    the two. Running the option again updates the catalog.
     """
     positions: dict[str, tuple[str, str]] = {}
     nb_lignes = 0
@@ -2230,14 +2221,14 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
         requete = urllib.request.Request(url, headers={"User-Agent": UA})
         try:
             with urllib.request.urlopen(requete, timeout=delai) as reponse:
-                # utf-8-sig : une marque d'ordre des octets en tête de
-                # fichier est ignorée au lieu de fausser l'en-tête.
+                # utf-8-sig: a byte order mark at the start of the
+                # file is ignored instead of corrupting the header.
                 texte = reponse.read().decode("utf-8-sig", errors="strict")
         except urllib.error.HTTPError as err:
             raise SystemExit("Catalogue : HTTP %d pour %s."
                              % (err.code, url)) from err
         except (OSError, http.client.HTTPException) as err:
-            # URLError est une sous-classe d'OSError, comme pour l'export PGN.
+            # URLError is a subclass of OSError, as for the PGN export.
             raise SystemExit("Catalogue injoignable : %s"
                              % getattr(err, "reason", err)) from err
         except UnicodeDecodeError as err:
@@ -2250,7 +2241,7 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
                              % (url, lecteur.fieldnames))
 
         lignes_fichier = 0
-        # La ligne 1 est l'en-tête, la numérotation suit celle du fichier.
+        # Line 1 is the header, the numbering follows that of the file.
         for numero, ligne in enumerate(lecteur, start=2):
             eco = (ligne.get("eco") or "").strip()
             nom = (ligne.get("name") or "").strip()
@@ -2268,8 +2259,8 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
                     raise SystemExit("Catalogue : coup %s illisible ou "
                                      "illégal, ligne %d de %s : %s"
                                      % (san, numero, url, err)) from err
-                # Position intermédiaire : connue, sans nom, à moins qu'une
-                # autre ligne ne l'ait déjà nommée.
+                # Intermediate position: known, without a name, unless another
+                # line has already named it.
                 positions.setdefault(plateau.epd(), ("", ""))
 
             epd = plateau.epd()
@@ -2303,8 +2294,8 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
             temporaire = pathlib.Path(tmp.name)
             tmp.write(entete + "\n")
             tmp.write("epd\teco\tnom\n")
-            # Ordre trié : deux installations du même catalogue donnent
-            # deux fichiers identiques, faciles à comparer avec diff.
+            # Sorted order: two installations of the same catalog give
+            # two identical files, easy to compare with diff.
             for epd in sorted(positions):
                 tmp.write("%s\t%s\t%s\n" % (epd, *positions[epd]))
             tmp.flush()
@@ -2317,8 +2308,8 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
         raise SystemExit("Écriture du catalogue impossible dans %s : %s"
                          % (cible.parent, err)) from err
 
-    # Relecture complète par le chemin normal : ce qui vient d'être écrit
-    # doit se charger exactement comme lors d'une collecte.
+    # Full read-back through the normal path: what has just been written
+    # must load exactly as it does during a collection.
     catalogue = lire_catalogue(repertoire)
     journal("Catalogue installé : %s lignes, %s positions nommées, %s "
             "positions connues, dans %s"
@@ -2328,12 +2319,12 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
 
 def lire_catalogue(repertoire: str) -> Catalogue:
     """
-    Charge l'index local du catalogue et vérifie son intégrité.
+    Loads the local index of the catalog and checks its integrity.
 
-    La première ligne décrit l'index. Un format inconnu, ou un nombre de
-    positions différent de celui annoncé, trahit un fichier tronqué ou
-    modifié : mieux vaut s'arrêter que de marquer la sortie de théorie sur
-    une base incomplète.
+    The first line describes the index. An unknown format, or a number of
+    positions different from the announced one, betrays a truncated or
+    modified file: it is better to stop than to mark the exit from theory
+    on an incomplete catalog.
     """
     chemin = chemin_catalogue(repertoire)
     if not est_fichier(chemin):
@@ -2345,8 +2336,8 @@ def lire_catalogue(repertoire: str) -> Catalogue:
 
     positions: dict[str, tuple[str, str]] = {}
     try:
-        # Encodage et traitement des erreurs explicites, jamais ceux de la
-        # locale : un index abîmé doit être refusé, non lu de travers.
+        # Explicit encoding and error handling, never those of the
+        # locale: a damaged index must be rejected, not misread.
         with chemin.open(encoding="utf-8-sig", errors="strict") as f:
             premiere = f.readline().rstrip("\n")
             entete = f.readline().rstrip("\n")
@@ -2377,18 +2368,18 @@ def lire_catalogue(repertoire: str) -> Catalogue:
 
 
 # ===========================================================================
-# Explorateur : accès réseau
+# Explorer: network access
 # ===========================================================================
 
 class SansRedirection(urllib.request.HTTPRedirectHandler):
     """
-    Refuse toute redirection HTTP.
+    Refuses any HTTP redirect.
 
-    L'ouvreur par défaut d'urllib suit les redirections en recopiant les
-    en-têtes de la requête, Authorization compris, vers la nouvelle
-    adresse, même sur un autre hôte. Le jeton ne doit partir que vers
-    l'explorateur : une réponse 301, 302, 303, 307 ou 308 est donc rendue
-    telle quelle, comme une erreur HTTP, et rien n'est envoyé ailleurs.
+    The default opener of urllib follows redirects by copying the request
+    headers, Authorization included, to the new address, even on another
+    host. The token must only go to the explorer: a 301, 302, 303, 307 or
+    308 answer is therefore returned as it is, like an HTTP error, and
+    nothing is sent elsewhere.
     """
 
     def redirect_request(self, *_arguments, **_options):
@@ -2397,18 +2388,18 @@ class SansRedirection(urllib.request.HTTPRedirectHandler):
 
 class Explorateur:
     """
-    Client minimal de l'explorateur Lichess, base maîtres ou base Lichess.
+    Minimal client of the Lichess explorer, masters or Lichess database.
 
-    Les deux endpoints exigent un jeton personnel, sans quoi ils renvoient
-    un 401 nginx au format HTML. Le jeton n'est transmis que dans l'en-tête
-    Authorization, jamais dans l'URL, afin qu'il n'apparaisse ni dans les
-    journaux du serveur ni dans une table de processus.
+    Both endpoints require a personal token, without which they return an
+    nginx 401 in HTML format. The token is only sent in the Authorization
+    header, never in the URL, so that it appears neither in the logs of
+    the server nor in a process table.
 
-    `url` désigne l'endpoint interrogé, la base maîtres par défaut afin que
-    les appels existants gardent leur comportement. `filtres` contient les
-    paramètres propres à la base Lichess (variante, cadences, tranches de
-    classement, date de début) ; il reste vide pour la base maîtres, qui ne
-    les connaît pas.
+    `url` names the endpoint queried, the masters database by default so
+    that the existing calls keep their behavior. `filtres` contains the
+    parameters specific to the Lichess database (variant, speeds, rating
+    bands, start date); it stays empty for the masters database, which
+    does not know them.
     """
 
     def __init__(self, jeton: str, pause: float, delai: int,
@@ -2418,38 +2409,38 @@ class Explorateur:
         self.pause = pause
         self.delai = delai
         self.url = url
-        # Copie défensive : un dictionnaire modifié plus tard par l'appelant
-        # ne doit pas changer les requêtes en cours de collecte.
+        # Defensive copy: a dictionary modified later by the caller
+        # must not change the requests during the collection.
         self.filtres = dict(filtres or {})
         self._premiere = True
-        # Ouvreur propre à l'explorateur, qui ne suit aucune redirection :
-        # voir SansRedirection.
+        # Opener specific to the explorer, which follows no redirect:
+        # see SansRedirection.
         self._ouvreur = urllib.request.build_opener(SansRedirection)
 
     def interroger(self, coups_uci: list[str]) -> tuple[int, dict]:
         """
-        Interroge la position atteinte après les coups fournis.
+        Queries the position reached after the given moves.
 
-        Renvoie le couple (code HTTP, dictionnaire décodé). Toute réponse
-        inexploitable, code différent de 200, corps non JSON ou erreur de
-        transport, revient avec un dictionnaire portant la clef "_erreur",
-        le code valant 0 quand aucun code HTTP n'a pu être obtenu.
+        Returns the pair (HTTP code, decoded dictionary). Any unusable answer,
+        code other than 200, non-JSON body or transport error, comes back with
+        a dictionary carrying the key "_erreur", the code being 0 when no HTTP
+        code could be obtained.
         """
-        # Pause de politesse. L'endpoint est strict sur le débit, mais il
-        # est inutile d'attendre avant la toute première requête.
+        # Courtesy pause. The endpoint is strict about the rate, but there
+        # is no point in waiting before the very first request.
         if not self._premiere:
             time.sleep(self.pause)
         self._premiere = False
 
-        # Toutes les réponses connues de la base, et non les dix premières :
-        # un coup joué au-delà du dixième rang passait sinon pour absent
-        # (0 partie, rang "hors base") alors qu'il était seulement plus
-        # rare. Le serveur tronque à cette valeur sans plafond propre, et
-        # 256 couvre largement tous les coups légaux d'une position.
+        # All the moves of the database, and not the first ten: a move
+        # played beyond the tenth rank otherwise passed for absent (0
+        # games, rank "hors base") while it was only rarer. The server
+        # truncates at this value without a cap of its own, and 256
+        # amply covers all the legal moves of a position.
         parametres = {"topGames": "0", "moves": "256"}
 
-        # Filtres de la base Lichess. Pour la base maîtres le dictionnaire
-        # est vide : la requête reste strictement celle d'avant l'option.
+        # Filters of the Lichess database. For the masters database the
+        # dictionary is empty: the request stays exactly as before the option.
         parametres.update(self.filtres)
         if coups_uci:
             parametres["play"] = ",".join(coups_uci)
@@ -2461,15 +2452,15 @@ class Explorateur:
             "Authorization": "Bearer %s" % self.jeton,
         })
 
-        # Une seule reprise, et uniquement sur 429 : au delà, mieux vaut
-        # s'arrêter que de se faire bannir.
+        # A single retry, and only on 429: beyond that, it is better to
+        # stop than to get banned.
         for tentative in (1, 2):
             try:
                 with self._ouvreur.open(requete, timeout=self.delai) as r:
                     corps = r.read().decode("utf-8-sig", errors="replace")
-                    # La réponse est recopiée telle quelle dans l'archive :
-                    # si un serveur renvoyait un jour l'en-tête reçu, le
-                    # jeton n'y entrerait pas.
+                    # The answer is copied as it is into the archive:
+                    # if a server one day sent back the header received, the
+                    # token would not get in.
                     donnees = json.loads(expurger(corps, self.jeton))
                     if not isinstance(donnees, dict):
                         return 0, {"_erreur": "réponse JSON inattendue, "
@@ -2480,9 +2471,9 @@ class Explorateur:
                     return err.code, {"_erreur": "redirection refusée : le "
                                       "jeton n'est envoyé qu'à l'adresse "
                                       "de l'explorateur"}
-                # Le corps de l'erreur n'est lu que pour le message : s'il
-                # est coupé ou trop lent, l'erreur HTTP reste ce qu'elle
-                # est, et seule l'interrogation s'arrête.
+                # The body of the error is only read for the message: if it
+                # is cut or too slow, the HTTP error stays what it
+                # is, and only the query stops.
                 try:
                     corps = err.read().decode("utf-8-sig", errors="replace")
                 except (OSError, http.client.HTTPException):
@@ -2498,18 +2489,18 @@ class Explorateur:
             except ValueError as err:
                 return 0, {"_erreur": "réponse non JSON : %s" % err}
             except RecursionError:
-                # Un JSON imbriqué sur des milliers de niveaux.
+                # A JSON nested thousands of levels deep.
                 return 0, {"_erreur": "réponse non JSON : imbrication "
                                       "démesurée"}
         return 0, {"_erreur": "échec après reprise"}
 
 
 # ===========================================================================
-# Explorateur : exploitation des données
+# Explorer: using the data
 # ===========================================================================
 
 def total_parties(bloc: dict | None) -> int:
-    """Nombre de parties d'une position ou d'un coup, nulles comprises."""
+    """Number of games of a position or of a move, draws included."""
     if not isinstance(bloc, dict):
         return 0
     return entier(bloc.get("white")) + entier(bloc.get("draws")) \
@@ -2518,7 +2509,7 @@ def total_parties(bloc: dict | None) -> int:
 
 def score_blancs(bloc: dict | None) -> float | None:
     """
-    Score des Blancs sur un coup, en pourcentage, la nulle valant un demi.
+    White's score on a move, as a percentage, a draw counting as half.
     """
     n = total_parties(bloc)
     if n == 0:
@@ -2534,39 +2525,38 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
                           catalogue: Catalogue | None = None,
                           demicoups_min: int = 0) -> dict:
     """
-    Parcourt la partie et interroge l'explorateur position par position.
+    Walks through the game and queries the explorer position by position.
 
-    Pour le demi-coup numéro i, c'est la position AVANT ce coup qui est
-    interrogée : c'est la seule façon d'obtenir le rang et la fréquence du
-    coup réellement joué parmi les réponses connues de la base.
+    For ply number i, it is the position BEFORE this move that is queried:
+    it is the only way to get the rank and the frequency of the move
+    actually played among the moves known to the database.
 
-    Trois critères d'arrêt, dans cet ordre de test :
+    Three stop criteria, in this order of testing:
 
-      - une réponse inexploitable, ou un échantillon nul, ce qui signifie
-        que la position est inconnue de la base ;
-      - un échantillon de position inférieur à `seuil_parties` ;
-      - une sortie de théorie : un coup joué dont la fréquence tombe sous
-        `seuil_frequence` et qui mène à une position absente du
-        `catalogue`. Un coup rare qui reste dans une ligne répertoriée
-        n'est pas une sortie.
+      - an unusable answer, or an empty sample, which means that the
+        position is unknown to the database;
+      - a position sample below `seuil_parties`;
+      - leaving theory: a played move whose frequency falls below
+        `seuil_frequence` and that leads to a position missing from the
+        `catalogue`. A rare move that stays within a listed line does not
+        leave theory.
 
-    Le troisième critère est suspendu pendant les `demicoups_min` premiers
-    demi-coups : la table couvre ainsi le début de partie même après une
-    sortie précoce, le premier critère et le seuil de parties restant
-    actifs. Au delà, l'arrêt reprend au premier coup qui sort. La première
-    sortie est notée dans tous les cas, fenêtre comprise.
+    The third criterion is suspended during the first `demicoups_min`
+    plies: the table thus covers the start of the game even after an
+    early exit from theory, the first criterion and the game threshold
+    staying active. Beyond that, the stop resumes at the first move that
+    leaves. The first exit is recorded in every case, window included.
 
-    Sans catalogue et sans fenêtre, le comportement est celui d'origine :
-    tout coup rare est une sortie et arrête la collecte.
+    Without a catalog and without a window, the behavior is the original
+    one: any rare move leaves theory and stops the collection.
 
-    Avec `jusqu_a_epuisement`, seuls le premier critère et le plafond de
-    demi-coups s'appliquent : l'interrogation descend aussi loin que la
-    base répond.
+    With `jusqu_a_epuisement`, only the first criterion and the ply cap
+    apply: the querying goes as deep as the database answers.
 
-    Un coup nul, "--" dans le PGN, arrête la collecte avant toute
-    interrogation pour ce demi-coup, quel que soit le mode : ce n'est pas
-    un coup des échecs, la base ne peut ni le compter ni suivre la partie
-    au delà. Il n'est pas tenu pour une sortie de théorie.
+    A null move, "--" in the PGN, stops the collection before any query
+    for this ply, whatever the mode: it is not a chess move, the database
+    can neither count it nor follow the game beyond it. It is not held as
+    leaving theory.
     """
     brut = dossier / "explorateur"
     brut.mkdir(parents=True, exist_ok=True)
@@ -2590,13 +2580,13 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
         san_joue = plateau.san(coup)
         uci_joue = coup.uci()
 
-        # Coup nul : le trait passe sans qu'une pièce ne bouge. La base ne
-        # le connaît pas, il ressortait donc à 0 partie, au rang "hors
-        # base", et passait pour la première sortie de théorie. Pire, le
-        # demi-coup suivant envoyait à l'explorateur une liste de coups
-        # contenant "0000", qu'il refuse par un HTTP 400 ("illegal uci") :
-        # l'arrêt était alors mis sur le compte d'une erreur réseau. On
-        # s'arrête ici, sans rien demander, en donnant la vraie raison.
+        # Null move: the turn passes without a piece moving. The database
+        # does not know it, so it came out with 0 games, at rank "hors
+        # base", and passed for the first exit from theory. Worse, the
+        # next ply sent the explorer a move list containing "0000",
+        # which it rejects with an HTTP 400 ("illegal uci"): the stop
+        # was then blamed on a network error. We stop here, without
+        # asking anything, giving the real reason.
         if not coup:
             arret = ("coup nul au demi-coup %d : ce n'est pas un coup des "
                      "échecs, l'explorateur ne peut pas suivre la partie au "
@@ -2608,20 +2598,20 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
             })
             break
 
-        # L'explorateur note le roque à la manière de Chess960, "roi prend
-        # tour" : e1h1 pour le petit roque des Blancs, là où python-chess
-        # écrit e1g1. Les deux formes sont admises pour retrouver le coup
-        # joué dans la réponse, sans quoi un roque passait pour absent de
-        # la base (0 partie, rang "hors base") et déclenchait une fausse
-        # sortie de théorie. Pour tout autre coup, elles sont identiques.
-        # La liste des coups envoyée à l'explorateur, elle, ne change pas.
+        # The explorer writes castling the Chess960 way, "king takes rook":
+        # e1h1 for White's short castling, where python-chess writes e1g1.
+        # Both forms are accepted to find the played move in the answer,
+        # otherwise a castling move passed for absent from the database (0
+        # games, rank "hors base") and triggered a false exit from theory.
+        # For any other move, they are identical. The move list sent to
+        # the explorer, for its part, does not change.
         uci_admis = (uci_joue, plateau.uci(coup, chess960=True))
 
         journal("Explorateur : demi-coup %d (%s)" % (indice + 1, san_joue))
         code, donnees = explorateur.interroger(joues_uci)
 
-        # Sauvegarde systématique du brut, même en cas d'erreur : cela vous
-        # évitera de relancer toute la collecte pour comprendre un échec.
+        # Systematic saving of the raw data, even on error: this will save
+        # you from running the whole collection again to understand a failure.
         fichier = brut / ("%03d-%s.json" % (indice + 1, uci_joue))
         ecrire_texte(fichier,
                      json.dumps(donnees, ensure_ascii=False, indent=1))
@@ -2641,8 +2631,8 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
 
         total = total_parties(donnees)
 
-        # Position inconnue de la base : l'explorateur répond 200 avec un
-        # échantillon nul, il n'y a plus rien à en tirer.
+        # Position unknown to the database: the explorer answers 200 with an
+        # empty sample, there is nothing more to get from it.
         if total == 0:
             arret = ("position inconnue de la base au demi-coup %d, "
                      "échantillon nul" % (indice + 1))
@@ -2665,10 +2655,10 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
             journal("Explorateur : %s." % arret)
             break
 
-        # Recherche du coup joué parmi les réponses connues de la base. Les
-        # entrées d'un type inattendu sont ignorées plutôt que fatales.
-        # Il en va de même d'une clef "moves" qui ne serait pas une liste :
-        # un entier ne se parcourt pas, la boucle levait alors TypeError.
+        # Search for the played move among the moves known to the database.
+        # Entries of an unexpected type are ignored rather than fatal.
+        # The same goes for a "moves" key that would not be a list:
+        # an integer cannot be iterated, and the loop then raised TypeError.
         coups_base = donnees.get("moves")
         if not isinstance(coups_base, list):
             coups_base = []
@@ -2708,16 +2698,16 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
         plateau.push(coup)
         joues_uci.append(uci_joue)
 
-        # Position atteinte après le coup : appartient-elle à une ligne du
-        # catalogue, et porte-t-elle un nom ? Les deux clefs existent
-        # toujours, afin que la synthèse n'ait pas à tester leur présence.
+        # Position reached after the move: does it belong to a line of the
+        # catalog, and does it carry a name? Both keys always exist, so
+        # that the summary does not have to test for their presence.
         ligne["connue"] = catalogue is not None and catalogue.connue(plateau)
         ligne["ouverture"] = (catalogue.nom(plateau) if catalogue is not None
                               else None)
 
-        # Sortie de théorie : coup rare qui quitte le catalogue. Le coup
-        # responsable figure bien dans le tableau, c'est l'interrogation
-        # qui s'arrête après lui, et jamais dans la fenêtre de départ.
+        # Leaving theory: a rare move that leaves the catalog. The move
+        # responsible does appear in the table, it is the querying that
+        # stops after it, and never within the starting window.
         if (seuil_frequence > 0 and frequence < seuil_frequence
                 and not ligne["connue"]):
             if premiere_sortie is None:
@@ -2754,15 +2744,15 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
 def formater_score(score: chess.engine.PovScore,
                    trait: bool | None = None) -> str:
     """
-    Met en forme un score du point de vue des Blancs, en pions ou en mat.
+    Formats a score from White's point of view, in pawns or as a mate.
 
-    Le score vient d'une recherche faite avant le coup, et l'évaluation
-    s'annonce après lui. En pions, cela ne change rien. Pour un mat, le
-    moteur compte les coups du camp qui mate, celui-ci compris : quand ce
-    camp est celui qui joue, donné par `trait`, il lui en reste un de
-    moins une fois le coup joué. "#+0" et "#-0" désignent le coup qui
-    donne mat lui-même. Le camp maté, lui, ne retire rien : après son
-    coup, l'adversaire a encore tous les siens à jouer.
+    The score comes from a search made before the move, and the
+    evaluation is announced after it. In pawns, this changes nothing. For
+    a mate, the engine counts the moves of the mating side, the current
+    move included: when that side is the one playing, given by `trait`, it has
+    one fewer left once the move is played. "#+0" and "#-0" denote the
+    mating move itself. The mated side, for its part, removes nothing:
+    after its move, the opponent still has all of theirs to play.
     """
     blanc = score.white()
     if blanc.is_mate():
@@ -2777,23 +2767,23 @@ def formater_score(score: chess.engine.PovScore,
 
 def valeur_pour_trait(score: chess.engine.PovScore, trait: bool) -> float:
     """
-    Valeur en centipions du point de vue du joueur au trait.
+    Value in centipawns from the point of view of the side to move.
 
-    Un mat est ramené à une valeur bornée, suffisante pour classer les
-    coups sans faire exploser les écarts affichés.
+    A mate is brought down to a bounded value, enough to rank the moves
+    without blowing up the losses displayed.
     """
     return float(score.pov(trait).score(mate_score=100000))
 
 
 def ecart_au_meilleur(meilleur: float, joue: float) -> float:
     """
-    Ce que le coup joué perd par rapport au premier choix du moteur, les
-    deux valeurs étant prises du point de vue du joueur au trait.
+    What the played move loses compared with the engine's first choice,
+    both values being taken from the point of view of the side to move.
 
-    Deux mats de même sens ne se comparent pas en centipions : mater en
-    deux coups au lieu d'un, ou se faire mater un coup plus tard, ne
-    change pas l'issue. Leurs valeurs bornées, 99999 et 99998, donnaient
-    un écart de 1, lu à tort comme un centipion : il vaut zéro.
+    Two mates in the same direction cannot be compared in centipawns:
+    mating in two moves instead of one, or getting mated one move later,
+    does not change the outcome. Their bounded values, 99999 and 99998,
+    gave a loss of 1, wrongly read as a centipawn: it is zero.
     """
     if min(abs(meilleur), abs(joue)) >= SEUIL_MAT and (meilleur > 0) == (
             joue > 0):
@@ -2802,7 +2792,7 @@ def ecart_au_meilleur(meilleur: float, joue: float) -> float:
 
 
 def wdl_blancs(info: dict) -> dict | None:
-    """Chances de gain, nulle et perte des Blancs, en pour mille."""
+    """White's chances of winning, drawing and losing, per thousand."""
     wdl = info.get("wdl")
     if wdl is None:
         return None
@@ -2812,7 +2802,7 @@ def wdl_blancs(info: dict) -> dict | None:
 
 
 def nature_coup(ecart: float | None) -> str | None:
-    """Imprécision, erreur ou gaffe selon l'écart en centipions."""
+    """Inaccuracy, mistake or blunder according to the loss in centipawns."""
     if ecart is None:
         return None
     if ecart >= SEUIL_GAFFE:
@@ -2826,11 +2816,11 @@ def nature_coup(ecart: float | None) -> str | None:
 
 def reste_estime(ecoule: float, faits: int, total: int) -> str:
     """
-    Temps restant, d'après la moyenne des demi-coups déjà analysés.
+    Remaining time, from the average of the plies already analyzed.
 
-    Les positions de fin de partie vont souvent plus vite que la moyenne :
-    l'estimation pèche plutôt par excès. Rien n'est affiché avant trois
-    demi-coups, la moyenne n'ayant pas encore de sens.
+    The endgame positions often go faster than the average: the estimate
+    tends to err on the high side. Nothing is displayed before three
+    plies, the average not making sense yet.
     """
     if faits < 3:
         return ""
@@ -2845,12 +2835,12 @@ def reste_estime(ecoule: float, faits: int, total: int) -> str:
 
 def resoudre_moteur(binaire: str) -> str:
     """
-    Chemin du moteur tel qu'il sera contrôlé puis lancé.
+    Path of the engine as it will be checked and then started.
 
-    Le tilde est développé, comme pour les autres options de chemin. Un
-    nom nu, "stockfish", est cherché dans le PATH : le lancement l'y
-    cherchait déjà, alors que le contrôle regardait le répertoire
-    courant, et les deux pouvaient se contredire.
+    The tilde is expanded, as for the other path options. A bare name,
+    "stockfish", is looked up in the PATH: the start already looked for
+    it there, while the check looked at the current directory, and the two
+    could contradict each other.
     """
     binaire = os.path.expanduser(binaire)
     if os.sep not in binaire and not est_fichier(pathlib.Path(binaire)):
@@ -2859,7 +2849,7 @@ def resoudre_moteur(binaire: str) -> str:
 
 
 def verifier_moteur(binaire: str) -> None:
-    """Vérifie l'existence du binaire avant d'avoir créé quoi que ce soit."""
+    """Checks that the binary exists before anything has been created."""
     if not est_fichier(pathlib.Path(binaire)):
         raise SystemExit("Stockfish introuvable : %s. Installez-le (%s), "
                          "ou indiquez son chemin avec --stockfish. "
@@ -2872,11 +2862,11 @@ def verifier_moteur(binaire: str) -> None:
 
 def lancer_moteur(binaire: str) -> chess.engine.SimpleEngine:
     """
-    Lance le moteur UCI et renvoie son pilote, ou arrête le script.
+    Starts the UCI engine and returns its driver, or stops the script.
 
-    Un binaire non exécutable, absent ou qui n'est pas un moteur UCI se
-    manifeste respectivement par une OSError, une OSError et un délai
-    dépassé à l'attente de "uciok".
+    A binary that is not executable, missing, or not a UCI engine shows up
+    respectively as an OSError, an OSError and a timeout while waiting for
+    "uciok".
     """
     try:
         return chess.engine.SimpleEngine.popen_uci(binaire)
@@ -2888,14 +2878,14 @@ def lancer_moteur(binaire: str) -> chess.engine.SimpleEngine:
 
 def fermer_moteur(moteur: chess.engine.SimpleEngine) -> None:
     """
-    Arrête le moteur sans jamais lever d'exception.
+    Stops the engine without ever raising an exception.
 
-    quit() échoue si le moteur est déjà mort ; close() est toujours sûr
-    et garantit qu'aucun processus Stockfish ne survit au script.
+    quit() fails if the engine is already dead; close() is always safe
+    and guarantees that no Stockfish process outlives the script.
     """
     try:
         moteur.quit()
-    except Exception:  # noqa: BLE001 - nettoyage de dernier recours
+    except Exception:  # noqa: BLE001 - last-resort cleanup
         pass
     moteur.close()
 
@@ -2903,14 +2893,14 @@ def fermer_moteur(moteur: chess.engine.SimpleEngine) -> None:
 def verifier_options_moteur(binaire: str, fils: int, hachage: int,
                             multipv: int) -> None:
     """
-    Contrôle --fils, --hachage et --multipv auprès du moteur lui-même,
-    avant toute collecte.
+    Checks --fils, --hachage and --multipv with the engine itself, before
+    any collection.
 
-    Le moteur annonce ses options et leurs bornes dès son lancement : une
-    valeur hors bornes, ou une option qu'il ne connaît pas, est refusée
-    ici plutôt qu'après toute la phase explorateur, qui peut durer
-    plusieurs minutes. Rien n'est configuré, donc aucune table de hachage
-    n'est allouée : le moteur est seulement lancé, interrogé, puis arrêté.
+    The engine announces its options and their bounds as soon as it
+    starts: a value out of bounds, or an option it does not know, is
+    refused here rather than after the whole explorer phase, which may
+    last several minutes. Nothing is configured, so no hash table is
+    allocated: the engine is only started, queried, then stopped.
     """
     moteur = lancer_moteur(binaire)
     try:
@@ -2935,16 +2925,16 @@ def verifier_options_moteur(binaire: str, fils: int, hachage: int,
 
 def decrire_variante(plateau: chess.Board, info: dict, trait: bool) -> dict:
     """
-    Met en forme une ligne renvoyée par le moteur : premier coup, score,
-    valeur numérique pour le trait, profondeur atteinte et variante
-    principale complète, en UCI et en notation algébrique numérotée.
+    Formats a line returned by the engine: first move, score, numeric
+    value for the side to move, depth reached and full principal
+    variation, in UCI and in numbered algebraic notation.
     """
     pv = list(info.get("pv") or [])
     try:
         pv_san = plateau.variation_san(pv)
     except ValueError:
-        # Variante que python-chess refuse de rejouer : on garde l'UCI brut
-        # plutôt que de perdre l'information.
+        # Variation that python-chess refuses to replay: we keep the raw UCI
+        # rather than lose the information.
         pv_san = " ".join(m.uci() for m in pv)
     return {
         "san": plateau.san(pv[0]),
@@ -2962,31 +2952,31 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
                         binaire: str, demicoups: int, profondeur: int,
                         multipv: int, fils: int, hachage: int) -> dict:
     """
-    Évalue les premiers demi-coups de la partie en multipv.
+    Evaluates the first plies of the game in multipv.
 
-    Pour chaque position, les `multipv` meilleurs coups sont demandés, avec
-    leur variante principale complète. Si le coup effectivement joué ne
-    figure pas dans cette liste, une seconde analyse restreinte à ce seul
-    coup fournit son évaluation et sa variante, et donc l'écart réel avec
-    le premier choix du moteur.
+    For each position, the `multipv` best moves are requested, with their
+    full principal variation. If the move actually played is not in this
+    list, a second analysis restricted to that single move provides its
+    evaluation and its variation, and therefore the real loss against the
+    engine's first choice.
     """
     verifier_moteur(binaire)
     limite = chess.engine.Limit(depth=profondeur)
     plateau = partie.board()
     resultats: list[dict] = []
     coups = list(partie.mainline_moves())
-    # Zéro signifie "toute la partie" ; sinon on borne au nombre réel de
-    # demi-coups pour que le compteur affiché soit exact.
+    # Zero means "the whole game"; otherwise we bound it to the real number
+    # of plies so that the counter displayed is exact.
     if demicoups <= 0 or demicoups > len(coups):
         demicoups = len(coups)
 
-    # Lancement et erreurs de lancement : voir lancer_moteur.
+    # Start and start errors: see lancer_moteur.
     moteur = lancer_moteur(binaire)
 
     try:
         moteur.configure({"Threads": fils, "Hash": hachage})
-        # Chances de gain, nulle et perte : un moteur qui ne connaît pas
-        # cette option laisse simplement la colonne vide.
+        # Chances of winning, drawing and losing: an engine that does not know
+        # this option simply leaves the column empty.
         wdl = "UCI_ShowWDL" in moteur.options
         if wdl:
             moteur.configure({"UCI_ShowWDL": True})
@@ -3018,13 +3008,13 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
                     eval_joue = m
                     break
             if eval_joue is None and not coup:
-                # Coup nul, "--" dans le PGN : le trait passe sans qu'aucune
-                # pièce ne bouge. Ce n'est pas un coup des échecs et le
-                # protocole UCI ne sait pas le restreindre : la recherche
-                # limitée à "0000" renvoyait un score sans rapport avec lui,
-                # d'où une évaluation et un écart inventés. La ligne est
-                # gardée, avec les meilleurs coups de la position, mais le
-                # coup joué n'est pas évalué.
+                # Null move, "--" in the PGN: the turn passes without any
+                # piece moving. It is not a chess move and the UCI protocol
+                # cannot restrict a search to it: the search limited to
+                # "0000" returned a score unrelated to it, hence a made-up
+                # evaluation and loss. The line is kept, with the best
+                # moves of the position, but the played move is not
+                # evaluated.
                 eval_joue = {
                     "san": san_joue, "uci": coup.uci(), "score": "-",
                     "valeur_trait": None, "profondeur": None,
@@ -3065,15 +3055,15 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
         raise SystemExit("Le moteur a échoué en cours d'analyse : %s"
                          % (err or type(err).__name__)) from err
     except concurrent.futures.CancelledError as err:
-        # Le moteur est mort hors d'une recherche, pendant un réglage par
-        # exemple : python-chess annule alors la commande en attente au
-        # lieu de lever une EngineError. La cause la plus courante est
-        # une table de hachage que le système refuse d'allouer.
+        # The engine died outside a search, during a setting for
+        # example: python-chess then cancels the pending command instead
+        # of raising an EngineError. The most common cause is a hash
+        # table that the system refuses to allocate.
         raise SystemExit("Le moteur a échoué en cours d'analyse : il s'est "
                          "arrêté sans répondre. Si --hachage ou --fils "
                          "sont élevés, la mémoire a pu manquer.") from err
     finally:
-        # Arrêt sûr dans tous les cas : voir fermer_moteur.
+        # Safe stop in every case: see fermer_moteur.
         fermer_moteur(moteur)
 
     brut = dossier / "stockfish"
@@ -3091,26 +3081,26 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
 
 
 # ===========================================================================
-# Fichier de synthèse
+# Summary file
 # ===========================================================================
 
 def _cellule(valeur, gabarit="%.1f") -> str:
-    """Formate une valeur numérique, ou renvoie un tiret si elle est absente."""
+    """Formats a numeric value, or returns a dash if it is missing."""
     return "-" if valeur is None else gabarit % valeur
 
 
 def resultat_contredit(partie: chess.pgn.Game,
                        resultats: list[dict]) -> str | None:
     """
-    Phrase à écrire quand le résultat de la partie contredit l'évaluation
-    du moteur après le dernier coup, ou None.
+    Sentence to write when the result of the game contradicts the
+    evaluation of the engine after the last move, or None.
 
-    Une partie notée 1-0 alors que les Noirs sont nettement mieux ne
-    s'est pas décidée sur l'échiquier : abandon, temps écoulé, ou autre
-    cause que le PGN ne dit pas. Sans cette phrase, un analyste pressé
-    raconte une victoire méritée : sur quatre LLM essayés, deux l'ont
-    fait. Le seuil est celui de la gaffe, pour ne signaler que les cas
-    nets, et rien n'est dit si le moteur n'a pas évalué le dernier coup.
+    A game scored 1-0 while Black is clearly better was not decided on
+    the board: resignation, time out, or another cause that the PGN does
+    not tell. Without this sentence, a hurried analyst tells the story of
+    a deserved win: out of four LLMs tried, two did. The threshold is that
+    of the blunder, to report only the clear cases, and nothing is said if
+    the engine did not evaluate the last move.
     """
     vainqueur = {"1-0": "Blancs", "0-1": "Noirs"}.get(
         partie.headers.get("Result", ""))
@@ -3118,12 +3108,12 @@ def resultat_contredit(partie: chess.pgn.Game,
         return None
     dernier = resultats[-1]
     valeur = dernier["joue"].get("valeur_trait")
-    # Le rang du demi-coup se compare au nombre de coups joués, compté
-    # ici même, et non à une numérotation tirée du PGN.
+    # The rank of the ply is compared with the number of moves played,
+    # counted right here, and not with a numbering taken from the PGN.
     joues = sum(1 for _ in partie.mainline_moves())
     if valeur is None or dernier["demicoup"] != joues:
         return None
-    # valeur_trait se lit du côté de celui qui vient de jouer.
+    # valeur_trait is read from the side of the one who has just played.
     pour_blancs = valeur if dernier["trait"] == "Blancs" else -valeur
     pour_vainqueur = pour_blancs if vainqueur == "Blancs" else -pour_blancs
     if pour_vainqueur > -SEUIL_GAFFE:
@@ -3146,13 +3136,13 @@ def resultat_contredit(partie: chess.pgn.Game,
 
 def _ecart(ecart: float | None) -> str:
     """
-    Cellule "Écart cp" du tableau Stockfish.
+    "Écart cp" cell of the Stockfish table.
 
-    Un écart absent donne un tiret. À partir de SEUIL_ECART_MAT, l'écart
-    vient d'un mat ramené à une valeur bornée, que le coup joué manque un
-    mat ou qu'il en concède un : la cellule porte "mat" au lieu d'un
-    nombre de centipions qui n'aurait aucun sens, les colonnes Éval et
-    1er donnant les deux scores.
+    A missing loss gives a dash. From SEUIL_ECART_MAT on, the loss comes
+    from a mate brought down to a bounded value, whether the played move
+    misses a mate or concedes one: the cell carries "mat" instead of a
+    number of centipawns that would make no sense, the Éval and 1er
+    columns giving both scores.
     """
     if ecart is None:
         return "-"
@@ -3162,7 +3152,7 @@ def _ecart(ecart: float | None) -> str:
 
 
 def _gnp(wdl: dict | None, pour_noirs: bool = False) -> str:
-    """Gain, nulle et perte en pour cent arrondi, des Blancs ou des Noirs."""
+    """Win, draw and loss as a rounded percentage, for White or for Black."""
     if not wdl:
         return "-"
     gain, nulle, perte = wdl["gain"], wdl["nulle"], wdl["perte"]
@@ -3173,15 +3163,15 @@ def _gnp(wdl: dict | None, pour_noirs: bool = False) -> str:
 
 
 def materiel_hors_pions(plateau: chess.Board) -> int:
-    """Matériel hors pions et rois des deux camps réunis."""
+    """Material other than pawns and kings of both sides together."""
     return sum(VALEUR_PIECES.get(c.lower(), 0) for c in plateau.board_fen())
 
 
 def reperes_phase(partie: chess.pgn.Game) -> list[str]:
     """
-    Repères objectifs de changement de phase sur la ligne principale :
-    roque de chaque camp, disparition des dames, entrée en finale selon
-    SEUIL_FINALE. Ils situent les transitions, l'analyste en juge.
+    Objective markers of phase change on the main line: castling of each
+    side, disappearance of the queens, entry into the endgame according
+    to SEUIL_FINALE. They locate the transitions, the analyst judges them.
     """
     plateau = partie.board()
     roques: dict = {chess.WHITE: None, chess.BLACK: None}
@@ -3224,8 +3214,8 @@ def reperes_phase(partie: chess.pgn.Game) -> list[str]:
 def tronquer_variante(plateau: chess.Board, pv_uci: list[str],
                       longueur: int) -> str:
     """
-    Rejoue une variante UCI depuis la position et la rend en notation
-    algébrique numérotée, limitée à `longueur` demi-coups (0 = tout).
+    Replays a UCI variation from the position and returns it in numbered
+    algebraic notation, limited to `longueur` plies (0 = all).
     """
     coups = []
     for uci in pv_uci[:longueur] if longueur > 0 else pv_uci:
@@ -3242,13 +3232,13 @@ def tronquer_variante(plateau: chess.Board, pv_uci: list[str],
 def tableau_compact(partie: chess.pgn.Game, resultats: list[dict],
                     longueur_pv: int) -> str:
     """
-    Évaluations du moteur pour le prompt court : une ligne par demi-coup,
-    le coup joué et son évaluation. Derrière un coup faible viennent sa
-    nature, son écart, puis le meilleur coup, sa suite et son évaluation.
+    Engine evaluations for the short prompt: one line per ply, the played
+    move and its evaluation. After a weak move come its category, its
+    loss, then the best move, its continuation and its evaluation.
 
-    Le tableau de la synthèse compte onze colonnes et trois variantes par
-    coup : celui-ci tient en quelques kilo-octets, pour un LLM à qui tout
-    est collé dans un seul message.
+    The table of the summary has eleven columns and three variations per
+    move: this one fits in a few kilobytes, for an LLM to which everything
+    is pasted in a single message.
     """
     lignes = []
     plateau = partie.board()
@@ -3271,13 +3261,13 @@ def tableau_compact(partie: chess.pgn.Game, resultats: list[dict],
 def coups_faibles_joueur(resultats: list[dict],
                          camp: str | None) -> int | None:
     """
-    Nombre de coups du joueur que le tableau du prompt court marque comme
-    faibles : imprécisions, erreurs et gaffes. None si son camp est
-    inconnu.
+    Number of the player's moves that the table of the short prompt marks
+    as weak: inaccuracies, mistakes and blunders. None if their side is
+    unknown.
 
-    La règle est celle de tableau_compact : un coup n'est marqué que si
-    le moteur lui a trouvé une nature et propose un meilleur coup. Le
-    nombre rendu est donc celui que le LLM peut compter lui-même.
+    The rule is that of tableau_compact: a move is only marked if the
+    engine found a category for it and suggests a better move. The number
+    returned is therefore the one that the LLM can count by itself.
     """
     if camp is None:
         return None
@@ -3287,8 +3277,8 @@ def coups_faibles_joueur(resultats: list[dict],
 
 def phrase_ouverture(explorateur: dict | None, libelle_base: str) -> str:
     """
-    Pour le prompt court, l'ouverture et la sortie de théorie en une
-    phrase, tirées de l'explorateur. Chaîne vide s'il n'a rien donné.
+    For the short prompt, the opening and the exit from theory in one
+    sentence, taken from the explorer. Empty string if it gave nothing.
     """
     if explorateur is None:
         return ""
@@ -3310,11 +3300,11 @@ def phrase_ouverture(explorateur: dict | None, libelle_base: str) -> str:
 
 def consignes_joueur(contexte: str | None) -> str:
     """
-    Pour le prompt court, ce que le joueur a réellement précisé : celles
-    de ses réponses aux questions de démarrage qu'il n'a pas laissées à
-    leur valeur par défaut. Le camp, dit ailleurs dans le prompt, n'est
-    pas repris, ni la cadence quand elle vient de la balise TimeControl
-    ou reste inconnue : le joueur n'a alors rien précisé.
+    For the short prompt, what the player really specified: those of
+    their answers to the startup questions that they did not leave at
+    their default value. The side, stated elsewhere in the prompt, is not
+    repeated, nor is the time control when it comes from the TimeControl
+    tag or stays unknown: the player then specified nothing.
     """
     if contexte is None:
         return ""
@@ -3335,22 +3325,22 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
                     annexes: list[str] | None = None,
                     pgn_complete: bool = False) -> None:
     """
-    Assemble le fichier de synthèse en markdown, dans l'ordre attendu.
+    Assembles the summary file in markdown, in the expected order.
 
-    `libelle_base` nomme la base interrogée dans les titres et le texte ;
-    sa valeur par défaut redonne mot pour mot la synthèse de la base
-    maîtres. `filtres`, fourni seulement pour la base Lichess, est
-    reproduit dans la section 2 afin que l'analyste sache sur quelle
-    population de parties portent les fréquences. `annexes` ajoute à la
-    section 5 les fichiers produits en plus, contexte.md par exemple, et
-    `pgn_complete` signale un partie.pgn aux en-têtes complétés.
+    `libelle_base` names the database queried in the titles and the text;
+    its default value reproduces word for word the summary of the masters
+    database. `filtres`, given only for the Lichess database, is
+    reproduced in section 2 so that the analyst knows which population of
+    games the frequencies are about. `annexes` adds to section 5 the files
+    produced in addition, contexte.md for example, and `pgn_complete`
+    reports a partie.pgn whose headers were filled in.
     """
     out: list[str] = []
     a = out.append
 
     identifiant = partie.headers.get("Site", "").rstrip("/").split("/")[-1]
     if identifiant == "?":
-        # python-chess donne "?" à une balise Site absente.
+        # python-chess gives "?" to a missing Site tag.
         identifiant = ""
     a("# Dossier d'analyse : %s"
       % (nettoyer_valeur(identifiant) or "partie locale"))
@@ -3362,7 +3352,7 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
       "collectées.")
     a("")
 
-    # -- 0. Consignes d'analyse, si fournies --------------------------------
+    # -- 0. Analysis instructions, if given ---------------------------------
     if consignes is not None:
         a("## Consignes d'analyse")
         a("")
@@ -3372,7 +3362,7 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
         a(consignes.strip())
         a("")
 
-    # -- 1. En-têtes et coups de la partie ----------------------------------
+    # -- 1. Headers and moves of the game -----------------------------------
     a("## 1. En-têtes et coups de la partie")
     a("")
     a("| Champ | Valeur |")
@@ -3383,24 +3373,24 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     a("Nombre de demi-coups dans la ligne principale : %d."
       % len(list(partie.mainline_moves())))
     a("")
-    # La ligne principale est reproduite sans commentaires ni variantes,
-    # afin que ce seul fichier suffise à l'analyse. Le PGN brut, avec ses
-    # éventuels commentaires d'origine, reste dans partie.pgn.
+    # The main line is reproduced without comments or variations, so
+    # that this single file is enough for the analysis. The raw PGN, with
+    # its possible original comments, stays in partie.pgn.
     exporteur = chess.pgn.StringExporter(headers=False, comments=False,
                                          variations=False, columns=78)
     a("```")
     a(partie.accept(exporteur).strip())
     a("```")
     a("")
-    # Repères de phase, calculés sur les roques et le matériel : ils
-    # situent les fins de phase que l'analyste doit commenter.
+    # Phase markers, computed from castling and material: they locate
+    # the ends of phases that the analyst must comment on.
     a("Repères de phase, indicatifs :")
     a("")
     for ligne in reperes_phase(partie):
         a(ligne)
     a("")
 
-    # -- 2. Sortie de théorie -----------------------------------------------
+    # -- 2. Exit from theory ------------------------------------------------
     a("## 2. Explorateur %s, sortie de théorie" % libelle_base)
     a("")
     if explorateur is None:
@@ -3409,8 +3399,8 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
         a("")
     else:
         if filtres:
-            # Base Lichess : les fréquences dépendent entièrement de la
-            # population filtrée, l'analyste doit la connaître.
+            # Lichess database: the frequencies depend entirely on the
+            # filtered population, the analyst must know it.
             a("Base interrogée : **Lichess**, parties classées de "
               "l'ensemble des joueurs du site, et non la base maîtres. "
               "Cadences : `%s`. Tranches de classement : `%s` (moyenne des "
@@ -3498,8 +3488,8 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
               % (explorateur["seuil_frequence"], hors_cat, ps["trait"],
                  ps["san"], ps["numero"], ps["demicoup"]))
             a("")
-            # Dernière ouverture nommée avant la sortie : elle situe, pour
-            # l'analyste, la ligne théorique que la partie vient de quitter.
+            # Last named opening before the exit: it locates, for the
+            # analyst, the theoretical line that the game has just left.
             nommees = [lg["ouverture"] for lg in explorateur["lignes"]
                        if lg["demicoup"] < ps["demicoup"]
                        and lg.get("ouverture")]
@@ -3569,17 +3559,17 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
              colonnes[0], colonnes[1], colonnes[2]))
     a("")
 
-    # Résultat contraire à l'évaluation finale : dit ici, sous le tableau,
-    # pour que l'analyste ne raconte pas une victoire méritée.
+    # Result contrary to the final evaluation: stated here, under the
+    # table, so that the analyst does not tell the story of a deserved win.
     contradiction = resultat_contredit(partie, stockfish["resultats"])
     if contradiction:
         a(contradiction)
         a("")
 
-    # Les variantes principales, rejouées depuis chaque position, pour
-    # que l'analyste dispose de lignes concrètes calculées par le
-    # moteur et n'ait pas à les inventer. Les variantes complètes sont
-    # dans stockfish/evaluations.json.
+    # The principal variations, replayed from each position, so
+    # that the analyst has concrete lines computed by the engine
+    # and does not have to make them up. The full variations are
+    # in stockfish/evaluations.json.
     a("### 3 bis. Variantes principales du moteur")
     a("")
     if longueur_pv > 0:
@@ -3614,9 +3604,9 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
         plateau.push(coup)
     a("")
 
-    # Palmarès : les coups qui coûtent le plus, par camp, avec ce qu'il
-    # fallait jouer et la FEN, matière directe des commentaires
-    # obligatoires et des positions à revoir.
+    # Ranking: the moves that cost the most, per side, with what should
+    # have been played and the FEN, direct material for the mandatory
+    # comments and the positions to review.
     a("### 3 ter. Erreurs et gaffes par camp")
     a("")
     a("Coups dont l'écart atteint %d cp, du plus coûteux au moins "
@@ -3638,9 +3628,9 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
         pour_noirs = camp == "Noirs"
         for r in fautes[:PALMARES_MAX]:
             meilleur = r["meilleurs"][0] if r["meilleurs"] else None
-            # À partir de SEUIL_ECART_MAT, l'écart vient d'un mat ramené
-            # à une valeur bornée : le chiffre n'a plus de sens, les
-            # scores parlent d'eux-mêmes.
+            # From SEUIL_ECART_MAT on, the loss comes from a mate brought down
+            # to a bounded value: the figure no longer makes sense, the
+            # scores speak for themselves.
             ecart = ("écart %.0f cp" % r["ecart_cp"]
                      if r["ecart_cp"] < SEUIL_ECART_MAT else
                      "écart lié à un mat, %s au lieu de %s"
@@ -3665,7 +3655,7 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
               % (len(fautes) - PALMARES_MAX))
         a("")
 
-    # -- 4. Positions non exploitables --------------------------------------
+    # -- 4. Unusable positions ----------------------------------------------
     a("## 4. Positions à échantillon non exploitable")
     a("")
     if explorateur is None:
@@ -3685,7 +3675,7 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
           "d'ailleurs." % libelle_base)
     a("")
 
-    # -- 5. Rappel des données brutes ---------------------------------------
+    # -- 5. Reminder of the raw data ----------------------------------------
     a("## 5. Données brutes de l'archive")
     a("")
     if pgn_complete:
@@ -3696,8 +3686,9 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     for annexe in annexes or []:
         a(annexe)
     if explorateur is not None:
-        # Sans explorateur, l'archive n'a pas ce dossier : l'annoncer
-        # ferait chercher à l'analyste des fichiers qui n'existent pas.
+        # Without the explorer, the archive does not have this folder:
+        # announcing it would send the analyst looking for files that do not
+        # exist.
         a("- `explorateur/NNN-<uci>.json` : une réponse brute par "
           "demi-coup interrogé, numérotée dans l'ordre de la partie.")
     a("- `stockfish/evaluations.json` : les évaluations moteur "
@@ -3710,43 +3701,44 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
 
 
 # ===========================================================================
-# Archive finale
+# Final archive
 # ===========================================================================
 
 def chemin_archive(dossier: pathlib.Path) -> pathlib.Path:
     """
-    Chemin de l'archive d'un dossier de travail : son nom suivi de ".zip".
+    Path of the archive of a working folder: its name followed by ".zip".
 
-    Le nom est construit par ajout et non par with_suffix(), qui remplace
-    tout ce qui suit le dernier point : pour un PGN nommé
-    "partie-2026.11.18.pgn", le dossier "analyse-partie-2026.11.18-..."
-    donnait "analyse-partie-2026.11.zip", alors que shutil.make_archive
-    écrit bien "<dossier>.zip".
+    The name is built by appending and not with with_suffix(), which
+    replaces everything after the last dot: for a PGN named
+    "partie-2026.11.18.pgn", the folder "analyse-partie-2026.11.18-..."
+    gave "analyse-partie-2026.11.zip", whereas shutil.make_archive does
+    write "<folder>.zip".
     """
     return dossier.with_name(dossier.name + ".zip")
 
 
 def archiver(dossier: pathlib.Path, garder: bool) -> pathlib.Path:
     """
-    Compresse le dossier de travail en zip, le vérifie, puis le supprime.
+    Compresses the working folder into a zip, checks it, then deletes it.
 
-    Le dossier n'est détruit que si l'archive relit sans erreur et contient
-    bien la synthèse. En cas de doute, tout est conservé et signalé.
+    The folder is only destroyed if the archive reads back without error
+    and does contain the summary. When in doubt, everything is kept and
+    reported.
 
-    L'archive est d'abord écrite sous un nom provisoire,
-    ".<dossier>.partiel.zip", à côté du dossier ; elle ne prend son nom
-    définitif qu'une fois vérifiée. Une interruption (Ctrl-C) ou un échec
-    ne laisse donc jamais, sous le nom d'une archive, un zip tronqué :
-    l'archive provisoire est retirée, le dossier de travail reste.
+    The archive is first written under a temporary name,
+    ".<folder>.partiel.zip", next to the folder; it only takes its final
+    name once checked. An interruption (Ctrl-C) or a failure therefore
+    never leaves a truncated zip under the name of an archive: the
+    temporary archive is removed, the working folder stays.
     """
     archive = chemin_archive(dossier)
     if archive.exists():
         raise SystemExit("L'archive %s existe déjà, dossier conservé."
                          % archive)
 
-    # Base du nom provisoire : shutil.make_archive y ajoute ".zip". Les
-    # chemins rangés dans le zip ne dépendent que de base_dir, ils restent
-    # ceux du dossier de travail.
+    # Base of the temporary name: shutil.make_archive appends ".zip" to it.
+    # The paths stored in the zip only depend on base_dir, they stay those
+    # of the working folder.
     base_partielle = dossier.with_name(".%s.partiel" % dossier.name)
     partielle = chemin_archive(base_partielle)
 
@@ -3773,8 +3765,8 @@ def archiver(dossier: pathlib.Path, garder: bool) -> pathlib.Path:
             raise SystemExit("Archive incomplète ou corrompue (%s), dossier "
                              "conservé." % (corrompu or "synthèse absente"))
 
-        # Renommage dans le même répertoire : l'archive apparaît d'un
-        # coup, complète et vérifiée.
+        # Renaming within the same directory: the archive appears all at
+        # once, complete and checked.
         try:
             partielle.replace(archive)
         except OSError as err:
@@ -3782,9 +3774,9 @@ def archiver(dossier: pathlib.Path, garder: bool) -> pathlib.Path:
                              "%s, dossier conservé : %s"
                              % (archive, err)) from err
     except BaseException:
-        # Tout arrêt avant le renommage, Ctrl-C compris, retire l'archive
-        # provisoire puis remonte tel quel : le dossier de travail, lui,
-        # est conservé pour diagnostic.
+        # Any stop before the renaming, Ctrl-C included, removes the
+        # temporary archive and then goes up unchanged: the working folder,
+        # for its part, is kept for diagnosis.
         with contextlib.suppress(OSError):
             partielle.unlink()
         raise
@@ -3803,7 +3795,7 @@ def archiver(dossier: pathlib.Path, garder: bool) -> pathlib.Path:
 
 
 # ===========================================================================
-# Ligne de commande
+# Command line
 # ===========================================================================
 
 EXEMPLES = """\
@@ -3927,15 +3919,15 @@ prérequis
 def valider_liste(p: argparse.ArgumentParser, option: str, valeur: str,
                   admises: tuple[str, ...]) -> str:
     """
-    Contrôle une liste séparée par des virgules et la renvoie normalisée.
+    Checks a comma-separated list and returns it normalized.
 
-    La casse est tolérée à la saisie ("ultrabullet" est accepté) mais la
-    valeur transmise reprend l'orthographe exacte de l'API. Les espaces
-    parasites et les doublons sont retirés, et la liste est remise dans
-    l'ordre de l'énumération, afin que collecte.json et la synthèse
-    restent comparables d'une collecte à l'autre. Une valeur inconnue est
-    refusée ici, avant toute création de dossier, plutôt que d'en découvrir
-    l'effet au premier demi-coup interrogé.
+    Case is tolerated on input ("ultrabullet" is accepted) but the value
+    passed on uses the exact spelling of the API. Stray spaces and
+    duplicates are removed, and the list is put back in the order of the
+    enumeration, so that collecte.json and the summary stay comparable
+    from one collection to the next. An unknown value is rejected here,
+    before any folder is created, rather than finding out its effect at
+    the first ply queried.
     """
     canoniques = {v.lower(): v for v in admises}
     retenues: list[str] = []
@@ -3956,12 +3948,12 @@ def valider_liste(p: argparse.ArgumentParser, option: str, valeur: str,
 
 
 def analyser_arguments(argv: list[str]) -> argparse.Namespace:
-    """Définit et lit les options de la ligne de commande."""
+    """Defines and reads the command line options."""
     p = argparse.ArgumentParser(
         prog="ianalyze.py",
-        # Les sauts de ligne sont écrits ici : avec ce formateur, argparse
-        # ne coupe pas la description, qui tenait sur une ligne de 250
-        # colonnes.
+        # The line breaks are written here: with this formatter, argparse
+        # does not wrap the description, which fitted on a line of 250
+        # columns.
         description="Collecte le matériel d'analyse d'une partie d'échecs : "
                     "PGN, statistiques\n"
                     "de l'explorateur Lichess (base de tous les joueurs, "
@@ -4121,12 +4113,12 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
     if options.purge_reglages and (options.installer_venv
                                    or options.installer_catalogue
                                    or options.source):
-        # La purge se fait seule : combinée, elle était ignorée sans un
-        # mot au profit de l'autre action.
+        # The purge is done alone: combined, it was ignored without a
+        # word in favor of the other action.
         p.error("--purge-reglages s'emploie seule, sans partie ni autre "
                 "action")
     if options.prompt is not None and not options.prompt.strip():
-        # Cas d'une variable vide dans un script : --prompt "$MODELE".
+        # Case of an empty variable in a script: --prompt "$MODELE".
         p.error("--prompt : chemin vide")
     if (options.installer_venv or options.installer_catalogue
             or options.purge_reglages):
@@ -4137,9 +4129,9 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
         p.error("--prompt et --sans-prompt s'excluent")
     if options.prompt_seul and options.sans_prompt:
         p.error("--prompt-seul et --sans-prompt s'excluent")
-    # nan et inf sont des flottants valides pour argparse, mais nan échappe
-    # à toute comparaison et time.sleep() refuse l'un comme l'autre : on
-    # les écarte ici, avant toute création de dossier.
+    # nan and inf are valid floats for argparse, but nan escapes any
+    # comparison and time.sleep() rejects both: they are ruled out
+    # here, before any folder is created.
     for nom in ("pause", "seuil_frequence"):
         if not math.isfinite(getattr(options, nom)):
             p.error("--%s doit être un nombre fini"
@@ -4150,8 +4142,8 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                 "fils", "hachage", "delai"):
         if getattr(options, nom) < 1:
             p.error("--%s doit valoir au moins 1" % nom.replace("_", "-"))
-    # Chemins : le tilde n'est développé par le shell que s'il ouvre le
-    # mot, pas dans la forme --sortie=~/analyses.
+    # Paths: the shell only expands the tilde if it starts the word,
+    # not in the form --sortie=~/analyses.
     options.sortie = os.path.expanduser(options.sortie)
     options.stockfish = resoudre_moteur(options.stockfish)
     if options.profondeur > PROFONDEUR_MAX:
@@ -4160,8 +4152,8 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
         p.error("--coups-stockfish doit valoir 0 ou plus")
     if options.coups_min < 0:
         p.error("--coups-min doit valoir 0 ou plus")
-    # Sans --pseudos, la valeur reste None : les pseudos viendront alors
-    # des réglages. L'option, quand elle est donnée, doit en porter un.
+    # Without --pseudos, the value stays None: the usernames will then
+    # come from the settings. The option, when given, must carry one.
     if options.pseudos is not None:
         options.pseudos = decouper_pseudos(options.pseudos)
         if not options.pseudos:
@@ -4171,15 +4163,15 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
     if options.longueur_pv < 0:
         p.error("--longueur-pv doit valoir 0 ou plus")
     if options.base == "maitres":
-        # Même principe que pour les options moteur : un filtre que la base
-        # maîtres ne connaît pas serait ignoré en silence, on le refuse.
+        # Same principle as for the engine options: a filter that the masters
+        # database does not know would be silently ignored, so it is refused.
         for nom in ("cadences", "classements"):
             if getattr(options, nom) is not None:
                 p.error("--%s n'a d'effet qu'avec --base lichess" % nom)
     else:
-        # Les valeurs par défaut ne sont posées qu'ici, et seulement pour la
-        # base Lichess : collecte.json enregistre ainsi les filtres
-        # réellement appliqués, et rien pour la base maîtres.
+        # The default values are only set here, and only for the Lichess
+        # database: collecte.json thus records the filters actually
+        # applied, and nothing for the masters database.
         if options.cadences is None:
             options.cadences = CADENCES_DEFAUT
         if options.classements is None:
@@ -4193,51 +4185,51 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
 
 
 def main(argv: list[str]) -> int:
-    """Point d'entrée : orchestre la collecte et écrit la synthèse."""
+    """Entry point: orchestrates the collection and writes the summary."""
     global DEBUG, JETON_COURANT
 
     options = analyser_arguments(argv)
     DEBUG = options.debug
 
-    # -- Environnement virtuel ----------------------------------------------
+    # -- Virtual environment ------------------------------------------------
     if options.installer_venv:
         installer_venv(options.venv)
         return 0
-    # -- Purge des réglages -------------------------------------------------
-    # Placée avant la relance : elle ne demande ni python-chess ni partie.
+    # -- Purge of the settings ----------------------------------------------
+    # Placed before the restart: it needs neither python-chess nor a game.
     if options.purge_reglages:
         purger_reglages(options.reglages)
         return 0
     if not CHESS_DISPONIBLE:
         relancer_dans_venv(options.venv, argv)
 
-    # -- Catalogue des ouvertures, installation ou mise à jour ---------------
-    # Placé après la relance : le catalogue est validé avec python-chess.
+    # -- Opening catalog, installation or update -----------------------------
+    # Placed after the restart: the catalog is validated with python-chess.
     if options.installer_catalogue:
         installer_catalogue(options.catalogue, options.delai)
         return 0
 
-    # Texte de la section "Consignes d'analyse" de la synthèse : les
-    # réponses aux questions de démarrage, quand elles sont posées.
+    # Text of the "Consignes d'analyse" section of the summary: the answers
+    # to the startup questions, when they are asked.
     consignes = None
 
-    # -- Réglages de l'utilisateur, lus tôt eux aussi -----------------------
+    # -- User settings, read early as well ----------------------------------
     reglages = lire_reglages(options.reglages)
 
-    # -- Modèle du prompt, lu et contrôlé avant la collecte -----------------
-    # Un modèle désigné par --prompt doit exister. Le modèle par défaut,
-    # lui, peut manquer quand le script a été copié seul : la collecte se
-    # fait alors sans prompt, et le journal le dit.
+    # -- Prompt template, read and checked before the collection ------------
+    # A template named by --prompt must exist. The default template, for
+    # its part, may be missing when the script was copied alone: the
+    # collection is then done without a prompt, and the log says so.
     modele_prompt = None
     if not options.sans_prompt:
         fichier_modele = chemin_modele(options.prompt, options.prompt_seul)
         if est_fichier(fichier_modele):
             modele_prompt = lire_texte(fichier_modele, "modèle de prompt")
             verifier_modele(modele_prompt, str(fichier_modele))
-            # Un prompt à coller seul doit porter la partie : un modèle
-            # personnel qui ne la place pas est refusé avant la collecte.
-            # Le repère est cherché dans les lignes de texte : placé
-            # dans une note, il ne mettrait rien dans le prompt.
+            # A prompt to be pasted alone must carry the game: a personal
+            # template that does not place it is refused before the collection.
+            # The marker is looked up in the text lines: placed in a
+            # note, it would put nothing into the prompt.
             if options.prompt_seul and not any(
                     PROMPT_DONNEES in ligne
                     for ligne in lignes_de_texte(modele_prompt)):
@@ -4246,8 +4238,8 @@ def main(argv: list[str]) -> int:
                     "prompt ne porterait pas la partie. Partez de %s."
                     % (fichier_modele, PROMPT_DONNEES, PROMPT_SEUL_MODELE))
         elif options.prompt or options.prompt_seul:
-            # --prompt-seul demande un prompt : sans modèle, mieux vaut
-            # s'arrêter ici qu'après la collecte.
+            # --prompt-seul asks for a prompt: without a template, it is better
+            # to stop here than after the collection.
             raise SystemExit("Modèle de prompt introuvable : %s"
                              % fichier_modele)
         else:
@@ -4255,9 +4247,9 @@ def main(argv: list[str]) -> int:
                     "prompt ne sera écrit. Voir --prompt et --sans-prompt."
                     % fichier_modele)
 
-    # -- Récupération du PGN ------------------------------------------------
-    # Encodage retenu pour le PGN et remarques de décodage, consignés dans
-    # collecte.json et, s'il y a lieu, dans la section 5 de la synthèse.
+    # -- Fetching the PGN ---------------------------------------------------
+    # Encoding chosen for the PGN and decoding remarks, recorded in
+    # collecte.json and, if need be, in section 5 of the summary.
     encodage_pgn = "utf-8"
     remarques_pgn: list[str] = []
     chemin_local = pathlib.Path(os.path.expanduser(options.source))
@@ -4266,12 +4258,12 @@ def main(argv: list[str]) -> int:
         texte_pgn, encodage_pgn, remarques_pgn = lire_fichier_texte(
             chemin_local, "PGN")
         if encodage_pgn == "latin-1":
-            # Le repli sur latin-1 n'a lieu que si le fichier contient un
-            # octet que cp1252 ne définit pas : c'est le signe d'un autre
-            # encodage, cp850 ou MacRoman par exemple, dont les lettres
-            # accentuées seraient retirées comme des caractères de
-            # contrôle. Plutôt que d'abîmer les noms en silence, le
-            # script s'arrête.
+            # The fallback on latin-1 only happens if the file contains a
+            # byte that cp1252 does not define: this is the sign of another
+            # encoding, cp850 or MacRoman for example, whose accented
+            # letters would be removed like control characters. Rather
+            # than silently damaging the names, the script
+            # stops.
             raise SystemExit(
                 "Encodage du PGN non reconnu : ni UTF-8, ni UTF-16, ni "
                 "cp1252. Convertissez le fichier en UTF-8, par exemple "
@@ -4280,15 +4272,15 @@ def main(argv: list[str]) -> int:
         if etiquette != chemin_local.stem:
             journal("Nom du dossier assaini : %s" % etiquette)
     elif options.source.strip() and est_repertoire(chemin_local):
-        # Un répertoire dont le nom fait huit lettres passerait sinon pour
-        # un identifiant, et une requête partirait vers Lichess.
+        # A directory whose name has eight letters would otherwise pass for
+        # an identifier, and a request would go to Lichess.
         raise SystemExit("%s est un répertoire, pas un fichier PGN."
                          % chemin_local)
     else:
         identifiant = extraire_id(options.source)
         if identifiant is None:
-            # Hors URL, un point, une barre oblique ou un tilde trahissent
-            # un chemin : le fichier visé n'existe pas, autant le dire.
+            # Outside a URL, a dot, a slash or a tilde betray a path: the
+            # file aimed at does not exist, we might as well say so.
             if (not options.source.strip().lower().startswith(
                     ("http://", "https://"))
                     and any(c in options.source for c in "./~")):
@@ -4296,8 +4288,8 @@ def main(argv: list[str]) -> int:
                                  % chemin_local)
             if options.source.strip().lower().startswith(
                     ("http://", "https://")):
-                # Message propre aux URL : dire la forme attendue vaut
-                # mieux qu'un refus général.
+                # Message specific to URLs: stating the expected form is better
+                # than a general refusal.
                 raise SystemExit("URL non reconnue comme une partie Lichess "
                                  ": %s\nForme attendue : "
                                  "https://lichess.org/<identifiant>, "
@@ -4311,40 +4303,40 @@ def main(argv: list[str]) -> int:
 
     partie = charger_partie(texte_pgn)
 
-    # -- Vérifications préalables, pour échouer avant d'avoir rien écrit ----
+    # -- Preliminary checks, to fail before anything has been written -------
     catalogue = None
     motif_sans_explorateur = None
     if options.sans_explorateur:
         motif_sans_explorateur = "désactivée par --sans-explorateur"
     else:
-        # Le jeton n'est lu qu'ici et n'est ni écrit ni journalisé.
+        # The token is only read here and is neither written nor logged.
         JETON_COURANT = lire_jeton(options.jeton_fichier)
-        # Catalogue chargé avant toute écriture : absent ou abîmé, on
-        # s'arrête ici en donnant la commande à lancer.
+        # Catalog loaded before any writing: missing or damaged, we stop
+        # here, giving the command to run.
         catalogue = lire_catalogue(options.catalogue)
         journal("Catalogue des ouvertures : %s positions connues, du %s"
                 % (catalogue.meta.get("connues"), catalogue.meta.get("date")))
-    # Le moteur est obligatoire depuis la version 4.0.0 : il est vérifié
-    # avant toute écriture et avant la moindre requête.
+    # The engine has been mandatory since version 4.0.0: it is checked
+    # before any writing and before the slightest request.
     verifier_moteur(options.stockfish)
-    # Les options moteur sont contrôlées ici, auprès du moteur, et non
-    # à sa configuration, qui n'a lieu qu'après la phase explorateur.
+    # The engine options are checked here, with the engine, and not at
+    # its configuration, which only happens after the explorer phase.
     verifier_options_moteur(options.stockfish, options.fils,
                             options.hachage, options.multipv)
 
-    # -- Questions de démarrage ---------------------------------------------
-    # Posées après les vérifications, pour ne rien demander à qui va de
-    # toute façon échouer, et avant la collecte, qui peut durer.
+    # -- Startup questions --------------------------------------------------
+    # Asked after the checks, so as to ask nothing of someone who is going
+    # to fail anyway, and before the collection, which may take a while.
     camp = None
     contexte = None
     interactif = questions_possibles(options.sans_questions)
     if interactif:
-        # Réglages manquants : demandés ici, une fois pour toutes, avant
-        # les questions propres à la partie.
+        # Missing settings: asked for here, once and for all, before the
+        # questions specific to the game.
         completer_reglages(options.reglages, reglages, options.pseudos)
-    # --pseudos l'emporte sur les réglages. La liste retenue remplace
-    # l'option : collecte.json enregistre ainsi les pseudos réellement
-    # utilisés, et elle peut être vide.
+    # --pseudos wins over the settings. The list kept replaces the
+    # option: collecte.json thus records the usernames actually used,
+    # and it may be empty.
     if options.pseudos is None:
         options.pseudos = decouper_pseudos(reglage(reglages, "pseudos"))
     if interactif:
@@ -4358,12 +4350,12 @@ def main(argv: list[str]) -> int:
                 % ("option --sans-questions" if options.sans_questions
                    else "terminal non interactif"))
 
-    # -- Création du dossier de travail -------------------------------------
-    # Le nom est horodaté à la seconde ; deux lancements dans la même
-    # seconde, ou un dossier laissé par un échec précédent, reçoivent un
-    # suffixe plutôt qu'une erreur. Le prompt compte aussi : avec
-    # --prompt-seul il est le seul fichier qui reste, et un second
-    # lancement dans la seconde l'écrasait.
+    # -- Creation of the working folder -------------------------------------
+    # The name is timestamped to the second; two runs within the same
+    # second, or a folder left by a previous failure, get a suffix rather
+    # than an error. The prompt counts too: with --prompt-seul it is the
+    # only file that remains, and a second run within the same second
+    # overwrote it.
     horodatage = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     base = pathlib.Path(options.sortie) / ("analyse-%s-%s"
                                            % (etiquette, horodatage))
@@ -4389,8 +4381,8 @@ def main(argv: list[str]) -> int:
     annexes: list[str] = []
     try:
         if camp and camp["modifiees"]:
-            # Le PGN fourni est gardé tel quel ; partie.pgn reprend la
-            # partie, réexportée par python-chess, en-têtes complétés.
+            # The PGN given is kept as it is; partie.pgn holds the game,
+            # re-exported by python-chess, with its headers filled in.
             ecrire_texte(dossier / "partie-origine.pgn", texte_pgn)
             ecrire_texte(dossier / "partie.pgn", str(partie) + "\n")
             annexes.append("- `partie-origine.pgn` : le PGN tel que "
@@ -4399,8 +4391,8 @@ def main(argv: list[str]) -> int:
         else:
             ecrire_texte(dossier / "partie.pgn", texte_pgn)
         if remarques_pgn:
-            # Le PGN gardé dans l'archive n'est plus, octet pour octet, le
-            # fichier fourni : l'analyste doit le savoir.
+            # The PGN kept in the archive is no longer, byte for byte, the
+            # file given: the analyst must know it.
             annexes.append("- Encodage : le PGN fourni a été converti en "
                            "UTF-8 avant d'être rangé dans l'archive (%s)."
                            % " ; ".join(remarques_pgn))
@@ -4413,14 +4405,14 @@ def main(argv: list[str]) -> int:
                          % (dossier, err)) from err
     journal("Dossier de travail : %s" % dossier)
 
-    # -- Explorateur --------------------------------------------------------
-    # Base et filtres sont fixés même sans collecte, pour que le titre de la
-    # section 2 nomme la base demandée dans tous les cas.
+    # -- Explorer -----------------------------------------------------------
+    # Database and filters are set even without a collection, so that the
+    # title of section 2 names the database requested in every case.
     base = BASES_EXPLORATEUR[options.base]
     filtres = None
     if options.base == "lichess":
-        # recentGames à 0, comme topGames : seules les statistiques servent,
-        # inutile de rapatrier des références de parties.
+        # recentGames at 0, like topGames: only the statistics are used,
+        # there is no point in fetching game references.
         filtres = {
             "variant": "standard",
             "speeds": options.cadences,
@@ -4444,7 +4436,7 @@ def main(argv: list[str]) -> int:
         options.coups_stockfish * 2, options.profondeur,
         options.multipv, options.fils, options.hachage)
 
-    # -- Trace des paramètres, expurgée de toute donnée sensible ------------
+    # -- Record of the parameters, redacted of any sensitive data -----------
     parametres = dict(vars(options))
     parametres["jeton_present"] = JETON_COURANT is not None
     parametres["catalogue_utilise"] = (catalogue.meta if catalogue is not None
@@ -4453,14 +4445,15 @@ def main(argv: list[str]) -> int:
     parametres["contexte_recueilli"] = contexte is not None
     parametres["pgn_encodage"] = encodage_pgn
     parametres["pgn_remarques"] = remarques_pgn
-    # Nom du prompt écrit à côté de l'archive, ou rien s'il n'y en a pas.
+    # Name of the prompt written next to the archive, or nothing if there
+    # is none.
     parametres["prompt_ecrit"] = (dossier.name + PROMPT_SUFFIXE
                                   if modele_prompt is not None else None)
     ecrire_texte(dossier / "collecte.json",
                  json.dumps(parametres, ensure_ascii=False, indent=1,
                             default=str))
 
-    # -- Synthèse -----------------------------------------------------------
+    # -- Summary ------------------------------------------------------------
     synthese = dossier / "synthese.md"
     ecrire_synthese(synthese, partie, options.source, consignes,
                     resume_explorateur, motif_sans_explorateur,
@@ -4469,33 +4462,34 @@ def main(argv: list[str]) -> int:
                     bool(camp and camp["modifiees"]))
     journal("Synthèse écrite : %s" % synthese)
 
-    # Le prompt peut reprendre le PGN : il est relu ici, avant l'archivage
-    # qui supprime le dossier de travail.
+    # The prompt may include the PGN: it is read back here, before the
+    # archiving that deletes the working folder.
     texte_partie = ""
     if modele_prompt is not None:
         texte_partie = (dossier / "partie.pgn").read_text(encoding="utf-8")
 
-    # -- Archive et nettoyage -----------------------------------------------
-    # Avec --prompt-seul, le prompt est tout ce que le joueur demande :
-    # aucune archive n'est écrite, et le dossier de travail est supprimé
-    # plus bas, une fois le prompt sur le disque. Le nom que l'archive
-    # aurait porté sert encore à nommer le prompt.
+    # -- Archive and cleanup ------------------------------------------------
+    # With --prompt-seul, the prompt is all that the player asks for: no
+    # archive is written, and the working folder is deleted further down,
+    # once the prompt is on disk. The name that the archive would have
+    # borne still serves to name the prompt.
     if options.prompt_seul:
         archive = chemin_archive(dossier)
     else:
         archive = archiver(dossier, options.garder_dossier)
 
-    # -- Prompt d'analyse, écrit à côté de l'archive ------------------------
-    # Après l'archivage : un échec ne laisse pas un prompt sans archive. Le
-    # prompt n'entre pas dans le zip, il se colle dans la conversation.
+    # -- Analysis prompt, written next to the archive -----------------------
+    # After the archiving: a failure does not leave a prompt without an
+    # archive. The prompt does not go into the zip, it is pasted into the
+    # conversation.
     if modele_prompt is not None:
         camp_joueur = ((camp or {}).get("camp")
                        or deduire_camp(partie, options.pseudos))
         niveau = analyser_niveau(reglage(reglages, "niveau")) or 0
         habituelle = (analyser_cadence(reglage(reglages, "cadence"))
                       or dict(CADENCE_INCONNUE))
-        # Données du prompt court : calculées dans tous les cas, un modèle
-        # personnel pouvant les placer lui aussi.
+        # Data of the short prompt: computed in every case, as a personal
+        # template may place them too.
         alerte = (resultat_contredit(partie, resume_stockfish["resultats"])
                   or "").replace("**", "")
         precisions = consignes_joueur(contexte)
@@ -4505,8 +4499,8 @@ def main(argv: list[str]) -> int:
         faibles = coups_faibles_joueur(resume_stockfish["resultats"],
                                        camp_joueur)
         conditions = {
-            # Toujours vraie depuis la version 4.0.0, gardée pour les
-            # modèles personnels qui l'emploient.
+            # Always true since version 4.0.0, kept for the personal
+            # templates that use it.
             "STOCKFISH": True,
             "EXPLORATEUR": resume_explorateur is not None,
             "BASE_LICHESS": options.base == "lichess",
@@ -4518,18 +4512,18 @@ def main(argv: list[str]) -> int:
             "RESULTAT_CONTREDIT": bool(alerte),
             "CONSIGNES_DONNEES": bool(precisions),
             "OUVERTURE_CONNUE": bool(ouverture),
-            # --coups-stockfish a limité le moteur aux premiers coups : le
-            # prompt doit le dire, sans quoi il promet un chiffre pour
-            # chaque coup.
+            # --coups-stockfish limited the engine to the first moves: the
+            # prompt must say so, otherwise it promises a figure for every
+            # move.
             "COUVERTURE_PARTIELLE": evalues < len(coups_partie),
             "COUP_NUL": any(not coup for coup in coups_partie),
-            # Le bilan du prompt court demande trois erreurs : quand le
-            # tableau en marque moins chez le joueur, le prompt le dit, pour
-            # que le LLM n'en invente pas une.
+            # The review of the short prompt asks for three errors: when the
+            # table marks fewer of them for the player, the prompt says so, so
+            # that the LLM does not make one up.
             "PEU_DE_COUPS_FAIBLES": (faibles is not None
                                      and faibles < ERREURS_DU_BILAN),
-            # Sans un seul coup faible, "tenez-vous-en à ceux-là" n'a pas
-            # de sens : le modèle court a une phrase pour ce cas.
+            # Without a single weak move, "tenez-vous-en à ceux-là" makes no
+            # sense: the short template has a sentence for this case.
             "AUCUN_COUP_FAIBLE": faibles == 0,
         }
         valeurs = {
@@ -4565,13 +4559,13 @@ def main(argv: list[str]) -> int:
                 modele_prompt, conditions, valeurs,
                 str(chemin_modele(options.prompt, options.prompt_seul)))
             ecrire_texte(prompt, rendu)
-            # rendre_modele retire les espaces de fin de ligne : un PGN
-            # terminé par une espace se compare donc sans elle.
+            # rendre_modele removes the trailing spaces of the lines: a PGN
+            # ending with a space is therefore compared without it.
             if (options.prompt_seul
                     and valeurs["PARTIE_PGN"].rstrip() not in rendu):
-                # Le repère existe dans le modèle, mais sous une condition
-                # fausse pour cette partie : le dire plutôt que d'annoncer
-                # un prompt complet.
+                # The marker exists in the template, but under a condition that
+                # is false for this game: say so rather than announce a
+                # complete prompt.
                 journal("Attention : le prompt %s ne porte pas la partie, "
                         "le modèle la place sous une condition qui ne "
                         "s'applique pas ici. Il ne peut pas être collé "
@@ -4586,18 +4580,18 @@ def main(argv: list[str]) -> int:
                         "conversation, l'archive en pièce jointe." % prompt)
         except OSError as err:
             if options.prompt_seul:
-                # Le prompt était le seul produit attendu : son échec est
-                # celui de la commande. Le dossier de travail reste.
+                # The prompt was the only product expected: its failure is that
+                # of the command. The working folder stays.
                 raise SystemExit("Prompt non écrit (%s), dossier de travail "
                                  "conservé : %s" % (prompt, err)) from err
-            # L'archive est faite : un prompt impossible à écrire ne doit
-            # pas faire échouer la collecte.
+            # The archive is made: a prompt that cannot be written must
+            # not make the collection fail.
             journal("Attention : prompt non écrit (%s) : %s" % (prompt, err))
 
     if options.prompt_seul:
-        # Le prompt est écrit : le dossier de travail n'a plus d'emploi,
-        # sauf si le joueur a demandé à le garder, par exemple pour le
-        # passer à verifier-analyse.py.
+        # The prompt is written: the working folder has no more use,
+        # unless the player asked to keep it, for example to pass it
+        # to verifier-analyse.py.
         prompt = archive.with_name(dossier.name + PROMPT_SUFFIXE)
         if options.garder_dossier:
             journal("Dossier conservé sur demande : %s" % dossier)
@@ -4609,7 +4603,7 @@ def main(argv: list[str]) -> int:
                                  "impossible : %s" % err) from err
             journal("Dossier de travail supprimé, aucune archive n'est "
                     "écrite avec --prompt-seul.")
-        # Le chemin écrit seul sur la sortie standard est celui du prompt.
+        # The path written alone on standard output is that of the prompt.
         annoncer_archive(prompt)
         return 0
 
@@ -4618,7 +4612,7 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    # Avant tout affichage, y compris celui de --help par argparse.
+    # Before any display, including that of --help by argparse.
     configurer_console()
     try:
         raise SystemExit(main(sys.argv[1:]))
@@ -4626,17 +4620,17 @@ if __name__ == "__main__":
         sys.stderr.write("\nInterrompu.\n")
         raise SystemExit(130) from None
     except SystemExit as fin:
-        # Un message d'arrêt est affiché ici plutôt que par l'interpréteur,
-        # afin d'en retirer les caractères de contrôle. Le texte et le code
-        # de retour, 1, restent ceux que produisait l'interpréteur.
+        # A stop message is displayed here rather than by the interpreter,
+        # so as to remove the control characters from it. The text and the
+        # exit code, 1, stay those that the interpreter produced.
         if isinstance(fin.code, str):
             sys.stderr.write(RE_CONTROLES.sub("", fin.code) + "\n")
             raise SystemExit(1) from None
         raise
-    except Exception as err:  # noqa: BLE001 - dernier recours volontaire
-        # Aucune exception ne doit sortir brute : on affiche un message
-        # expurgé du jeton, et la trace complète, elle aussi expurgée,
-        # seulement sur --debug.
+    except Exception as err:  # noqa: BLE001 - deliberate last resort
+        # No exception must come out raw: we display a message redacted
+        # of the token, and the full traceback, also redacted, only with
+        # --debug.
         if DEBUG:
             sys.stderr.write(expurger(traceback.format_exc(), JETON_COURANT))
         else:

@@ -1,6 +1,6 @@
-# Productions du script et des tests lancés depuis le dépôt.
+# Output of the script and of the tests run from the repository.
 rapport-tests-*.txt
 analyse-*
-# Sauf les PGN annotés des exemples, qui portent ce préfixe.
+# Except the annotated PGNs of the examples, which carry this prefix.
 !parties-exemples/analyse-*.pgn
 __pycache__/
