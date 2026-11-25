@@ -9,7 +9,7 @@ This program produces no analysis. It collects and formats:
   2. the statistics of the Lichess explorer, position by position,
      to find where the game leaves theory: the database of all
      Lichess players by default, or the masters database with
-     --base maitres. A rare move that stays within a line of the
+     --database masters. A rare move that stays within a line of the
      catalog of named openings, kept locally, does not count as
      leaving theory;
   3. the Stockfish evaluation of the game in multipv, computed locally
@@ -27,7 +27,7 @@ by hand.
 
 Next to the archive, the script writes the analysis prompt for the
 game, drawn from the template prompt-modele.txt: you paste it into the
-conversation, with the archive as an attachment. With --prompt-seul,
+conversation, with the archive as an attachment. With --prompt-only,
 it is a short prompt, drawn from prompt-seul-modele.txt, that carries
 the game and the Stockfish evaluations: it is pasted on its own,
 without an attachment, and no archive is written then.
@@ -79,7 +79,7 @@ import zipfile
 #   - it is not, but the virtual environment exists: we restart
 #     automatically with the interpreter of that environment;
 #   - it is not and the environment does not exist: we tell you what to
-#     do, or we create it if you passed --installer-venv.
+#     do, or we create it if you passed --install-venv.
 # ===========================================================================
 
 
@@ -143,7 +143,7 @@ VENV_DEFAUT = DONNEES + "/venv"
 
 #: Environment variable that guards against an endless restart loop if
 #: the virtual environment exists but remains incomplete.
-MARQUEUR_RELANCE = "IANALYZE_DEJA_RELANCE"
+MARQUEUR_RELANCE = "IANALYZE_RELAUNCHED"
 
 #: Token in use, kept only so that the last-resort error handler can
 #: redact it from an unexpected message.
@@ -202,7 +202,7 @@ def venv_incomplet(venv: str) -> bool:
 
     A creation interrupted before its end (Ctrl-C, killed process, cut
     power) leaves such an environment: python -m venv writes pyvenv.cfg
-    and the interpreter first, pip last. --installer-venv took it for
+    and the interpreter first, pip last. --install-venv took it for
     complete, then failed on "No module named pip". An interpreter that
     exists but can no longer be run gives the same verdict. A timeout
     does not: in doubt, nothing is rebuilt.
@@ -233,7 +233,7 @@ def pas_un_venv(venv: str) -> bool:
     virtual environment: not empty, and without pyvenv.cfg. /usr is one,
     with its bin/python3, so is a home directory.
 
-    --installer-venv refuses it: pip would run on the Python found
+    --install-venv refuses it: pip would run on the Python found
     there, often the one of the system, and python -m venv would scatter
     its files among those already in place. A missing or empty directory
     is not refused, a virtual environment is created in it. A directory
@@ -334,7 +334,7 @@ def relancer_dans_venv(venv: str, argv: list[str]) -> None:
     if os.environ.get(MARQUEUR_RELANCE) == "1":
         raise SystemExit(
             "The environment %s does not provide the chess module.\n"
-            "Repair it with: %s --installer-venv --venv %s"
+            "Repair it with: %s --install-venv --venv %s"
             % (venv, script, venv))
 
     if est_fichier(interpreteur):
@@ -352,7 +352,7 @@ def relancer_dans_venv(venv: str, argv: list[str]) -> None:
         "%s does not exist.\n\n"
         "Create it with one command:\n"
         "    %s\n"
-        "    %s --installer-venv%s\n"
+        "    %s --install-venv%s\n"
         % (venv, CMD_PAQUET_VENV, script, supplement))
 
 
@@ -368,11 +368,11 @@ EXPLORER_URL = "https://explorer.lichess.org/masters"
 #: on the page https://lichess.org/opening.
 EXPLORER_LICHESS_URL = "https://explorer.lichess.org/lichess"
 
-#: Databases that --base can query: endpoint, and label repeated in the
+#: Databases that --database can query: endpoint, and label repeated in the
 #: summary. The label of the masters database reproduces exactly the
 #: titles of the summaries produced before this option was added.
 BASES_EXPLORATEUR = {
-    "maitres": {"url": EXPLORER_URL, "libelle": "maîtres"},
+    "masters": {"url": EXPLORER_URL, "libelle": "maîtres"},
     "lichess": {"url": EXPLORER_LICHESS_URL,
                 "libelle": "Lichess (tous joueurs)"},
 }
@@ -435,7 +435,7 @@ REGLAGES_CLEFS = (
     ("pseudos",
      ("Vos noms de joueur, séparés par des virgules. Ils sont cherchés,",
       "sans tenir compte de la casse, dans les balises White et Black",
-      "pour déduire votre camp. L'option --pseudos les remplace le temps",
+      "pour déduire votre camp. L'option --usernames les remplace le temps",
       "d'un lancement.")),
     ("cadence",
      ("Votre cadence habituelle, proposée quand la balise TimeControl",
@@ -463,12 +463,12 @@ NIVEAU_MIN, NIVEAU_MAX = 100, 3500
 PROMPT_MODELE = "prompt-modele.txt"
 PROMPT_SUFFIXE = ".prompt.txt"
 
-#: Template of the short prompt of --prompt-seul: a few instructions, the
+#: Template of the short prompt of --prompt-only: a few instructions, the
 #: game and the engine evaluations, to be pasted alone, without an
 #: attachment.
 PROMPT_SEUL_MODELE = "prompt-seul-modele.txt"
 
-#: Value through which a template places the game. With --prompt-seul, a
+#: Value through which a template places the game. With --prompt-only, a
 #: template that did not place it would give nothing to analyze.
 PROMPT_DONNEES = "{{PARTIE_PGN}}"
 
@@ -1764,7 +1764,7 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
     present is never replaced. Returns the side ("Blancs", "Noirs" or
     None), the origin of the information and the list of modified tags.
 
-    `pseudos` may be empty, when neither --pseudos nor the settings give
+    `pseudos` may be empty, when neither --usernames nor the settings give
     any: the side is then always asked, and so is the player's name if
     its tag is empty.
     """
@@ -1901,7 +1901,7 @@ def purger_reglages(chemin: str) -> None:
     any more, is already reached. A directory, or anything that is not a
     file, is refused rather than deleted.
 
-    With --reglages, the path comes from the command line: a typo must not
+    With --settings, the path comes from the command line: a typo must not
     destroy another file. Only a file that carries the [joueur] section,
     or an empty file, is deleted. The section is looked up in the raw
     text: a damaged settings file, which configparser would reject, thus
@@ -1912,24 +1912,24 @@ def purger_reglages(chemin: str) -> None:
         journal("No settings file to delete: %s" % p)
         return
     if not (est_fichier(p) or p.is_symlink()):
-        raise SystemExit("--purge-reglages: %s is not a file, nothing is "
+        raise SystemExit("--purge-settings: %s is not a file, nothing is "
                          "deleted." % p)
     try:
         brut = p.read_bytes()
     except OSError as e:
-        raise SystemExit("--purge-reglages: cannot read %s: %s. Nothing is "
+        raise SystemExit("--purge-settings: cannot read %s: %s. Nothing is "
                          "deleted." % (p, e)) from e
     en_tete = re.compile(rb"^[ \t]*\[%s\][ \t]*\r?$"
                          % re.escape(REGLAGES_SECTION).encode("ascii"),
                          re.MULTILINE)
     if brut.strip() and not en_tete.search(brut):
-        raise SystemExit("--purge-reglages: %s is not a settings file, it "
+        raise SystemExit("--purge-settings: %s is not a settings file, it "
                          "does not carry the [%s] section. Nothing is "
                          "deleted." % (p, REGLAGES_SECTION))
     try:
         p.unlink()
     except OSError as e:
-        raise SystemExit("--purge-reglages: cannot delete %s: "
+        raise SystemExit("--purge-settings: cannot delete %s: "
                          "%s" % (p, e)) from e
     journal("Settings deleted: %s. They will be asked again at the next "
             "collection run in a terminal." % p)
@@ -2025,7 +2025,7 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
 
     Called only on an interactive terminal. Each key missing from
     [joueur] gets a question; a key that is present, even empty, is never
-    asked for again. The usernames passed with --pseudos serve as the
+    asked for again. The usernames passed with --usernames serve as the
     suggested answer. An end of stream (Ctrl-D) gives up without writing
     anything: the questions will come back on the next run.
     """
@@ -2108,7 +2108,7 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
 def chemin_modele(option: str | None, seul: bool = False) -> pathlib.Path:
     """
     Path of the prompt template: the one of --prompt, otherwise, next to
-    the script, prompt-modele.txt or, with --prompt-seul, the short
+    the script, prompt-modele.txt or, with --prompt-only, the short
     template prompt-seul-modele.txt. The real path of the script is
     followed, so that a symbolic link placed elsewhere finds the template
     of the repository.
@@ -2285,9 +2285,9 @@ def chemin_catalogue(repertoire: str) -> pathlib.Path:
 def commande_catalogue(repertoire: str) -> str:
     """Installation command to suggest in the error messages."""
     supplement = ("" if repertoire == CATALOGUE_DEFAUT
-                  else " --catalogue %s" % repertoire)
-    return "%s --installer-catalogue%s" % (os.path.abspath(__file__),
-                                           supplement)
+                  else " --catalog %s" % repertoire)
+    return "%s --install-catalog%s" % (os.path.abspath(__file__),
+                                       supplement)
 
 
 def installer_catalogue(repertoire: str, delai: int) -> None:
@@ -2667,7 +2667,7 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
     for indice, coup in enumerate(coups):
         if indice >= plafond_demicoups:
             arret = ("plafond de %d demi-coups atteint (option "
-                     "--max-demicoups)" % plafond_demicoups)
+                     "--max-plies)" % plafond_demicoups)
             break
 
         numero = plateau.fullmove_number
@@ -2987,7 +2987,7 @@ def fermer_moteur(moteur: chess.engine.SimpleEngine) -> None:
 def verifier_options_moteur(binaire: str, fils: int, hachage: int,
                             multipv: int) -> None:
     """
-    Checks --fils, --hachage and --multipv with the engine itself, before
+    Checks --threads, --hash and --multipv with the engine itself, before
     any collection.
 
     The engine announces its options and their bounds as soon as it
@@ -2998,8 +2998,8 @@ def verifier_options_moteur(binaire: str, fils: int, hachage: int,
     """
     moteur = lancer_moteur(binaire)
     try:
-        for drapeau, option, valeur in (("--fils", "Threads", fils),
-                                        ("--hachage", "Hash", hachage),
+        for drapeau, option, valeur in (("--threads", "Threads", fils),
+                                        ("--hash", "Hash", hachage),
                                         ("--multipv", "MultiPV", multipv)):
             annonce = moteur.options.get(option)
             if annonce is None:
@@ -3154,7 +3154,7 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
         # of raising an EngineError. The most common cause is a hash
         # table that the system refuses to allocate.
         raise SystemExit("The engine failed during the analysis: it stopped "
-                         "without answering. If --hachage or --fils are high, "
+                         "without answering. If --hash or --threads are high, "
                          "memory may have run out.") from err
     finally:
         # Safe stop in every case: see fermer_moteur.
@@ -3512,7 +3512,7 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
           "décroissante.")
         a("")
         if explorateur["jusqu_a_epuisement"]:
-            a("Mode `--jusqu-a-epuisement` : aucun seuil n'a été appliqué, "
+            a("Mode `--exhaustive` : aucun seuil n'a été appliqué, "
               "l'interrogation est descendue aussi loin que la base a "
               "répondu.")
         else:
@@ -3525,7 +3525,7 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
                  else ""))
             if explorateur.get("demicoups_min", 0) > 0:
                 a("")
-                a("Fenêtre de départ (`--coups-min`) : aucun arrêt sur la "
+                a("Fenêtre de départ (`--min-moves`) : aucun arrêt sur la "
                   "fréquence avant la fin du coup %d (demi-coup %d), le seuil "
                   "de parties restant actif. La table peut donc continuer "
                   "après la première sortie de théorie."
@@ -3900,10 +3900,10 @@ usage examples
 
       %s
       %s
-      ./ianalyze.py --installer-venv
-      ./ianalyze.py --installer-catalogue
+      ./ianalyze.py --install-venv
+      ./ianalyze.py --install-catalog
 
-  Running --installer-catalogue again from time to time updates the
+  Running --install-catalog again from time to time updates the
   opening catalog.
 
   Common use, on a local PGN:
@@ -3918,50 +3918,50 @@ usage examples
   Without any question, for example from another script, or with all your
   player names so that your side is deduced from the headers:
 
-      ./ianalyze.py my-game.pgn --sans-questions
-      ./ianalyze.py my-game.pgn --pseudos MyUsername,OtherUsername
+      ./ianalyze.py my-game.pgn --no-questions
+      ./ianalyze.py my-game.pgn --usernames MyUsername,OtherUsername
 
   Going as deep as the database answers, without any threshold:
 
-      ./ianalyze.py my-game.pgn --jusqu-a-epuisement
+      ./ianalyze.py my-game.pgn --exhaustive
 
   The database of all Lichess players is queried by default, with the
   filters of https://lichess.org/opening. Restricting it to some speeds
   and rating bands, or querying the masters database:
 
       ./ianalyze.py my-game.pgn \\
-          --cadences rapid,classical,correspondence --classements 0,1000
-      ./ianalyze.py my-game.pgn --base maitres
+          --speeds rapid,classical,correspondence --ratings 0,1000
+      ./ianalyze.py my-game.pgn --database masters
 
   Covering the first ten moves whatever the frequency of the moves played,
   or on the contrary stopping at the first exit from theory:
 
-      ./ianalyze.py my-game.pgn --coups-min 10
-      ./ianalyze.py my-game.pgn --coups-min 0
+      ./ianalyze.py my-game.pgn --min-moves 10
+      ./ianalyze.py my-game.pgn --min-moves 0
 
   Engine only, without network or token:
 
-      ./ianalyze.py my-game.pgn --sans-explorateur
+      ./ianalyze.py my-game.pgn --no-explorer
 
   Keeping the working folder next to the archive:
 
-      ./ianalyze.py my-game.pgn --garder-dossier
+      ./ianalyze.py my-game.pgn --keep-folder
 
   For an LLM that does not open zip files or run code: a short prompt
   that carries the game and the evaluations, to be pasted alone. No
   archive is written:
 
-      ./ianalyze.py my-game.pgn --prompt-seul
+      ./ianalyze.py my-game.pgn --prompt-only
 
   Using your own prompt template, or writing no prompt:
 
       ./ianalyze.py my-game.pgn --prompt ~/my-template.txt
-      ./ianalyze.py my-game.pgn --sans-prompt
+      ./ianalyze.py my-game.pgn --no-prompt
 
   Deeper engine, or limited to the first fifteen moves:
 
-      ./ianalyze.py my-game.pgn --profondeur 22
-      ./ianalyze.py my-game.pgn --coups-stockfish 15
+      ./ianalyze.py my-game.pgn --depth 22
+      ./ianalyze.py my-game.pgn --stockfish-moves 15
 
 result
 ------
@@ -3982,7 +3982,7 @@ prerequisites
   %s
   %s
 
-  python-chess is not packaged by Debian. The --installer-venv option
+  python-chess is not packaged by Debian. The --install-venv option
   creates a dedicated virtual environment and installs the module in it.
   By default:
   %s
@@ -3991,8 +3991,8 @@ prerequisites
 
   The catalog of the named openings of Lichess (public domain, CC0) is
   kept locally in %s,
-  installed and updated by --installer-catalogue. It is not required
-  with --sans-explorateur.
+  installed and updated by --install-catalog. It is not required
+  with --no-explorer.
 
   The personal Lichess token is read from %s, in mode 600,
   this file containing only the token. It never appears in the output,
@@ -4052,8 +4052,8 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                     "PGN, statistics\n"
                     "of the Lichess explorer (database of all players, or "
                     "masters database\n"
-                    "with --base maitres) to find the exit from theory, and "
-                    "Stockfish\n"
+                    "with --database masters) to find the exit from theory, "
+                    "and Stockfish\n"
                     "evaluations of the game. Produces no analysis.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=EXEMPLES)
@@ -4063,7 +4063,8 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                         "eight or twelve characters")
 
     g = p.add_argument_group("virtual environment")
-    g.add_argument("--installer-venv", action="store_true",
+    g.add_argument("--install-venv", dest="installer_venv",
+                   action="store_true",
                    help="creates the virtual environment if it is missing, "
                         "installs python-chess in it, then exits")
     g.add_argument("--venv", default=VENV_DEFAUT, metavar="PATH",
@@ -4071,123 +4072,142 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                         "%(default)s)")
 
     g = p.add_argument_group("startup questions")
-    g.add_argument("--sans-questions", action="store_true",
+    g.add_argument("--no-questions", dest="sans_questions",
+                   action="store_true",
                    help="asks no question, neither side nor context; implied "
                         "outside an interactive terminal")
-    g.add_argument("--pseudos", default=None, metavar="LIST",
+    g.add_argument("--usernames", dest="pseudos", default=None, metavar="LIST",
                    help="your player names, comma-separated, looked up "
                         "ignoring case in White and Black to deduce your side "
                         "(default: those of your settings)")
-    g.add_argument("--reglages", default=REGLAGES_DEFAUT, metavar="FILE",
+    g.add_argument("--settings", dest="reglages",
+                   default=REGLAGES_DEFAUT, metavar="FILE",
                    help="settings file, where your username, your usual time "
                         "control and your rating are kept, asked only once in "
                         "a terminal (default: %(default)s)")
-    g.add_argument("--purge-reglages", action="store_true",
-                   help="deletes the settings file, the one of --reglages if "
+    g.add_argument("--purge-settings", dest="purge_reglages",
+                   action="store_true",
+                   help="deletes the settings file, the one of --settings if "
                         "given, then exits; your answers will be asked again "
                         "at the next collection")
 
     g = p.add_argument_group("opening catalog")
-    g.add_argument("--installer-catalogue", action="store_true",
+    g.add_argument("--install-catalog", dest="installer_catalogue",
+                   action="store_true",
                    help="downloads or updates the catalog of the named "
                         "openings of Lichess, validates it, then exits")
-    g.add_argument("--catalogue", default=CATALOGUE_DEFAUT, metavar="DIR",
+    g.add_argument("--catalog", dest="catalogue",
+                   default=CATALOGUE_DEFAUT, metavar="DIR",
                    help="directory of the local catalog (default: "
                         "%(default)s)")
 
     g = p.add_argument_group("output")
-    g.add_argument("--sortie", default=".", metavar="DIR",
+    g.add_argument("--output-dir", dest="sortie", default=".", metavar="DIR",
                    help="directory where the archive is written (default: "
                         "%(default)s)")
-    g.add_argument("--garder-dossier", action="store_true",
+    g.add_argument("--keep-folder", dest="garder_dossier", action="store_true",
                    help="does not delete the working folder after the archive "
-                        "is created, or the prompt with --prompt-seul")
+                        "is created, or the prompt with --prompt-only")
     g.add_argument("--prompt", metavar="FILE",
                    help="template of the analysis prompt, written next to the "
                         "archive under the name <archive>%s (default: %s next "
                         "to the script)" % (PROMPT_SUFFIXE, PROMPT_MODELE))
-    g.add_argument("--sans-prompt", action="store_true",
+    g.add_argument("--no-prompt", dest="sans_prompt", action="store_true",
                    help="does not write the analysis prompt")
-    g.add_argument("--prompt-seul", action="store_true",
+    g.add_argument("--prompt-only", dest="prompt_seul", action="store_true",
                    help="writes a short prompt that carries the game and the "
                         "Stockfish evaluations, to be pasted alone into the "
                         "conversation, without an attachment: for an LLM that "
                         "does not open zip files or run code. Its template is "
                         "%s. No archive is written, and the working folder is "
                         "deleted, except with "
-                        "--garder-dossier" % PROMPT_SEUL_MODELE)
+                        "--keep-folder" % PROMPT_SEUL_MODELE)
 
     g = p.add_argument_group("explorer")
-    g.add_argument("--base", choices=sorted(BASES_EXPLORATEUR),
+    g.add_argument("--database", dest="base",
+                   choices=sorted(BASES_EXPLORATEUR),
                    default="lichess",
                    help="database queried: lichess, the rated games of all "
                         "the players of the site, the one of "
-                        "https://lichess.org/opening, or maitres (default: "
+                        "https://lichess.org/opening, or masters (default: "
                         "%(default)s)")
-    g.add_argument("--cadences", metavar="LIST",
-                   help="with --base lichess, speeds kept, comma-separated, "
-                        "among: %s (default: %s)"
+    g.add_argument("--speeds", dest="cadences", metavar="LIST",
+                   help="with --database lichess, speeds kept, "
+                        "comma-separated, among: %s (default: %s)"
                         % (", ".join(CADENCES_LICHESS), CADENCES_DEFAUT))
-    g.add_argument("--classements", metavar="LIST",
-                   help="with --base lichess, rating bands kept, "
+    g.add_argument("--ratings", dest="classements", metavar="LIST",
+                   help="with --database lichess, rating bands kept, "
                         "comma-separated, among: %s; 0 covers 0 to 999, 2500 "
                         "everything above (default: %s)"
                         % (", ".join(CLASSEMENTS_LICHESS),
                            CLASSEMENTS_DEFAUT))
-    g.add_argument("--jeton-fichier", default=JETON_DEFAUT, metavar="FILE",
+    g.add_argument("--token-file", dest="jeton_fichier",
+                   default=JETON_DEFAUT, metavar="FILE",
                    help="file containing the personal token (default: "
                         "%(default)s)")
-    g.add_argument("--seuil-parties", type=int, default=50, metavar="N",
+    g.add_argument("--min-games", dest="seuil_parties",
+                   type=int, default=50, metavar="N",
                    help="stop below N games for the position (default: "
                         "%(default)s)")
-    g.add_argument("--seuil-frequence", type=float, default=10.0, metavar="P",
+    g.add_argument("--min-frequency", dest="seuil_frequence",
+                   type=float, default=10.0, metavar="P",
                    help="stop as soon as the played move falls below P "
                         "percent of frequency and leaves the opening catalog, "
                         "0 to disable this criterion (default: %(default)s)")
-    g.add_argument("--jusqu-a-epuisement", action="store_true",
+    g.add_argument("--exhaustive", dest="jusqu_a_epuisement",
+                   action="store_true",
                    help="ignores both thresholds and queries the database as "
                         "long as it answers, the stop then only happening on "
                         "an HTTP error, on a position missing from the "
-                        "database, on a null move, at the --max-demicoups cap "
+                        "database, on a null move, at the --max-plies cap "
                         "or at the end of the game")
-    g.add_argument("--coups-min", type=int, default=6, metavar="N",
+    g.add_argument("--min-moves", dest="coups_min",
+                   type=int, default=6, metavar="N",
                    help="no stop on frequency before the end of move N, the "
                         "game threshold staying active; the table thus covers "
                         "the start of the game even after an early exit from "
                         "theory, 0 to stop at the first exit (default: "
                         "%(default)s)")
-    g.add_argument("--max-demicoups", type=int, default=60, metavar="N",
+    g.add_argument("--max-plies", dest="max_demicoups",
+                   type=int, default=60, metavar="N",
                    help="cap on the plies queried, a safeguard always active "
                         "(default: %(default)s)")
     g.add_argument("--pause", type=float, default=2.0, metavar="S",
                    help="pause between two requests, in seconds, minimum 2 "
                         "required by the API (default: %(default)s)")
-    g.add_argument("--sans-explorateur", action="store_true",
+    g.add_argument("--no-explorer", dest="sans_explorateur",
+                   action="store_true",
                    help="skips the explorer collection entirely")
 
     g = p.add_argument_group("engine")
-    g.add_argument("--coups-stockfish", type=int, default=0, metavar="N",
+    g.add_argument("--stockfish-moves", dest="coups_stockfish",
+                   type=int, default=0, metavar="N",
                    help="limits the engine analysis to the first N full "
                         "moves, that is 2N plies; 0 analyzes the whole game "
                         "(default: %(default)s)")
-    g.add_argument("--profondeur", type=int, default=18, metavar="D",
+    g.add_argument("--depth", dest="profondeur",
+                   type=int, default=18, metavar="D",
                    help="search depth, from 1 to 60 (default: %(default)s)")
     g.add_argument("--multipv", type=int, default=3, metavar="K",
                    help="number of variations requested per position "
                         "(default: %(default)s)")
-    g.add_argument("--fils", type=int, default=os.cpu_count() or 1,
+    g.add_argument("--threads", dest="fils",
+                   type=int, default=os.cpu_count() or 1,
                    metavar="N",
                    help="Stockfish threads (default: number of processors)")
-    g.add_argument("--hachage", type=int, default=256, metavar="MB",
+    g.add_argument("--hash", dest="hachage",
+                   type=int, default=256, metavar="MB",
                    help="hash table in megabytes (default: %(default)s)")
     g.add_argument("--stockfish", default=STOCKFISH_DEFAUT, metavar="PATH",
                    help="engine binary (default: %(default)s)")
-    g.add_argument("--longueur-pv", type=int, default=5, metavar="N",
+    g.add_argument("--pv-length", dest="longueur_pv",
+                   type=int, default=5, metavar="N",
                    help="plies of the principal variation reproduced in the "
                         "summary, 0 for the whole variation (default: "
                         "%(default)s)")
 
-    p.add_argument("--delai", type=int, default=30, metavar="S",
+    p.add_argument("--timeout", dest="delai",
+                   type=int, default=30, metavar="S",
                    help="maximum network delay, in seconds (default: "
                         "%(default)s)")
     p.add_argument("--debug", action="store_true",
@@ -4200,7 +4220,7 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                                    or options.source):
         # The purge is done alone: combined, it was ignored without a
         # word in favor of the other action.
-        p.error("--purge-reglages is used alone, without a game or another "
+        p.error("--purge-settings is used alone, without a game or another "
                 "action")
     if options.prompt is not None and not options.prompt.strip():
         # Case of an empty variable in a script: --prompt "$MODELE".
@@ -4211,48 +4231,55 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
     if not options.source:
         p.error("a PGN file, a URL or a game identifier is required")
     if options.prompt and options.sans_prompt:
-        p.error("--prompt and --sans-prompt are mutually exclusive")
+        p.error("--prompt and --no-prompt are mutually exclusive")
     if options.prompt_seul and options.sans_prompt:
-        p.error("--prompt-seul and --sans-prompt are mutually exclusive")
+        p.error("--prompt-only and --no-prompt are mutually exclusive")
     # nan and inf are valid floats for argparse, but nan escapes any
     # comparison and time.sleep() rejects both: they are ruled out
     # here, before any folder is created.
-    for nom in ("pause", "seuil_frequence"):
+    for nom, option in (("pause", "--pause"),
+                        ("seuil_frequence", "--min-frequency")):
         if not math.isfinite(getattr(options, nom)):
-            p.error("--%s must be a finite number"
-                    % nom.replace("_", "-"))
+            p.error("%s must be a finite number" % option)
     if options.pause < 2.0:
         p.error("--pause must not go below 2 seconds")
-    for nom in ("seuil_parties", "max_demicoups", "profondeur", "multipv",
-                "fils", "hachage", "delai"):
+    for nom, option in (("seuil_parties", "--min-games"),
+                        ("max_demicoups", "--max-plies"),
+                        ("profondeur", "--depth"),
+                        ("multipv", "--multipv"),
+                        ("fils", "--threads"),
+                        ("hachage", "--hash"),
+                        ("delai", "--timeout")):
         if getattr(options, nom) < 1:
-            p.error("--%s must be at least 1" % nom.replace("_", "-"))
+            p.error("%s must be at least 1" % option)
     # Paths: the shell only expands the tilde if it starts the word,
-    # not in the form --sortie=~/analyses.
+    # not in the form --output-dir=~/analyses.
     options.sortie = os.path.expanduser(options.sortie)
     options.stockfish = resoudre_moteur(options.stockfish)
     if options.profondeur > PROFONDEUR_MAX:
-        p.error("--profondeur must not exceed %d" % PROFONDEUR_MAX)
+        p.error("--depth must not exceed %d" % PROFONDEUR_MAX)
     if options.coups_stockfish < 0:
-        p.error("--coups-stockfish must be 0 or more")
+        p.error("--stockfish-moves must be 0 or more")
     if options.coups_min < 0:
-        p.error("--coups-min must be 0 or more")
-    # Without --pseudos, the value stays None: the usernames will then
+        p.error("--min-moves must be 0 or more")
+    # Without --usernames, the value stays None: the usernames will then
     # come from the settings. The option, when given, must carry one.
     if options.pseudos is not None:
         options.pseudos = decouper_pseudos(options.pseudos)
         if not options.pseudos:
-            p.error("--pseudos: empty list")
+            p.error("--usernames: empty list")
     if options.seuil_frequence < 0 or options.seuil_frequence > 100:
-        p.error("--seuil-frequence must be between 0 and 100")
+        p.error("--min-frequency must be between 0 and 100")
     if options.longueur_pv < 0:
-        p.error("--longueur-pv must be 0 or more")
-    if options.base == "maitres":
+        p.error("--pv-length must be 0 or more")
+    if options.base == "masters":
         # Same principle as for the engine options: a filter that the masters
         # database does not know would be silently ignored, so it is refused.
-        for nom in ("cadences", "classements"):
+        for nom, option in (("cadences", "--speeds"),
+                            ("classements", "--ratings")):
             if getattr(options, nom) is not None:
-                p.error("--%s only has an effect with --base lichess" % nom)
+                p.error("%s only has an effect with --database lichess"
+                        % option)
     else:
         # The default values are only set here, and only for the Lichess
         # database: collecte.json thus records the filters actually
@@ -4261,9 +4288,9 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
             options.cadences = CADENCES_DEFAUT
         if options.classements is None:
             options.classements = CLASSEMENTS_DEFAUT
-        options.cadences = valider_liste(p, "--cadences", options.cadences,
+        options.cadences = valider_liste(p, "--speeds", options.cadences,
                                          CADENCES_LICHESS)
-        options.classements = valider_liste(p, "--classements",
+        options.classements = valider_liste(p, "--ratings",
                                             options.classements,
                                             CLASSEMENTS_LICHESS)
     return options
@@ -4319,17 +4346,17 @@ def main(argv: list[str]) -> int:
                     PROMPT_DONNEES in ligne
                     for ligne in lignes_de_texte(modele_prompt)):
                 raise SystemExit(
-                    "--prompt-seul: the template %s does not contain %s, the "
+                    "--prompt-only: the template %s does not contain %s, the "
                     "prompt would not carry the game. Start from %s."
                     % (fichier_modele, PROMPT_DONNEES, PROMPT_SEUL_MODELE))
         elif options.prompt or options.prompt_seul:
-            # --prompt-seul asks for a prompt: without a template, it is better
+            # --prompt-only asks for a prompt: without a template, it is better
             # to stop here than after the collection.
             raise SystemExit("Prompt template not found: %s"
                              % fichier_modele)
         else:
             journal("Warning: prompt template not found (%s), no prompt will "
-                    "be written. See --prompt and --sans-prompt."
+                    "be written. See --prompt and --no-prompt."
                     % fichier_modele)
 
     # -- Fetching the PGN ---------------------------------------------------
@@ -4392,7 +4419,7 @@ def main(argv: list[str]) -> int:
     catalogue = None
     motif_sans_explorateur = None
     if options.sans_explorateur:
-        motif_sans_explorateur = "désactivée par --sans-explorateur"
+        motif_sans_explorateur = "désactivée par --no-explorer"
     else:
         # The token is only read here and is neither written nor logged.
         JETON_COURANT = lire_jeton(options.jeton_fichier)
@@ -4419,7 +4446,7 @@ def main(argv: list[str]) -> int:
         # Missing settings: asked for here, once and for all, before the
         # questions specific to the game.
         completer_reglages(options.reglages, reglages, options.pseudos)
-    # --pseudos wins over the settings. The list kept replaces the
+    # --usernames wins over the settings. The list kept replaces the
     # option: collecte.json thus records the usernames actually used,
     # and it may be empty.
     if options.pseudos is None:
@@ -4432,13 +4459,13 @@ def main(argv: list[str]) -> int:
         consignes = contexte
     else:
         journal("Startup questions skipped: %s."
-                % ("option --sans-questions" if options.sans_questions
+                % ("option --no-questions" if options.sans_questions
                    else "non-interactive terminal"))
 
     # -- Creation of the working folder -------------------------------------
     # The name is timestamped to the second; two runs within the same
     # second, or a folder left by a previous failure, get a suffix rather
-    # than an error. The prompt counts too: with --prompt-seul it is the
+    # than an error. The prompt counts too: with --prompt-only it is the
     # only file that remains, and a second run within the same second
     # overwrote it.
     horodatage = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -4554,7 +4581,7 @@ def main(argv: list[str]) -> int:
         texte_partie = (dossier / "partie.pgn").read_text(encoding="utf-8")
 
     # -- Archive and cleanup ------------------------------------------------
-    # With --prompt-seul, the prompt is all that the player asks for: no
+    # With --prompt-only, the prompt is all that the player asks for: no
     # archive is written, and the working folder is deleted further down,
     # once the prompt is on disk. The name that the archive would have
     # borne still serves to name the prompt.
@@ -4589,7 +4616,7 @@ def main(argv: list[str]) -> int:
             "STOCKFISH": True,
             "EXPLORATEUR": resume_explorateur is not None,
             "BASE_LICHESS": options.base == "lichess",
-            "BASE_MAITRES": options.base == "maitres",
+            "BASE_MAITRES": options.base == "masters",
             "REPONSES": contexte is not None,
             "CAMP_CONNU": camp_joueur is not None,
             "PSEUDO_CONNU": bool(options.pseudos),
@@ -4597,7 +4624,7 @@ def main(argv: list[str]) -> int:
             "RESULTAT_CONTREDIT": bool(alerte),
             "CONSIGNES_DONNEES": bool(precisions),
             "OUVERTURE_CONNUE": bool(ouverture),
-            # --coups-stockfish limited the engine to the first moves: the
+            # --stockfish-moves limited the engine to the first moves: the
             # prompt must say so, otherwise it promises a figure for every
             # move.
             "COUVERTURE_PARTIELLE": evalues < len(coups_partie),
@@ -4686,7 +4713,7 @@ def main(argv: list[str]) -> int:
                 raise SystemExit("Prompt written but cannot delete the "
                                  "folder: %s" % err) from err
             journal("Working folder deleted, no archive is written with "
-                    "--prompt-seul.")
+                    "--prompt-only.")
         # The path written alone on standard output is that of the prompt.
         annoncer_archive(prompt)
         return 0

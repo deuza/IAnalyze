@@ -23,13 +23,11 @@ Icône de la licence CC-0
   English: progress log, warnings, errors, and the command line help
   with its option descriptions, group titles, placeholders and
   examples. A warning now starts with "Warning" instead of
-  "Attention". The options keep their names for now, and the messages
-  quote them as they are.
+  "Attention".
 - The messages of `test-app.sh` are in English: section titles, labels
   of the checks, report and errors. A failed check is now marked
   `FAIL` instead of `ECHEC`, a skipped one `SKIP` instead of `SAUTE`,
-  and the summary reads "Passed: N, failed: N, skipped: N". The options
-  and variables of `test-app.sh` keep their names for now.
+  and the summary reads "Passed: N, failed: N, skipped: N".
 - Everything the script creates for itself now lives in the
   application folder: the virtual environment (`local/venv`) and the
   opening catalog in `local/`, and the settings in `settings.ini`, at
@@ -40,17 +38,61 @@ Icône de la licence CC-0
   `verifier-analyse.py` and `test-app.sh` look for the virtual
   environment at the same place. The former locations,
   `~/.local/share/IAnalyze` and `~/.config/IAnalyze`, are no longer
-  read: run `--installer-venv` and `--installer-catalogue` again, move
+  read: run `--install-venv` and `--install-catalog` again, move
   `~/.config/IAnalyze/reglages.ini` to `settings.ini` to keep your
   answers, then delete them by hand.
+- The command line options are in English, and their former names are
+  no longer accepted. Those of `ianalyze.py`:
+
+| Former name             | New name            |
+| ----------------------- | ------------------- |
+| `--installer-venv`      | `--install-venv`    |
+| `--sans-questions`      | `--no-questions`    |
+| `--pseudos`             | `--usernames`       |
+| `--reglages`            | `--settings`        |
+| `--purge-reglages`      | `--purge-settings`  |
+| `--installer-catalogue` | `--install-catalog` |
+| `--catalogue`           | `--catalog`         |
+| `--sortie`              | `--output-dir`      |
+| `--garder-dossier`      | `--keep-folder`     |
+| `--sans-prompt`         | `--no-prompt`       |
+| `--prompt-seul`         | `--prompt-only`     |
+| `--base`                | `--database`        |
+| `--cadences`            | `--speeds`          |
+| `--classements`         | `--ratings`         |
+| `--jeton-fichier`       | `--token-file`      |
+| `--seuil-parties`       | `--min-games`       |
+| `--seuil-frequence`     | `--min-frequency`   |
+| `--jusqu-a-epuisement`  | `--exhaustive`      |
+| `--coups-min`           | `--min-moves`       |
+| `--max-demicoups`       | `--max-plies`       |
+| `--sans-explorateur`    | `--no-explorer`     |
+| `--coups-stockfish`     | `--stockfish-moves` |
+| `--profondeur`          | `--depth`           |
+| `--fils`                | `--threads`         |
+| `--hachage`             | `--hash`            |
+| `--longueur-pv`         | `--pv-length`       |
+| `--delai`               | `--timeout`         |
+
+- The values of `--database` are `lichess` and `masters`, formerly
+  `maitres`. `--venv`, `--prompt`, `--pause`, `--multipv`,
+  `--stockfish` and `--debug` keep their names.
+- `verifier-analyse.py` takes `--summary`, `--name`, `--prompt-only`
+  and `--scope` instead of `--synthese`, `--nom`, `--prompt-seul` and
+  `--perimetre`.
+- `test-app.sh` takes `--network` instead of `--reseau`, and reads the
+  variables `TOKEN` and `KEEP` instead of `JETON` and `GARDER`.
+- The environment variable that marks the relaunch of `ianalyze.py` in
+  its virtual environment is `IANALYZE_RELAUNCHED` instead of
+  `IANALYZE_DEJA_RELANCE`.
 
 ### Fixed
 
-- `--installer-venv` rebuilds a virtual environment left without pip
+- `--install-venv` rebuilds a virtual environment left without pip
   by an interrupted creation, instead of failing on "No module named
   pip". Only a directory that carries `pyvenv.cfg` can be rebuilt, so
   that a wrong `--venv` never loses its content.
-- `--installer-venv` refuses a `--venv` that is not a virtual
+- `--install-venv` refuses a `--venv` that is not a virtual
   environment, an existing directory that is not empty and has no
   `pyvenv.cfg`, such as `/usr` or a home directory. It used to run pip
   on the Python found there, often the one of the system, or to

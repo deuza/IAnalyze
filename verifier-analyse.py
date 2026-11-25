@@ -7,8 +7,8 @@ received, and gives the same report for each LLM tried. It does not
 judge the quality of the commentary: it checks what a machine can
 check.
 
-    ./verifier-analyse.py ARCHIVE PGN [--synthese FICHIER] [--nom NOM]
-                          [--prompt-seul] [--perimetre N]
+    ./verifier-analyse.py ARCHIVE PGN [--summary FICHIER] [--name NOM]
+                          [--prompt-only] [--scope N]
 
     ARCHIVE     the zip produced by ianalyze.py, or its unzipped
                 folder. A folder that contains the latter also does,
@@ -16,19 +16,19 @@ check.
     PGN         the .pgn file returned by the LLM, or a dash, "-", if
                 the LLM returned no file: only the summary is then
                 checked
-    --synthese  optional: the final summary of the LLM, copied from the
+    --summary   optional: the final summary of the LLM, copied from the
                 conversation into a text file. The FEN and the
                 evaluations it quotes are then checked too
-    --nom       optional: name of the model tried, repeated at the top
+    --name      optional: name of the model tried, repeated at the top
                 of the report
-    --prompt-seul
+    --prompt-only
                 the PGN answers the short prompt of ianalyze.py
-                --prompt-seul. This prompt asks for less: the checks it
+                --prompt-only. This prompt asks for less: the checks it
                 does not ground are skipped (lines of 79 characters,
                 summary before move 1, NAG, percent, em dash, Annotator
                 and PlyCount tags, length of the variations, number of
                 FEN)
-    --perimetre N
+    --scope N
                 scope agreed with the LLM, in moves: the mistakes and
                 blunders played after move N are not expected. Without
                 this option, the scope is the one that the player gave
@@ -46,8 +46,8 @@ What is checked:
   5. each evaluation quoted does exist in the engine data;
   6. the variations: number, length, support from an engine line, and
      those that an LLM wrongly writes inside a comment;
-  7. with --synthese: the FEN quoted are valid and come from the folder;
-  8. with --synthese: the evaluations quoted in the conversation exist
+  7. with --summary: the FEN quoted are valid and come from the folder;
+  8. with --summary: the evaluations quoted in the conversation exist
      in the engine data.
 
 Three traps found in real LLM PGNs are named plainly: a blank line in
@@ -101,7 +101,7 @@ except ImportError:
         os.execv(interpreteur, [interpreteur] + sys.argv)
     raise SystemExit(
         "Module chess introuvable. Lancez d'abord, depuis le dépôt "
-        "IAnalyze : ./ianalyze.py --installer-venv")
+        "IAnalyze : ./ianalyze.py --install-venv")
 
 # python-chess itself writes each illegal move on standard error, in
 # English. The report repeats all of them: these lines would be
@@ -453,7 +453,7 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
     Mandatory format constraints of the prompt.
 
     `court` is true for a PGN returned from the short prompt of
-    --prompt-seul: only the checks that this prompt grounds remain, the
+    --prompt-only: only the checks that this prompt grounds remain, the
     braces, the tags copied and the end marker.
     `balises_origine` then gives the names of the tags of the original
     game, in the order in which its file writes them: among the seven
@@ -916,15 +916,16 @@ def main(argv: list[str]) -> int:
                                    "dossier décompressé")
     p.add_argument("pgn", help="PGN annoté rendu par le LLM, ou - s'il "
                                "n'en a rendu aucun")
-    p.add_argument("--synthese", metavar="FICHIER",
+    p.add_argument("--summary", dest="synthese", metavar="FICHIER",
                    help="synthèse finale du LLM, copiée dans un fichier "
                         "texte")
-    p.add_argument("--nom", default="", help="nom du modèle essayé")
-    p.add_argument("--prompt-seul", action="store_true",
+    p.add_argument("--name", dest="nom",
+                   default="", help="nom du modèle essayé")
+    p.add_argument("--prompt-only", dest="prompt_seul", action="store_true",
                    help="le PGN répond au prompt court de ianalyze.py "
-                        "--prompt-seul : les contrôles que ce prompt ne "
+                        "--prompt-only : les contrôles que ce prompt ne "
                         "fonde pas sont sautés")
-    p.add_argument("--perimetre", metavar="N", type=int,
+    p.add_argument("--scope", dest="perimetre", metavar="N", type=int,
                    help="périmètre convenu avec le LLM, en coups : les "
                         "erreurs et gaffes jouées après le coup N ne sont "
                         "pas attendues. Sans cette option, le périmètre "
@@ -932,7 +933,7 @@ def main(argv: list[str]) -> int:
                         "dans l'archive")
     options = p.parse_args(argv)
     if options.perimetre is not None and options.perimetre < 1:
-        p.error("--perimetre attend un nombre de coups, 1 au moins")
+        p.error("--scope attend un nombre de coups, 1 au moins")
 
     try:
         fichiers = lire_archive(pathlib.Path(options.archive))
@@ -974,7 +975,7 @@ def main(argv: list[str]) -> int:
                         % fichiers[COLLECTE])
     b.lignes.append("  PGN     : %s" % pathlib.Path(options.pgn).name)
     if options.prompt_seul:
-        b.lignes.append("  prompt  : court (--prompt-seul), contrôles "
+        b.lignes.append("  prompt  : court (--prompt-only), contrôles "
                         "réduits à ce qu'il demande")
 
     if brut is None:

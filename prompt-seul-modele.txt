@@ -1,5 +1,5 @@
 #! note ===============================================================
-#! note Modèle du prompt court, écrit avec l'option --prompt-seul.
+#! note Modèle du prompt court, écrit avec l'option --prompt-only.
 #! note
 #! note Ce prompt se colle seul dans une conversation, sans pièce jointe :
 #! note quelques consignes, la partie, puis les évaluations de Stockfish.

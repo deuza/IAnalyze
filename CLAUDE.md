@@ -9,7 +9,7 @@ partie, écrit à côté. Les deux alimentent une conversation avec un LLM,
 où l'analyse est faite. Le script ne produit lui-même aucune analyse.
 
 Fichiers : ianalyze.py, prompt-modele.txt (modèle du prompt),
-prompt-seul-modele.txt (modèle du prompt court de --prompt-seul),
+prompt-seul-modele.txt (modèle du prompt court de --prompt-only),
 verifier-analyse.py (contrôle du PGN rendu par le LLM),
 test.pgn (partie d'essai), test-app.sh (suite de tests),
 parties-exemples/ (fichiers des exemples d'EXEMPLES.md),
@@ -61,7 +61,7 @@ tests), CHANGELOG.md.
   documentation et noms des fichiers du dépôt. README.fr.md est la
   version française du README, tenue à jour avec lui.
 - Restent en français : les noms de fonctions, de variables et de
-  constantes, et les dest d'argparse (--output remplit toujours
+  constantes, et les dest d'argparse (--output-dir remplit toujours
   options.sortie). Les algorithmes ne changent pas : seuls les
   littéraux changent (chaînes, motifs des regex, mots des réponses),
   sauf pluriel(), qui passe à la règle anglaise (!= 1).
@@ -70,7 +70,7 @@ tests), CHANGELOG.md.
 - Pas de migration : l'ancien reglages.ini et l'ancien catalogue.tsv
   sont ignorés, sans message.
 - Traduction faite directement, sans DeepL.
-- Sept lots, un patch chacun. Lot 0 : CLAUDE.md.
+- Huit lots, un patch chacun. Lot 0 : CLAUDE.md.
 - Lot 1 : commentaires et docstrings, sans changer le code : l'AST, une
   fois les docstrings retirées, est identique avant et après.
 - Lot 2 : messages d'ianalyze.py sur la sortie d'erreur (journal,
@@ -79,22 +79,28 @@ tests), CHANGELOG.md.
   aussi dans l'archive attend le lot 4.
 - Lot 2b : messages de test-app.sh (titres, libellés des vérifications,
   rapport, erreurs).
-- Lot 3 : interface, soit options, questions et réponses au terminal,
-  réglages, catalogue, variables d'environnement, options de
-  test-app.sh. Les questions vont avec leurs réponses : elles portent
-  les touches à taper.
+- Lot 3a : noms et valeurs des options d'ianalyze.py, de
+  verifier-analyse.py et de test-app.sh, variables d'environnement.
+- Lot 3b : questions et réponses au terminal, réglages, catalogue. Les
+  questions vont avec leurs réponses : elles portent les touches à
+  taper. Les quatre questions de QUESTIONS_CONTEXTE, dont les réponses
+  partent dans contexte.md, attendent le lot 4.
 - Lot 4 : archive et LLM, soit noms et contenu des fichiers (JSON,
-  synthèse, contexte), modèles de prompt, vérificateur en entier.
+  synthèse, contexte), modèles de prompt, vérificateur en entier hors
+  ses options, renommées au lot 3a.
 - Lot 5 : renommage des fichiers du dépôt et documentation.
 - Dérogation : la documentation (README, EXEMPLES, TECHNIQUE, TESTS)
   est traduite et remise à jour au lot 5, une fois l'interface figée.
   Le CHANGELOG suit chaque lot, en anglais, sous Unreleased. CLAUDE.md
   suit chaque renommage dans le lot qui le fait.
-- Renommages du lot 3 : catalogue.tsv -> catalog.tsv, variable JETON de
-  test-app.sh -> TOKEN, option --reseau de test-app.sh -> --network.
-  Les noms des autres options sont fixés au lot 3. reglages.ini est
+- Renommages du lot 3a : toutes les options d'ianalyze.py et de
+  verifier-analyse.py, dest inchangés ; --base maitres -> --database
+  masters ; variables JETON et GARDER de test-app.sh -> TOKEN et KEEP ;
+  option --reseau de test-app.sh -> --network ; variable
+  IANALYZE_DEJA_RELANCE -> IANALYZE_RELAUNCHED.
+- Renommages du lot 3b : catalogue.tsv -> catalog.tsv. reglages.ini est
   déjà devenu settings.ini, à la racine de l'application ; son contenu
-  passe en anglais au lot 3.
+  passe en anglais au lot 3b.
 - Renommages du lot 5 : verifier-analyse.py -> verify-analysis.py,
   prompt-modele.txt -> prompt-template.txt, prompt-seul-modele.txt ->
   prompt-only-template.txt, parties-exemples/ -> example-games/
@@ -118,11 +124,12 @@ tests), CHANGELOG.md.
   démarrage = startup questions ; collecte = collection ; dossier de
   travail = working folder ; synthèse = summary ; consignes =
   instructions ; journal = log ; bilan = report ; palmarès = ranking ;
-  modèle = template ; périmètre = scope ; gain, nulle, perte = win,
-  draw, loss (W/D/L) ; avertissement "Attention" = "Warning" ; aide =
-  help ; code de retour = exit code ; dans le rapport des tests,
-  réussi, échec, sauté = passed, failed, skipped, et les marqueurs
-  ECHEC, SAUTE = FAIL, SKIP.
+  modèle = template ; périmètre = scope ; dossier de sortie = output
+  directory ; délai = timeout ; fils = threads ; jusqu'à épuisement =
+  exhaustive ; gain, nulle, perte = win, draw, loss (W/D/L) ;
+  avertissement "Attention" = "Warning" ; aide = help ; code de retour
+  = exit code ; dans le rapport des tests, réussi, échec, sauté =
+  passed, failed, skipped, et les marqueurs ECHEC, SAUTE = FAIL, SKIP.
 - Correspondance à capital : capital, incrément, plafond, réserve =
   clock, increment, maximum, bank, termes des ICCF Rules 2026 (§2.4 et
   annexe 3), vérifiés au lot 1.
@@ -154,7 +161,7 @@ pu être testé (par exemple un vrai jeton Lichess).
 Le jeton Lichess est dans ~/.lichess_token (mode 600). Ne le lis pas
 pour l'afficher, ne le journalise pas, ne le copie dans aucun fichier
 du dépôt ni dans aucun test. Les tests utilisent un faux jeton ou un
-faux explorateur, sauf ceux de test-app.sh --reseau, qui emploient le
+faux explorateur, sauf ceux de test-app.sh --network, qui emploient le
 vrai jeton sans l'afficher ni le copier, et que seul l'utilisateur
 lance.
 

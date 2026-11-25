@@ -156,7 +156,7 @@ Section 3, "Évaluations Stockfish" : pour chaque demi-coup,
    dernier coup.
 #! si COUVERTURE_PARTIELLE
    Le moteur n'a évalué que les {{DEMI_COUPS_EVALUES}} premiers demi-coups sur {{DEMI_COUPS}} : la
-   collecte a été limitée par --coups-stockfish. Au delà, vous n'avez
+   collecte a été limitée par --stockfish-moves. Au delà, vous n'avez
    aucun chiffre : dites-le, et n'en avancez aucun.
 #! fin
 Section 4, "Positions à échantillon non exploitable" : là où la base
