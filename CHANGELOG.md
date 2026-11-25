@@ -346,6 +346,14 @@ and the project applies [Semantic Versioning](https://semver.org/).
   run of Stockfish, whose evaluations vary from one run to another:
   replayed, the check shown in `EXAMPLES.md` ended on a `FAIL`, an
   evaluation not found. The flaw dates from version 4.0.0.
+- The report of `verify-analysis.py` agrees its words with its
+  counts: "the only variation is written inside a comment" instead
+  of "the 1 variations are written inside the comments", "1
+  variation starts from a line of the engine" and "1 is the LLM's
+  own" instead of "1 variation(s) start" and "1 are", "1 of which
+  starts", "the first move" for a scope of one move, and "ply" for a
+  single ply. The forms in "(s)", such as "3 move(s) commented",
+  stay as they are.
 
 ## [4.0.2] - 2026-11-21
 

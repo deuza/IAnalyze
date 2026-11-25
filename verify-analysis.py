@@ -157,6 +157,19 @@ RE_FEN = re.compile(
     r" [wb] (?:-|[KQkq]{1,4}) (?:-|[a-h][36]) \d+ \d+)")
 
 
+def accorder(nombre: int, singulier: str, pluriel: str) -> str:
+    """
+    The singular form for one, the plural form otherwise, zero included,
+    as English writes it: "1 variation starts", "0 variations start".
+
+    The messages whose count governs a noun or a verb go through it: "the
+    1 variations are written" and "1 are the LLM's own" came out of the
+    report. The forms in "(s)", such as "3 move(s) commented", stay as
+    they are.
+    """
+    return singulier if nombre == 1 else pluriel
+
+
 class ArchiveInutilisable(Exception):
     """The archive reads, but its content is not that of IAnalyze."""
 
@@ -335,9 +348,10 @@ def controler_lecture(b: Bilan, brut: bytes) -> tuple[str, chess.pgn.Game]:
         lus = len(ligne_principale(partie))
         constat = "blank line in the body of the game"
         if relue is not None and len(ligne_principale(relue)) > lus:
+            total = len(ligne_principale(relue))
             constat += (": python-chess stops reading there and only sees %d "
-                        "of the %d plies"
-                        % (lus, len(ligne_principale(relue))))
+                        "of the %d %s"
+                        % (lus, total, accorder(total, "ply", "plies")))
         else:
             constat += (": python-chess stops reading there, what follows is "
                         "not read")
@@ -372,14 +386,17 @@ def controler_partie(b: Bilan, partie: chess.pgn.Game,
                           rendue[commun] if commun < len(rendue) else "end",
                           attendue[commun] if commun < len(attendue)
                           else "end"))
-        details.append("%d plies returned, %d expected"
-                       % (len(rendue), len(attendue)))
+        details.append("%d %s returned, %d expected"
+                       % (len(rendue), accorder(len(rendue), "ply", "plies"),
+                          len(attendue)))
         if partie.errors:
             # On an illegal move, python-chess gives up reading what
             # follows: the main line may come out truncated.
             details.append("may come from an illegal move found in 1")
     b.controle(identique, "main line identical to the original "
-               "game (%d plies)" % len(attendue), details)
+               "game (%d %s)" % (len(attendue),
+                                 accorder(len(attendue), "ply", "plies")),
+               details)
     return identique
 
 
@@ -612,9 +629,10 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
             % sum(1 for n in noeuds if n.nags))
 
     if perimetre:
-        b.noter("INFO", "agreed scope: the first %d moves, the mistakes and "
-                "blunders played beyond are not expected"
-                % perimetre)
+        b.noter("INFO", "agreed scope: %s, the mistakes and blunders played "
+                "beyond are not expected"
+                % ("the first move" if perimetre == 1
+                   else "the first %d moves" % perimetre))
     oublies, sans_nag, fautes = [], [], 0
     for e in evaluations:
         if e.get("category") not in ("mistake", "blunder"):
@@ -797,12 +815,20 @@ def controler_variantes_en_texte(b: Bilan, partie: chess.pgn.Game,
                 appuyees += 1
     if not trouvees:
         return
-    b.controle(False, "%d variation(s) written inside a comment: it is only "
-               "text, SCID does not replay them"
-               % trouvees if jouables else
-               "no playable variation: the %d variations are written inside "
-               "the comments, where they are only text"
-               % trouvees, grave=not jouables)
+    if jouables:
+        constat = ("%d %s written inside a comment: %s only text, SCID "
+                   "does not replay %s"
+                   % (trouvees,
+                      accorder(trouvees, "variation", "variations"),
+                      accorder(trouvees, "it is", "they are"),
+                      accorder(trouvees, "it", "them")))
+    elif trouvees == 1:
+        constat = ("no playable variation: the only variation is written "
+                   "inside a comment, where it is only text")
+    else:
+        constat = ("no playable variation: the %d variations are written "
+                   "inside the comments, where they are only text" % trouvees)
+    b.controle(False, constat, grave=not jouables)
     b.controle(not illegales, "replayed by the script, these variations are "
                "all legal (%d illegal)" % len(illegales), illegales)
     if perdues:
@@ -812,8 +838,8 @@ def controler_variantes_en_texte(b: Bilan, partie: chess.pgn.Game,
     if longues and not court:
         b.noter("WARNING", "variation(s) of more than %d plies"
                 % VARIANTE_MAX, longues)
-    b.noter("INFO", "%d legal, %d of which start from a line of the engine"
-            % (legales, appuyees))
+    b.noter("INFO", "%d legal, %d of which %s from a line of the engine"
+            % (legales, appuyees, accorder(appuyees, "starts", "start")))
 
 
 def controler_variantes(b: Bilan, partie: chess.pgn.Game,
@@ -860,8 +886,11 @@ def controler_variantes(b: Bilan, partie: chess.pgn.Game,
         b.controle(not longues, "no variation of more than %d plies"
                    % VARIANTE_MAX, longues, grave=False)
     libres = [lieu for lieu, _, appuyee in variantes if not appuyee]
-    b.noter("INFO", "%d variation(s) start from a line of the engine, %d are "
-            "the LLM's own" % (len(variantes) - len(libres), len(libres)),
+    du_moteur = len(variantes) - len(libres)
+    b.noter("INFO", "%d %s from a line of the engine, %d %s the LLM's own"
+            % (du_moteur,
+               accorder(du_moteur, "variation starts", "variations start"),
+               len(libres), accorder(len(libres), "is", "are")),
             libres)
 
 

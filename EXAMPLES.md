@@ -356,7 +356,7 @@ Check of an analysis returned by an LLM
 === 6. Variations ===
   INFO      1 playable variation(s) on the main line
   OK        no variation of more than 5 plies
-  INFO      1 variation(s) start from a line of the engine, 0 are the LLM's own
+  INFO      1 variation starts from a line of the engine, 0 are the LLM's own
 
 === Totals ===
   failures : 0
@@ -397,7 +397,7 @@ Check of an analysis returned by an LLM
 ...
 === 6. Variations ===
 ...
-  FAIL      no playable variation: the 1 variations are written inside the comments, where they are only text
+  FAIL      no playable variation: the only variation is written inside a comment, where it is only text
 ...
 === Totals ===
   failures : 4

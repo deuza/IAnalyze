@@ -3237,9 +3237,18 @@ FIN
             > bilan 2>&1
         verifier "T83 llm-annotated.pgn, report produced" \
             contient bilan "=== Totals ==="
+        # Its single variation starts from a line of the engine, or is
+        # the LLM's own, according to the engine: either way, the count
+        # governs the verb. The report wrote "1 are the LLM's own".
+        egal "T83 llm-annotated.pgn, one variation, in the singular" 1 \
+            "$(grep -c -E '1 variation starts from a line of the engine, 0 are|0 variations start from a line of the engine, 1 is the LLM' bilan)"
         "$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH" \
             "$EX/llm-faulty.pgn" > bilan 2>&1
         egal "T83 llm-faulty.pgn, failures" 1 "$?"
+        # Its only variation is written inside a comment: the report
+        # wrote "the 1 variations are written inside the comments".
+        verifier "T83 llm-faulty.pgn, its only variation, in the singular" \
+            contient bilan "no playable variation: the only variation is written inside a comment"
         verifier "T83 export of chess-mail.com, repeated result ignored" \
             contient t-83-journal "Result repeated at the end of the file"
         egal "T83 no real game: neither address nor identifier" 0 \
