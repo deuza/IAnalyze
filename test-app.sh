@@ -1191,7 +1191,7 @@ titre "T59: outside a terminal, then username refused"
 egal "T59 outside a terminal, exit code" 0 $?
 egal "T59 outside a terminal, nothing asked" 0 "$(grep -c -i 'settings' journal)"
 if [ -e t-abs.ini ]; then
-    egal "T59 outside a terminal, no file created" absent présent
+    egal "T59 outside a terminal, no file created" absent present
 else
     egal "T59 outside a terminal, no file created" absent absent
 fi
@@ -2034,7 +2034,7 @@ for essai in 1 2 3 4 5 6; do
     "$SCRIPT" t-espace.pgn --no-explorer --no-questions \
         --venv "$VENV" --settings t-pr.ini --depth 1 --threads 1 \
         --hash 16 --prompt-only --output-dir t-meme-seconde \
-        > /dev/null 2>> journal || noter "  note   lancement $essai en échec"
+        > /dev/null 2>> journal || noter "  note   run $essai failed"
 done
 egal "T74 runs close together, no prompt overwritten" 6 \
     "$(find t-meme-seconde -name '*.prompt.txt' | wc -l)"
@@ -2052,13 +2052,13 @@ ARCH74="$(head -n 1 sortie)"
 "$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH74" t-seul.pgn --prompt-only \
     > bilan 2>&1
 verifier "T74 checker: three tags copied, no fault" \
-    contient bilan "OK        les balises obligatoires de la partie d'origine"
+    contient bilan "OK        the mandatory tags of the original game"
 printf '[Black "Bob"]\n[White "Alice"]\n[Result "1-0"]\n\n' > t-seul-inverse.pgn
 printf '1. e4 e5 2. Qh5 Nc6 3. Qxf7+ Kxf7 1-0\n' >> t-seul-inverse.pgn
 "$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH74" t-seul-inverse.pgn \
     --prompt-only > bilan 2>&1
 verifier "T74 checker: tags in another order, reported" \
-    contient bilan "ECHEC     les balises obligatoires de la partie d'origine"
+    contient bilan "FAIL      the mandatory tags of the original game"
 rm -rf "$DEPOT/__pycache__"
 rm -f analysis-t-seul-*
 "$SCRIPT" t-seul.pgn $S74 --prompt-only --no-prompt > sortie 2> journal
@@ -2793,74 +2793,74 @@ open("t-conversation.txt", "w", encoding="utf-8").write(
 EOF
         "$PYVENV" "$VERIF" "$ARCH" t-conforme.pgn > bilan 2>&1
         egal "T73 compliant PGN, exit code" 0 "$?"
-        egal "T73 compliant PGN, no failure" 0 "$(grep -c '^  ECHEC' bilan)"
+        egal "T73 compliant PGN, no failure" 0 "$(grep -c '^  FAIL' bilan)"
         verifier "T73 compliant PGN, variations backed by the engine" \
-            contient bilan "0 sont du cru du LLM"
+            contient bilan "0 are the LLM's own"
         "$PYVENV" "$VERIF" "$ARCH" t-fautif.pgn --name "essai fautif" \
             --summary t-conversation.txt > bilan 2>&1
         egal "T73 faulty PGN, exit code" 1 "$?"
         # Each line gives the injected flaw, then what the report says of it.
         while IFS='|' read -r defaut constat; do
             verifier "T73 flaw reported: $defaut" \
-                grep -q -E "^  ECHEC .*$constat" bilan
+                grep -q -E "^  FAIL .*$constat" bilan
         done <<'FIN'
-ligne vide dans le corps|ligne vide dans le corps de la partie
-pour cent écrit %|aucun caractère % dans un commentaire
-notation suffixe|pas de notation suffixe
-marqueur de fin|marqueur de fin "1-0"
-gaffe non commentée|toutes commentées \(1 oubliée
-NAG contraire au moteur|aucun NAG de position contraire
-variante illégale dans un commentaire|toutes légales \(1 illégale
-tiret cadratin dans la conversation|aucun tiret cadratin dans la conversation \(1 relevé
-FEN invalide|toutes les FEN sont des positions valides
+blank line in the body|blank line in the body of the game
+percent written %|no % character in a comment
+suffix notation|no suffix notation
+end marker|end marker "1-0"
+blunder not commented on|all commented on \(1 missed
+NAG contrary to the engine|no position NAG contrary
+illegal variation in a comment|all legal \(1 illegal
+em dash in the conversation|no em dash in the conversation \(1 found
+invalid FEN|all the FEN are valid positions
 FIN
         verifier "T73 variation written in a comment" \
-            contient bilan "écrite(s) à l'intérieur d'un commentaire"
-        verifier "T73 illegal move named" contient bilan "Ke3 est illégal"
+            contient bilan "written inside a comment"
+        verifier "T73 illegal move named" contient bilan "Ke3 is illegal"
         # The two invented evaluations, the one of the PGN and the one of the
         # conversation, give the same sentence in the report: each one is
         # looked for in its section, otherwise one passed for the other.
         sed -n '/^=== 5\. /,/^=== 6\. /p' bilan > section5
-        sed -n '/^=== 8\. /,/^=== Bilan/p' bilan > section8
+        sed -n '/^=== 8\. /,/^=== Totals/p' bilan > section8
         INVENTE=$(cat t-invente-pgn 2>/dev/null)
         verifier "T73 flaw reported: evaluation invented in the PGN" \
-            grep -q -E '^  ECHEC .*\(1 introuvable' section5
+            grep -q -E '^  FAIL .*\(1 not found' section5
         verifier "T73 invented figure named" \
-            contient section5 ": ${INVENTE:-chiffre non rendu}"
+            contient section5 ": ${INVENTE:-figure not returned}"
         verifier "T73 flaw reported: evaluation invented in the conversation" \
-            grep -q -E '^  ECHEC .*\(1 introuvable' section8
-        grep -E '^  (ECHEC|ATTENTION)' bilan | cut -c1-110 > lignes
+            grep -q -E '^  FAIL .*\(1 not found' section8
+        grep -E '^  (FAIL|WARNING)' bilan | cut -c1-110 > lignes
         joindre lignes 20
         # Flaws that do not change the moves read: each one must be
         # reported on its own, on a PGN otherwise compliant.
         while IFS='|' read -r fichier constat; do
             "$PYVENV" "$VERIF" "$ARCH" "$fichier" > bilan 2>&1
             egal "T73 $fichier, exit code" 1 "$?"
-            egal "T73 $fichier, a single failure" 1 "$(grep -c '^  ECHEC' bilan)"
+            egal "T73 $fichier, a single failure" 1 "$(grep -c '^  FAIL' bilan)"
             verifier "T73 $fichier, flaw named" \
-                grep -q -E "^  ECHEC .*$constat" bilan
+                grep -q -E "^  FAIL .*$constat" bilan
         done <<'FIN'
-t-vide-fin.pgn|ligne vide dans le corps de la partie
-t-fermante.pgn|aucune accolade dans un commentaire
-t-balises.pgn|les sept balises obligatoires, dans l'ordre
+t-vide-fin.pgn|blank line in the body of the game
+t-fermante.pgn|no brace in a comment
+t-balises.pgn|the seven mandatory tags, in order
 FIN
         # A PGN compliant with the short prompt has neither a summary nor
         # lines of 79 characters: with --prompt-only it passes, without the
         # option it fails on these two points, which come from the full prompt.
         "$PYVENV" "$VERIF" "$ARCH" t-court.pgn --prompt-only > bilan 2>&1
         egal "T73 --prompt-only, exit code" 0 "$?"
-        egal "T73 --prompt-only, no failure" 0 "$(grep -c '^  ECHEC' bilan)"
+        egal "T73 --prompt-only, no failure" 0 "$(grep -c '^  FAIL' bilan)"
         verifier "T73 --prompt-only, said at the top of the report" \
-            contient bilan "prompt  : court"
+            contient bilan "prompt     : short"
         "$PYVENV" "$VERIF" "$ARCH" t-court.pgn > bilan 2>&1
         egal "T73 the same without the option, exit code" 1 "$?"
         egal "T73 the same without the option, two failures" 2 \
-            "$(grep -c '^  ECHEC' bilan)"
+            "$(grep -c '^  FAIL' bilan)"
         "$PYVENV" "$VERIF" "$ARCH" - --summary t-conversation.txt \
             > bilan 2>&1
         egal "T73 no PGN returned, exit code" 1 "$?"
         verifier "T73 no PGN returned, said in the report" \
-            contient bilan "aucun PGN rendu"
+            contient bilan "no PGN returned"
         # Quoted evaluations: the check is called alone, on a folder
         # with a single evaluation, +0.35, whose rounding goes wrong in
         # floating point. Each line gives the quoted text and the
@@ -2911,7 +2911,7 @@ EOF
         "$PYVENV" "$VERIF" "$ARCH" t-illisible.pgn > bilan 2>&1
         egal "T73 unreadable PGN, exit code" 1 "$?"
         verifier "T73 unreadable PGN, said in the report" \
-            contient bilan "aucune partie lisible"
+            contient bilan "no readable game"
         printf '1. e4 ( 1. e5 ) 1... e4 *\n' > t-variante-folle.pgn
         "$PYVENV" "$VERIF" "$ARCH" t-variante-folle.pgn > bilan2 2>&1
         egal "T73 illegal variation at the start, exit code" 1 "$?"
@@ -2977,9 +2977,9 @@ EOF
         "$PYVENV" "$VERIF" "$ARCH" t-82-mats.pgn --prompt-only > bilan 2>&1
         sed -n '/^=== 5\. /,/^=== 6\. /p' bilan > section5
         verifier "T82 quoted mates: three evaluations read" \
-            contient section5 "3 évaluation(s) citée(s)"
+            contient section5 "3 evaluation(s) quoted"
         verifier "T82 quoted mates: the invented mate is the only one reported" \
-            contient section5 "(1 introuvable(s))"
+            contient section5 "(1 not found)"
         verifier "T82 quoted mates: invented mate named" contient section5 "#+7"
         # The agreed scope bounds the check: the blunder of move 5
         # is not expected from a PGN limited to the first four moves.
@@ -2987,14 +2987,14 @@ EOF
         # The number of mistakes found after move 4 varies with the
         # engine: only the failure of the check counts.
         egal "T82 without a scope, the blunder of move 5 is expected" "1 0" \
-            "$(grep -c 'ECHEC     les .* sont toutes commentées' bilan) $(grep -c '(0 oubliée(s))' bilan)"
+            "$(grep -c 'FAIL      the .* are all commented on' bilan) $(grep -c '(0 missed)' bilan)"
         "$PYVENV" "$VERIF" "$ARCH" t-82-quatre.pgn --prompt-only \
             --scope 4 > bilan 2>&1
         egal "T82 --scope 4, exit code" 0 "$?"
         verifier "T82 --scope 4, said in the report" \
-            contient bilan "périmètre convenu : les 4 premiers coups"
+            contient bilan "agreed scope: the first 4 moves"
         verifier "T82 --scope 4, nothing forgotten any more" \
-            contient bilan "(0 oubliée(s))"
+            contient bilan "(0 missed)"
         "$PYVENV" "$VERIF" "$ARCH" t-82-quatre.pgn --scope 0 \
             > bilan 2>&1
         egal "T82 --scope 0 refused" 2 "$?"
@@ -3031,7 +3031,7 @@ EOF
         "$PYVENV" "$VERIF" "$ARCH82P" t-82-quatre.pgn --prompt-only \
             > bilan 2>&1
         verifier "T82 scope of a real collection read without --scope" \
-            contient bilan "périmètre convenu : les 4 premiers coups"
+            contient bilan "agreed scope: the first 4 moves"
         egal "T82 real collection, no unexpected error" 0 \
             "$(grep -c 'Unexpected error' sortie-pty)"
         rm -rf t-82-p
@@ -3043,11 +3043,11 @@ EOF
         egal "T82 short mode, exit code" 0 "$?"
         egal "T82 short mode, NAG, em dash and FEN not checked" \
             "0 0 0" \
-            "$(grep -c 'NAG de position' bilan) $(grep -c 'tiret cadratin' bilan) $(grep -c 'deux demandées' bilan)"
+            "$(grep -c 'position NAG' bilan) $(grep -c 'em dash' bilan) $(grep -c 'two requested' bilan)"
         "$PYVENV" "$VERIF" "$ARCH" t-82-nag.pgn \
             --summary t-82-conv.txt > bilan 2>&1
         egal "T82 full mode, the three are reported" "1 1 1" \
-            "$(grep -c 'ECHEC     aucun NAG de position' bilan) $(grep -c 'ECHEC     aucun tiret cadratin dans la conversation' bilan) $(grep -c 'ATTENTION 0 FEN' bilan)"
+            "$(grep -c 'FAIL      no position NAG' bilan) $(grep -c 'FAIL      no em dash in the conversation' bilan) $(grep -c 'WARNING   0 FEN' bilan)"
         # Parent folder: the only complete collection is taken and named,
         # an interrupted collection beside it does not get mixed in, and two
         # complete collections are refused rather than chosen.
@@ -3056,14 +3056,14 @@ EOF
         printf '1. d4 d5 *\n' > t-parent/analysis-aaa-interrompue/game.pgn
         "$PYVENV" "$VERIF" t-parent t-82-mats.pgn --prompt-only > bilan 2>&1
         verifier "T82 parent folder, complete collection named" \
-            contient bilan "collecte: $(basename "$DOSSIER82")"
+            contient bilan "collection : $(basename "$DOSSIER82")"
         verifier "T82 parent folder, the right game is read" \
-            contient bilan "OK        ligne principale identique"
+            contient bilan "OK        main line identical"
         cp -R "$DOSSIER82" t-parent/analysis-zzz-seconde
         "$PYVENV" "$VERIF" t-parent t-82-mats.pgn --prompt-only > bilan 2>&1
         egal "T82 two complete collections, exit code" 2 "$?"
         verifier "T82 two complete collections, named" \
-            contient bilan "contient 2 collectes complètes"
+            contient bilan "holds 2 complete collections"
         joindre bilan
         rm -rf t-parent
     else
@@ -3106,7 +3106,7 @@ FIN
         "$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH" "$EX/analyse-llm.pgn" \
             > bilan 2>&1
         verifier "T83 analyse-llm.pgn, report produced" \
-            contient bilan "=== Bilan ==="
+            contient bilan "=== Totals ==="
         "$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH" \
             "$EX/analyse-fautive.pgn" > bilan 2>&1
         egal "T83 analyse-fautive.pgn, failures" 1 "$?"
@@ -3308,7 +3308,7 @@ head -n 1 table > ligne
 verifier "T15 line 1: b4" contient ligne "| b4 |"
 verifier "T15 line 1: A00 Polish Opening" contient ligne "| A00 Polish Opening |"
 joindre table
-grep 'Arrêt de l' section2 > ligne 2>/dev/null
+grep 'Stop of the querying' section2 > ligne 2>/dev/null
 joindre ligne
 
 # --- Lichess database ----------------------------------------------------
@@ -3333,7 +3333,7 @@ sain "T17"
 egal "T17 two lines in the table" 2 "$(lignes table)"
 verifier "T17 stop on the exit from theory" \
     contient section2 "exit from theory at ply 2: g6 played at"
-grep 'Arrêt de l' section2 > ligne 2>/dev/null
+grep 'Stop of the querying' section2 > ligne 2>/dev/null
 joindre ligne
 
 titre "T18: speed and rating filters"
@@ -3363,7 +3363,7 @@ collecter polonaise.pgn $EXPL --database lichess --min-moves 0 --min-frequency 0
 sain "T20"
 verifier "T20 no exit below 0.0 %" \
     contient section2 "No move queried goes below the threshold of 0.0 %"
-grep 'Arrêt de l' section2 > ligne 2>/dev/null
+grep 'Stop of the querying' section2 > ligne 2>/dev/null
 joindre ligne
 
 titre "T21: until exhaustion"
@@ -3372,7 +3372,7 @@ sain "T21"
 verifier "T21 mode announced" contient section2 'Mode `--exhaustive`'
 verifier "T21 first exit still g6" contient section2 "**Black plays g6**"
 noter "  note   lines in the table: $(lignes table)"
-grep 'Arrêt de l' section2 > ligne 2>/dev/null
+grep 'Stop of the querying' section2 > ligne 2>/dev/null
 joindre ligne
 
 titre "T22: ply cap"
@@ -3414,7 +3414,7 @@ egal "T33 no castling at rank outside the database" 0 \
 egal "T33 no castling at 0.0 %" 0 "$(grep -c -E '\| O-O \| [0-9-]+ \| 0\.0 %' roques)"
 joindre roques
 noter "  note   lines in the table: $(lignes table)"
-grep 'Arrêt de l' section2 > ligne 2>/dev/null
+grep 'Stop of the querying' section2 > ligne 2>/dev/null
 joindre ligne
 
 # --- Token in the archive ------------------------------------------------

@@ -144,6 +144,13 @@ tests), CHANGELOG.md.
   VERSION, ARCHIVE, MULTIPV inchangés) ; sections du prompt en
   anglais, dont RÉSUMÉ DE LA PARTIE -> OVERVIEW OF THE GAME ; le
   tutoiement devient "you", sur un ton amical.
+- Renommages du lot 4d, faits : dans le rapport du vérificateur,
+  repères ECHEC, ATTENTION -> FAIL, WARNING (OK, INFO inchangés) ;
+  === Bilan === -> === Totals ===, échecs, attentions -> failures,
+  warnings ; titres des sections (1. Reading the PGN... 8. Evaluations
+  quoted in the conversation) ; métavariables FICHIER, NOM -> FILE,
+  NAME, --name recevant metavar="NAME", seul changement hors
+  littéraux.
 - Renommages du lot 5 : verifier-analyse.py -> verify-analysis.py,
   prompt-modele.txt -> prompt-template.txt, prompt-seul-modele.txt ->
   prompt-only-template.txt, parties-exemples/ -> example-games/
@@ -176,9 +183,12 @@ tests), CHANGELOG.md.
   markers ; fenêtre de départ = starting window ; échantillon =
   sample ; coup majoritaire = most played move (colonne Top move) ;
   motif d'arrêt = stop reason ; résumé d'avant le coup 1 = overview ;
-  dans le rapport des tests,
+  contrôle = check ; rendu par le LLM = returned by the LLM ; du cru
+  du LLM = the LLM's own ; dans le rapport des tests,
   réussi, échec, sauté = passed, failed, skipped, et les marqueurs
-  ECHEC, SAUTE = FAIL, SKIP.
+  ECHEC, SAUTE = FAIL, SKIP ; dans celui du vérificateur, ECHEC,
+  ATTENTION = FAIL, WARNING, et son bilan = totals, toute sa sortie
+  étant déjà le rapport.
 - Correspondance à capital : capital, incrément, plafond, réserve =
   clock, increment, maximum, bank, termes des ICCF Rules 2026 (§2.4 et
   annexe 3), vérifiés au lot 1.

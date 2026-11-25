@@ -228,6 +228,12 @@ Icône de la licence CC-0
   into the folder, and a shared installation, such as one in `/opt`,
   no longer keeps the settings of each user: each one uses their own
   clone.
+- The report of `verifier-analyse.py` is in English: the markers
+  `FAIL` and `WARNING`, `OK` and `INFO` being unchanged, the titles of
+  its eight sections, its checks and their details, and the totals
+  under `=== Totals ===`, as `failures` and `warnings`. Its help and
+  its errors follow, with `--summary FILE` and `--name NAME`. A script
+  that read the French report must follow: `ECHEC` is now `FAIL`.
 
 ### Fixed
 

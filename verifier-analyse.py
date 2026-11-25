@@ -57,12 +57,12 @@ contrary to the engine evaluation.
 
 Each line of the report carries one of these markers:
 
-    OK         compliant
-    ECHEC      contrary to a mandatory instruction of the prompt
-    ATTENTION  to be looked at closely, without being necessarily wrong
-    INFO       measure given to compare the LLMs with one another
+    OK       compliant
+    FAIL     contrary to a mandatory instruction of the prompt
+    WARNING  to be looked at closely, without being necessarily wrong
+    INFO     measure given to compare the LLMs with one another
 
-Exit code: 0 without ECHEC, 1 with at least one ECHEC, 2 if a file
+Exit code: 0 without FAIL, 1 with at least one FAIL, 2 if a file
 cannot be read or if the archive is not an IAnalyze one.
 
 The script needs python-chess. If it does not find it, it restarts
@@ -100,8 +100,8 @@ except ImportError:
     if os.path.exists(interpreteur) and sys.executable != interpreteur:
         os.execv(interpreteur, [interpreteur] + sys.argv)
     raise SystemExit(
-        "Module chess introuvable. Lancez d'abord, depuis le dépôt "
-        "IAnalyze : ./ianalyze.py --install-venv")
+        "Module chess not found. First run, from the IAnalyze repository: "
+        "./ianalyze.py --install-venv")
 
 # python-chess itself writes each illegal move on standard error, in
 # English. The report repeats all of them: these lines would be
@@ -119,7 +119,7 @@ VARIANTE_MAX = 5
 
 #: Key under which lire_archive stores the name of the collection chosen,
 #: when the archive given is the parent folder of that collection.
-COLLECTE = "collecte retenue"
+COLLECTE = "chosen collection"
 COMMENTES_MIN, COMMENTES_MAX = 15, 25
 
 #: An evaluation written in a comment: "+0.35", "-1,20", "#-3". Also
@@ -170,9 +170,9 @@ class Bilan:
         self.lignes.append("=== %s ===" % texte)
 
     def noter(self, repere: str, texte: str, details=None) -> None:
-        if repere == "ECHEC":
+        if repere == "FAIL":
             self.echecs += 1
-        elif repere == "ATTENTION":
+        elif repere == "WARNING":
             self.attentions += 1
         self.lignes.append("  %-9s %s" % (repere, texte))
         # Ten details at most: beyond that, the report becomes unreadable.
@@ -180,16 +180,16 @@ class Bilan:
         for d in details[:10]:
             self.lignes.append("            - %s" % d)
         if len(details) > 10:
-            self.lignes.append("            - ... et %d de plus"
+            self.lignes.append("            - ... and %d more"
                                % (len(details) - 10))
 
     def controle(self, vrai: bool, texte: str, details=None,
                  grave: bool = True) -> None:
-        """OK if true, otherwise ECHEC, or ATTENTION if grave is false."""
+        """OK if true, otherwise FAIL, or WARNING if grave is false."""
         if vrai:
             self.noter("OK", texte)
         else:
-            self.noter("ECHEC" if grave else "ATTENTION", texte, details)
+            self.noter("FAIL" if grave else "WARNING", texte, details)
 
 
 # ---------------------------------------------------------------------------
@@ -214,8 +214,8 @@ def lire_archive(chemin: pathlib.Path) -> dict[str, str]:
                          and all((d / nom).is_file() for nom in voulus)]
             if len(completes) > 1:
                 raise ArchiveInutilisable(
-                    "%s contient %d collectes complètes : %s. Donnez le "
-                    "dossier de celle que le LLM a reçue."
+                    "%s holds %d complete collections: %s. Give the folder of "
+                    "the one that the LLM received."
                     % (chemin, len(completes),
                        ", ".join(d.name for d in completes)))
             if completes:
@@ -232,8 +232,9 @@ def lire_archive(chemin: pathlib.Path) -> dict[str, str]:
                         trouves[nom] = z.read(membre).decode("utf-8")
     manquants = [n for n in voulus if n not in trouves]
     if manquants:
-        raise ArchiveInutilisable("archive incomplète, fichier(s) "
-                                  "absent(s) : %s" % ", ".join(manquants))
+        raise ArchiveInutilisable("incomplete "
+                                  "archive, missing "
+                                  "file(s): %s" % ", ".join(manquants))
     return trouves
 
 
@@ -272,8 +273,8 @@ def lire_partie(texte: str) -> chess.pgn.Game | None:
 
     On some damaged PGNs, an illegal move followed by a closing
     parenthesis for example, python-chess does not record the error: it
-    raises IndexError. The file is then held as unreadable, which gives an
-    ECHEC in the report and not a Python traceback.
+    raises IndexError. The file is then held as unreadable, which gives a
+    FAIL in the report and not a Python traceback.
     """
     try:
         return chess.pgn.read_game(io.StringIO(texte))
@@ -296,23 +297,23 @@ def san_ou_uci(noeud: chess.pgn.ChildNode) -> str:
 
 def controler_lecture(b: Bilan, brut: bytes) -> tuple[str, chess.pgn.Game]:
     """Encoding, then reading by python-chess."""
-    b.titre("1. Lecture du PGN")
+    b.titre("1. Reading the PGN")
     try:
         texte = brut.decode("utf-8")
-        b.noter("OK", "fichier en UTF-8")
+        b.noter("OK", "file in UTF-8")
     except UnicodeDecodeError:
         texte = brut.decode("latin-1")
-        b.noter("ECHEC", "le fichier n'est pas en UTF-8, lu en latin-1")
+        b.noter("FAIL", "the file is not in UTF-8, read as latin-1")
     if texte.startswith("\ufeff"):
         texte = texte[1:]
-        b.noter("ATTENTION", "marque d'ordre des octets en tête de fichier")
+        b.noter("WARNING", "byte order mark at the start of the file")
     # Line ends turned into LF: a file coming from Windows would otherwise
     # keep a carriage return at the end of each line, counted as one more
     # character in the check of the 79 columns.
     texte = texte.replace("\r\n", "\n").replace("\r", "\n")
     partie = lire_partie(texte)
     if partie is None:
-        b.noter("ECHEC", "aucune partie lisible dans le fichier")
+        b.noter("FAIL", "no readable game in the file")
         raise SystemExit(afficher(b, 1))
     # A blank line in the body of the game: the PGN specification makes it,
     # in export format, the end of the body, and python-chess stops reading
@@ -328,31 +329,31 @@ def controler_lecture(b: Bilan, brut: bytes) -> tuple[str, chess.pgn.Game]:
     if retirees:
         relue = lire_partie(repare)
         lus = len(ligne_principale(partie))
-        constat = "ligne vide dans le corps de la partie"
+        constat = "blank line in the body of the game"
         if relue is not None and len(ligne_principale(relue)) > lus:
-            constat += (" : python-chess y arrête sa lecture et ne voit "
-                        "que %d demi-coup(s) sur %d"
+            constat += (": python-chess stops reading there and only sees %d "
+                        "of the %d plies"
                         % (lus, len(ligne_principale(relue))))
         else:
-            constat += (" : python-chess y arrête sa lecture, ce qui la "
-                        "suit n'est pas lu")
-        b.noter("ECHEC", constat, ["ligne %d" % n for n in retirees])
+            constat += (": python-chess stops reading there, what follows is "
+                        "not read")
+        b.noter("FAIL", constat, ["line %d" % n for n in retirees])
         if relue is not None:
-            b.noter("INFO", "les contrôles suivants portent sur le fichier "
-                    "une fois ces lignes retirées")
+            b.noter("INFO", "the following checks are made on the file once "
+                    "these lines are removed")
             texte, partie = repare, relue
     # python-chess does not stop reading on an illegal move: it records
     # it in errors and gives up on the variation at that point.
     erreurs = [str(e).split(" while parsing")[0] for e in partie.errors]
-    b.controle(not erreurs, "aucun coup illégal, variantes comprises "
-               "(%d erreur(s) de lecture)" % len(erreurs), erreurs)
+    b.controle(not erreurs, "no illegal move, variations included (%d reading "
+               "error(s))" % len(erreurs), erreurs)
     return texte, partie
 
 
 def controler_partie(b: Bilan, partie: chess.pgn.Game,
                      origine: chess.pgn.Game) -> bool:
     """The main line must be that of the original game."""
-    b.titre("2. Ligne principale")
+    b.titre("2. Main line")
     rendue, attendue = ligne_principale(partie), ligne_principale(origine)
     identique = rendue == attendue
     details = []
@@ -362,19 +363,19 @@ def controler_partie(b: Bilan, partie: chess.pgn.Game,
             if x != y:
                 break
             commun += 1
-        details.append("identique sur %d demi-coup(s), puis %s au lieu de %s"
+        details.append("identical up to ply %d, then %s instead of %s"
                        % (commun,
-                          rendue[commun] if commun < len(rendue) else "fin",
+                          rendue[commun] if commun < len(rendue) else "end",
                           attendue[commun] if commun < len(attendue)
-                          else "fin"))
-        details.append("%d demi-coups rendus, %d attendus"
+                          else "end"))
+        details.append("%d plies returned, %d expected"
                        % (len(rendue), len(attendue)))
         if partie.errors:
             # On an illegal move, python-chess gives up reading what
             # follows: the main line may come out truncated.
-            details.append("peut découler d'un coup illégal relevé en 1")
-    b.controle(identique, "ligne principale identique à la partie d'origine "
-               "(%d demi-coups)" % len(attendue), details)
+            details.append("may come from an illegal move found in 1")
+    b.controle(identique, "main line identical to the original "
+               "game (%d plies)" % len(attendue), details)
     return identique
 
 
@@ -382,7 +383,7 @@ def commentaires(partie: chess.pgn.Game) -> list[tuple[str, str]]:
     """All the comments of the PGN, with the place where they are."""
     trouves = []
     if partie.comment:
-        trouves.append(("avant le coup 1", partie.comment))
+        trouves.append(("before move 1", partie.comment))
 
     def parcourir(noeud: chess.pgn.GameNode) -> None:
         for enfant in noeud.variations:
@@ -423,7 +424,7 @@ def accolades_orphelines(texte: str) -> list[str]:
                 # End-of-line comment.
                 break
             elif c == "}":
-                trouvees.append("ligne %d : accolade fermante en trop" % n)
+                trouvees.append("line %d: extra closing brace" % n)
     return trouvees
 
 
@@ -462,9 +463,9 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
     b.titre("3. Format")
     lignes = texte.split("\n")
     if not court:
-        longues = ["ligne %d : %d caractères" % (n + 1, len(x))
+        longues = ["line %d: %d characters" % (n + 1, len(x))
                    for n, x in enumerate(lignes) if len(x) > LONGUEUR_MAX]
-        b.controle(not longues, "aucune ligne de plus de %d caractères"
+        b.controle(not longues, "no line of more than %d characters"
                    % LONGUEUR_MAX, longues)
 
     notes = commentaires(partie)
@@ -472,18 +473,18 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
     # ends it too early, and only shows in the raw text.
     accolades = [lieu for lieu, t in notes if "{" in t or "}" in t]
     accolades += accolades_orphelines(texte)
-    b.controle(not accolades, "aucune accolade dans un commentaire",
+    b.controle(not accolades, "no brace in a comment",
                accolades)
     corps = "\n".join(x for x in lignes if not x.startswith("["))
     hors_commentaires = re.sub(r"\{[^}]*\}", " ", corps)
     if not court:
         pourcents = [lieu for lieu, t in notes if "%" in t]
-        b.controle(not pourcents, "aucun caractère % dans un commentaire",
+        b.controle(not pourcents, "no % character in a comment",
                    pourcents)
         cadratins = [lieu for lieu, t in notes if "\u2014" in t]
-        b.controle(not cadratins, "aucun tiret cadratin", cadratins)
+        b.controle(not cadratins, "no em dash", cadratins)
         virgules = [lieu for lieu, t in notes if ";" in t]
-        b.controle(not virgules, "aucun point-virgule dans un commentaire",
+        b.controle(not virgules, "no semicolon in a comment",
                    virgules, grave=False)
 
         # Suffix notation (Qxa8?): looked for outside the comments, where
@@ -491,7 +492,7 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
         suffixes = sorted(set(re.findall(
             r"\b(?:[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?"
             r"|O-O(?:-O)?)[+#]?[!?]+", hors_commentaires)))
-        b.controle(not suffixes, "pas de notation suffixe, les NAG seuls",
+        b.controle(not suffixes, "no suffix notation, NAGs only",
                    suffixes)
 
     # Tags: the seven mandatory ones first, the others in alphabetical
@@ -508,42 +509,42 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
         rendues = [n for n in noms if n in attendues]
         absentes = [n for n in attendues if n not in noms]
         b.controle(rendues == attendues,
-                   "les balises obligatoires de la partie d'origine, dans "
-                   "le même ordre",
-                   ["ordre rendu : %s" % ", ".join(noms)]
-                   + ["absente : %s" % n for n in absentes])
+                   "the mandatory tags of the original game, in the same "
+                   "order",
+                   ["order returned: %s" % ", ".join(noms)]
+                   + ["missing: %s" % n for n in absentes])
     else:
         absentes = [n for n in SEPT_BALISES if n not in noms]
         b.controle(tuple(noms[:7]) == SEPT_BALISES,
-                   "les sept balises obligatoires, dans l'ordre",
-                   ["ordre rendu : %s" % ", ".join(noms[:7])]
-                   + ["absente : %s" % n for n in absentes])
+                   "the seven mandatory tags, in order",
+                   ["order returned: %s" % ", ".join(noms[:7])]
+                   + ["missing: %s" % n for n in absentes])
     autres = noms[7:]
     if not court:
         b.controle(autres == sorted(autres),
-                   "les autres balises par ordre alphabétique",
-                   ["ordre rendu : %s" % ", ".join(autres)], grave=False)
+                   "the other tags in alphabetical order",
+                   ["order returned: %s" % ", ".join(autres)], grave=False)
     differentes = [
-        "%s : \"%s\" au lieu de \"%s\""
+        '%s: "%s" instead of "%s"'
         % (n, partie.headers.get(n), origine.headers.get(n))
         for n in SEPT_BALISES
         if partie.headers.get(n) != origine.headers.get(n)]
-    b.controle(not differentes, "valeurs des sept balises reprises de la "
-               "partie d'origine", differentes)
+    b.controle(not differentes, "values of the seven tags taken from the "
+               "original game", differentes)
     if not court:
         b.controle(bool(partie.headers.get("Annotator", "").strip("? ")),
-                   "balise Annotator renseignée : \"%s\""
+                   'Annotator tag filled in: "%s"'
                    % partie.headers.get("Annotator", ""), grave=False)
         compte = partie.headers.get("PlyCount", "")
         b.controle(compte == str(demi_coups),
-                   "balise PlyCount : \"%s\", attendu \"%d\""
+                   'PlyCount tag: "%s", expected "%d"'
                    % (compte, demi_coups), grave=False)
 
     # End marker: the last word of the file, outside the comments.
     mots = hors_commentaires.split()
     marqueur = mots[-1] if mots else ""
     b.controle(marqueur == partie.headers.get("Result"),
-               "marqueur de fin \"%s\" identique à la balise Result \"%s\""
+               'end marker "%s" identical to the Result tag "%s"'
                % (marqueur, partie.headers.get("Result")))
 
 
@@ -581,28 +582,28 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
     with `perimetre`, in moves, a mistake played beyond it is not
     expected, and its absence is not a fault.
     """
-    b.titre("4. Coups commentés")
+    b.titre("4. Commented moves")
     if not court:
         resume = partie.comment.strip()
-        b.controle(bool(resume), "résumé de la partie avant le coup 1 "
-                   "(%d ligne(s), 6 à 10 demandées)"
+        b.controle(bool(resume), "overview of the game before move 1 (%d "
+                   "line(s), 6 to 10 requested)"
                    % (resume.count("\n") + 1 if resume else 0))
 
     noeuds = list(partie.mainline())
     commentes = [n for n in noeuds if n.comment.strip()]
     if court:
-        b.noter("INFO", "%d coup(s) commenté(s) sur %d"
+        b.noter("INFO", "%d move(s) commented out of %d"
                 % (len(commentes), len(noeuds)))
     else:
-        b.noter("INFO", "%d coup(s) commenté(s) sur %d, %d à %d visés sur "
-                "une partie complète" % (len(commentes), len(noeuds),
-                                         COMMENTES_MIN, COMMENTES_MAX))
-    b.noter("INFO", "%d coup(s) porteur(s) d'un NAG"
+        b.noter("INFO", "%d move(s) commented out of %d, %d to %d aimed for "
+                "over a whole game" % (len(commentes), len(noeuds),
+                                       COMMENTES_MIN, COMMENTES_MAX))
+    b.noter("INFO", "%d move(s) carrying a NAG"
             % sum(1 for n in noeuds if n.nags))
 
     if perimetre:
-        b.noter("INFO", "périmètre convenu : les %d premiers coups, les "
-                "erreurs et gaffes jouées au-delà ne sont pas attendues"
+        b.noter("INFO", "agreed scope: the first %d moves, the mistakes and "
+                "blunders played beyond are not expected"
                 % perimetre)
     oublies, sans_nag, fautes = [], [], 0
     for e in evaluations:
@@ -621,12 +622,12 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
             oublies.append(lieu)
         elif not noeuds[indice].nags:
             sans_nag.append(lieu)
-    b.controle(not oublies, "les %d erreur(s) et gaffe(s) de Stockfish sont "
-               "toutes commentées (%d oubliée(s))" % (fautes, len(oublies)),
+    b.controle(not oublies, "the %d mistake(s) and blunder(s) of Stockfish "
+               "are all commented on (%d missed)" % (fautes, len(oublies)),
                oublies)
     if fautes > len(oublies) and not court:
-        b.controle(not sans_nag, "chaque erreur ou gaffe commentée porte un "
-                   "NAG", sans_nag, grave=False)
+        b.controle(not sans_nag, "each mistake or blunder commented on "
+                   "carries a NAG", sans_nag, grave=False)
 
     if court:
         # The short prompt asks for no NAG: neither their agreement with the
@@ -651,7 +652,7 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
             signe = 1 if float(score) > 0 else -1
         if (signe < 0 and nags & NAG_BLANCS_MIEUX) or (
                 signe > 0 and nags & NAG_NOIRS_MIEUX):
-            contraires.append("%s : NAG $%d, moteur %s"
+            contraires.append("%s: NAG $%d, engine %s"
                               % (lieu, min(nags & (NAG_BLANCS_MIEUX
                                                    | NAG_NOIRS_MIEUX)),
                                  score))
@@ -660,13 +661,13 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
             if attendu in nags:
                 accords += 1
             else:
-                ecarts.append("%s : %s pour le moteur, NAG $%d"
+                ecarts.append("%s: %s for the engine, NAG $%d"
                               % (lieu, e["category"],
                                  min(nags & set(NAG_NATURE.values()))))
-    b.controle(not contraires, "aucun NAG de position contraire à "
-               "l'évaluation du moteur", contraires)
-    b.noter("INFO", "NAG de qualité : %d conforme(s) à la nature donnée par "
-            "le moteur, %d d'un autre avis" % (accords, len(ecarts)), ecarts)
+    b.controle(not contraires, "no position NAG contrary to the evaluation of "
+               "the engine", contraires)
+    b.noter("INFO", "quality NAGs: %d matching the category given by the "
+            "engine, %d of another opinion" % (accords, len(ecarts)), ecarts)
 
 
 def controler_chiffres(b: Bilan, textes: list[tuple[str, str]],
@@ -699,10 +700,10 @@ def controler_chiffres(b: Bilan, textes: list[tuple[str, str]],
             # "#+2", the form of the folder.
             lu = re.sub(r"^#(\d)", r"#+\1", lu)
             if lu not in connues:
-                inconnues.append("%s : %s" % (lieu, brut))
-    b.noter("INFO", "%d évaluation(s) citée(s)" % citees)
-    b.controle(not inconnues, "toutes se retrouvent dans les données du "
-               "moteur (%d introuvable(s))" % len(inconnues), inconnues)
+                inconnues.append("%s: %s" % (lieu, brut))
+    b.noter("INFO", "%d evaluation(s) quoted" % citees)
+    b.controle(not inconnues, "all are found in the data of the engine (%d "
+               "not found)" % len(inconnues), inconnues)
 
 
 def lignes_du_moteur(evaluations: list[dict]) -> dict[int, list[list[str]]]:
@@ -764,31 +765,31 @@ def controler_variantes_en_texte(b: Bilan, partie: chess.pgn.Game,
                 joues.append(coup.uci())
                 depart.push(coup)
             if fautif:
-                illegales.append("%s : %s est illégal" % (texte, fautif))
+                illegales.append("%s: %s is illegal" % (texte, fautif))
                 continue
             legales += 1
             if len(joues) > VARIANTE_MAX:
-                longues.append("%s : %d demi-coups" % (texte, len(joues)))
+                longues.append("%s: %d plies" % (texte, len(joues)))
             if any(pv[:2] == joues[:2] for pv in moteur):
                 appuyees += 1
     if not trouvees:
         return
-    b.controle(False, "%d variante(s) écrite(s) à l'intérieur d'un "
-               "commentaire : ce n'est que du texte, SCID ne les rejoue pas"
+    b.controle(False, "%d variation(s) written inside a comment: it is only "
+               "text, SCID does not replay them"
                % trouvees if jouables else
-               "aucune variante jouable : les %d variantes sont écrites à "
-               "l'intérieur des commentaires, où elles ne sont que du texte"
+               "no playable variation: the %d variations are written inside "
+               "the comments, where they are only text"
                % trouvees, grave=not jouables)
-    b.controle(not illegales, "rejouées par le script, ces variantes sont "
-               "toutes légales (%d illégale(s))" % len(illegales), illegales)
+    b.controle(not illegales, "replayed by the script, these variations are "
+               "all legal (%d illegal)" % len(illegales), illegales)
     if perdues:
-        b.noter("ATTENTION", "%d variante(s) dont le numéro de coup ne "
-                "correspond à aucune position voisine" % len(perdues),
+        b.noter("WARNING", "%d variation(s) whose move number matches no "
+                "nearby position" % len(perdues),
                 perdues)
     if longues and not court:
-        b.noter("ATTENTION", "variante(s) de plus de %d demi-coups"
+        b.noter("WARNING", "variation(s) of more than %d plies"
                 % VARIANTE_MAX, longues)
-    b.noter("INFO", "%d légale(s), dont %d partent d'une ligne du moteur"
+    b.noter("INFO", "%d legal, %d of which start from a line of the engine"
             % (legales, appuyees))
 
 
@@ -801,7 +802,7 @@ def controler_variantes(b: Bilan, partie: chess.pgn.Game,
     The short prompt sets no length: with `court`, a variation of more
     than five plies is not reported.
     """
-    b.titre("6. Variantes")
+    b.titre("6. Variations")
     lignes_moteur = lignes_du_moteur(evaluations)
 
     variantes = []      # (place, length, backed by the engine?)
@@ -824,20 +825,20 @@ def controler_variantes(b: Bilan, partie: chess.pgn.Game,
                           for pv in lignes_moteur.get(indice + 1, []))
             variantes.append((lieu, len(coups), appuyee))
 
-    b.noter("INFO", "%d variante(s) jouable(s) sur la ligne principale"
+    b.noter("INFO", "%d playable variation(s) on the main line"
             % len(variantes))
     controler_variantes_en_texte(b, partie, evaluations, len(variantes),
                                  court)
     if not variantes:
         return
     if not court:
-        longues = ["%s : %d demi-coups" % (lieu, n)
+        longues = ["%s: %d plies" % (lieu, n)
                    for lieu, n, _ in variantes if n > VARIANTE_MAX]
-        b.controle(not longues, "aucune variante de plus de %d demi-coups"
+        b.controle(not longues, "no variation of more than %d plies"
                    % VARIANTE_MAX, longues, grave=False)
     libres = [lieu for lieu, _, appuyee in variantes if not appuyee]
-    b.noter("INFO", "%d variante(s) partent d'une ligne du moteur, %d sont "
-            "du cru du LLM" % (len(variantes) - len(libres), len(libres)),
+    b.noter("INFO", "%d variation(s) start from a line of the engine, %d are "
+            "the LLM's own" % (len(variantes) - len(libres), len(libres)),
             libres)
 
 
@@ -852,7 +853,7 @@ def controler_synthese(b: Bilan, texte: str, evaluations: list[dict],
     the em dash and the number of FEN are not checked. A FEN quoted
     anyway must stay valid and come from the game.
     """
-    b.titre("7. Conversation : positions citées, langue")
+    b.titre("7. Conversation: positions quoted, language")
     # A FEN of the folder is recognized by its first four fields: the
     # move counters do not identify the position.
 
@@ -871,11 +872,11 @@ def controler_synthese(b: Bilan, texte: str, evaluations: list[dict],
     connues |= {clef(f) for f in RE_FEN.findall(synthese_archive)}
     citees = RE_FEN.findall(texte)
     if court:
-        b.noter("INFO", "%d FEN citée(s)" % len(citees))
+        b.noter("INFO", "%d FEN quoted" % len(citees))
     else:
-        b.controle("\u2014" not in texte, "aucun tiret cadratin dans la "
-                   "conversation (%d relevé(s))" % texte.count("\u2014"))
-        b.controle(len(citees) >= 2, "%d FEN citée(s), deux demandées"
+        b.controle("\u2014" not in texte, "no em dash in the conversation (%d "
+                   "found)" % texte.count("\u2014"))
+        b.controle(len(citees) >= 2, "%d FEN quoted, two requested"
                    % len(citees), grave=False)
     if not citees:
         return
@@ -890,9 +891,9 @@ def controler_synthese(b: Bilan, texte: str, evaluations: list[dict],
             invalides.append(fen)
         elif clef(fen) not in connues:
             etrangeres.append(fen)
-    b.controle(not invalides, "toutes les FEN sont des positions valides",
+    b.controle(not invalides, "all the FEN are valid positions",
                invalides)
-    b.controle(not etrangeres, "toutes viennent d'une position de la partie",
+    b.controle(not etrangeres, "all come from a position of the game",
                etrangeres)
 
 
@@ -904,38 +905,36 @@ def afficher(b: Bilan, code: int) -> int:
     """Writes the report and returns the exit code."""
     print("\n".join(b.lignes))
     print("")
-    print("=== Bilan ===")
-    print("  échecs     : %d" % b.echecs)
-    print("  attentions : %d" % b.attentions)
+    print("=== Totals ===")
+    print("  failures : %d" % b.echecs)
+    print("  warnings : %d" % b.attentions)
     return code
 
 
 def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(
-        description="Contrôle le PGN annoté rendu par un LLM à partir "
-                    "d'une archive d'IAnalyze.")
-    p.add_argument("archive", help="zip de ianalyze.py, ou son "
-                                   "dossier décompressé")
-    p.add_argument("pgn", help="PGN annoté rendu par le LLM, ou - s'il "
-                               "n'en a rendu aucun")
-    p.add_argument("--summary", dest="synthese", metavar="FICHIER",
-                   help="synthèse finale du LLM, copiée dans un fichier "
-                        "texte")
-    p.add_argument("--name", dest="nom",
-                   default="", help="nom du modèle essayé")
+        description="Checks the annotated PGN returned by an LLM from an "
+                    "IAnalyze archive.")
+    p.add_argument("archive", help="zip of ianalyze.py, or its unzipped "
+                                   "folder")
+    p.add_argument("pgn", help="annotated PGN returned by the LLM, or - if it "
+                               "returned none")
+    p.add_argument("--summary", dest="synthese", metavar="FILE",
+                   help="final summary of the LLM, copied into a text file")
+    p.add_argument("--name", dest="nom", metavar="NAME",
+                   default="", help="name of the model tried")
     p.add_argument("--prompt-only", dest="prompt_seul", action="store_true",
-                   help="le PGN répond au prompt court de ianalyze.py "
-                        "--prompt-only : les contrôles que ce prompt ne "
-                        "fonde pas sont sautés")
+                   help="the PGN answers the short prompt of ianalyze.py "
+                        "--prompt-only: the checks that this prompt does not "
+                        "ask for are skipped")
     p.add_argument("--scope", dest="perimetre", metavar="N", type=int,
-                   help="périmètre convenu avec le LLM, en coups : les "
-                        "erreurs et gaffes jouées après le coup N ne sont "
-                        "pas attendues. Sans cette option, le périmètre "
-                        "est celui que le joueur a donné au script, lu "
-                        "dans l'archive")
+                   help="scope agreed with the LLM, in moves: the mistakes "
+                        "and blunders played after move N are not expected. "
+                        "Without this option, the scope is the one that the "
+                        "player gave to the script, read in the archive")
     options = p.parse_args(argv)
     if options.perimetre is not None and options.perimetre < 1:
-        p.error("--scope attend un nombre de coups, 1 au moins")
+        p.error("--scope expects a number of moves, 1 at least")
 
     try:
         fichiers = lire_archive(pathlib.Path(options.archive))
@@ -948,50 +947,49 @@ def main(argv: list[str]) -> int:
         origine = lire_partie(fichiers["game.pgn"])
         evaluations = json.loads(fichiers["stockfish/evaluations.json"])
         if origine is None or not ligne_principale(origine):
-            raise ArchiveInutilisable("game.pgn de l'archive ne "
-                                      "contient aucune partie")
+            raise ArchiveInutilisable("game.pgn of the archive holds no game")
         if not (isinstance(evaluations, list) and all(
                 isinstance(e, dict) and isinstance(e.get("played"), dict)
                 and isinstance(e.get("best"), list)
                 and "ply" in e for e in evaluations)):
-            raise ArchiveInutilisable("stockfish/evaluations.json n'a pas "
-                                      "la forme écrite par IAnalyze")
+            raise ArchiveInutilisable("stockfish/evaluations.json does not "
+                                      "have the form written by IAnalyze")
     except (OSError, zipfile.BadZipFile, zlib.error, ValueError,
             ArchiveInutilisable) as e:
         # ValueError covers a file that is not in UTF-8 and an invalid JSON.
         # In all these cases no check could start: the code 2 tells it
         # apart from a report with failures.
-        print("Lecture impossible : %s" % e, file=sys.stderr)
+        print("Cannot read: %s" % e, file=sys.stderr)
         return 2
 
     b = Bilan()
-    b.lignes.append("Contrôle d'une analyse rendue par un LLM")
+    b.lignes.append("Check of an analysis returned by an LLM")
     if options.nom:
-        b.lignes.append("  modèle  : %s" % options.nom)
+        b.lignes.append("  model      : %s" % options.nom)
     # The name of a path such as "." is empty: the path given is then
     # used as it is.
-    b.lignes.append("  archive : %s" % (pathlib.Path(options.archive).name
-                                        or options.archive))
+    b.lignes.append("  archive    : %s" % (pathlib.Path(options.archive).name
+                                           or options.archive))
     if COLLECTE in fichiers:
-        b.lignes.append("  collecte: %s, seule collecte complète du dossier"
+        b.lignes.append("  collection : %s, the only complete collection of "
+                        "the folder"
                         % fichiers[COLLECTE])
-    b.lignes.append("  PGN     : %s" % pathlib.Path(options.pgn).name)
+    b.lignes.append("  PGN        : %s" % pathlib.Path(options.pgn).name)
     if options.prompt_seul:
-        b.lignes.append("  prompt  : court (--prompt-only), contrôles "
-                        "réduits à ce qu'il demande")
+        b.lignes.append("  prompt     : short (--prompt-only), checks limited "
+                        "to what it asks for")
 
     if brut is None:
         # The LLM returned no file, and no PGN in the conversation.
-        b.titre("1. Lecture du PGN")
-        b.noter("ECHEC", "aucun PGN rendu : les contrôles 2 à 6 sont sans "
-                "objet")
+        b.titre("1. Reading the PGN")
+        b.noter("FAIL", "no PGN returned: checks 2 to 6 do not apply")
         if synthese_llm is not None:
             controler_synthese(b, synthese_llm, evaluations,
                                fichiers["summary.md"], origine,
                                options.prompt_seul)
             controler_chiffres(b, [("conversation", synthese_llm)],
                                evaluations,
-                               "8. Évaluations citées dans la conversation")
+                               "8. Evaluations quoted in the conversation")
         return afficher(b, 1)
 
     texte, partie = controler_lecture(b, brut)
@@ -1006,10 +1004,10 @@ def main(argv: list[str]) -> int:
     else:
         # Without the same main line, the plies no longer
         # match: these checks would make no sense.
-        b.titre("4. Coups commentés")
-        b.noter("ATTENTION", "non contrôlé, la ligne principale diffère")
+        b.titre("4. Commented moves")
+        b.noter("WARNING", "not checked, the main line differs")
     controler_chiffres(b, commentaires(partie), evaluations,
-                       "5. Évaluations citées dans le PGN")
+                       "5. Evaluations quoted in the PGN")
     if identique:
         controler_variantes(b, partie, evaluations, options.prompt_seul)
     if synthese_llm is not None:
@@ -1018,7 +1016,7 @@ def main(argv: list[str]) -> int:
                            options.prompt_seul)
         controler_chiffres(b, [("conversation", synthese_llm)],
                            evaluations,
-                           "8. Évaluations citées dans la conversation")
+                           "8. Evaluations quoted in the conversation")
     return afficher(b, 1 if b.echecs else 0)
 
 
