@@ -8,5 +8,6 @@ __pycache__/
 # environment and catalog. Deleting this folder brings the application
 # back to a fresh clone.
 /local/
-# Your settings, and any other settings file kept next to them.
-/settings*.ini
+# Your settings files: --settings only takes a name, and keeps them
+# all at the root of the application.
+/*.ini

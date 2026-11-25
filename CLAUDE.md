@@ -26,9 +26,10 @@ tests), CHANGELOG.md.
 - Sur les deux : tout ce que le script crée pour lui-même vit dans le
   dossier de l'application. Dans local/, ce qu'il sait refaire seul :
   venv (local/venv) et catalogue. À la racine, les réglages :
-  settings.ini. Les deux sont ignorés par git. Supprimer le dossier ne
-  laisse rien, hors le jeton (~/.lichess_token) ; vider local/ garde
-  les réglages.
+  settings.ini, et tout autre profil : --settings ne prend qu'un nom en
+  .ini, jamais un chemin. Les deux sont ignorés par git. Supprimer le
+  dossier ne laisse rien, hors le jeton (~/.lichess_token) ; vider
+  local/ garde les réglages.
 - Le comportement doit rester identique sur les deux.
 - Python : modules hors apt installés dans un venv dédié, jamais dans
   l'environnement système. Signale tout nouveau module requis.

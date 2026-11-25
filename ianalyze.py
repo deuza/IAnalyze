@@ -421,7 +421,16 @@ RE_NUMERO_COUP = re.compile(r"\d+\.+")
 #: of local/, which only holds what the script can rebuild: emptying
 #: local/ keeps the answers, and the file stays in sight, to be edited
 #: by hand.
-REGLAGES_DEFAUT = os.path.join(DOSSIER_APPLICATION, "settings.ini")
+#:
+#: --settings takes a name, never a path: every settings file, this one
+#: or joueur1.ini for a second player, lives at the root of the
+#: application folder, and deleting the folder leaves nothing behind
+#: (see verifier_nom_reglages and chemin_reglages).
+REGLAGES_DEFAUT = "settings.ini"
+
+#: Name accepted by --settings: a file name ending in .ini, without a
+#: folder, without a leading dot and without a control character.
+RE_NOM_REGLAGES = re.compile(r"[^\x00-\x1f\x7f./\\][^\x00-\x1f\x7f/\\]*\.ini")
 
 #: Section of the settings file that describes the player.
 REGLAGES_SECTION = "player"
@@ -1910,8 +1919,54 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
 # ===========================================================================
 
 def chemin_reglages(chemin: str) -> pathlib.Path:
-    """Path of the settings file, with the tilde expanded."""
-    return pathlib.Path(os.path.expanduser(chemin))
+    """
+    Path of a settings file: the name given to --settings, at the root of
+    the application folder. The name has been checked by
+    verifier_nom_reglages: it cannot lead out of the folder.
+    """
+    return pathlib.Path(DOSSIER_APPLICATION) / chemin
+
+
+def verifier_nom_reglages(nom: str) -> str | None:
+    """
+    Reason to refuse the name given to --settings, or None.
+
+    The settings never leave the application folder: deleting it leaves
+    nothing behind, and no path, such as /dev/null or that of the file of
+    another program, can be written over by mistake. So --settings takes
+    a file name ending in .ini, which chemin_reglages puts at the root of
+    the folder; a path, even inside the folder, is refused.
+    """
+    if RE_NOM_REGLAGES.fullmatch(nom):
+        return None
+    return ("--settings: %s is not a settings name. Give a file name ending "
+            "in .ini, without a folder: every settings file is kept in %s. "
+            "To run without settings, use --no-settings."
+            % (nom, DOSSIER_APPLICATION))
+
+
+def confirmer_nouveaux_reglages(nom: str) -> None:
+    """
+    Asks before creating a settings file named by --settings that does
+    not exist yet.
+
+    A typo in the name, jouer1.ini for joueur1.ini, would otherwise start
+    a new file and ask its questions again. Answering n, or Ctrl-D, stops
+    the script before anything is written or collected. The default file
+    is created without this question on the first run: its name cannot
+    be mistyped. An unreadable answer makes the question come again.
+    """
+    question = ("Settings: %s does not exist yet in %s. Create it? [y/n]"
+                % (nom, DOSSIER_APPLICATION))
+    while True:
+        reponse = demander(question)
+        choix = None if reponse is None else reponse.casefold()
+        if choix in (None, "n", "no"):
+            raise SystemExit("Nothing done: check the name given to "
+                             "--settings, or use --no-settings to run "
+                             "without settings.")
+        if choix in ("y", "yes"):
+            return
 
 
 def purger_reglages(chemin: str) -> None:
@@ -1924,7 +1979,7 @@ def purger_reglages(chemin: str) -> None:
     any more, is already reached. A directory, or anything that is not a
     file, is refused rather than deleted.
 
-    With --settings, the path comes from the command line: a typo must not
+    With --settings, the name comes from the command line: a typo must not
     destroy another file. Only a file that carries the [player] section,
     or an empty file, is deleted. The section is looked up in the raw
     text: a damaged settings file, which configparser would reject, thus
@@ -4100,7 +4155,8 @@ prerequisites
   mandatory, the engine is driven over UCI.
 """ % (CMD_PAQUET_VENV, CMD_PAQUET_STOCKFISH,
        CMD_PAQUET_VENV, CMD_PAQUET_STOCKFISH,
-       VENV_DEFAUT, CATALOGUE_DEFAUT, JETON_DEFAUT, REGLAGES_DEFAUT)
+       VENV_DEFAUT, CATALOGUE_DEFAUT, JETON_DEFAUT,
+       os.path.join(DOSSIER_APPLICATION, REGLAGES_DEFAUT))
 
 
 def valider_liste(p: argparse.ArgumentParser, option: str, valeur: str,
@@ -4221,10 +4277,12 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
     # path given, even the default one.
     m = g.add_mutually_exclusive_group()
     m.add_argument("--settings", dest="reglages",
-                   default=REGLAGES_DEFAUT, metavar="FILE",
-                   help="settings file, where your username, your usual time "
-                        "control and your rating are kept, asked only once in "
-                        "a terminal (default: %(default)s)")
+                   default=REGLAGES_DEFAUT, metavar="NAME",
+                   help="name of the settings file, ending in .ini and kept "
+                        "in the folder of the application, where your "
+                        "username, your usual time control and your rating "
+                        "are kept, asked only once in a terminal (default: "
+                        "%(default)s)")
     m.add_argument("--no-settings", dest="sans_reglages",
                    action="store_true",
                    help="for this run only, neither reads nor writes the "
@@ -4365,6 +4423,13 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
         # Opposite requests: one deletes the settings file, the other
         # leaves it alone for this run.
         p.error("--purge-settings and --no-settings are mutually exclusive")
+    if not options.sans_reglages:
+        # A name, never a path: checked before any reading, writing or
+        # purge, so that nothing outside the application folder is
+        # touched. With --no-settings, the file plays no part.
+        refus = verifier_nom_reglages(options.reglages)
+        if refus is not None:
+            p.error(refus)
     if options.purge_reglages and (options.installer_venv
                                    or options.installer_catalogue
                                    or options.source):
@@ -4599,6 +4664,11 @@ def main(argv: list[str]) -> int:
     contexte = None
     interactif = questions_possibles(options.sans_questions)
     if interactif and not options.sans_reglages:
+        # A name given with --settings whose file does not exist yet is
+        # confirmed first: a typo must not start a new file.
+        if (options.reglages != REGLAGES_DEFAUT
+                and not os.path.lexists(chemin_reglages(options.reglages))):
+            confirmer_nouveaux_reglages(options.reglages)
         # Missing settings: asked for here, once and for all, before the
         # questions specific to the game. Not with --no-settings, which
         # leaves the file alone: its questions would write it.

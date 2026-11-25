@@ -196,10 +196,12 @@ cd "$TRAVAIL" || exit 2
 # the engine. The variable is deliberately expanded without quotes.
 O="--no-explorer --depth 1 --no-questions --stockfish $STOCKFISH"
 
-# Settings file specific to the tests: yours is neither read nor
+# Settings file specific to the tests, given by its name: --settings
+# only takes a name, and the copy of the application made below, in this
+# temporary directory, keeps it here. Yours is neither read nor
 # modified. It carries a username, so that the tests that go through a
 # terminal do not get the questions of the first run.
-REGL="$TRAVAIL/reglages-tests.ini"
+REGL="reglages-tests.ini"
 printf '[player]\nusernames = Moi\ntime_control = 14 days\nrating = 1300\n' \
     > "$REGL"
 
@@ -345,6 +347,20 @@ if command -v git >/dev/null 2>&1; then
     noter "  script mode     : $(ls -l "$SCRIPT" | cut -c1-10)"
 fi
 
+# The settings files live in the folder of the application, and
+# --settings only takes a name: the tests run a copy of the application,
+# made in this temporary directory, which thus holds their settings
+# files. Yours, next to the script of the repository, are never read or
+# written, even if a check fails. The templates come along, as in the
+# repository.
+cp "$SCRIPT" "$TRAVAIL/" || exit 2
+for modele in prompt-modele.txt prompt-seul-modele.txt; do
+    if [ -f "$DEPOT/$modele" ]; then
+        cp "$DEPOT/$modele" "$TRAVAIL/"
+    fi
+done
+SCRIPT="$TRAVAIL/ianalyze.py"
+
 printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 *\n' > italienne.pgn
 
 # --- Platform ---------------------------------------------------------------
@@ -369,7 +385,7 @@ verifier "default of --venv in the application folder" \
 verifier "default of --catalog in the application folder" \
     contient aide "/local)"
 verifier "default of --settings in the application folder" \
-    contient aide "/settings.ini)"
+    contient aide "/settings.ini, which you can edit by hand."
 
 titre "T84: virtual environment left incomplete, recognized"
 # A venv without pip, as an interrupted creation leaves it, a directory
@@ -1122,8 +1138,10 @@ P="--no-explorer --depth 1 --keep-folder --venv $VENV"
 
 titre "T57: first run, settings asked then saved"
 rm -rf analysis-italienne-*
-SCRIPT="$SCRIPT" python3 t-pty.py "Zoe42, zoe|r|15|10|1300|w||||||" \
+SCRIPT="$SCRIPT" python3 t-pty.py "y|Zoe42, zoe|r|15|10|1300|w||||||" \
     italienne.pgn $P --settings t-reglages.ini > sortie-pty 2>&1
+verifier "T57 new settings file, created after confirmation" \
+    contient sortie-pty "Settings: t-reglages.ini does not exist yet in"
 verifier "T57 three answers asked only once" \
     contient sortie-pty "3 answer(s) to give only once"
 verifier "T57 rating question" \
@@ -1168,17 +1186,17 @@ verifier "T58 --usernames wins over the settings" \
 rm -rf analysis-t-noms-*
 
 titre "T59: outside a terminal, then username refused"
-"$SCRIPT" italienne.pgn $O --venv "$VENV" --settings t-abs/reglages.ini \
+"$SCRIPT" italienne.pgn $O --venv "$VENV" --settings t-abs.ini \
     > sortie 2> journal
 egal "T59 outside a terminal, exit code" 0 $?
 egal "T59 outside a terminal, nothing asked" 0 "$(grep -c -i 'settings' journal)"
-if [ -e t-abs ]; then
+if [ -e t-abs.ini ]; then
     egal "T59 outside a terminal, no file created" absent présent
 else
     egal "T59 outside a terminal, no file created" absent absent
 fi
 rm -rf analysis-italienne-*
-SCRIPT="$SCRIPT" python3 t-pty.py "|||b|Moi|Lui|||||" italienne.pgn $P \
+SCRIPT="$SCRIPT" python3 t-pty.py "y||||b|Moi|Lui|||||" italienne.pgn $P \
     --settings t-vide.ini > sortie-pty 2>&1
 verifier "T59 without a username, the player name is asked" \
     contient sortie-pty "Your player name? (Enter: ?)"
@@ -1299,7 +1317,7 @@ joindre ligne
 rm -rf analysis-t-noms-*
 # Settings file missing: the username is asked first, then, for lack
 # of a username, the side.
-SCRIPT="$SCRIPT" python3 t-pty.py "|c|p|10|40||w|||||" t-noms.pgn $P \
+SCRIPT="$SCRIPT" python3 t-pty.py "y||c|p|10|40||w|||||" t-noms.pgn $P \
     --settings t-vide2.ini > sortie-pty 2>&1
 verifier "T63 moves per period typed on the keyboard" \
     contient t-vide2.ini "time_control = 10 moves in 40 days"
@@ -1727,14 +1745,16 @@ titre "T89: settings written only over a settings file"
 # the device here: making one needs no root, on Linux as on macOS. The
 # file of another program, which configparser reads, stays untouched
 # too; an empty file, a new one and one in the format written before
-# version 5.0.0, with its [joueur] section, are written.
-rm -rf t-89
-mkdir t-89 t-89/dossier
-mkfifo t-89/fifo
-printf '[core]\n# kept as it is\neditor = vi\n' > t-89/autre.ini
-cp t-89/autre.ini t-89/autre-avant.ini
-printf '[joueur]\npseudos = Zoe42\n' > t-89/ancien.ini
-: > t-89/vide.ini
+# version 5.0.0, with its [joueur] section, are written. --settings
+# only takes a name (T90): the cases carry names, in the folder of the
+# copy of the application.
+rm -rf t89-*
+mkdir t89-dossier.ini
+mkfifo t89-fifo.ini
+printf '[core]\n# kept as it is\neditor = vi\n' > t89-autre.ini
+cp t89-autre.ini t89-autre-avant.txt
+printf '[joueur]\npseudos = Zoe42\n' > t89-ancien.ini
+: > t89-vide.ini
 SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t89 2> journal-t89 <<'EOF'
 import importlib.util
 import os
@@ -1743,29 +1763,28 @@ spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
 cp = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cp)
 res = []
-for nom in ("fifo", "dossier", "autre.ini", "ancien.ini", "vide.ini",
-            "neuf.ini"):
-    chemin = os.path.join("t-89", nom)
+for nom in ("fifo", "dossier", "autre", "ancien", "vide", "neuf"):
+    chemin = "t89-%s.ini" % nom
     reglages = cp.lire_reglages(chemin)
     reglages.set(cp.REGLAGES_SECTION, "usernames", "Zoe42")
     res.append("%s=%s" % (nom, cp.ecrire_reglages(chemin, reglages)))
 print(" ".join(res))
 EOF
 egal "T89 written only over a settings file, or a new one" \
-    "fifo=False dossier=False autre.ini=False ancien.ini=True vide.ini=True neuf.ini=True" \
+    "fifo=False dossier=False autre=False ancien=True vide=True neuf=True" \
     "$(cat sortie-t89)"
-verifier "T89 FIFO left as it is" test -p t-89/fifo
-verifier "T89 directory left as it is" test -d t-89/dossier
+verifier "T89 FIFO left as it is" test -p t89-fifo.ini
+verifier "T89 directory left as it is" test -d t89-dossier.ini
 verifier "T89 file of another program untouched" \
-    cmp -s t-89/autre-avant.ini t-89/autre.ini
+    cmp -s t89-autre-avant.txt t89-autre.ini
 verifier "T89 not a regular file, said" \
     contient journal-t89 "it is not a regular file. To run without settings, use --no-settings."
 verifier "T89 not a settings file, said" \
     contient journal-t89 "it is not a settings file, it does not carry the [player] section."
-grep -v '^#' t-89/ancien.ini > extrait 2>/dev/null
+grep -v '^#' t89-ancien.ini > extrait 2>/dev/null
 printf '\n[player]\nusernames = Zoe42\n\n[joueur]\npseudos = Zoe42\n' > attendu
 verifier "T89 old format written, its section kept" cmp -s attendu extrait
-find t-89 -name '*.partiel' > ligne
+find . -maxdepth 1 -name '*.partiel' > ligne
 egal "T89 no partial file left" 0 "$(lignes ligne)"
 joindre journal-t89 5
 rm -rf "$DEPOT/__pycache__"
@@ -1773,17 +1792,56 @@ rm -rf "$DEPOT/__pycache__"
 # run, and the warning says why they are not kept.
 rm -rf analysis-italienne-*
 SCRIPT="$SCRIPT" python3 t-pty.py "Zoe42|r|15|10|1300|w||||||" \
-    italienne.pgn $P --settings t-89/fifo > sortie-pty 2>&1
+    italienne.pgn $P --settings t89-fifo.ini > sortie-pty 2>&1
 verifier "T89 on a terminal, warning" \
-    contient sortie-pty "Warning: settings not saved in t-89/fifo: it is not a regular file."
+    contient sortie-pty "/t89-fifo.ini: it is not a regular file."
 egal "T89 on a terminal, nothing saved" 0 \
     "$(grep -c 'Settings saved' sortie-pty)"
-verifier "T89 on a terminal, FIFO left as it is" test -p t-89/fifo
+verifier "T89 on a terminal, FIFO left as it is" test -p t89-fifo.ini
 cat analysis-italienne-*/game.pgn > extrait 2>/dev/null
 verifier "T89 on a terminal, the answers serve this run" \
     contient extrait '[White "Zoe42"]'
 egal "T89 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
 rm -rf analysis-italienne-*
+
+titre "T90: --settings takes a name, kept in the folder of the application"
+# --settings takes a file name ending in .ini, kept at the root of the
+# folder of the application: deleting the folder leaves nothing behind,
+# and no path, /dev/null included, can be written over. A path, even
+# inside the folder, and any other name are refused before anything is
+# read, written or purged.
+rm -rf t-sous
+codes=""
+for nom in /dev/null t-sous/t-x.ini ./t-x.ini ../t-x.ini t-x.txt t-x.INI .ini
+do
+    "$SCRIPT" --purge-settings --settings "$nom" > sortie 2> journal
+    codes="$codes $?:$(grep -c 'is not a settings name' journal)"
+done
+egal "T90 paths and other names refused" \
+    " 2:1 2:1 2:1 2:1 2:1 2:1 2:1" "$codes"
+verifier "T90 nothing created for a path" test ! -e t-sous
+"$SCRIPT" italienne.pgn $O --venv "$VENV" --settings /dev/null \
+    > sortie 2> journal
+egal "T90 /dev/null for a collection, exit code" 2 "$?"
+verifier "T90 /dev/null, --no-settings suggested" \
+    contient journal "To run without settings, use --no-settings."
+verifier "T90 help, a name" contient aide "--settings NAME"
+joindre journal 3
+# On a terminal, a name whose file does not exist yet is confirmed: a
+# typo must not start a new file. An unreadable answer makes the
+# question come again; n stops before anything is written or collected.
+rm -rf analysis-italienne-*
+SCRIPT="$SCRIPT" python3 t-pty.py "x|n" italienne.pgn $P \
+    --settings t-nouveau.ini > sortie-pty 2>&1
+egal "T90 new name, confirmation asked, again after x" 2 \
+    "$(grep -c 'Settings: t-nouveau.ini does not exist yet in' sortie-pty)"
+verifier "T90 new name refused, nothing done" \
+    contient sortie-pty "Nothing done: check the name given to --settings"
+verifier "T90 new name refused, no file created" test ! -e t-nouveau.ini
+find . -maxdepth 1 -name 'analysis-italienne-*' > ligne
+egal "T90 new name refused, no collection" 0 "$(lignes ligne)"
+egal "T90 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
+joindre sortie-pty 5
 
 titre "T74: prompt only, short, to be pasted without an attachment"
 
@@ -2233,29 +2291,29 @@ egal "T27 no working folder created" 0 \
 titre "T69: purge of the settings"
 
 printf '[player]\nusernames = Alice\n' > t-purge.ini
-mkdir -p t-rep
+mkdir -p t-rep.ini
 "$SCRIPT" --purge-settings --settings t-purge.ini > sortie 2> journal
 egal "T69 file present, exit code" 0 "$?"
 verifier "T69 deletion announced" \
-    contient journal "Settings deleted: t-purge.ini"
+    contient journal "/t-purge.ini. They will be asked again"
 verifier "T69 the file no longer exists" test ! -e t-purge.ini
 egal "T69 standard output empty" 0 "$(wc -c < sortie)"
 "$SCRIPT" --purge-settings --settings t-purge.ini > sortie 2> journal
 egal "T69 file missing, exit code" 0 "$?"
 verifier "T69 file missing, announced" \
     contient journal "No settings file to delete"
-"$SCRIPT" --purge-settings --settings t-rep > sortie 2> journal
+"$SCRIPT" --purge-settings --settings t-rep.ini > sortie 2> journal
 egal "T69 directory, exit code" 1 "$?"
 verifier "T69 directory refused" contient journal "is not a file"
-verifier "T69 the directory is still there" test -d t-rep
+verifier "T69 the directory is still there" test -d t-rep.ini
 # A typo after --settings must not destroy another file: only a file
 # carrying the [player] section, or an empty one, goes.
-printf '[White "Alice"]\n\n1. e4 e5 *\n' > t-pas-reglages.pgn
-"$SCRIPT" --purge-settings --settings t-pas-reglages.pgn > sortie 2> journal
+printf '[White "Alice"]\n\n1. e4 e5 *\n' > t-pas-reglages.ini
+"$SCRIPT" --purge-settings --settings t-pas-reglages.ini > sortie 2> journal
 egal "T69 other file, exit code" 1 "$?"
 verifier "T69 other file refused" \
     contient journal "is not a settings file"
-verifier "T69 the other file is still there" test -f t-pas-reglages.pgn
+verifier "T69 the other file is still there" test -f t-pas-reglages.ini
 printf 'usernames = Alice\n[player\n[player]\n' > t-purge.ini
 "$SCRIPT" --purge-settings --settings t-purge.ini > sortie 2> journal
 egal "T69 damaged settings, deleted all the same" "0 0" \

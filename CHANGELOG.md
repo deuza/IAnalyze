@@ -215,6 +215,19 @@ Icône de la licence CC-0
   name, followed by its publisher in parentheses"), an unknown side or
   number of weak moves ("unknown"), the table of the short prompt
   ("blunder (350): better ...") and the sentence on the opening.
+- `--settings` takes a name, never a path: a file name ending in
+  `.ini`, kept at the root of the application folder like
+  `settings.ini`, such as `--settings joueur1.ini` for a second player.
+  A path, even inside the folder, is refused, `/dev/null` included:
+  the settings never leave the folder, and deleting it leaves nothing
+  behind. `--no-settings` runs without settings. In a terminal, a name
+  whose file does not exist yet is created only after confirmation, so
+  that a typo does not start a new file; answering `n` stops the
+  script before anything is written or collected. `--purge-settings`
+  follows the same rule. A settings file kept elsewhere must be moved
+  into the folder, and a shared installation, such as one in `/opt`,
+  no longer keeps the settings of each user: each one uses their own
+  clone.
 
 ### Fixed
 
