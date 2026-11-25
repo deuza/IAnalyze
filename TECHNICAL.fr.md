@@ -663,9 +663,9 @@ Conditions :
 | `FEW_WEAK_MOVES` | votre camp est connu et `PLAYER_WEAK_MOVES` est inférieur à trois |
 | `NO_WEAK_MOVE` | votre camp est connu et `PLAYER_WEAK_MOVES` vaut zéro |
 
-Les deux modèles, `prompt-template.txt` et `prompt-only-template.txt`, partagent ces repères. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `PLAYER_WEAK_MOVES` et les conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` servent au prompt court.
+Les deux modèles, `prompt-template.txt` et `prompt-only-template.txt`, partagent ces repères. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `PLAYER_WEAK_MOVES` et les conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` servent au prompt court. `PLAYER_WEAK_MOVES`, `FEW_WEAK_MOVES` et `NO_WEAK_MOVE` servent aussi au bilan final du prompt complet.
 
-Le prompt court finit par un bilan : les trois erreurs les plus coûteuses du joueur et le thème à travailler. Quand le tableau marque moins de trois coups faibles de votre côté, la phrase change : elle donne leur nombre et demande de s'en tenir à ceux-là.
+Les deux prompts finissent par un bilan : les trois erreurs les plus coûteuses du joueur et le thème à travailler. Quand le tableau marque moins de trois coups faibles de votre côté, la phrase change : elle donne leur nombre et demande de s'en tenir à ceux-là. Dans le prompt court :
 
 ```text
 After the code block, give in a few lines the costliest errors of the
@@ -674,9 +674,9 @@ Weak moves of the player in the table: 2.
 Keep to those, without adding any.
 ```
 
-Sans aucun coup faible de votre côté, le prompt demande de ne vous prêter aucune erreur. Quand votre camp n'est pas connu, il demande de commenter les deux camps de la même façon et de donner le bilan pour chacun.
+Le prompt complet le dit dans son bilan final, et demande en outre de ne pas remplacer vos erreurs par celles de votre adversaire. Sans aucun coup faible de votre côté, les deux prompts demandent de ne vous prêter aucune erreur. Quand votre camp n'est pas connu, le prompt court demande de commenter les deux camps de la même façon et de donner le bilan pour chacun ; le prompt complet demande vos erreurs une fois votre camp trouvé, et celles de chaque camp sinon.
 
-La raison vient des essais du 21 novembre 2026 (README, section 7) : le joueur n'avait commis que deux erreurs, et trois réponses sur cinq en ont présenté une troisième pour arriver au compte demandé.
+La raison vient des essais du 21 novembre 2026 (README, section 7) : le joueur n'avait commis que deux erreurs, et trois réponses sur cinq en ont présenté une troisième pour arriver au compte demandé. Un essai du prompt complet, le 25 novembre 2026, a montré l'autre dérobade : prié de donner "les trois erreurs les plus coûteuses" sans qu'on lui dise de qui, le LLM a donné celles de l'adversaire, et laissé de côté l'un des deux coups faibles du joueur.
 
 Un repère inconnu ou mal écrit, comme `{{ RATING }}`, un "if" jamais fermé, une directive mal formée ou un modèle sans une ligne de texte arrêtent le script avant la collecte :
 

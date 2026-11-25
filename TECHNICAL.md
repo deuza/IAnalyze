@@ -661,9 +661,9 @@ Conditions:
 | `FEW_WEAK_MOVES` | your side is known and `PLAYER_WEAK_MOVES` is less than three |
 | `NO_WEAK_MOVE` | your side is known and `PLAYER_WEAK_MOVES` is zero |
 
-The two templates, `prompt-template.txt` and `prompt-only-template.txt`, share these markers. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `PLAYER_WEAK_MOVES` and the conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` serve the short prompt.
+The two templates, `prompt-template.txt` and `prompt-only-template.txt`, share these markers. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `PLAYER_WEAK_MOVES` and the conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` serve the short prompt. `PLAYER_WEAK_MOVES`, `FEW_WEAK_MOVES` and `NO_WEAK_MOVE` also serve the final summary of the full prompt.
 
-The short prompt ends with a report: the three costliest errors of the player and the theme to work on. When the table marks fewer than three weak moves on your side, the sentence changes: it gives their number and asks to keep to those.
+Both prompts end with a report: the three costliest errors of the player and the theme to work on. When the table marks fewer than three weak moves on your side, the sentence changes: it gives their number and asks to keep to those. In the short prompt:
 
 ```text
 After the code block, give in a few lines the costliest errors of the
@@ -672,9 +672,9 @@ Weak moves of the player in the table: 2.
 Keep to those, without adding any.
 ```
 
-Without any weak move on your side, the prompt asks to attribute no error to you. When your side is not known, it asks to comment on both sides in the same way and to give the report for each one.
+The full prompt says it in its final summary, and asks besides not to replace your errors with those of your opponent. Without any weak move on your side, both prompts ask to attribute no error to you. When your side is not known, the short prompt asks to comment on both sides in the same way and to give the report for each one; the full prompt asks for your errors once your side is found, and for those of each side otherwise.
 
-The reason comes from the trials of November 21, 2026 (README, section 7): the player had made only two errors, and three answers out of five presented a third one to reach the count asked for.
+The reason comes from the trials of November 21, 2026 (README, section 7): the player had made only two errors, and three answers out of five presented a third one to reach the count asked for. A trial of the full prompt, on November 25, 2026, showed the other way out: asked for "the three costliest errors" without being told whose, the LLM gave those of the opponent, and left out one of the two weak moves of the player.
 
 An unknown or badly written marker, such as `{{ RATING }}`, an "if" never closed, a badly formed directive or a template without a single line of text stop the script before the collection:
 

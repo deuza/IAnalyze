@@ -136,7 +136,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | T62 | Cadence | les réponses sont vérifiées, les fausses refusées ; une balise TimeControl épargne la question |
 | T63 | Correspondance | les trois systèmes de cadence par correspondance sont reconnus, avec le pluriel anglais des durées |
 | T64 | Prompt écrit | le prompt est écrit à côté de l'archive, avec ses valeurs remplies |
-| T65 | Prompt adapté | le prompt ne garde que les passages qui s'appliquent : explorateur, base, réponses, section 2 |
+| T65 | Prompt adapté | le prompt ne garde que les passages qui s'appliquent : explorateur, base, réponses, section 2 ; son bilan final demande les erreurs du joueur, selon leur nombre |
 | T66 | Modèle fautif | repère inconnu, condition jamais fermée ou modèle absent arrêtent le script avant la collecte |
 | T67 | Script sans modèle | le script copié seul fait sa collecte sans prompt, et le dit |
 | T68 | Niveau | le niveau en points Elo est vérifié et repris dans le prompt |

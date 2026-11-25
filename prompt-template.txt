@@ -474,10 +474,35 @@ track.
 
 After the file, in the conversation and in plain text:
 
-1. THE THREE COSTLIEST ERRORS, in decreasing order of seriousness. For
-   each one: move number, move played, correct move, loss read in
+#! note The summary asks for the errors of the player, and says how
+#! note many the table marks: asked for "the three costliest errors"
+#! note without being told whose, an LLM gave those of the opponent, and
+#! note an LLM asked for three makes one up when the player made fewer.
+#! if NO_WEAK_MOVE
+1. THE ERRORS OF THE PLAYER: section 3 marks no weak move on their
+   side. Attribute no error to them, and say so in one sentence.
+#! else
+#! if FEW_WEAK_MOVES
+1. THE COSTLIEST ERRORS OF THE PLAYER, in decreasing order of
+   seriousness. Weak moves of the player in section 3: {{PLAYER_WEAK_MOVES}}.
+   Keep to those, without adding any, and do not replace them with the
+   errors of the opponent.
+#! else
+#! if SIDE_KNOWN
+1. THE THREE COSTLIEST ERRORS OF THE PLAYER, in decreasing order of
+   seriousness, chosen among the weak moves of their side in section 3.
+#! else
+1. THE COSTLIEST ERRORS OF THE PLAYER, three at most, in decreasing
+   order of seriousness, chosen among the weak moves of their side in
+   section 3: inaccuracy, mistake or blunder. If it marks fewer than
+   three, keep to those, without adding any. If their side stays
+   unknown, give those of each side.
+#! end
+#! end
+   For each one: move number, move played, correct move, loss read in
    section 3, and nature of the error (calculation, evaluation, plan,
    tactical oversight, structural decision).
+#! end
 2. THE THEME TO WORK ON FIRST, a single one, the one whose correction
    would bring the most points, justified by what happened in THIS
    game.

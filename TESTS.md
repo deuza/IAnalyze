@@ -134,7 +134,7 @@ The numbers follow the order in which the tests were created, not the order in w
 | T62 | Time control | the answers are checked, the wrong ones refused; a TimeControl tag spares the question |
 | T63 | Correspondence | the three systems of correspondence time control are recognized, with the English plural of the durations |
 | T64 | Prompt written | the prompt is written next to the archive, with its values filled in |
-| T65 | Adapted prompt | the prompt keeps only the passages that apply: explorer, database, answers, section 2 |
+| T65 | Adapted prompt | the prompt keeps only the passages that apply: explorer, database, answers, section 2; its final summary asks for the errors of the player, according to their count |
 | T66 | Faulty template | unknown marker, condition never closed or missing template stop the script before the collection |
 | T67 | Script without template | the script copied alone makes its collection without a prompt, and says so |
 | T68 | Rating | the rating in Elo points is checked and repeated in the prompt |

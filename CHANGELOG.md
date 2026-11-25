@@ -288,6 +288,14 @@ and the project applies [Semantic Versioning](https://semver.org/).
   then, in French. The heading of the additions of this version no
   longer carries a date, which Keep a Changelog only puts on the
   heading of a release.
+- The final summary of the full prompt asks for the costliest errors
+  of the player, as the review of the short prompt does: when the
+  table marks fewer than three weak moves on the side of the player,
+  it gives their number and asks to keep to those, without replacing
+  them with the errors of the opponent; without any weak move, it
+  asks to attribute no error to the player. Asked for "the three
+  costliest errors" without being told whose, an LLM tried on
+  25 November 2026 gave those of the opponent.
 
 ### Fixed
 

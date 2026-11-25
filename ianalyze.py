@@ -4859,13 +4859,13 @@ def main(argv: list[str]) -> int:
             # move.
             "PARTIAL_COVERAGE": evalues < len(coups_partie),
             "NULL_MOVE": any(not coup for coup in coups_partie),
-            # The review of the short prompt asks for three errors: when the
+            # The review of both prompts asks for three errors: when the
             # table marks fewer of them for the player, the prompt says so, so
             # that the LLM does not make one up.
             "FEW_WEAK_MOVES": (faibles is not None
                                and faibles < ERREURS_DU_BILAN),
             # Without a single weak move, "Keep to those" makes no sense:
-            # the short template has a sentence for this case.
+            # both templates have a sentence for this case.
             "NO_WEAK_MOVE": faibles == 0,
         }
         valeurs = {

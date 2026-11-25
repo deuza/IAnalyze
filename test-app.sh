@@ -1467,6 +1467,47 @@ verifier "T65 with the explorer, a single database branch" \
 joindre sortie-t65
 joindre journal-t65 5
 rm -rf "$DEPOT/__pycache__"
+# The final summary asks for the errors of the player, as the review of
+# the short prompt does (T74): asked for "the three costliest errors"
+# without being told whose, an LLM gave those of the opponent. Four
+# cases: no weak move, fewer than three, three or more, and an unknown
+# side. The count must stay on the line of its sentence: alone at the
+# start of a line, "2." would read as the next item of the list.
+SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t65 2> journal-t65 <<'EOF'
+import importlib.util
+import os
+import pathlib
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+modele = pathlib.Path(os.environ["SCRIPT"]).with_name(
+    cp.PROMPT_MODELE).read_text(encoding="utf-8")
+for cas, vraies in (("aucun", ("SIDE_KNOWN", "FEW_WEAK_MOVES",
+                               "NO_WEAK_MOVE")),
+                    ("peu", ("SIDE_KNOWN", "FEW_WEAK_MOVES")),
+                    ("trois", ("SIDE_KNOWN",)),
+                    ("inconnu", ())):
+    conditions = dict.fromkeys(cp.PROMPT_CONDITIONS, False)
+    conditions.update(dict.fromkeys(vraies, True))
+    valeurs = dict.fromkeys(cp.PROMPT_VALEURS, "x")
+    valeurs["PLAYER_WEAK_MOVES"] = "2"
+    rendu = cp.rendre_modele(modele, conditions, valeurs, "essai")
+    print(cas, rendu.count("Attribute no error to them"),
+          rendu.count("Weak moves of the player in section 3: 2."),
+          rendu.count("without adding any"),
+          rendu.count("THE THREE COSTLIEST ERRORS OF THE PLAYER"),
+          rendu.count("give those of each side"),
+          rendu.count("For each one:"),
+          rendu.count("THE THREE COSTLIEST ERRORS,"))
+EOF
+printf 'aucun 1 0 0 0 0 0 0\npeu 0 1 1 0 0 1 0\n' > attendu-t65
+printf 'trois 0 0 0 1 0 1 0\ninconnu 0 0 1 0 1 1 0\n' >> attendu-t65
+verifier "T65 final summary: errors of the player, according to their count" \
+    cmp -s attendu-t65 sortie-t65
+joindre sortie-t65
+joindre journal-t65 5
+rm -rf "$DEPOT/__pycache__"
 
 titre "T66: faulty template refused before the collection"
 rm -f analysis-t-pr-*
