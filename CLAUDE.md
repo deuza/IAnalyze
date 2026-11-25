@@ -166,6 +166,18 @@ tests), CHANGELOG.md.
   -> `test-report-<system>-<date>.txt` ; dans le .gitignore,
   analyse-* -> analysis-*. Les fichiers de example-games/ sont
   renommés au 5b, d'après la table validée.
+- Renommages du lot 5b, faits : dans example-games/, accolade,
+  analyse-courte, analyse-fautive, analyse-llm, conversation.txt,
+  deux-parties, francais, ma-partie, partie-ajedrezmail,
+  partie-chess-com, partie-chess-mail, partie-commentee,
+  partie-lichess-org, partie-lucas-chess, polonaise ->
+  unclosed-brace, llm-short, llm-faulty, llm-annotated,
+  llm-conversation.txt, two-games, french-notation, my-game,
+  game-ajedrezmail, game-chess-com, game-chess-mail, commented-game,
+  game-lichess-org, game-lucas-chess, polish-opening (position
+  inchangé) ; pseudos MonPseudo, Adversaire -> MyUsername, Opponent.
+  Contenus traduits, sauf french-notation.pgn ; test.pgn garde ses
+  noms accentués et un échantillon d'accents.
 - Points d'attention : au terminal, "b" voulait dire Blancs, il veut
   dire Black ([w/b]) depuis le lot 3b, signalé dans le CHANGELOG ;
   verify-analysis.py ne lira plus les archives 4.x ; le prompt traduit

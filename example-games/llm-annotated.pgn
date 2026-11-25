@@ -1,0 +1,17 @@
+[Event "Friendly game"]
+[Site "?"]
+[Date "2026.11.19"]
+[Round "-"]
+[White "MyUsername"]
+[Black "Opponent"]
+[Result "*"]
+[Annotator "Example"]
+[PlyCount "9"]
+
+{ A quiet Italian game, stopped at the fifth move. Both sides follow
+known moves, and the engine finds neither mistake nor blunder. White
+keeps the slight advantage of moving first. } 1. e4 { The most direct
+move to occupy the center, evaluated +0.37 by the engine. } 1... e5 2. Nf3
+Nc6 3. Bc4 { The bishop eyes f7. The engine slightly prefers the pin. }
+( 3. Bb5 a6 4. Ba4 ) 3... Bc5 4. c3 Nf6 5. d3 { White consolidates e4
+before pushing d4, evaluation +0.21. } *

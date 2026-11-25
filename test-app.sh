@@ -678,7 +678,7 @@ time.sleep(3)
 try:
     print(os.read(fd, 65536).decode("utf-8", "replace")[-300:])
 except OSError as err:
-    print("lecture du pseudo-terminal :", err)
+    print("reading the pseudo-terminal:", err)
 os.waitpid(pid, 0)
 EOF
 cat analysis-italienne-*/game.pgn > extrait 2>/dev/null
@@ -2123,10 +2123,10 @@ titre "T75: PGNs that python-chess would misread, refused"
 printf '1. e4 e5 2. Cf3 Cc6 3. Fc4 Fc5 *\n' > t-francais.pgn
 printf '1. e4 e5 2. \342\231\230f3 *\n' > t-figurines.pgn
 printf '1. e4 e5 2. nf3 nc6 *\n' > t-minuscules.pgn
-printf '1. e4 e5 2. Nf3 { bon coup Nc6 3. Bb5 a6 1-0\n' > t-accolade.pgn
+printf '1. e4 e5 2. Nf3 { good move Nc6 3. Bb5 a6 1-0\n' > t-accolade.pgn
 printf '1. e4 e5 ( 1... c5 ( 1... d5\n' > t-parenthese.pgn
 printf '1. e4 e5 2. Ke3 ) $2 *\n' > t-orpheline.pgn
-printf '1. e4 e5 2. Nf3 *\n\nLes Blancs gagnent (voir b5) !\n' > t-queue.pgn
+printf '1. e4 e5 2. Nf3 *\n\nWhite wins (see b5)!\n' > t-queue.pgn
 while read -r fichier cause; do
     lancer "$fichier" $O < /dev/null
     egal "T75 $fichier, exit code" 1 "$RC"
@@ -2142,7 +2142,7 @@ t-minuscules.pgn "nf3"
 t-accolade.pgn is never closed
 t-parenthese.pgn and never closed
 t-orpheline.pgn without an open variation
-t-queue.pgn "Les"
+t-queue.pgn "White"
 FIN
 joindre journal 3
 egal "T75 no folder or archive created by these refusals" 0 \
@@ -2341,7 +2341,7 @@ egal "T71 help silent about the option" 0 \
 
 # --consignes, removed in its turn: the prompt carries the
 # instructions, and the startup questions the context.
-echo "Annotez en français." > t-consignes.md
+echo "Annotate in French." > t-consignes.md
 "$SCRIPT" italienne.pgn --consignes t-consignes.md > sortie 2> journal
 egal "T71 --consignes, exit code" 2 "$?"
 verifier "T71 --consignes, unknown option" \
@@ -2703,12 +2703,13 @@ def construire(fautif):
     jeu = chess.pgn.Game()
     for b in ("Event", "Site", "Date", "Round", "White", "Black", "Result"):
         jeu.headers[b] = source.headers[b]
-    autres = {"Annotator": "Essai (test-app.sh)", "BlackElo": "1500",
+    autres = {"Annotator": "Test (test-app.sh)", "BlackElo": "1500",
               "PlyCount": str(len(evals)), "TimeControl": "600+5",
               "WhiteElo": "1450"}
     for b in sorted(autres):
         jeu.headers[b] = autres[b]
-    jeu.comment = textwrap.fill("Partie d'essai, ouverture Barnes. " * 12, 75)
+    jeu.comment = textwrap.fill("Test game, opened with the Barnes Opening. "
+                                * 12, 75)
     noeud = jeu
     for e, coup in zip(evals, source.mainline_moves()):
         suivant = noeud.add_main_variation(coup)
@@ -2719,15 +2720,15 @@ def construire(fautif):
             suivant.nags.add(chess.pgn.NAG_BLUNDER if e["category"] == "blunder"
                              else chess.pgn.NAG_MISTAKE)
             meilleur = e["best"][0]
-            texte = ("Il fallait %s, que le moteur donne à %s contre %s "
-                     "pour le coup joué." % (meilleur["san"],
+            texte = ("You had to play %s, which the engine gives %s "
+                     "against %s for the move played." % (meilleur["san"],
                                              meilleur["score"],
                                              e["played"]["score"]))
             if fautif and e["ply"] == 3:
                 # Ply 3, a mate conceded: invented evaluation, percent,
                 # variation written in the comment, illegal variation,
                 # and NAG giving White as winning.
-                texte += (" Chiffre inventé : %s, soit 50 %% de gain. (%s)"
+                texte += (" Invented figure: %s, that is 50 %% of winning chances. (%s)"
                           " (2. Ke3 Nc6)"
                           % (INVENTE_PGN,
                              " ".join(meilleur["pv_san"].split()[:4])))
@@ -2762,8 +2763,8 @@ lignes = conforme.rstrip("\n").split("\n")
 lignes.insert(len(lignes) - 1, "")
 open("t-vide-fin.pgn", "w", encoding="utf-8").write("\n".join(lignes) + "\n")
 open("t-fermante.pgn", "w", encoding="utf-8").write(
-    conforme.replace("Partie d'essai, ouverture",
-                     "Partie d'essai } ouverture", 1))
+    conforme.replace("Test game, opened",
+                     "Test game } opened", 1))
 blancs = '[White "%s"]\n' % source.headers["White"]
 noirs = '[Black "%s"]\n' % source.headers["Black"]
 open("t-balises.pgn", "w", encoding="utf-8").write(
@@ -2780,15 +2781,15 @@ noeud = court
 for e, coup in zip(evals, source.mainline_moves()):
     noeud = noeud.add_main_variation(coup)
     if e["category"] in ("mistake", "blunder"):
-        noeud.comment = ("Ici tu devais jouer %s, bien meilleur d'après "
-                         "le tableau : prends le temps de chercher ce coup "
-                         "avant de pousser un pion." % e["best"][0]["san"])
+        noeud.comment = ("Here you had to play %s, much better according "
+                         "to the table: take the time to look for this move "
+                         "before pushing a pawn." % e["best"][0]["san"])
 open("t-court.pgn", "w", encoding="utf-8").write(
     court.accept(chess.pgn.StringExporter(columns=None)) + "\n")
 open("t-conversation.txt", "w", encoding="utf-8").write(
-    "Position 1 : %s\n"
-    "Position 2 : 8/8/8/8/8/8/8/8 w - - 0 1\n"
-    "Evaluation %s sortie de nulle part \u2014 avec un tiret cadratin.\n"
+    "Position 1: %s\n"
+    "Position 2: 8/8/8/8/8/8/8/8 w - - 0 1\n"
+    "Evaluation %s out of nowhere \u2014 with an em dash.\n"
     % (evals[2]["fen"], INVENTE_CONVERSATION))
 EOF
         "$PYVENV" "$VERIF" "$ARCH" t-conforme.pgn > bilan 2>&1
@@ -2921,7 +2922,7 @@ EOF
         unzip -p "$ARCH" '*/summary.md' > t-abimee/summary.md
         "$PYVENV" "$VERIF" t-abimee t-conforme.pgn >> bilan 2>&1
         egal "T73 incomplete archive, exit code" 2 "$?"
-        printf '{pas du JSON' > t-abimee/stockfish/evaluations.json
+        printf '{not JSON' > t-abimee/stockfish/evaluations.json
         "$PYVENV" "$VERIF" t-abimee t-conforme.pgn >> bilan 2>&1
         egal "T73 unreadable evaluations, exit code" 2 "$?"
         printf '{"autre": "forme"}' > t-abimee/stockfish/evaluations.json
@@ -2960,9 +2961,9 @@ for nom in ("mats", "quatre", "nag"):
     for rang, noeud in enumerate(jeu.mainline(), 1):
         noeud.comment = "Coup %d." % rang
         if nom == "mats" and rang == 11:
-            noeud.comment = "Le moteur donne #+1."
+            noeud.comment = "The engine gives #+1."
         if nom == "mats" and rang == 12:
-            noeud.comment = "Toujours #1, puis un inventé : #+7."
+            noeud.comment = "Still #1, then an invented one: #+7."
         if nom == "quatre" and rang > 8:
             noeud.comment = ""
         if nom == "nag" and rang == 10:
@@ -3037,7 +3038,7 @@ EOF
         rm -rf t-82-p
         # Short mode: neither NAG, nor em dash, nor number of FEN, which the
         # short prompt does not ask for. Without the option, they are reported.
-        printf 'Synth\303\250se \342\200\224 sans position.\n' > t-82-conv.txt
+        printf 'Summary \342\200\224 without a position.\n' > t-82-conv.txt
         "$PYVENV" "$VERIF" "$ARCH" t-82-nag.pgn --prompt-only \
             --summary t-82-conv.txt > bilan 2>&1
         egal "T82 short mode, exit code" 0 "$?"
@@ -3076,16 +3077,16 @@ EOF
     # with its cause. The collections are done in the test directory.
     EX="$DEPOT/example-games"
     if [ -d "$EX" ]; then
-        for partie in ma-partie polonaise partie-lichess-org partie-commentee \
-            partie-chess-com partie-chess-mail partie-ajedrezmail \
-            partie-lucas-chess; do
+        for partie in my-game polish-opening game-lichess-org commented-game \
+            game-chess-com game-chess-mail game-ajedrezmail \
+            game-lucas-chess; do
             lancer "$EX/$partie.pgn" $MOTEUR --depth 1 --threads 1 \
                 --hash 16
             egal "T83 $partie.pgn, collection done" "0 1" \
                 "$RC $(find . -maxdepth 1 -name "analysis-$partie-*.zip" | wc -l)"
             # The log of the chess-mail.com export is kept: it must
             # say that the repeated result was ignored.
-            [ "$partie" = partie-chess-mail ] && cp journal t-83-journal
+            [ "$partie" = game-chess-mail ] && cp journal t-83-journal
         done
         while IFS='|' read -r partie cause; do
             lancer "$EX/$partie.pgn" $MOTEUR --depth 1
@@ -3093,23 +3094,23 @@ EOF
             verifier "T83 $partie.pgn, refused with its cause" \
                 contient journal "$cause"
         done <<'FIN'
-francais|is neither a move in English notation
-deux-parties|The PGN contains 2 games
+french-notation|is neither a move in English notation
+two-games|The PGN contains 2 games
 position|does not start from the initial position
-accolade|brace
+unclosed-brace|brace
 FIN
         # The annotated PGNs of the page go through the checker, on
-        # the archive of ma-partie.pgn: the first one without a failure,
+        # the archive of my-game.pgn: the first one without a failure,
         # the second one with.
-        lancer "$EX/ma-partie.pgn" $MOTEUR --depth 1 --threads 1 \
+        lancer "$EX/my-game.pgn" $MOTEUR --depth 1 --threads 1 \
             --hash 16
-        "$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH" "$EX/analyse-llm.pgn" \
+        "$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH" "$EX/llm-annotated.pgn" \
             > bilan 2>&1
-        verifier "T83 analyse-llm.pgn, report produced" \
+        verifier "T83 llm-annotated.pgn, report produced" \
             contient bilan "=== Totals ==="
         "$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH" \
-            "$EX/analyse-fautive.pgn" > bilan 2>&1
-        egal "T83 analyse-fautive.pgn, failures" 1 "$?"
+            "$EX/llm-faulty.pgn" > bilan 2>&1
+        egal "T83 llm-faulty.pgn, failures" 1 "$?"
         verifier "T83 export of chess-mail.com, repeated result ignored" \
             contient t-83-journal "Result repeated at the end of the file"
         egal "T83 no real game: neither address nor identifier" 0 \
@@ -3514,7 +3515,7 @@ if [ "$RESEAU" = 1 ] &&
 fi
 
 LC_ALL=C sed -e "s#$TRAVAIL#<TMP>#g" -e "s#$HOME#~#g" \
-    -e "s#${ID_PARTIE:-aucune-partie-donnee}#<PARTIE>#g" "$BRUT" > "$RAPPORT"
+    -e "s#${ID_PARTIE:-no-game-given}#<GAME>#g" "$BRUT" > "$RAPPORT"
 
 printf '\nPassed: %d, failed: %d, skipped: %d\n' \
     "$NB_OK" "$NB_ECHEC" "$NB_SAUTE" >&2

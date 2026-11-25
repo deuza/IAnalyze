@@ -239,10 +239,14 @@ Icône de la licence CC-0
   `prompt-only-template.txt`, formerly `prompt-modele.txt` and
   `prompt-seul-modele.txt`; `example-games/`, formerly
   `parties-exemples/`; `EXAMPLES.md` and `TECHNICAL.md`, formerly
-  `EXEMPLES.md` and `TECHNIQUE.md`. A template kept next to the
-  script under its old name is no longer read: the script reads
-  `prompt-template.txt` and `prompt-only-template.txt`. The report of
-  `test-app.sh` is named `test-report-<system>-<date>.txt`.
+  `EXEMPLES.md` and `TECHNIQUE.md`. The files of `example-games/`
+  have English names and contents too, such as `my-game.pgn` and
+  `llm-annotated.pgn`: only `french-notation.pgn` keeps its French
+  notation, which the script refuses, and which is its point. A
+  template kept next to the script under its old name is no longer
+  read: the script reads `prompt-template.txt` and
+  `prompt-only-template.txt`. The report of `test-app.sh` is named
+  `test-report-<system>-<date>.txt`.
 
 ### Fixed
 

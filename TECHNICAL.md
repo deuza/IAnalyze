@@ -92,7 +92,7 @@ Ceux de `verify-analysis.py` sont donnés en section 13.
 Le chemin de l'archive est écrit seul sur la sortie standard, le journal horodaté va sur la sortie d'erreur :
 
 ```bash
-ARCHIVE=$(./ianalyze.py ma-partie.pgn 2>/dev/null)
+ARCHIVE=$(./ianalyze.py my-game.pgn 2>/dev/null)
 ```
 
 Avec `--prompt-seul`, c'est le chemin du prompt qui est écrit sur la sortie standard.
@@ -101,7 +101,7 @@ Le journal, les questions et les messages d'erreur vont tous sur la sortie d'err
 
 ```text
 [16:41:40] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[16:41:40] Lecture du PGN local : ma-partie.pgn
+[16:41:40] Lecture du PGN local : my-game.pgn
 [16:41:41] Dossier de travail : analyse-ma-partie-20261119-164141
 [16:41:41] Stockfish : évaluation de 49 demi-coups, profondeur 18, multipv 3, threads 8. C'est la phase la plus longue.
 ```
@@ -111,7 +111,7 @@ Un message d'erreur, lui, n'est pas horodaté : c'est la dernière ligne, et le 
 ### Appeler le script depuis un autre programme
 
 ```bash
-ARCHIVE=$(./ianalyze.py ma-partie.pgn --sans-questions 2> collecte.log)
+ARCHIVE=$(./ianalyze.py my-game.pgn --sans-questions 2> collecte.log)
 ```
 
 Le code de retour dit si la collecte a abouti, `collecte.log` garde le journal et `$ARCHIVE` reçoit le chemin de l'archive.
@@ -121,7 +121,7 @@ Rediriger la sortie d'erreur suffit à faire taire les questions (section 5) : `
 Sous macOS, cette commande met le prompt court dans le presse-papiers, prêt à être collé dans la conversation. La sortie d'erreur n'étant pas redirigée, les questions restent posées :
 
 ```bash
-pbcopy < "$(./ianalyze.py ma-partie.pgn --prompt-seul)"
+pbcopy < "$(./ianalyze.py my-game.pgn --prompt-seul)"
 ```
 
 ## 4. La partie, sa source et ses contrôles
@@ -198,12 +198,12 @@ Le script ne les pose donc que s'il est lancé à la main, dans un terminal. Il 
 
 - vous passez `--sans-questions`
 - un autre programme le lance sans terminal : cron, un service
-- son entrée ne vient pas du clavier : `./ianalyze.py ma-partie.pgn < /dev/null`
-- son journal ne va pas à l'écran : `./ianalyze.py ma-partie.pgn 2> journal.log`
+- son entrée ne vient pas du clavier : `./ianalyze.py my-game.pgn < /dev/null`
+- son journal ne va pas à l'écran : `./ianalyze.py my-game.pgn 2> journal.log`
 
 Le dernier cas surprend : les questions s'écrivent au même endroit que le journal, la sortie d'erreur. Si vous la redirigez, vous ne les verriez pas.
 
-L'exemple de la section 3, avec `2>/dev/null`, ne pose donc aucune question. Sans cette redirection, `ARCHIVE=$(./ianalyze.py ma-partie.pgn)` les pose normalement.
+L'exemple de la section 3, avec `2>/dev/null`, ne pose donc aucune question. Sans cette redirection, `ARCHIVE=$(./ianalyze.py my-game.pgn)` les pose normalement.
 
 Dans la suite, "sans terminal" désigne ces quatre cas.
 

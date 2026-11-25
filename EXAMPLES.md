@@ -90,37 +90,37 @@ cd example-games
 ```
 
 ```bash
-../ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions
+../ianalyze.py my-game.pgn --sans-explorateur --sans-questions
 ```
 
 | Fichier | Ce que c'est |
 |---|---|
-| `ma-partie.pgn` | une partie italienne de neuf demi-coups, celle de presque tous les exemples |
-| `polonaise.pgn` | une ouverture qui sort tôt de la théorie, pour les options de l'explorateur |
-| `partie-lichess-org.pgn` | une vraie partie de 20 coups, anonymisée, telle que Lichess l'exporte : c'est celle des essais du 21 novembre 2026 (README, section 7) |
-| `partie-commentee.pgn` | une autre vraie partie de Lichess, 25 coups, anonymisée, exportée avec l'analyse du site : commentaires, variantes et horloges |
-| `partie-chess-com.pgn`, `partie-chess-mail.pgn`, `partie-ajedrezmail.pgn`, `partie-lucas-chess.pgn` | quatre vraies parties, anonymisées, telles que ces sites et ce logiciel les exportent |
-| `francais.pgn`, `deux-parties.pgn`, `position.pgn`, `accolade.pgn` | quatre fichiers que le script refuse, pour les messages d'erreur |
-| `analyse-llm.pgn`, `analyse-fautive.pgn`, `analyse-courte.pgn` | trois PGN annotés écrits pour l'exemple, à la place de ceux qu'un LLM rendrait |
-| `conversation.txt` | le texte d'une conversation, pour l'option `--synthese` du vérificateur |
+| `my-game.pgn` | une partie italienne de neuf demi-coups, celle de presque tous les exemples |
+| `polish-opening.pgn` | une ouverture qui sort tôt de la théorie, pour les options de l'explorateur |
+| `game-lichess-org.pgn` | une vraie partie de 20 coups, anonymisée, telle que Lichess l'exporte : c'est celle des essais du 21 novembre 2026 (README, section 7) |
+| `commented-game.pgn` | une autre vraie partie de Lichess, 25 coups, anonymisée, exportée avec l'analyse du site : commentaires, variantes et horloges |
+| `game-chess-com.pgn`, `game-chess-mail.pgn`, `game-ajedrezmail.pgn`, `game-lucas-chess.pgn` | quatre vraies parties, anonymisées, telles que ces sites et ce logiciel les exportent |
+| `french-notation.pgn`, `two-games.pgn`, `position.pgn`, `unclosed-brace.pgn` | quatre fichiers que le script refuse, pour les messages d'erreur |
+| `llm-annotated.pgn`, `llm-faulty.pgn`, `llm-short.pgn` | trois PGN annotés écrits pour l'exemple, à la place de ceux qu'un LLM rendrait |
+| `llm-conversation.txt` | le texte d'une conversation, pour l'option `--synthese` du vérificateur |
 
 Vos propres parties se rangent où vous voulez : le script prend le chemin du PGN que vous lui donnez, et écrit l'archive dans le répertoire courant, ou dans celui de `--sortie`.
 
-`ma-partie.pgn` est une partie italienne de neuf demi-coups :
+`my-game.pgn` est une partie italienne de neuf demi-coups :
 
 ```text
 [Event "Partie amicale"]
 [Site "?"]
 [Date "2026.11.19"]
 [Round "-"]
-[White "MonPseudo"]
-[Black "Adversaire"]
+[White "MyUsername"]
+[Black "Opponent"]
 [Result "*"]
 
 1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 *
 ```
 
-`polonaise.pgn` sort tôt de la théorie, ce qui met les seuils de l'explorateur à l'épreuve :
+`polish-opening.pgn` sort tôt de la théorie, ce qui met les seuils de l'explorateur à l'épreuve :
 
 ```text
 1. b4 g6 2. Bb2 Nf6 3. e3 Bg7 4. Nf3 O-O *
@@ -137,14 +137,14 @@ Au tout premier lancement dans un terminal, le script demande vos réglages, pui
 Entrée retient la valeur proposée entre parenthèses.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur
+./ianalyze.py my-game.pgn --sans-explorateur
 ```
 
 ```text
 [01:08:35] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:08:35] Lecture du PGN local : ma-partie.pgn
+[01:08:35] Lecture du PGN local : my-game.pgn
 [01:08:35] Réglages : 3 réponse(s) à donner une seule fois, gardée(s) dans ~/IAnalyze/settings.ini.
-Votre pseudo de joueur, ou plusieurs séparés par des virgules ? (Entrée : aucun) MonPseudo
+Votre pseudo de joueur, ou plusieurs séparés par des virgules ? (Entrée : aucun) MyUsername
 Votre cadence habituelle : [t]emps réel, [c]orrespondance ou [i]nconnue ? (Entrée : non précisée) t
   Minutes par joueur ? 15
   Incrément en secondes ? 10
@@ -181,12 +181,12 @@ La dernière ligne est le chemin de l'archive, celle d'avant nomme le prompt : c
 ### Collecte sans rien saisir
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions
 ```
 
 ```text
 [01:08:11] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:08:11] Lecture du PGN local : ma-partie.pgn
+[01:08:11] Lecture du PGN local : my-game.pgn
 [01:08:11] Questions de démarrage sautées : option --sans-questions.
 [01:08:11] Dossier de travail : analyse-ma-partie-20261121-010811
 [01:08:11] Stockfish : évaluation de 9 demi-coups, profondeur 18, multipv 3, threads 4. C'est la phase la plus longue.
@@ -228,7 +228,7 @@ Sans `--sans-explorateur`, le script interroge aussi l'explorateur de Lichess.
 Il lui faut le jeton et le catalogue des ouvertures (README, section 2).
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-questions --base maitres
+./ianalyze.py my-game.pgn --sans-questions --base maitres
 ```
 
 La section 2 de `synthese.md` reçoit alors la table de l'explorateur, une ligne par demi-coup interrogé. 
@@ -256,12 +256,12 @@ Arrêt de l'interrogation : fin de la partie.
 `--prompt-seul` écrit un prompt court, à coller seul dans la conversation. Aucune archive n'est écrite.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --prompt-seul
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --prompt-seul
 ```
 
 ```text
 [01:09:21] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:09:21] Lecture du PGN local : ma-partie.pgn
+[01:09:21] Lecture du PGN local : my-game.pgn
 [01:09:21] Questions de démarrage sautées : option --sans-questions.
 [01:09:21] Dossier de travail : analyse-ma-partie-20261121-010921
 [01:09:21] Stockfish : évaluation de 9 demi-coups, profondeur 18, multipv 3, threads 4. C'est la phase la plus longue.
@@ -306,17 +306,17 @@ Noirs matent en un coup. Le compte se lit après le coup de la ligne :
 
 ### Vérifier la réponse du LLM
 
-`analyse-llm.pgn` tient ici la place du PGN annoté qu'un LLM aurait rendu : il a été écrit pour l'exemple.   
+`llm-annotated.pgn` tient ici la place du PGN annoté qu'un LLM aurait rendu : il a été écrit pour l'exemple.   
 Le vérificateur le compare à l'archive :
 
 ```bash
-./verify-analysis.py analyse-ma-partie-20261121-010838.zip analyse-llm.pgn
+./verify-analysis.py analyse-ma-partie-20261121-010838.zip llm-annotated.pgn
 ```
 
 ```text
 Contrôle d'une analyse rendue par un LLM
   archive : analyse-ma-partie-20261121-010838.zip
-  PGN     : analyse-llm.pgn
+  PGN     : llm-annotated.pgn
 
 === 1. Lecture du PGN ===
   OK        fichier en UTF-8
@@ -366,14 +366,14 @@ Un PGN fautif, lui, voit chacun de ses défauts nommé.
 Celui-ci porte une ligne vide entre deux coups, un signe pour cent, un chiffre inventé et une variante écrite dans un commentaire :
 
 ```bash
-./verify-analysis.py analyse-ma-partie-20261121-010838.zip analyse-fautive.pgn --nom "Modèle essayé"
+./verify-analysis.py analyse-ma-partie-20261121-010838.zip llm-faulty.pgn --nom "Modèle essayé"
 ```
 
 ```text
 Contrôle d'une analyse rendue par un LLM
   modèle  : Modèle essayé
   archive : analyse-ma-partie-20261121-010838.zip
-  PGN     : analyse-fautive.pgn
+  PGN     : llm-faulty.pgn
 ...
 === 1. Lecture du PGN ===
 ...
@@ -455,7 +455,7 @@ options:
 Délai réseau maximal par requête, en secondes : export PGN,  explorateur, téléchargement du catalogue.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --delai 60
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --delai 60
 ```
 
 Rien ne change à l'écran hors réseau : le délai ne joue que sur les requêtes vers Lichess.   
@@ -467,7 +467,7 @@ Laisse remonter la trace complète d'une erreur inattendue, expurgée du jeton.
 Sans cette option, seul un message d'une ligne s'affiche.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --debug
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --debug
 ```
 
 Sans erreur inattendue, rien ne change. Le journal est le même qu'à la section [Collecte sans rien saisir](#collecte-sans-rien-saisir).
@@ -546,12 +546,12 @@ Un répertoire qui n'est pas un environnement virtuel, non vide et sans `pyvenv.
 La même option sert ensuite à chaque collecte, et le journal nomme l'environnement employé :
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --venv ~/venv/echecs
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --venv ~/venv/echecs
 ```
 
 ```text
 [01:11:39] Environnement virtuel : relance via ~/venv/echecs/bin/python3
-[01:11:39] Lecture du PGN local : ma-partie.pgn
+[01:11:39] Lecture du PGN local : my-game.pgn
 ...
 ```
 
@@ -563,12 +563,12 @@ Ne pose aucune question, ni camp ni contexte.
 Rien n'est retenu à votre place : le prompt dit alors au LLM que vos réponses n'ont pas été recueillies, et c'est lui qui vous pose les questions avant d'analyser.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions
 ```
 
 ```text
 ...
-[01:08:11] Lecture du PGN local : ma-partie.pgn
+[01:08:11] Lecture du PGN local : my-game.pgn
 [01:08:11] Questions de démarrage sautées : option --sans-questions.
 ...
 ```
@@ -580,11 +580,11 @@ Rien n'est retenu à votre place : le prompt dit alors au LLM que vos réponses 
 Vos noms de joueur, séparés par des virgules, cherchés sans tenir compte de la casse dans White et Black pour déduire votre camp.   
 Le premier sert à compléter une balise vide. L'option remplace, le temps d'un lancement, les pseudos du fichier de réglages.
 
-`ma-partie.pgn` oppose MonPseudo, avec les Blancs, à Adversaire.   
+`my-game.pgn` oppose MyUsername, avec les Blancs, à Opponent.   
 Avec le pseudo de celui-ci, le camp retenu pour le prompt change :
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --pseudos Adversaire
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --pseudos Opponent
 ```
 
 ```bash
@@ -605,12 +605,12 @@ Si le fichier n'existe pas encore, le script pose ses trois questions dans le te
 C'est la façon de tenir plusieurs profils sur un même compte, un par joueur par exemple.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --reglages ~/IAnalyze/settings-joueur2.ini
+./ianalyze.py my-game.pgn --sans-explorateur --reglages ~/IAnalyze/settings-joueur2.ini
 ```
 
 ```text
 [01:12:11] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:12:11] Lecture du PGN local : ma-partie.pgn
+[01:12:11] Lecture du PGN local : my-game.pgn
 [01:12:11] Réglages : 3 réponse(s) à donner une seule fois, gardée(s) dans ~/IAnalyze/settings-joueur2.ini.
 Votre pseudo de joueur, ou plusieurs séparés par des virgules ? (Entrée : aucun) Joueur2
 Votre cadence habituelle : [t]emps réel, [c]orrespondance ou [i]nconnue ? (Entrée : non précisée) i
@@ -711,7 +711,7 @@ Répertoire du catalogue local, à l'installation comme à l'usage.
 La même option sert ensuite à chaque collecte :
 
 ```bash
-./ianalyze.py ma-partie.pgn --catalogue ~/echecs/catalogue
+./ianalyze.py my-game.pgn --catalogue ~/echecs/catalogue
 ```
 
 ### Sortie
@@ -732,12 +732,12 @@ Sans aucune de ces options, le script écrit deux fichiers dans le répertoire c
 Répertoire où le script écrit ses fichiers. Il est créé au besoin.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --sortie ~/analyses
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --sortie ~/analyses
 ```
 
 ```text
 [01:09:00] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:09:01] Lecture du PGN local : ma-partie.pgn
+[01:09:01] Lecture du PGN local : my-game.pgn
 ...
 [01:09:01] Dossier de travail : ~/analyses/analyse-ma-partie-20261121-010901
 ...
@@ -766,12 +766,12 @@ Avec cette option, le dossier reste à côté de l'archive.
 Il sert quand le LLM n'ouvre pas les zip : vous lui envoyez alors les fichiers du dossier.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --garder-dossier
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --garder-dossier
 ```
 
 ```text
 [01:09:10] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:09:10] Lecture du PGN local : ma-partie.pgn
+[01:09:10] Lecture du PGN local : my-game.pgn
 ...
 [01:09:10] Dossier de travail : analyse-ma-partie-20261121-010910
 ...
@@ -809,12 +809,12 @@ Aucune archive n'est écrite : le prompt est le seul fichier produit, et c'est s
 Pour l'archive et ses données, lancez une collecte sans cette option.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --prompt-seul
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --prompt-seul
 ```
 
 ```text
 [01:09:21] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:09:21] Lecture du PGN local : ma-partie.pgn
+[01:09:21] Lecture du PGN local : my-game.pgn
 ...
 [01:09:21] Dossier de travail : analyse-ma-partie-20261121-010921
 ...
@@ -827,12 +827,12 @@ analyse-ma-partie-20261121-010921.prompt.txt
 Ajoutez `--garder-dossier` si vous comptez faire contrôler la réponse du LLM par `verify-analysis.py` : le dossier de travail reste alors à côté du prompt.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --prompt-seul --garder-dossier
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --prompt-seul --garder-dossier
 ```
 
 ```text
 [01:09:30] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:09:31] Lecture du PGN local : ma-partie.pgn
+[01:09:31] Lecture du PGN local : my-game.pgn
 ...
 [01:09:31] Dossier de travail : analyse-ma-partie-20261121-010931
 ...
@@ -849,12 +849,12 @@ S'exclut avec `--sans-prompt`.
 N'écrit que l'archive, sans prompt. S'exclut avec `--prompt` et avec `--prompt-seul`.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --sans-prompt
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --sans-prompt
 ```
 
 ```text
 [01:09:39] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:09:39] Lecture du PGN local : ma-partie.pgn
+[01:09:39] Lecture du PGN local : my-game.pgn
 ...
 [01:09:39] Dossier de travail : analyse-ma-partie-20261121-010939
 ...
@@ -876,12 +876,12 @@ Un fichier texte dont il remplit les blancs, votre pseudo, votre camp ou le nom 
 Cette option lui fait prendre votre modèle à la place de celui du dépôt.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --prompt ~/mon-modele.txt
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --prompt ~/mon-modele.txt
 ```
 
 ```text
 [01:09:48] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:09:48] Lecture du PGN local : ma-partie.pgn
+[01:09:48] Lecture du PGN local : my-game.pgn
 ...
 [01:09:49] Dossier de travail : analyse-ma-partie-20261121-010949
 ...
@@ -912,7 +912,7 @@ Base interrogée :
 - `maitres` : les parties de maîtres
 
 ```bash
-./ianalyze.py polonaise.pgn --sans-questions --base lichess
+./ianalyze.py polish-opening.pgn --sans-questions --base lichess
 ```
 
 | # | Coup | Trait | Parties pos. | Joué | Rang | Fréq. | Score B. | Majoritaire | Fréq. majo | Score B. majo | Ouverture |
@@ -935,7 +935,7 @@ Premier coup sous le seuil de 10.0 % hors catalogue : **Noirs joue g6** au coup 
 La même partie dans la base des maîtres, où elle est bien plus rare :
 
 ```bash
-./ianalyze.py polonaise.pgn --sans-questions --base maitres
+./ianalyze.py polish-opening.pgn --sans-questions --base maitres
 ```
 
 | # | Coup | Trait | Parties pos. | Joué | Rang | Fréq. | Score B. | Majoritaire | Fréq. majo | Score B. majo | Ouverture |
@@ -977,7 +977,7 @@ Les filtres par défaut, plus la date de début fixée à janvier 2017, reprenne
 Les deux filtres ensemble, sur les parties lentes des joueurs classés sous 1200 :
 
 ```bash
-./ianalyze.py polonaise.pgn --sans-questions --coups-min 0 --cadences rapid,classical --classements 0,1000
+./ianalyze.py polish-opening.pgn --sans-questions --coups-min 0 --cadences rapid,classical --classements 0,1000
 ```
 
 | # | Coup | Trait | Parties pos. | Joué | Rang | Fréq. | Score B. | Majoritaire | Fréq. majo | Score B. majo | Ouverture |
@@ -992,12 +992,12 @@ Fichier contenant le jeton personnel, et rien d'autre.
 Si le fichier manque, le script s'arrête avant toute requête :
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-questions --jeton-fichier ~/.jeton-test
+./ianalyze.py my-game.pgn --sans-questions --jeton-fichier ~/.jeton-test
 ```
 
 ```text
 [01:11:54] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:11:54] Lecture du PGN local : ma-partie.pgn
+[01:11:54] Lecture du PGN local : my-game.pgn
 Jeton absent : ~/.jeton-test introuvable.
 ```
 
@@ -1009,7 +1009,7 @@ Arrêt quand la position compte moins de N parties dans la base.
 Avec le seuil par défaut, 50, la Polonaise s'arrête au troisième demi-coup dans la base des maîtres :
 
 ```bash
-./ianalyze.py polonaise.pgn --sans-questions --base maitres
+./ianalyze.py polish-opening.pgn --sans-questions --base maitres
 ```
 
 ```text
@@ -1019,7 +1019,7 @@ Arrêt de l'interrogation : échantillon insuffisant au demi-coup 3 : 12 parties
 Pour un seuil plus exigeant :
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-questions --seuil-parties 200
+./ianalyze.py my-game.pgn --sans-questions --seuil-parties 200
 ```
 
 #### `--seuil-frequence P`
@@ -1032,7 +1032,7 @@ Un coup rare qui mène hors du catalogue des ouvertures est une sortie de théor
 0 désactive le critère.
 
 ```bash
-./ianalyze.py polonaise.pgn --sans-questions --coups-min 0
+./ianalyze.py polish-opening.pgn --sans-questions --coups-min 0
 ```
 
 ```text
@@ -1042,7 +1042,7 @@ Arrêt de l'interrogation : sortie de théorie au demi-coup 2 : g6 joué à 4.9 
 Avec 0, plus aucun coup n'est une sortie de théorie :
 
 ```bash
-./ianalyze.py polonaise.pgn --sans-questions --coups-min 0 --seuil-frequence 0
+./ianalyze.py polish-opening.pgn --sans-questions --coups-min 0 --seuil-frequence 0
 ```
 
 ```text
@@ -1062,7 +1062,7 @@ Avec la valeur par défaut, la table de la Polonaise va jusqu'au bout de la part
 Avec 0, elle s'arrête sur ce coup :
 
 ```bash
-./ianalyze.py polonaise.pgn --sans-questions --coups-min 0
+./ianalyze.py polish-opening.pgn --sans-questions --coups-min 0
 ```
 
 ```text
@@ -1075,7 +1075,7 @@ Ignore les deux seuils pour l'arrêt : l'interrogation descend tant que la base 
 La première sortie reste notée.
 
 ```bash
-./ianalyze.py polonaise.pgn --sans-questions --jusqu-a-epuisement
+./ianalyze.py polish-opening.pgn --sans-questions --jusqu-a-epuisement
 ```
 
 ```text
@@ -1089,7 +1089,7 @@ Arrêt de l'interrogation : fin de la partie.
 Plafond de demi-coups interrogés, garde-fou toujours actif.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-questions --jusqu-a-epuisement --max-demicoups 4
+./ianalyze.py my-game.pgn --sans-questions --jusqu-a-epuisement --max-demicoups 4
 ```
 
 ```text
@@ -1104,7 +1104,7 @@ Pause entre deux requêtes à l'explorateur, 2 secondes au minimum.
 Avec une pause de 3 secondes, visible à l'heure de chaque ligne :
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-questions --pause 3 --max-demicoups 3
+./ianalyze.py my-game.pgn --sans-questions --pause 3 --max-demicoups 3
 ```
 
 ```text
@@ -1119,12 +1119,12 @@ Saute la collecte explorateur : ni réseau vers l'explorateur, ni jeton, ni cata
 Le journal passe alors de la lecture de la partie au moteur, sans ligne "Explorateur" :
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions
 ```
 
 ```text
 [01:08:11] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:08:11] Lecture du PGN local : ma-partie.pgn
+[01:08:11] Lecture du PGN local : my-game.pgn
 [01:08:11] Questions de démarrage sautées : option --sans-questions.
 [01:08:11] Dossier de travail : analyse-ma-partie-20261121-010811
 [01:08:11] Stockfish : évaluation de 9 demi-coups, profondeur 18, multipv 3, threads 4. C'est la phase la plus longue.
@@ -1143,7 +1143,7 @@ L'évaluation Stockfish fait partie de toute collecte : le binaire est vérifié
 Limite le moteur aux N premiers coups entiers, soit 2N demi-coups. 0 analyse toute la partie.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --coups-stockfish 3
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --coups-stockfish 3
 ```
 
 ```text
@@ -1160,7 +1160,7 @@ Profondeur de recherche par position, de 1 à 60.
 Le temps de calcul croît très vite avec elle : au delà de 60, une seule position occuperait le moteur des heures !
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --profondeur 12
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --profondeur 12
 ```
 
 ```text
@@ -1179,7 +1179,7 @@ Avec 3, la synthèse montre, en face de chaque coup de la partie, les trois coup
 Si le coup joué n'en fait pas partie, le script le fait évaluer à part, pour mesurer ce qu'il perd.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --multipv 5
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --multipv 5
 ```
 
 ```text
@@ -1204,7 +1204,7 @@ Les deux ensemble.
 Le journal nomme le nombre de fils, "threads", pas la taille de la table :
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --fils 2 --hachage 128
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --fils 2 --hachage 128
 ```
 
 ```text
@@ -1222,7 +1222,7 @@ Ces trois réglages, MultiPV, Threads et Hash pour Stockfish, sont expliqués da
 Binaire du moteur.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --stockfish /usr/games/stockfish
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --stockfish /usr/games/stockfish
 ```
 
 Le journal est le même qu'à la section [Collecte sans rien saisir](#collecte-sans-rien-saisir).
@@ -1230,12 +1230,12 @@ Le journal est le même qu'à la section [Collecte sans rien saisir](#collecte-s
 Un chemin qui ne mène à rien arrête le script avant la collecte :
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --stockfish /nulle/part
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --stockfish /nulle/part
 ```
 
 ```text
 [01:11:53] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:11:53] Lecture du PGN local : ma-partie.pgn
+[01:11:53] Lecture du PGN local : my-game.pgn
 Stockfish introuvable : /nulle/part. Installez-le (apt install stockfish, dans /usr/games), ou indiquez son chemin avec --stockfish. L'évaluation du moteur fait partie de toute collecte.
 ```
 
@@ -1248,7 +1248,7 @@ Demi-coups de variante principale reproduits dans la synthèse, 0 pour la varian
 Les variantes complètes restent dans `stockfish/evaluations.json`.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --longueur-pv 2 --garder-dossier
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --longueur-pv 2 --garder-dossier
 ```
 
 Dans `synthese.md`, les variantes sont alors coupées à deux demi-coups :
@@ -1282,14 +1282,14 @@ Voir [Vérifier la réponse du LLM](#vérifier-la-réponse-du-llm) pour un bilan
 Nom du modèle essayé, repris en tête du bilan.
 
 ```bash
-./verify-analysis.py analyse-ma-partie-20261121-010838.zip analyse-fautive.pgn --nom "Modèle essayé"
+./verify-analysis.py analyse-ma-partie-20261121-010838.zip llm-faulty.pgn --nom "Modèle essayé"
 ```
 
 ```text
 Contrôle d'une analyse rendue par un LLM
   modèle  : Modèle essayé
   archive : analyse-ma-partie-20261121-010838.zip
-  PGN     : analyse-fautive.pgn
+  PGN     : llm-faulty.pgn
 ...
 ```
 
@@ -1299,13 +1299,13 @@ La conversation du LLM, copiée dans un fichier texte.
 Les positions et les évaluations qu'elle cite sont alors contrôlées aussi, dans deux sections de plus.
 
 ```bash
-./verify-analysis.py analyse-ma-partie-20261121-010838.zip analyse-llm.pgn --synthese conversation.txt
+./verify-analysis.py analyse-ma-partie-20261121-010838.zip llm-annotated.pgn --synthese llm-conversation.txt
 ```
 
 ```text
 Contrôle d'une analyse rendue par un LLM
   archive : analyse-ma-partie-20261121-010838.zip
-  PGN     : analyse-llm.pgn
+  PGN     : llm-annotated.pgn
 ...
 === 7. Conversation : positions citées, langue ===
   OK        aucun tiret cadratin dans la conversation (0 relevé(s))
@@ -1325,7 +1325,7 @@ Contrôle d'une analyse rendue par un LLM
 Sans PGN rendu, seule la conversation est contrôlée :
 
 ```bash
-./verify-analysis.py analyse-ma-partie-20261121-010838.zip - --synthese conversation.txt
+./verify-analysis.py analyse-ma-partie-20261121-010838.zip - --synthese llm-conversation.txt
 ```
 
 ```text
@@ -1359,13 +1359,13 @@ Ce prompt demande moins que le prompt complet : les contrôles qu'il ne fonde pa
 L'archive est ici le dossier gardé par `--prompt-seul --garder-dossier`.
 
 ```bash
-./verify-analysis.py analyse-ma-partie-20261121-010931 analyse-courte.pgn --prompt-seul
+./verify-analysis.py analyse-ma-partie-20261121-010931 llm-short.pgn --prompt-seul
 ```
 
 ```text
 Contrôle d'une analyse rendue par un LLM
   archive : analyse-ma-partie-20261121-010931
-  PGN     : analyse-courte.pgn
+  PGN     : llm-short.pgn
   prompt  : court (--prompt-seul), contrôles réduits à ce qu'il demande
 
 === 1. Lecture du PGN ===
@@ -1407,7 +1407,7 @@ Sans cette option, le périmètre est celui de votre réponse à la question de 
 Elle sert quand il a été fixé dans la conversation.
 
 ```bash
-./verify-analysis.py analyse-ma-partie-20261121-010838.zip analyse-llm.pgn --perimetre 3
+./verify-analysis.py analyse-ma-partie-20261121-010838.zip llm-annotated.pgn --perimetre 3
 ```
 
 ```text
@@ -1441,12 +1441,12 @@ Fichier PGN introuvable : partie-absente.pgn
 Les coups doivent être notés en anglais : K, Q, R, B, N.
 
 ```bash
-./ianalyze.py francais.pgn --sans-explorateur --sans-questions
+./ianalyze.py french-notation.pgn --sans-explorateur --sans-questions
 ```
 
 ```text
 [01:11:52] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:11:52] Lecture du PGN local : francais.pgn
+[01:11:52] Lecture du PGN local : french-notation.pgn
 PGN corrompu : "Cf3", ligne 1, n'est ni un coup en notation anglaise (K, Q, R, B, N) ni un autre élément de PGN. Une partie notée en français ou en figurines doit être convertie, un texte libre placé entre accolades.
 ```
 
@@ -1455,12 +1455,12 @@ PGN corrompu : "Cf3", ligne 1, n'est ni un coup en notation anglaise (K, Q, R, B
 Ce n'est pas une erreur : l'export de chess-mail.com écrit le résultat deux fois, et le second est ignoré. Le journal le signale, la collecte se poursuit.
 
 ```bash
-./ianalyze.py partie-chess-mail.pgn --sans-explorateur --sans-questions
+./ianalyze.py game-chess-mail.pgn --sans-explorateur --sans-questions
 ```
 
 ```text
 [17:04:02] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[17:04:03] Lecture du PGN local : partie-chess-mail.pgn
+[17:04:03] Lecture du PGN local : game-chess-mail.pgn
 [17:04:03] Résultat répété en fin de fichier, après la partie : ignoré.
 [17:04:03] Questions de démarrage sautées : option --sans-questions.
 ...
@@ -1470,12 +1470,12 @@ analyse-partie-chess-mail-20261121-170403.zip
 ### Plusieurs parties dans le fichier
 
 ```bash
-./ianalyze.py deux-parties.pgn --sans-explorateur --sans-questions
+./ianalyze.py two-games.pgn --sans-explorateur --sans-questions
 ```
 
 ```text
 [01:11:52] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:11:52] Lecture du PGN local : deux-parties.pgn
+[01:11:52] Lecture du PGN local : two-games.pgn
 Le PGN contient 2 parties : isolez celle à analyser dans un fichier à part.
 ```
 
@@ -1494,12 +1494,12 @@ La partie ne commence pas à la position initiale, elle part d'une balise FEN. I
 ### Commentaire jamais fermé
 
 ```bash
-./ianalyze.py accolade.pgn --sans-explorateur --sans-questions
+./ianalyze.py unclosed-brace.pgn --sans-explorateur --sans-questions
 ```
 
 ```text
 [01:11:52] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:11:53] Lecture du PGN local : accolade.pgn
+[01:11:53] Lecture du PGN local : unclosed-brace.pgn
 PGN corrompu : le commentaire ouvert par une accolade à la ligne 1 n'est jamais fermé.
 ```
 
@@ -1508,7 +1508,7 @@ PGN corrompu : le commentaire ouvert par une accolade à la ligne 1 n'est jamais
 Ici une option retirée depuis la version 4.0.0 : Le code de retour vaut 2.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-stockfish
+./ianalyze.py my-game.pgn --sans-stockfish
 ```
 
 ```text
@@ -1522,7 +1522,7 @@ ianalyze.py: error: unrecognized arguments: --sans-stockfish
 Le code de retour vaut 2.
 
 ```bash
-./ianalyze.py ma-partie.pgn --pause 1
+./ianalyze.py my-game.pgn --pause 1
 ```
 
 ```text
@@ -1536,24 +1536,24 @@ ianalyze.py: error: --pause ne doit pas descendre sous 2 secondes
 Les bornes sont celles que le moteur annonce : elles changent d'une version de Stockfish à l'autre.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --multipv 9999
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --multipv 9999
 ```
 
 ```text
 [01:11:53] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:11:53] Lecture du PGN local : ma-partie.pgn
+[01:11:53] Lecture du PGN local : my-game.pgn
 --multipv : 9999 est hors des bornes du moteur /usr/games/stockfish, qui admet de 1 à 500 pour MultiPV.
 ```
 
 ### Moteur introuvable
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --stockfish /nulle/part
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --stockfish /nulle/part
 ```
 
 ```text
 [01:11:53] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:11:53] Lecture du PGN local : ma-partie.pgn
+[01:11:53] Lecture du PGN local : my-game.pgn
 Stockfish introuvable : /nulle/part. Installez-le (apt install stockfish, dans /usr/games), ou indiquez son chemin avec --stockfish. L'évaluation du moteur fait partie de toute collecte.
 ```
 
@@ -1562,12 +1562,12 @@ Stockfish introuvable : /nulle/part. Installez-le (apt install stockfish, dans /
 Sans `--sans-explorateur`  le script a besoin du jeton Lichess (README, section 2).
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-questions
+./ianalyze.py my-game.pgn --sans-questions
 ```
 
 ```text
 [01:11:54] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:11:54] Lecture du PGN local : ma-partie.pgn
+[01:11:54] Lecture du PGN local : my-game.pgn
 Jeton absent : ~/.lichess_token introuvable.
 ```
 
@@ -1576,12 +1576,12 @@ Jeton absent : ~/.lichess_token introuvable.
 Le jeton est en place, mais le catalogue des ouvertures n'a pas été installé.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-questions
+./ianalyze.py my-game.pgn --sans-questions
 ```
 
 ```text
 [01:11:54] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[01:11:54] Lecture du PGN local : ma-partie.pgn
+[01:11:54] Lecture du PGN local : my-game.pgn
 Catalogue des ouvertures absent : ~/IAnalyze/local/catalogue.tsv introuvable.
 
 Installez-le en une commande :
@@ -1593,7 +1593,7 @@ Installez-le en une commande :
 Le modèle désigné par `--prompt` porte ici une valeur mal écrite.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --prompt ~/modele-fautif.txt
+./ianalyze.py my-game.pgn --sans-explorateur --sans-questions --prompt ~/modele-fautif.txt
 ```
 
 ```text
@@ -1607,11 +1607,11 @@ Modèle de prompt ~/modele-fautif.txt, ligne 21 : valeur inconnue {{VERSON}}, va
 Le code de retour vaut 1.
 
 ```bash
-./ianalyze.py --purge-reglages --reglages ma-partie.pgn
+./ianalyze.py --purge-reglages --reglages my-game.pgn
 ```
 
 ```text
---purge-reglages : ma-partie.pgn n'est pas un fichier de réglages, il ne porte pas la section [joueur]. Rien n'est supprimé.
+--purge-reglages : my-game.pgn n'est pas un fichier de réglages, il ne porte pas la section [joueur]. Rien n'est supprimé.
 ```
 
 ### Dossier à plusieurs collectes, pour le vérificateur
@@ -1620,7 +1620,7 @@ Le répertoire courant contient ici deux dossiers de collecte complets :
 Le code de retour vaut 2.
 
 ```bash
-./verify-analysis.py . analyse-llm.pgn
+./verify-analysis.py . llm-annotated.pgn
 ```
 
 ```text
@@ -1632,7 +1632,7 @@ Lecture impossible : . contient 2 collectes complètes : analyse-ma-partie-20261
 Le code de retour vaut 2.
 
 ```bash
-./verify-analysis.py archive-absente.zip analyse-llm.pgn
+./verify-analysis.py archive-absente.zip llm-annotated.pgn
 ```
 
 ```text
@@ -1693,7 +1693,7 @@ Le fichier de réglages, tel que le script l'écrit après la première collecte
 # sans tenir compte de la casse, dans les balises White et Black
 # pour déduire votre camp. L'option --pseudos les remplace le temps
 # d'un lancement.
-pseudos = MonPseudo
+pseudos = MyUsername
 # Votre cadence habituelle, proposée quand la balise TimeControl
 # d'une partie ne la donne pas. Formes admises :
 #   15+10                 temps réel, minutes puis incrément en

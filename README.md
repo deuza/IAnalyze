@@ -19,7 +19,7 @@ L'idée vient du programme [Lucas Chess](https://lucaschess.pythonanywhere.com/)
 *Le script ne produit aucune analyse : il donne à l'analyste des chiffres sûrs, et le prompt lui impose de s'y tenir.*
 
 ```bash
-./ianalyze.py ma-partie.pgn
+./ianalyze.py my-game.pgn
 ```
 
 ```text
@@ -69,7 +69,7 @@ Le script rassemble et met en forme :
 
 La chaîne complète tient en trois temps :
 
-1. `./ianalyze.py ma-partie.pgn`
+1. `./ianalyze.py my-game.pgn`
 
    Le script collecte, calcule, et écrit deux fichiers : `analyse-<partie>-<date>.zip` et `analyse-<partie>-<date>.prompt.txt`.
 
@@ -209,7 +209,7 @@ Le script les demande une seule fois, au premier lancement dans un terminal.
 
 ```ini
 [joueur]
-pseudos = MonPseudo, AutrePseudo
+pseudos = MyUsername, AutrePseudo
 cadence = 15+10
 niveau = 1300
 ```
@@ -233,7 +233,7 @@ Les autres formes de correspondance, la clef facultative `annotateur` et la faç
 SOURCE accepte trois formes :
 
 ```bash
-./ianalyze.py ma-partie.pgn                 # PGN local
+./ianalyze.py my-game.pgn                 # PGN local
 ./ianalyze.py https://lichess.org/<identifiant>  # URL Lichess
 ./ianalyze.py <identifiant>                      # identifiant
 ```
@@ -254,7 +254,7 @@ Les exports de ces sites et logiciels ont été essayés, et passent tels quels 
 | ajedrezmail.org | un coup par ligne |
 | Lucas Chess | durées et horloges en commentaires |
 
-Une partie de chacun est dans le répertoire `example-games`, anonymisée. Lichess en a deux : `partie-lichess-org.pgn`, l'export simple, et `partie-commentee.pgn`, l'export avec l'analyse du site.
+Une partie de chacun est dans le répertoire `example-games`, anonymisée. Lichess en a deux : `game-lichess-org.pgn`, l'export simple, et `commented-game.pgn`, l'export avec l'analyse du site.
 
 Le script refuse plutôt que d'analyser de travers :
 
@@ -317,7 +317,7 @@ Quelques options suffisent à la plupart des usages :
 | `--reglages FICHIER` | un autre fichier de réglages, créé s'il n'existe pas : un profil par joueur |
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sortie ~/analyses
+./ianalyze.py my-game.pgn --sans-explorateur --sortie ~/analyses
 ```
 
 Toutes les options sont dans [EXAMPLES.md](EXAMPLES.md), chacune avec sa commande et ce que le terminal affiche.   
@@ -428,7 +428,7 @@ Deux conseils si vous l'essayez avec un autre LLM :
 Pour un compte gratuit, ou pour un LLM qui n'ouvre pas les zip, refuse certaines pièces jointes ou n'exécute pas de code, le script écrit un prompt court :
 
 ```bash
-./ianalyze.py ma-partie.pgn --prompt-seul
+./ianalyze.py my-game.pgn --prompt-seul
 ```
 
 Vous collez ce seul texte dans la conversation, sans rien joindre.   
@@ -486,7 +486,7 @@ Elle n'a pas été testée avec le fichier .zip
 
 #### Le 21 novembre 2026, avec `--prompt-seul`
 
-Une partie de 39 demi-coups, gagnée par le joueur, et le même prompt court collé seul dans cinq conversations. C'est `example-games/partie-lichess-org.pgn`.   
+Une partie de 39 demi-coups, gagnée par le joueur, et le même prompt court collé seul dans cinq conversations. C'est `example-games/game-lichess-org.pgn`.   
 Le tableau du moteur y marque dix coups faibles, dont deux du joueur.
 
 Les cinq réponses ont en commun l'essentiel :
@@ -523,29 +523,29 @@ Un LLM peut rendre un PGN qui a l'air juste et ne l'est pas : un coup illégal d
 `verify-analysis.py` compare le PGN rendu à l'archive que le LLM a reçue, et sort le même bilan pour chaque LLM essayé.
 
 ```bash
-./verify-analysis.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn
+./verify-analysis.py analyse-ma-partie-20261119-164140.zip llm-annotated.pgn
 ```
 
 Copiez la conversation dans un fichier texte pour faire contrôler aussi les positions et les évaluations qu'elle cite :
 
 ```bash
-./verify-analysis.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn --synthese conversation.txt --nom "Nom du modèle"
+./verify-analysis.py analyse-ma-partie-20261119-164140.zip llm-annotated.pgn --synthese llm-conversation.txt --nom "Nom du modèle"
 ```
 
 Si le LLM n'a rendu aucun PGN, mettez un tiret à la place du fichier :
 
 ```bash
-./verify-analysis.py analyse-ma-partie-20261119-164140.zip - --synthese conversation.txt
+./verify-analysis.py analyse-ma-partie-20261119-164140.zip - --synthese llm-conversation.txt
 ```
 
 Pour un PGN obtenu avec le prompt court de `--prompt-seul`, ajoutez la même option, et donnez le dossier de travail gardé par `--garder-dossier` :
 
 ```bash
-./ianalyze.py ma-partie.pgn --prompt-seul --garder-dossier
+./ianalyze.py my-game.pgn --prompt-seul --garder-dossier
 ```
 
 ```bash
-./verify-analysis.py analyse-ma-partie-20261119-164140 analyse-llm.pgn --prompt-seul
+./verify-analysis.py analyse-ma-partie-20261119-164140 llm-annotated.pgn --prompt-seul
 ```
 
 Le prompt court demande moins que le prompt complet. Avec cette option, les contrôles qu'il ne fonde pas sont sautés : lignes de 79 caractères, résumé avant le premier coup, NAG, `%`, tiret cadratin, notation suffixe, balises Annotator et PlyCount, longueur des variantes, nombre de FEN. Restent la lecture, la ligne principale, les accolades, les balises recopiées, le marqueur de fin, les erreurs et gaffes commentées, les évaluations citées et les variantes.
@@ -554,7 +554,7 @@ Si vous avez convenu avec le LLM d'un périmètre, les 20 premiers coups par exe
 Quand le périmètre a été fixé dans la conversation, donnez-le :
 
 ```bash
-./verify-analysis.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn --perimetre 20
+./verify-analysis.py analyse-ma-partie-20261119-164140.zip llm-annotated.pgn --perimetre 20
 ```
 
 Le script accepte le zip ou son dossier décompressé, et se relance tout seul dans l'environnement virtuel d'IAnalyze, à son emplacement par défaut.   
