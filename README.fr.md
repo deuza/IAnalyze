@@ -39,12 +39,12 @@ Un outil supplémentaire, `verify-analysis.py`, contrôle le PGN que le LLM vous
 Plateformes : Debian et macOS (Homebrew).\
 Python 3.10 ou plus récent, et python-chess, que le script installe lui-même dans un environnement virtuel dédié.
 
-Le script, ses messages, l'archive et le prompt sont en anglais depuis la version 5.0.0, et l'analyse est demandée en anglais. La documentation tient en quatre fichiers, en anglais ; ce README et l'aide-mémoire ont leur version française :
+Le script, ses messages, l'archive et le prompt sont en anglais depuis la version 5.0.0, et l'analyse est demandée en anglais. La documentation tient en quatre fichiers, en anglais ; ce README, l'aide-mémoire et la page des tests ont leur version française :
 
 - [README.md](README.md), pour installer IAnalyze et analyser une partie, dont ce fichier est la traduction
 - [EXAMPLES.fr.md](EXAMPLES.fr.md), l'aide-mémoire : toutes les commandes, toutes les options, et ce que le terminal affiche, version française d'[EXAMPLES.md](EXAMPLES.md)
 - [TECHNICAL.md](TECHNICAL.md), pour le fonctionnement du script, son emploi depuis un autre programme, et le détail des fichiers produits
-- [TESTS.md](TESTS.md), pour lancer les tests et savoir ce que chacun vérifie
+- [TESTS.fr.md](TESTS.fr.md), pour lancer les tests et savoir ce que chacun vérifie, version française de [TESTS.md](TESTS.md)
 
 ## Sommaire
 
@@ -96,12 +96,13 @@ Les fichiers du dépôt :
 | `verify-analysis.py` | l'outil supplémentaire qui contrôle le PGN rendu par le LLM (section 8) |
 | [`EXAMPLES.md`](EXAMPLES.md) | l'aide-mémoire : commandes, options et sorties, en anglais |
 | [`TECHNICAL.md`](TECHNICAL.md) | la documentation technique |
-| [`TESTS.md`](TESTS.md) | les tests : comment les lancer, ce que chacun vérifie |
+| [`TESTS.md`](TESTS.md) | les tests : comment les lancer, ce que chacun vérifie, en anglais |
 | [`CHANGELOG.md`](CHANGELOG.md) | l'historique des versions |
 | [`README.md`](README.md) | ce README, en anglais |
 | [`EXAMPLES.fr.md`](EXAMPLES.fr.md) | l'aide-mémoire, en français |
+| [`TESTS.fr.md`](TESTS.fr.md) | les tests, en français |
 | [`LICENSE`](LICENSE) | la licence du code (voir Licences) |
-| `test-app.sh`, `test.pgn` | la suite de tests et sa partie d'essai, décrites dans [TESTS.md](TESTS.md) |
+| `test-app.sh`, `test.pgn` | la suite de tests et sa partie d'essai, décrites dans [TESTS.fr.md](TESTS.fr.md) |
 | `example-games/` | les parties et les fichiers des exemples d'[EXAMPLES.fr.md](EXAMPLES.fr.md), dont une vraie partie anonymisée pour un premier essai |
 
 ## 2. Prérequis et installation

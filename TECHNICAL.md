@@ -57,7 +57,7 @@ After step 8, a failure leaves the working folder in place, as it is, for diagno
 | `test-app.sh` | the test suite, for Linux and macOS, described in [TESTS.md](TESTS.md) |
 | `test.pgn` | a test game that gathers the tricky cases of a PGN, described in [TESTS.md](TESTS.md) |
 | `example-games/` | the files quoted in [EXAMPLES.md](EXAMPLES.md): games, refused PGNs, annotated PGNs |
-| `README.md`, `README.fr.md`, `EXAMPLES.md`, `EXAMPLES.fr.md`, `TECHNICAL.md`, `TESTS.md`, `CHANGELOG.md` | the documentation, the French versions of the README and of EXAMPLES.md, and the history of the versions |
+| `README.md`, `README.fr.md`, `EXAMPLES.md`, `EXAMPLES.fr.md`, `TECHNICAL.md`, `TESTS.md`, `TESTS.fr.md`, `CHANGELOG.md` | the documentation, the French versions of the README, of EXAMPLES.md and of TESTS.md, and the history of the versions |
 | `LICENSE` | the license, CC0 |
 
 HTTP goes through urllib and the archive through zipfile, both from the standard library of Python.

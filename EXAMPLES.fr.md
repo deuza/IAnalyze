@@ -1821,6 +1821,6 @@ rating = 1300
 
 - [README.fr.md](README.fr.md) : l'installation, l'usage courant, le choix du LLM
 - [TECHNICAL.md](TECHNICAL.md) : le fonctionnement du script, le format des fichiers (en anglais)
-- [TESTS.md](TESTS.md) : la suite de tests, test par test
+- [TESTS.fr.md](TESTS.fr.md) : la suite de tests, test par test
 - [CHANGELOG.md](CHANGELOG.md) : l'historique des versions (en anglais)
 - `./ianalyze.py --help` : le résumé des options, dans le terminal, en anglais

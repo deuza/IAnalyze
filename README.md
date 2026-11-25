@@ -100,6 +100,7 @@ The files of the repository:
 | [`CHANGELOG.md`](CHANGELOG.md) | the history of the versions |
 | [`README.fr.md`](README.fr.md) | the French version of this README |
 | [`EXAMPLES.fr.md`](EXAMPLES.fr.md) | the French version of EXAMPLES.md |
+| [`TESTS.fr.md`](TESTS.fr.md) | the French version of TESTS.md |
 | [`LICENSE`](LICENSE) | the license of the code (see Licenses) |
 | `test-app.sh`, `test.pgn` | the test suite and its test game, described in [TESTS.md](TESTS.md) |
 | `example-games/` | the games and files of the examples of [EXAMPLES.md](EXAMPLES.md), among them a real anonymized game for a first try |

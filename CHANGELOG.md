@@ -23,6 +23,8 @@ Icône de la licence CC-0
   with it.
 - `EXAMPLES.fr.md`, the French version of `EXAMPLES.md`, kept up to
   date with it.
+- `TESTS.fr.md`, the French version of `TESTS.md`, kept up to date
+  with it.
 
 ### Changed
 
@@ -269,6 +271,13 @@ Icône de la licence CC-0
   `--no-settings`, refusal of a settings file of version 4 by
   `--purge-settings`. Its earlier French text, brought up to date,
   is now `EXAMPLES.fr.md`.
+- `TESTS.md` is in English, and describes the tests of this version,
+  with the English names of the options and variables (`--network`,
+  `TOKEN`, `KEEP`). The tests added during the translation, T86 to
+  T90, have their rows, and the rows of T02, T05, T10, T11, T25,
+  T27, T57, T60, T62, T63 and T69 say all that these tests now
+  check. Its earlier French text, brought up to date, is now
+  `TESTS.fr.md`.
 
 ### Fixed
 
