@@ -13,10 +13,10 @@ prompt-only-template.txt (modèle du prompt court de --prompt-only),
 verify-analysis.py (contrôle du PGN rendu par le LLM),
 test.pgn (partie d'essai), test-app.sh (suite de tests),
 example-games/ (fichiers des exemples d'EXAMPLES.md),
-README.md (installation et usage courant), EXAMPLES.md (commandes,
-options et sorties, sur le plan d'une page de manuel), TECHNICAL.md
-(fonctionnement), TESTS.md (lancement des tests et tableau de tous les
-tests), CHANGELOG.md.
+README.md (installation et usage courant), README.fr.md (sa version
+française), EXAMPLES.md (commandes, options et sorties, sur le plan
+d'une page de manuel), TECHNICAL.md (fonctionnement), TESTS.md
+(lancement des tests et tableau de tous les tests), CHANGELOG.md.
 
 ## Plateformes
 
@@ -253,6 +253,10 @@ factice, et le vrai jeton n'entre jamais dans le bac à sable.
 - Commentaires et docstrings abondants, en anglais.
 - Pas de tiret cadratin, pas de guillemets chevrons, pas d'émoji dans
   les scripts.
+- Saut de ligne Markdown : une barre oblique inverse en fin de ligne,
+  jamais d'espaces, que git signale comme parasites. Elle ne marche
+  pas sous Obsidian, l'utilisateur le sait. La documentation ne parle
+  pas de cette convention.
 - Documents en anglais, sauf README.fr.md, en français et au
   vouvoiement. Nos échanges restent en français, au tutoiement.
 

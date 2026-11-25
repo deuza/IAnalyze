@@ -17,8 +17,10 @@ Icône de la licence CC-0
   deduced from `--usernames`; the rating comes from the Elo tag of the
   player's side, and the time control from the TimeControl tag or from
   the question about the game, which then suggests "unspecified". The
-  option is refused with `--settings`, whatever the path given, and
+  option is refused with `--settings`, whatever the name given, and
   with `--purge-settings`.
+- `README.fr.md`, the French version of the README, kept up to date
+  with it.
 
 ### Changed
 
@@ -234,6 +236,9 @@ Icône de la licence CC-0
   under `=== Totals ===`, as `failures` and `warnings`. Its help and
   its errors follow, with `--summary FILE` and `--name NAME`. A script
   that read the French report must follow: `ECHEC` is now `FAIL`.
+- The README is in English, and describes the commands, options and
+  files of this version. Its earlier French text, brought up to date,
+  is now `README.fr.md`.
 - The files of the repository have English names: `verify-analysis.py`,
   formerly `verifier-analyse.py`; `prompt-template.txt` and
   `prompt-only-template.txt`, formerly `prompt-modele.txt` and
