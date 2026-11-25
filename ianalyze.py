@@ -406,10 +406,10 @@ CATALOGUE_PARTIES = ("a", "b", "c", "d", "e")
 
 #: Default directory of the local catalog, and name of its index.
 CATALOGUE_DEFAUT = DONNEES
-CATALOGUE_INDEX = "catalogue.tsv"
+CATALOGUE_INDEX = "catalog.tsv"
 
 #: Version of the index format, checked on loading.
-CATALOGUE_FORMAT = "1"
+CATALOGUE_FORMAT = "2"
 
 #: Move number in a catalog line, "1." or "12." for example.
 RE_NUMERO_COUP = re.compile(r"\d+\.+")
@@ -425,34 +425,33 @@ RE_NUMERO_COUP = re.compile(r"\d+\.+")
 REGLAGES_DEFAUT = os.path.join(DOSSIER_APPLICATION, "settings.ini")
 
 #: Section of the settings file that describes the player.
-REGLAGES_SECTION = "joueur"
+REGLAGES_SECTION = "player"
 
 #: Known keys of this section, with the comment lines written above each
 #: one in the file. The usernames are looked up, ignoring case, in the
 #: White and Black tags to deduce the player's side; the first one is
 #: used to fill in an empty tag.
 REGLAGES_CLEFS = (
-    ("pseudos",
-     ("Vos noms de joueur, séparés par des virgules. Ils sont cherchés,",
-      "sans tenir compte de la casse, dans les balises White et Black",
-      "pour déduire votre camp. L'option --usernames les remplace le temps",
-      "d'un lancement.")),
-    ("cadence",
-     ("Votre cadence habituelle, proposée quand la balise TimeControl",
-      "d'une partie ne la donne pas. Formes admises :",
-      "  15+10                 temps réel, minutes puis incrément en",
-      "                        secondes",
-      "  14 jours              correspondance, délai fixe par coup",
-      "  10 coups en 50 jours  correspondance, coups par période",
-      "  5 jours + 36 heures   correspondance, capital de départ puis",
-      "                        incrément par coup, en heures ou en",
-      "                        jours ; ajoutez au besoin \", plafond 20",
-      "                        jours\" et \", réserve 50 jours\"",
-      "  inconnue")),
-    ("niveau",
-     ("Votre niveau, en points Elo approximatifs, ou inconnu. Il est",
-      "transmis à l'analyste, qui y adapte ses explications. Sans lui,",
-      "c'est l'Elo de votre balise dans la partie qui sert.")),
+    ("usernames",
+     ("Your player names, separated by commas. They are looked up,",
+      "ignoring case, in the White and Black tags to deduce your",
+      "side. The --usernames option replaces them for one run.")),
+    ("time_control",
+     ("Your usual time control, suggested when the TimeControl tag of",
+      "a game does not give it. Accepted forms:",
+      "  15+10                real time, minutes then increment in",
+      "                       seconds",
+      "  14 days              correspondence, fixed delay per move",
+      "  10 moves in 50 days  correspondence, moves per period",
+      "  5 days + 36 hours    correspondence, starting clock then",
+      "                       increment per move, in hours or in",
+      "                       days; add if need be \", maximum 20",
+      "                       days\" and \", bank 50 days\"",
+      "  unknown")),
+    ("rating",
+     ("Your rating, in approximate Elo points, or unknown. It is",
+      "passed on to the analyst, who adapts the explanations to it.",
+      "Without it, the Elo of your tag in the game is used.")),
 )
 
 #: Bounds of a rating expressed in Elo points.
@@ -504,7 +503,7 @@ ANNOTATEUR_DEFAUT = ("votre nom de modèle, suivi de son éditeur entre "
 
 #: Label of an unknown time control, when neither the TimeControl tag
 #: nor the settings give it.
-CADENCE_DEFAUT = "non précisée"
+CADENCE_DEFAUT = "unspecified"
 
 #: Lichess time control categories, from the slowest to the fastest, each
 #: with the estimated duration, in seconds, from which it applies. The
@@ -512,26 +511,26 @@ CADENCE_DEFAUT = "non précisée"
 #: times the increment. Bounds and formula taken from the Lichess source
 #: (scalachess: Speed.scala and Clock.scala). Beyond six hours, Lichess
 #: speaks of correspondence; a time control entered as real time stays
-#: "classique" here.
-CATEGORIES_CADENCE = ((1500, "classique"), (480, "rapide"), (180, "blitz"),
+#: "classical" here.
+CATEGORIES_CADENCE = ((1500, "classical"), (480, "rapid"), (180, "blitz"),
                       (30, "bullet"), (0, "ultrabullet"))
 COUPS_ESTIMES = 40
 
 #: Time control forms accepted in the settings file: "15+10", minutes per
-#: player then increment in seconds, the Lichess way, and "14 jours" for
+#: player then increment in seconds, the Lichess way, and "14 days" for
 #: correspondence. The other values of CADENCES_INCONNUES denote an
 #: unknown time control.
 RE_CADENCE_REELLE = re.compile(r"([0-9]{1,5})\s*\+\s*([0-9]{1,5})")
-RE_CADENCE_JOURS = re.compile(r"([0-9]{1,4})\s*(?:j|jour|jours)")
+RE_CADENCE_JOURS = re.compile(r"([0-9]{1,4})\s*(?:d|day|days)")
 
-#: Correspondence by period: "10 coups en 50 jours". This is the
+#: Correspondence by period: "10 moves in 50 days". This is the
 #: so-called standard ICCF time control, the time saved over a period
 #: being carried over to the next one.
 RE_CADENCE_PERIODE = re.compile(
-    r"([0-9]{1,3})\s*coups?\s*en\s*([0-9]{1,4})\s*(?:j|jour|jours)")
+    r"([0-9]{1,3})\s*moves?\s*in\s*([0-9]{1,4})\s*(?:d|day|days)")
 
-#: Correspondence with a clock: "5 jours + 36 heures", followed if need be
-#: by ", plafond 20 jours" and by ", réserve 50 jours". A clock is given at
+#: Correspondence with a clock: "5 days + 36 hours", followed if need be
+#: by ", maximum 20 days" and by ", bank 50 days". A clock is given at
 #: the start, an increment is added to it at each move, a maximum may cap
 #: it, and a bank may exist beside it, which the player draws from at
 #: will. chess-mail.com is its simple form (5 days, 36 hours per move,
@@ -540,14 +539,14 @@ RE_CADENCE_PERIODE = re.compile(
 #: increment carries its unit, hours or days: a day and a half cannot be
 #: written in whole days.
 RE_CADENCE_CAPITAL = re.compile(
-    r"([0-9]{1,4})\s*(?:j|jour|jours)\s*\+\s*([0-9]{1,4})\s*"
-    r"(h|heure|heures|j|jour|jours)"
-    r"(?:\s*,?\s*plafond\s*([0-9]{1,4})\s*(?:j|jour|jours))?"
-    r"(?:\s*,?\s*r[ée]serve\s*([0-9]{1,4})\s*(?:j|jour|jours))?")
+    r"([0-9]{1,4})\s*(?:d|day|days)\s*\+\s*([0-9]{1,4})\s*"
+    r"(h|hour|hours|d|day|days)"
+    r"(?:\s*,?\s*maximum\s*([0-9]{1,4})\s*(?:d|day|days))?"
+    r"(?:\s*,?\s*bank\s*([0-9]{1,4})\s*(?:d|day|days))?")
 
-#: Increment entered with its unit: "36h" or "3j".
-RE_INCREMENT = re.compile(r"([0-9]{1,4})\s*(h|heure|heures|j|jour|jours)")
-CADENCES_INCONNUES = ("", "?", "inconnue", "non précisée")
+#: Increment entered with its unit: "36h" or "3d".
+RE_INCREMENT = re.compile(r"([0-9]{1,4})\s*(h|hour|hours|d|day|days)")
+CADENCES_INCONNUES = ("", "?", "unknown", "unspecified")
 
 #: TimeControl tag of the PGN standard, in its two most common forms:
 #: "600+5", seconds then increment, and "300", time only.
@@ -1355,7 +1354,7 @@ def demander(question: str, defaut: str | None = None,
     characters of SIGNES_INTERDITS_NOM.
     """
     invite = (question if defaut is None
-              else "%s (Entrée : %s)" % (question, defaut))
+              else "%s (Enter: %s)" % (question, defaut))
     while True:
         sys.stderr.write(invite + " ")
         sys.stderr.flush()
@@ -1371,13 +1370,12 @@ def demander(question: str, defaut: str | None = None,
                 ligne.encode("utf-8", errors="surrogateescape"))[0]
         reponse = nettoyer_valeur(ligne).strip()
         if len(reponse) > REPONSE_MAX:
-            sys.stderr.write("  Réponse trop longue : %d caractères au "
-                             "plus.\n" % REPONSE_MAX)
+            sys.stderr.write("  Answer too long: %d characters at "
+                             "most.\n" % REPONSE_MAX)
             continue
         if nom and any(c in SIGNES_INTERDITS_NOM for c in reponse):
-            sys.stderr.write("  Un nom ne peut contenir ni guillemet, ni "
-                             "barre oblique inversée, ni crochet, ni "
-                             "accolade.\n")
+            sys.stderr.write("  A name cannot contain a quote, a "
+                             "backslash, a bracket or a brace.\n")
             continue
         return reponse or (defaut or "")
 
@@ -1403,7 +1401,7 @@ def demander(question: str, defaut: str | None = None,
 #   - a fixed delay for each move, nothing being carried over from one
 #     move to the next: Lichess, chess.com;
 #   - a number of moves to play per period, the time saved being carried
-#     over: standard ICCF time control, "10 coups en 50 jours";
+#     over: standard ICCF time control, "10 moves in 50 days";
 #   - a clock that grows by an increment at each move, with an optional
 #     maximum and bank: chess-mail.com, and the ICCF Triple Block.
 #
@@ -1448,15 +1446,15 @@ def analyser_cadence(texte: str) -> dict | None:
 
 
 def heures_increment(nombre: int, unite: str) -> int:
-    """Increment in hours, from a number and its unit, h or j."""
-    return nombre * 24 if unite.startswith("j") else nombre
+    """Increment in hours, from a number and its unit, h or d."""
+    return nombre * 24 if unite.startswith("d") else nombre
 
 
 def duree_increment(heures: int) -> str:
-    """ "36 heures", or "3 jours" when the count falls exactly in days."""
+    """ "36 hours", or "3 days" when the count falls exactly in days."""
     if heures and heures % 24 == 0:
-        return pluriel(heures // 24, "jour")
-    return pluriel(heures, "heure")
+        return pluriel(heures // 24, "day")
+    return pluriel(heures, "hour")
 
 
 def cadence_a_capital(capital: int, increment: int, plafond: int,
@@ -1496,24 +1494,25 @@ def noter_cadence(cadence: dict) -> str:
     if cadence["type"] == "reel":
         return "%d+%d" % (cadence["initial"] // 60, cadence["increment"])
     if cadence["type"] == "correspondance" and "capital" in cadence:
-        note = "%s + %s" % (pluriel(cadence["capital"], "jour"),
+        note = "%s + %s" % (pluriel(cadence["capital"], "day"),
                             duree_increment(cadence["increment"]))
         if cadence["plafond"]:
-            note += ", plafond %s" % pluriel(cadence["plafond"], "jour")
+            note += ", maximum %s" % pluriel(cadence["plafond"], "day")
         if cadence["reserve"]:
-            note += ", réserve %s" % pluriel(cadence["reserve"], "jour")
+            note += ", bank %s" % pluriel(cadence["reserve"], "day")
         return note
     if cadence["type"] == "correspondance" and "coups" in cadence:
-        return "%s en %s" % (pluriel(cadence["coups"], "coup"),
-                             pluriel(cadence["periode"], "jour"))
+        return "%s in %s" % (pluriel(cadence["coups"], "move"),
+                             pluriel(cadence["periode"], "day"))
     if cadence["type"] == "correspondance":
-        return pluriel(cadence["jours"], "jour")
-    return "inconnue"
+        return pluriel(cadence["jours"], "day")
+    return "unknown"
 
 
 def pluriel(nombre: int, mot: str) -> str:
-    """ "1 jour", "14 jours": the number followed by the word, in agreement."""
-    return "%d %s%s" % (nombre, mot, "s" if nombre > 1 else "")
+    """ "1 day", "14 days", "0 days": the number, then the word, plural
+    unless the number is 1."""
+    return "%d %s%s" % (nombre, mot, "s" if nombre != 1 else "")
 
 
 def categorie_cadence(initial: int, increment: int) -> str:
@@ -1528,27 +1527,27 @@ def categorie_cadence(initial: int, increment: int) -> str:
 def decrire_cadence(cadence: dict) -> str:
     """
     Sentence describing a time control, as it goes into contexte.md:
-    "rapide, 15 minutes + 10 secondes par coup", "blitz, 5 minutes sans
-    incrément", "correspondance, 14 jours par coup", "correspondance,
-    10 coups en 50 jours", "correspondance, capital de 5 jours + 36
-    heures par coup, plafonné à 20 jours", or "non précisée".
+    "rapid, 15 minutes + 10 seconds per move", "blitz, 5 minutes
+    without increment", "correspondence, 14 days per move",
+    "correspondence, 10 moves in 50 days", "correspondence, clock of
+    5 days + 36 hours per move, maximum of 20 days", or "unspecified".
     """
     if cadence["type"] == "correspondance" and "capital" in cadence:
-        phrase = ("correspondance, capital de %s + %s par coup"
-                  % (pluriel(cadence["capital"], "jour"),
+        phrase = ("correspondence, clock of %s + %s per move"
+                  % (pluriel(cadence["capital"], "day"),
                      duree_increment(cadence["increment"])))
         if cadence["plafond"]:
-            phrase += ", plafonné à %s" % pluriel(cadence["plafond"], "jour")
+            phrase += ", maximum of %s" % pluriel(cadence["plafond"], "day")
         if cadence["reserve"]:
-            phrase += ", réserve de %s" % pluriel(cadence["reserve"], "jour")
+            phrase += ", bank of %s" % pluriel(cadence["reserve"], "day")
         return phrase
     if cadence["type"] == "correspondance" and "coups" in cadence:
-        return "correspondance, %s en %s" % (
-            pluriel(cadence["coups"], "coup"),
-            pluriel(cadence["periode"], "jour"))
+        return "correspondence, %s in %s" % (
+            pluriel(cadence["coups"], "move"),
+            pluriel(cadence["periode"], "day"))
     if cadence["type"] == "correspondance":
-        return "correspondance, %s par coup" % pluriel(cadence["jours"],
-                                                       "jour")
+        return "correspondence, %s per move" % pluriel(cadence["jours"],
+                                                       "day")
     if cadence["type"] != "reel":
         return CADENCE_DEFAUT
     minutes, secondes = divmod(cadence["initial"], 60)
@@ -1556,9 +1555,9 @@ def decrire_cadence(cadence: dict) -> str:
     if minutes or not secondes:
         duree.append(pluriel(minutes, "minute"))
     if secondes:
-        duree.append(pluriel(secondes, "seconde"))
-    increment = (" + %s par coup" % pluriel(cadence["increment"], "seconde")
-                 if cadence["increment"] else " sans incrément")
+        duree.append(pluriel(secondes, "second"))
+    increment = (" + %s per move" % pluriel(cadence["increment"], "second")
+                 if cadence["increment"] else " without increment")
     return "%s, %s%s" % (categorie_cadence(cadence["initial"],
                                            cadence["increment"]),
                          " ".join(duree), increment)
@@ -1579,7 +1578,7 @@ def demander_entier(question: str, minimum: int,
             return vide
         if re.fullmatch(r"[0-9]{1,5}", reponse) and int(reponse) >= minimum:
             return int(reponse)
-        sys.stderr.write("  Réponse attendue : un nombre entier, %d ou plus.\n"
+        sys.stderr.write("  Expected answer: a whole number, %d or more.\n"
                          % minimum)
 
 
@@ -1597,35 +1596,34 @@ def demander_cadence(libelle: str, defaut: dict) -> tuple[dict, bool] | None:
     """
     propose = decrire_cadence(defaut)
     while True:
-        reponse = demander("%s : [t]emps réel, [c]orrespondance ou "
-                           "[i]nconnue ?" % libelle, propose)
+        reponse = demander("%s: [r]eal time, [c]orrespondence or "
+                           "[u]nknown?" % libelle, propose)
         if reponse is None:
             return None
         if reponse == propose:
             return defaut, True
         choix = reponse.casefold()
-        if choix in ("t", "temps", "temps réel", "temps reel", "r", "reel",
-                     "réel"):
-            minutes = demander_entier("  Minutes par joueur ?", 0)
+        if choix in ("r", "real", "real time", "real-time"):
+            minutes = demander_entier("  Minutes per player?", 0)
             if minutes is None:
                 return None
-            increment = demander_entier("  Incrément en secondes ?", 0)
+            increment = demander_entier("  Increment in seconds?", 0)
             if increment is None:
                 return None
             if minutes == 0 and increment == 0:
-                sys.stderr.write("  Une cadence sans temps ni incrément "
-                                 "n'existe pas.\n")
+                sys.stderr.write("  A time control with neither time nor "
+                                 "increment does not exist.\n")
                 continue
             return ({"type": "reel", "initial": 60 * minutes,
                      "increment": increment}, False)
-        if choix in ("c", "corr", "correspondance"):
+        if choix in ("c", "corr", "correspondence"):
             saisie = demander_correspondance()
             if saisie is None:
                 return None
             return saisie, False
-        if choix in ("i", "inconnue", "?"):
+        if choix in ("u", "unknown", "?"):
             return dict(CADENCE_INCONNUE), False
-        sys.stderr.write("  Réponse attendue : t, c ou i.\n")
+        sys.stderr.write("  Expected answer: r, c or u.\n")
 
 
 def analyser_niveau(texte: str) -> int | None:
@@ -1635,7 +1633,7 @@ def analyser_niveau(texte: str) -> int | None:
     and None for a value of another form.
     """
     texte = texte.strip().casefold()
-    if texte in ("", "?", "inconnu"):
+    if texte in ("", "?", "unknown"):
         return 0
     if (re.fullmatch(r"[0-9]{1,4}", texte)
             and NIVEAU_MIN <= int(texte) <= NIVEAU_MAX):
@@ -1645,20 +1643,20 @@ def analyser_niveau(texte: str) -> int | None:
 
 def demander_niveau() -> int | None:
     """
-    Asks for the player's rating in Elo points, Enter meaning "inconnu"
+    Asks for the player's rating in Elo points, Enter meaning "unknown"
     (0). The question is asked again as long as the answer is not an
     integer within the bounds. Returns None at the end of the stream.
     """
     while True:
-        reponse = demander("Votre niveau, en points Elo approximatifs ? "
-                           "(Entrée : inconnu)")
+        reponse = demander("Your rating, in approximate Elo points? "
+                           "(Enter: unknown)")
         if reponse is None:
             return None
         niveau = analyser_niveau(reponse)
         if niveau is not None:
             return niveau
-        sys.stderr.write("  Réponse attendue : un nombre entier entre %d et "
-                         "%d, ou Entrée.\n" % (NIVEAU_MIN, NIVEAU_MAX))
+        sys.stderr.write("  Expected answer: a whole number between %d and "
+                         "%d, or Enter.\n" % (NIVEAU_MIN, NIVEAU_MAX))
 
 
 def deduire_camp(partie: chess.pgn.Game, pseudos: list[str]) -> str | None:
@@ -1685,68 +1683,68 @@ def demander_correspondance() -> dict | None:
     Returns None at the end of the stream.
     """
     while True:
-        reponse = demander("  Correspondance : [d]élai fixe par coup, "
-                           "[p]ériode pour un nombre de coups, ou [c]apital "
-                           "de temps avec incrément ?")
+        reponse = demander("  Correspondence: fixed [d]elay per move, "
+                           "[p]eriod for a number of moves, or [c]lock "
+                           "with an increment?")
         if reponse is None:
             return None
         choix = reponse.casefold()
-        if choix in ("d", "delai", "délai"):
-            jours = demander_entier("  Jours par coup ?", 1)
+        if choix in ("d", "delay"):
+            jours = demander_entier("  Days per move?", 1)
             if jours is None:
                 return None
             return {"type": "correspondance", "jours": jours}
-        if choix in ("p", "periode", "période"):
-            coups = demander_entier("  Nombre de coups par période ?", 1)
+        if choix in ("p", "period"):
+            coups = demander_entier("  Number of moves per period?", 1)
             if coups is None:
                 return None
-            periode = demander_entier("  Durée de la période, en jours ?", 1)
+            periode = demander_entier("  Length of the period, in days?", 1)
             if periode is None:
                 return None
             return {"type": "correspondance", "coups": coups,
                     "periode": periode}
-        if choix in ("c", "capital"):
-            capital = demander_entier("  Capital de départ, en jours ?", 0)
+        if choix in ("c", "clock"):
+            capital = demander_entier("  Starting clock, in days?", 0)
             if capital is None:
                 return None
             increment = demander_increment()
             if increment is None:
                 return None
-            plafond = demander_entier("  Plafond du capital, en jours ? "
-                                      "(Entrée : aucun)", 1, vide=0)
+            plafond = demander_entier("  Maximum of the clock, in days? "
+                                      "(Enter: none)", 1, vide=0)
             if plafond is None:
                 return None
-            reserve = demander_entier("  Réserve à côté du capital, en "
-                                      "jours ? (Entrée : aucune)", 1, vide=0)
+            reserve = demander_entier("  Bank beside the clock, in "
+                                      "days? (Enter: none)", 1, vide=0)
             if reserve is None:
                 return None
             cadence = cadence_a_capital(capital, increment, plafond, reserve)
             if cadence is not None:
                 return cadence
-            sys.stderr.write("  Cadence incohérente : il faut un capital ou "
-                             "un incrément, et un plafond au moins égal au "
-                             "capital de départ.\n")
+            sys.stderr.write("  Inconsistent time control: it takes a "
+                             "clock or an increment, and a maximum at "
+                             "least equal to the starting clock.\n")
             continue
-        sys.stderr.write("  Réponse attendue : d, p ou c.\n")
+        sys.stderr.write("  Expected answer: d, p or c.\n")
 
 
 def demander_increment() -> int | None:
     """
     Asks for the increment per move, with its unit, and returns it in
-    hours: "36h" gives 36, "3j" gives 72. The question is asked again as
+    hours: "36h" gives 36, "3d" gives 72. The question is asked again as
     long as the answer does not have this form. Returns None at the end of
     the stream.
     """
     while True:
-        reponse = demander("  Incrément par coup, avec son unité, 36h ou 3j "
-                           "par exemple ?")
+        reponse = demander("  Increment per move, with its unit, 36h or 3d "
+                           "for example?")
         if reponse is None:
             return None
         trouve = RE_INCREMENT.fullmatch(reponse.casefold())
         if trouve:
             return heures_increment(int(trouve.group(1)), trouve.group(2))
-        sys.stderr.write("  Réponse attendue : un nombre entier suivi de h "
-                         "ou de j.\n")
+        sys.stderr.write("  Expected answer: a whole number followed by h "
+                         "or d.\n")
 
 
 def est_pseudo(nom: str, pseudos: list[str]) -> bool:
@@ -1778,13 +1776,13 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
     # answer makes the question come again, Ctrl-D gives up on it.
     camp = None
     while camp is None:
-        reponse = demander("Avez-vous joué les Blancs ou les Noirs ? [b/n]")
+        reponse = demander("Did you play White or Black? [w/b]")
         if reponse is None:
             return {"camp": None, "origine": "non déclaré", "modifiees": []}
         choix = reponse.casefold()
-        if choix in ("b", "blanc", "blancs", "w", "white"):
+        if choix in ("w", "white"):
             camp = "Blancs"
-        elif choix in ("n", "noir", "noirs", "black"):
+        elif choix in ("b", "black"):
             camp = "Noirs"
 
     modifiees = []
@@ -1798,12 +1796,12 @@ def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
             # No known username: pseudos[0] raised IndexError. We ask
             # for the name, as for the opponent, and "?" leaves the tag
             # as it is.
-            nom = demander("Votre nom de joueur ?", "?", nom=True)
+            nom = demander("Your player name?", "?", nom=True)
             if nom and nom != "?":
                 partie.headers[mienne] = nom
                 modifiees.append(mienne)
     if partie.headers.get(autre, "?").strip() in ("", "?"):
-        nom = demander("Nom de l'adversaire ?", "?", nom=True)
+        nom = demander("Opponent's name?", "?", nom=True)
         if nom and nom != "?":
             partie.headers[autre] = nom
             modifiees.append(autre)
@@ -1816,8 +1814,8 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
     Asks the time control question if the TimeControl tag does not give
     it, then the four startup questions of the project, and writes the
     text of contexte.md. `cadence_habituelle`, taken from the settings, is
-    the time control that the question suggests; without it, it is "non
-    précisée". A TimeControl tag of a common form is quoted, then
+    the time control that the question suggests; without it, it is
+    "unspecified". A TimeControl tag of a common form is quoted, then
     translated.
 
     "(défaut)" marks an answer confirmed with Enter: the analyst thus
@@ -1857,7 +1855,8 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
     else:
         habituelle = cadence_habituelle or dict(CADENCE_INCONNUE)
         saisie = (None if fin_de_flux
-                  else demander_cadence("Cadence de la partie", habituelle))
+                  else demander_cadence("Time control of the game",
+                                        habituelle))
         if saisie is None:
             fin_de_flux = True
             saisie = (habituelle, True)
@@ -1877,11 +1876,12 @@ def recueillir_contexte(partie: chess.pgn.Game, camp: dict,
 # What depends on the person, and not on the game, lives in a small file
 # in INI format, readable and editable by hand:
 #
-#     [joueur]
-#     pseudos = MonPseudo, AutrePseudo
-#     cadence = rapide, 15 minutes
+#     [player]
+#     usernames = MyUsername, OtherUsername
+#     time_control = 15+10
+#     rating = 1500
 #
-# It is created on the first run in a terminal, by two questions asked
+# It is created on the first run in a terminal, by three questions asked
 # only once. Outside a terminal, nothing is asked or written: the script
 # makes do with what the file already contains.
 # ===========================================================================
@@ -1902,7 +1902,7 @@ def purger_reglages(chemin: str) -> None:
     file, is refused rather than deleted.
 
     With --settings, the path comes from the command line: a typo must not
-    destroy another file. Only a file that carries the [joueur] section,
+    destroy another file. Only a file that carries the [player] section,
     or an empty file, is deleted. The section is looked up in the raw
     text: a damaged settings file, which configparser would reject, thus
     stays deletable.
@@ -1941,7 +1941,7 @@ def lire_reglages(chemin: str) -> configparser.ConfigParser:
 
     The file goes through the same decoding as the PGN: its encoding does
     not matter. A file that configparser rejects stops the script with a
-    clear message, rather than being silently ignored. The [joueur]
+    clear message, rather than being silently ignored. The [player]
     section always exists in the returned object.
     """
     # interpolation=None: the percent sign of a value stays a plain
@@ -1964,7 +1964,7 @@ def lire_reglages(chemin: str) -> configparser.ConfigParser:
 
 
 def reglage(reglages: configparser.ConfigParser, clef: str) -> str:
-    """Value of a key of the [joueur] section, empty if it is missing."""
+    """Value of a key of the [player] section, empty if it is missing."""
     return reglages.get(REGLAGES_SECTION, clef, fallback="").strip()
 
 
@@ -1978,7 +1978,7 @@ def ecrire_reglages(chemin: str, reglages: configparser.ConfigParser) -> bool:
     Writes the settings file, comments included.
 
     The known keys come first, each one under its comment; the other keys
-    of [joueur] and the other sections, which you may have added, are
+    of [player] and the other sections, which you may have added, are
     copied after them. A failure to write does not stop the collection: it
     is reported, and the question will be asked again on the next run.
     Returns true if the file was written.
@@ -1989,9 +1989,9 @@ def ecrire_reglages(chemin: str, reglages: configparser.ConfigParser) -> bool:
         valeur = valeur.replace("\n", "\n\t")
         return "%s = %s" % (clef, valeur) if valeur else "%s =" % clef
 
-    out = ["# Réglages de ianalyze.py.",
-           "# Vous pouvez modifier ce fichier à la main. Une clef supprimée",
-           "# sera redemandée au prochain lancement sur un terminal.",
+    out = ["# Settings of ianalyze.py.",
+           "# You may edit this file by hand. A deleted key will be asked",
+           "# again at the next run in a terminal.",
            "",
            "[%s]" % REGLAGES_SECTION]
     connues = [clef for clef, _ in REGLAGES_CLEFS]
@@ -2024,7 +2024,7 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
     Asks, only once, for the settings that the file does not give.
 
     Called only on an interactive terminal. Each key missing from
-    [joueur] gets a question; a key that is present, even empty, is never
+    [player] gets a question; a key that is present, even empty, is never
     asked for again. The usernames passed with --usernames serve as the
     suggested answer. An end of stream (Ctrl-D) gives up without writing
     anything: the questions will come back on the next run.
@@ -2034,42 +2034,41 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
     # A time control that is present but unreadable, written by hand or
     # inherited from a version that accepted free text, is asked for
     # again too: it must not go to the analyst as it is.
-    brute = reglages.get(REGLAGES_SECTION, "cadence", fallback=None)
+    brute = reglages.get(REGLAGES_SECTION, "time_control", fallback=None)
     if brute is not None and analyser_cadence(brute) is None:
         journal("Settings: the saved time control, \"%s\", cannot be read, it "
                 "is asked again." % nettoyer_valeur(brute))
-        manquantes.append("cadence")
+        manquantes.append("time_control")
     # The same goes for the rating, which must be a number of Elo points.
-    brute = reglages.get(REGLAGES_SECTION, "niveau", fallback=None)
+    brute = reglages.get(REGLAGES_SECTION, "rating", fallback=None)
     if brute is not None and analyser_niveau(brute) is None:
         journal("Settings: the saved rating, \"%s\", cannot be read, it is "
                 "asked again." % nettoyer_valeur(brute))
-        manquantes.append("niveau")
+        manquantes.append("rating")
     if not manquantes:
         return
 
     journal("Settings: %d answer(s) to give only once, kept in "
             "%s." % (len(manquantes), chemin_reglages(chemin)))
     for clef in manquantes:
-        if clef == "pseudos":
+        if clef == "usernames":
             if pseudos_cli:
-                reponse = demander("Votre pseudo de joueur, ou plusieurs "
-                                   "séparés par des virgules ?",
+                reponse = demander("Your username, or several separated "
+                                   "by commas?",
                                    ", ".join(pseudos_cli), nom=True)
             else:
-                reponse = demander("Votre pseudo de joueur, ou plusieurs "
-                                   "séparés par des virgules ? (Entrée : "
-                                   "aucun)", nom=True)
+                reponse = demander("Your username, or several separated "
+                                   "by commas? (Enter: none)", nom=True)
             if reponse is not None:
                 reponse = ", ".join(decouper_pseudos(reponse))
-        elif clef == "niveau":
+        elif clef == "rating":
             niveau = demander_niveau()
             if niveau is None:
                 reponse = None
             else:
-                reponse = str(niveau) if niveau else "inconnu"
+                reponse = str(niveau) if niveau else "unknown"
         else:
-            saisie = demander_cadence("Votre cadence habituelle",
+            saisie = demander_cadence("Your usual time control",
                                       dict(CADENCE_INCONNUE))
             reponse = None if saisie is None else noter_cadence(saisie[0])
         if reponse is None:
@@ -2368,8 +2367,8 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
     nommees = sum(1 for _, nom in positions.values() if nom)
     date = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
     entete = "\t".join(("#format=%s" % CATALOGUE_FORMAT, "date=%s" % date,
-                        "lignes=%d" % nb_lignes, "nommees=%d" % nommees,
-                        "connues=%d" % len(positions),
+                        "lines=%d" % nb_lignes, "named=%d" % nommees,
+                        "known=%d" % len(positions),
                         "source=%s" % CATALOGUE_SOURCE))
 
     cible = chemin_catalogue(repertoire)
@@ -2378,12 +2377,12 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
         cible.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile("w", encoding="utf-8",
                                          dir=cible.parent,
-                                         prefix=".catalogue-",
+                                         prefix=".catalog-",
                                          suffix=".tmp",
                                          delete=False) as tmp:
             temporaire = pathlib.Path(tmp.name)
             tmp.write(entete + "\n")
-            tmp.write("epd\teco\tnom\n")
+            tmp.write("epd\teco\tname\n")
             # Sorted order: two installations of the same catalog give
             # two identical files, easy to compare with diff.
             for epd in sorted(positions):
@@ -2403,8 +2402,8 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
     catalogue = lire_catalogue(repertoire)
     journal("Catalog installed: %s lines, %s named positions, %s known "
             "positions, in %s"
-            % (catalogue.meta["lignes"], catalogue.meta["nommees"],
-               catalogue.meta["connues"], cible))
+            % (catalogue.meta["lines"], catalogue.meta["named"],
+               catalogue.meta["known"], cible))
 
 
 def lire_catalogue(repertoire: str) -> Catalogue:
@@ -2422,7 +2421,7 @@ def lire_catalogue(repertoire: str) -> Catalogue:
             "Opening catalog missing: %s not found.\n\n"
             "Install it with one command:\n"
             "    %s\n" % (chemin, commande_catalogue(repertoire)))
-    reparer = "Réinstallez-le avec : %s" % commande_catalogue(repertoire)
+    reparer = "Reinstall it with: %s" % commande_catalogue(repertoire)
 
     positions: dict[str, tuple[str, str]] = {}
     try:
@@ -2449,15 +2448,15 @@ def lire_catalogue(repertoire: str) -> Catalogue:
                          % (chemin, reparer))
     meta = dict(champ.partition("=")[::2]
                 for champ in premiere[1:].split("\t"))
-    if meta.get("format") != CATALOGUE_FORMAT or entete != "epd\teco\tnom":
+    if meta.get("format") != CATALOGUE_FORMAT or entete != "epd\teco\tname":
         raise SystemExit("Catalog of unknown format, %s.\n"
                          "%s"
                          % (chemin, reparer))
-    if meta.get("connues") != str(len(positions)):
+    if meta.get("known") != str(len(positions)):
         raise SystemExit("Truncated catalog: %s positions announced, %d read "
                          "in %s.\n"
                          "%s"
-                         % (meta.get("connues"), len(positions), chemin,
+                         % (meta.get("known"), len(positions), chemin,
                             reparer))
     return Catalogue(positions, meta)
 
@@ -3407,7 +3406,7 @@ def consignes_joueur(contexte: str | None) -> str:
         if ligne.startswith("- ") and not ligne.endswith("(défaut)")
         and not ligne.startswith(("- Camp du joueur",
                                   "- Cadence : balise TimeControl",
-                                  "- Cadence : non précisée")))
+                                  "- Cadence : unspecified")))
 
 
 def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
@@ -3540,8 +3539,8 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
               "nomme la position atteinte par le coup joué ; "
               "`(intermédiaire)` signale une position de passage d'une "
               "ligne nommée, `-` une position hors catalogue."
-              % (cat.get("date", "?"), cat.get("nommees", "?"),
-                 cat.get("connues", "?")))
+              % (cat.get("date", "?"), cat.get("named", "?"),
+                 cat.get("known", "?")))
         a("")
         a("| # | Coup | Trait | Parties pos. | Joué | Rang | Fréq. | "
           "Score B. | Majoritaire | Fréq. majo | Score B. majo | "
@@ -4427,7 +4426,7 @@ def main(argv: list[str]) -> int:
         # here, giving the command to run.
         catalogue = lire_catalogue(options.catalogue)
         journal("Opening catalog: %s known positions, from %s"
-                % (catalogue.meta.get("connues"), catalogue.meta.get("date")))
+                % (catalogue.meta.get("known"), catalogue.meta.get("date")))
     # The engine has been mandatory since version 4.0.0: it is checked
     # before any writing and before the slightest request.
     verifier_moteur(options.stockfish)
@@ -4450,12 +4449,13 @@ def main(argv: list[str]) -> int:
     # option: collecte.json thus records the usernames actually used,
     # and it may be empty.
     if options.pseudos is None:
-        options.pseudos = decouper_pseudos(reglage(reglages, "pseudos"))
+        options.pseudos = decouper_pseudos(reglage(reglages, "usernames"))
     if interactif:
         journal("Startup questions, Enter keeps the suggested value.")
         camp = completer_entetes(partie, options.pseudos)
         contexte = recueillir_contexte(
-            partie, camp, analyser_cadence(reglage(reglages, "cadence")))
+            partie, camp,
+            analyser_cadence(reglage(reglages, "time_control")))
         consignes = contexte
     else:
         journal("Startup questions skipped: %s."
@@ -4597,8 +4597,8 @@ def main(argv: list[str]) -> int:
     if modele_prompt is not None:
         camp_joueur = ((camp or {}).get("camp")
                        or deduire_camp(partie, options.pseudos))
-        niveau = analyser_niveau(reglage(reglages, "niveau")) or 0
-        habituelle = (analyser_cadence(reglage(reglages, "cadence"))
+        niveau = analyser_niveau(reglage(reglages, "rating")) or 0
+        habituelle = (analyser_cadence(reglage(reglages, "time_control"))
                       or dict(CADENCE_INCONNUE))
         # Data of the short prompt: computed in every case, as a personal
         # template may place them too.
@@ -4646,7 +4646,7 @@ def main(argv: list[str]) -> int:
             "CAMP": camp_joueur or "inconnu",
             "NIVEAU": decrire_niveau(niveau, partie, camp_joueur),
             "CADENCE": decrire_cadence(habituelle),
-            "ANNOTATEUR": (nettoyer_valeur(reglage(reglages, "annotateur"))
+            "ANNOTATEUR": (nettoyer_valeur(reglage(reglages, "annotator"))
                            or ANNOTATEUR_DEFAUT),
             "BASE": base["libelle"],
             "SEUIL_IMPRECISION": str(SEUIL_IMPRECISION),

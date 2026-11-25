@@ -68,7 +68,8 @@ tests), CHANGELOG.md.
 - Rupture de compatibilité, donc version majeure : 5.0.0, appliquée
   une seule fois, à la fusion dans main.
 - Pas de migration : l'ancien reglages.ini et l'ancien catalogue.tsv
-  sont ignorés, sans message.
+  sont ignorés, sans message. Un settings.ini à l'ancien format garde
+  sa section [joueur], recopiée comme section inconnue après [player].
 - Traduction faite directement, sans DeepL.
 - Huit lots, un patch chacun. Lot 0 : CLAUDE.md.
 - Lot 1 : commentaires et docstrings, sans changer le code : l'AST, une
@@ -84,7 +85,11 @@ tests), CHANGELOG.md.
 - Lot 3b : questions et réponses au terminal, réglages, catalogue. Les
   questions vont avec leurs réponses : elles portent les touches à
   taper. Les quatre questions de QUESTIONS_CONTEXTE, dont les réponses
-  partent dans contexte.md, attendent le lot 4.
+  partent dans contexte.md, attendent le lot 4. La phrase de cadence
+  (decrire_cadence) passe au 3b : défaut affiché au terminal, elle
+  partage pluriel() et duree_increment() avec settings.ini ; dans
+  contexte.md et le prompt, ses libellés restent français jusqu'au
+  lot 4.
 - Lot 4 : archive et LLM, soit noms et contenu des fichiers (JSON,
   synthèse, contexte), modèles de prompt, vérificateur en entier hors
   ses options, renommées au lot 3a.
@@ -98,18 +103,19 @@ tests), CHANGELOG.md.
   masters ; variables JETON et GARDER de test-app.sh -> TOKEN et KEEP ;
   option --reseau de test-app.sh -> --network ; variable
   IANALYZE_DEJA_RELANCE -> IANALYZE_RELAUNCHED.
-- Renommages du lot 3b : catalogue.tsv -> catalog.tsv. reglages.ini est
-  déjà devenu settings.ini, à la racine de l'application ; son contenu
-  passe en anglais au lot 3b.
+- Renommages du lot 3b, faits : catalogue.tsv -> catalog.tsv, format 2,
+  colonnes epd eco name, clefs lines, named, known ; dans
+  settings.ini, [joueur] -> [player], pseudos, cadence, niveau,
+  annotateur -> usernames, time_control, rating, annotator.
 - Renommages du lot 5 : verifier-analyse.py -> verify-analysis.py,
   prompt-modele.txt -> prompt-template.txt, prompt-seul-modele.txt ->
   prompt-only-template.txt, parties-exemples/ -> example-games/
   (fichiers compris), EXEMPLES.md -> EXAMPLES.md, TECHNIQUE.md ->
   TECHNICAL.md.
-- Points d'attention : au terminal, "b" voulait dire Blancs, il voudra
-  dire Black ([w/b]), à signaler dans le CHANGELOG ; verify-analysis.py
-  ne lira plus les archives 4.x ; le prompt traduit ne se valide
-  qu'avec un vrai LLM, par l'utilisateur.
+- Points d'attention : au terminal, "b" voulait dire Blancs, il veut
+  dire Black ([w/b]) depuis le lot 3b, signalé dans le CHANGELOG ;
+  verify-analysis.py ne lira plus les archives 4.x ; le prompt traduit
+  ne se valide qu'avec un vrai LLM, par l'utilisateur.
 - Glossaire, à compléter au fil des lots : partie = game ; coup = move ;
   demi-coup = ply ; trait = side to move ; Blancs, Noirs = White,
   Black ; camp = side ; cadence = time control ; correspondance =
@@ -128,8 +134,10 @@ tests), CHANGELOG.md.
   directory ; délai = timeout ; fils = threads ; jusqu'à épuisement =
   exhaustive ; gain, nulle, perte = win, draw, loss (W/D/L) ;
   avertissement "Attention" = "Warning" ; aide = help ; code de retour
-  = exit code ; dans le rapport des tests, réussi, échec, sauté =
-  passed, failed, skipped, et les marqueurs ECHEC, SAUTE = FAIL, SKIP.
+  = exit code ; inconnu = unknown ; cadence non précisée =
+  unspecified ; délai fixe = fixed delay ; dans le rapport des tests,
+  réussi, échec, sauté = passed, failed, skipped, et les marqueurs
+  ECHEC, SAUTE = FAIL, SKIP.
 - Correspondance à capital : capital, incrément, plafond, réserve =
   clock, increment, maximum, bank, termes des ICCF Rules 2026 (§2.4 et
   annexe 3), vérifiés au lot 1.

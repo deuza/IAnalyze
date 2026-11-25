@@ -200,7 +200,7 @@ O="--no-explorer --depth 1 --no-questions --stockfish $STOCKFISH"
 # modified. It carries a username, so that the tests that go through a
 # terminal do not get the questions of the first run.
 REGL="$TRAVAIL/reglages-tests.ini"
-printf '[joueur]\npseudos = Moi\ncadence = 14 jours\nniveau = 1300\n' \
+printf '[player]\nusernames = Moi\ntime_control = 14 days\nrating = 1300\n' \
     > "$REGL"
 
 NB_OK=0
@@ -655,7 +655,7 @@ if pid == 0:
                       "--depth", "1", "--keep-folder",
                       "--venv", os.environ["VENV"],
                       "--settings", os.environ["REGL"]])
-for reponse in (b"b", b"Zo\xe9", b"", b"", b"", b"", b""):
+for reponse in (b"w", b"Zo\xe9", b"", b"", b"", b"", b""):
     time.sleep(1)
     os.write(fd, reponse + b"\n")
 time.sleep(3)
@@ -690,7 +690,7 @@ if pid == 0:
                       "--venv", os.environ["VENV"],
                       "--settings", os.environ["REGL"]])
 recu = b""
-for reponse in (b"b", b'Ev"il] [White "Pirate"] {x}', b"a" * 300, b"Bob",
+for reponse in (b"w", b'Ev"il] [White "Pirate"] {x}', b"a" * 300, b"Bob",
                 b"", b"", b"", b"", b""):
     time.sleep(1)
     os.write(fd, reponse + b"\n")
@@ -705,8 +705,8 @@ except OSError:
     pass
 os.waitpid(pid, 0)
 texte = recu.decode("utf-8", "replace")
-print(texte.count("Un nom ne peut contenir"),
-      texte.count("Réponse trop longue : 255"),
+print(texte.count("A name cannot contain"),
+      texte.count("Answer too long: 255"),
       texte.count("Unexpected error"))
 EOF
 cat analyse-italienne-*/partie.pgn > extrait 2>/dev/null
@@ -1122,37 +1122,37 @@ P="--no-explorer --depth 1 --keep-folder --venv $VENV"
 
 titre "T57: first run, settings asked then saved"
 rm -rf analyse-italienne-*
-SCRIPT="$SCRIPT" python3 t-pty.py "Zoe42, zoe|t|15|10|1300|b||||||" \
+SCRIPT="$SCRIPT" python3 t-pty.py "Zoe42, zoe|r|15|10|1300|w||||||" \
     italienne.pgn $P --settings t-reglages.ini > sortie-pty 2>&1
 verifier "T57 three answers asked only once" \
     contient sortie-pty "3 answer(s) to give only once"
 verifier "T57 rating question" \
-    contient sortie-pty "Votre niveau, en points Elo approximatifs ?"
-verifier "T57 username question" contient sortie-pty "Votre pseudo de joueur"
+    contient sortie-pty "Your rating, in approximate Elo points?"
+verifier "T57 username question" contient sortie-pty "Your username"
 verifier "T57 time control question" \
-    contient sortie-pty "Votre cadence habituelle : [t]emps réel, [c]orrespondance"
-verifier "T57 minutes asked" contient sortie-pty "Minutes par joueur ?"
-verifier "T57 increment asked" contient sortie-pty "Incrément en secondes ?"
+    contient sortie-pty "Your usual time control: [r]eal time, [c]orrespondence"
+verifier "T57 minutes asked" contient sortie-pty "Minutes per player?"
+verifier "T57 increment asked" contient sortie-pty "Increment in seconds?"
 verifier "T57 settings saved" contient sortie-pty "Settings saved:"
 grep -v '^#' t-reglages.ini > extrait 2>/dev/null
-printf '\n[joueur]\npseudos = Zoe42, zoe\ncadence = 15+10\n' > attendu
-printf 'niveau = 1300\n' >> attendu
+printf '\n[player]\nusernames = Zoe42, zoe\ntime_control = 15+10\n' > attendu
+printf 'rating = 1300\n' >> attendu
 verifier "T57 content of the file" cmp -s attendu extrait
 cat analyse-italienne-*/partie.pgn > extrait 2>/dev/null
 verifier "T57 empty tag filled in with the username" \
     contient extrait '[White "Zoe42"]'
 cat analyse-italienne-*/contexte.md > extrait 2>/dev/null
 verifier "T57 usual time control suggested and written" \
-    contient extrait "- Cadence : rapide, 15 minutes + 10 secondes par coup (défaut)"
-grep -E 'glages|Votre|par |Erreur' sortie-pty > ligne 2>/dev/null
+    contient extrait "- Cadence : rapid, 15 minutes + 10 seconds per move (défaut)"
+grep -E 'Settings|Your|per |rror' sortie-pty > ligne 2>/dev/null
 joindre ligne
 
 titre "T58: second run, priority of --usernames"
 rm -rf analyse-italienne-*
-SCRIPT="$SCRIPT" python3 t-pty.py "b||||||" italienne.pgn $P \
+SCRIPT="$SCRIPT" python3 t-pty.py "w||||||" italienne.pgn $P \
     --settings t-reglages.ini > sortie-pty 2>&1
 egal "T58 no more settings question" 0 \
-    "$(grep -c -E 'Settings|Votre' sortie-pty)"
+    "$(grep -c -E 'Settings|Your' sortie-pty)"
 printf '[White "Alice"]\n[Black "Zoe42"]\n\n1. e4 e5 *\n' > t-noms.pgn
 SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
     --settings t-reglages.ini > sortie-pty 2>&1
@@ -1178,12 +1178,12 @@ else
     egal "T59 outside a terminal, no file created" absent absent
 fi
 rm -rf analyse-italienne-*
-SCRIPT="$SCRIPT" python3 t-pty.py "|||n|Moi|Lui|||||" italienne.pgn $P \
+SCRIPT="$SCRIPT" python3 t-pty.py "|||b|Moi|Lui|||||" italienne.pgn $P \
     --settings t-vide.ini > sortie-pty 2>&1
 verifier "T59 without a username, the player name is asked" \
-    contient sortie-pty "Votre nom de joueur ? (Entrée : ?)"
+    contient sortie-pty "Your player name? (Enter: ?)"
 grep -v '^#' t-vide.ini > extrait 2>/dev/null
-printf '\n[joueur]\npseudos =\ncadence = inconnue\nniveau = inconnu\n' \
+printf '\n[player]\nusernames =\ntime_control = unknown\nrating = unknown\n' \
     > attendu
 verifier "T59 empty keys saved, hence no longer asked" \
     cmp -s attendu extrait
@@ -1194,24 +1194,24 @@ egal "T59 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
 rm -rf analyse-italienne-*
 
 titre "T60: badly formed file, added keys kept"
-printf 'pseudos = Alice\n' > t-mauvais.ini
+printf 'usernames = Alice\n' > t-mauvais.ini
 "$SCRIPT" italienne.pgn $O --venv "$VENV" --settings t-mauvais.ini \
     > sortie 2> journal
 egal "T60 badly formed file, exit code" 1 $?
 verifier "T60 badly formed file, message" contient journal "Unreadable settings:"
 verifier "T60 badly formed file, remedy given" \
     contient journal "or delete it"
-printf '[joueur]\npseudos = Alice\nniveau = 1500\n\n' > t-plus.ini
+printf '[player]\nusernames = Alice\nrating = 1500\n\n' > t-plus.ini
 printf '[perso]\nnote = 100 %% à moi\n' >> t-plus.ini
 SCRIPT="$SCRIPT" python3 t-pty.py "c|d|14|||||" t-noms.pgn $P \
     --settings t-plus.ini > sortie-pty 2>&1
 grep -v '^#' t-plus.ini > extrait 2>/dev/null
 cat > attendu <<'EOF'
 
-[joueur]
-pseudos = Alice
-cadence = 14 jours
-niveau = 1500
+[player]
+usernames = Alice
+time_control = 14 days
+rating = 1500
 
 [perso]
 note = 100 % à moi
@@ -1222,88 +1222,110 @@ joindre extrait
 rm -rf analyse-t-noms-*
 
 titre "T62: time control checked, wrong answers refused"
-printf '[joueur]\npseudos = Alice\nniveau = inconnu\n' > t-cad.ini
-printf 'cadence = Ploum ploum\n' >> t-cad.ini
-SCRIPT="$SCRIPT" python3 t-pty.py "x|t|abc|-5|0|0|t|15|10|||||" t-noms.pgn \
+printf '[player]\nusernames = Alice\nrating = unknown\n' > t-cad.ini
+printf 'time_control = Ploum ploum\n' >> t-cad.ini
+SCRIPT="$SCRIPT" python3 t-pty.py "x|r|abc|-5|0|0|r|15|10|||||" t-noms.pgn \
     $P --settings t-cad.ini > sortie-pty 2>&1
 verifier "T62 unreadable time control of the settings asked again" \
     contient sortie-pty "the saved time control,"
 egal "T62 type refused once" 1 \
-    "$(grep -c 'attendue : t, c ou i' sortie-pty)"
+    "$(grep -c 'answer: r, c or u' sortie-pty)"
 egal "T62 number refused twice" 2 \
-    "$(grep -c 'un nombre entier, 0 ou plus' sortie-pty)"
+    "$(grep -c 'a whole number, 0 or more' sortie-pty)"
 egal "T62 time control 0+0 refused" 1 \
-    "$(grep -c 'sans temps ni incrément' sortie-pty)"
+    "$(grep -c 'neither time nor increment' sortie-pty)"
 verifier "T62 time control saved in its short form" \
-    contient t-cad.ini "cadence = 15+10"
+    contient t-cad.ini "time_control = 15+10"
 egal "T62 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
-grep -E 'lisible|attendue|existe' sortie-pty > ligne 2>/dev/null
+grep -E 'be read|answer|exist' sortie-pty > ligne 2>/dev/null
 joindre ligne
 rm -rf analyse-t-noms-*
-SCRIPT="$SCRIPT" python3 t-pty.py "t|5|0||||" t-noms.pgn $P \
+SCRIPT="$SCRIPT" python3 t-pty.py "r|5|0||||" t-noms.pgn $P \
     --settings t-cad.ini > sortie-pty 2>&1
 cat analyse-t-noms-*/contexte.md > extrait 2>/dev/null
 verifier "T62 time control of the game different from the usual one" \
-    contient extrait "- Cadence : blitz, 5 minutes sans incrément"
+    contient extrait "- Cadence : blitz, 5 minutes without increment"
 rm -rf analyse-t-noms-*
 printf '[White "Alice"]\n[Black "Bob"]\n' > t-tc.pgn
 printf '[TimeControl "600+5"]\n\n1. e4 e5 *\n' >> t-tc.pgn
 SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-tc.pgn $P \
     --settings t-cad.ini > sortie-pty 2>&1
 egal "T62 TimeControl tag: no question" 0 \
-    "$(grep -c 'Cadence de la partie' sortie-pty)"
+    "$(grep -c 'Time control of the game' sortie-pty)"
 cat analyse-t-tc-*/contexte.md > extrait 2>/dev/null
 verifier "T62 TimeControl tag translated" \
-    contient extrait "soit rapide, 10 minutes + 5 secondes par coup"
+    contient extrait "soit rapid, 10 minutes + 5 seconds per move"
 grep Cadence extrait > ligne 2>/dev/null
 joindre ligne
 rm -rf analyse-t-tc-*
 
 titre "T63: correspondence, three systems checked"
-printf '[joueur]\npseudos = Alice\nniveau = inconnu\n' > t-corr.ini
+printf '[player]\nusernames = Alice\nrating = unknown\n' > t-corr.ini
 SCRIPT="$SCRIPT" python3 t-pty.py \
     "c|x|c|0|0h|||c|5|36|36h|2||c|5|36h|20||||||" t-noms.pgn $P \
     --settings t-corr.ini > sortie-pty 2>&1
 egal "T63 system refused once" 1 \
-    "$(grep -c 'attendue : d, p ou c' sortie-pty)"
+    "$(grep -c 'answer: d, p or c' sortie-pty)"
 egal "T63 increment without a unit refused once" 1 \
-    "$(grep -c 'suivi de h ou de j' sortie-pty)"
+    "$(grep -c 'followed by h or d' sortie-pty)"
 egal "T63 inconsistent time control refused twice" 2 \
-    "$(grep -c 'Cadence incohérente' sortie-pty)"
+    "$(grep -c 'Inconsistent time control' sortie-pty)"
 verifier "T63 clock, increment and maximum saved" \
-    contient t-corr.ini "cadence = 5 jours + 36 heures, plafond 20 jours"
+    contient t-corr.ini "time_control = 5 days + 36 hours, maximum 20 days"
 cat analyse-t-noms-*/contexte.md > extrait 2>/dev/null
 verifier "T63 chess-mail.com: clock 5 days + 36 hours, maximum 20" \
-    contient extrait "capital de 5 jours + 36 heures par coup, plafonné à 20 jours"
+    contient extrait "clock of 5 days + 36 hours per move, maximum of 20 days"
 egal "T63 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
-grep -E 'attendue|incohérente' sortie-pty > ligne 2>/dev/null
+grep -E 'answer|Inconsistent' sortie-pty > ligne 2>/dev/null
 joindre ligne
 rm -rf analyse-t-noms-*
-printf '[joueur]\npseudos = Alice\nniveau = inconnu\n' > t-corr.ini
-printf 'cadence = 10 coups en 50 jours\n' >> t-corr.ini
+printf '[player]\nusernames = Alice\nrating = unknown\n' > t-corr.ini
+printf 'time_control = 10 moves in 50 days\n' >> t-corr.ini
 SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
     --settings t-corr.ini > sortie-pty 2>&1
 cat analyse-t-noms-*/contexte.md > extrait 2>/dev/null
 verifier "T63 standard ICCF: 10 moves in 50 days" \
-    contient extrait "- Cadence : correspondance, 10 coups en 50 jours (défaut)"
+    contient extrait "- Cadence : correspondence, 10 moves in 50 days (défaut)"
 rm -rf analyse-t-noms-*
-printf '[joueur]\npseudos = Alice\nniveau = inconnu\n' > t-corr.ini
-printf 'cadence = 50j+3j, plafond 50j, réserve 75j\n' >> t-corr.ini
+printf '[player]\nusernames = Alice\nrating = unknown\n' > t-corr.ini
+printf 'time_control = 50d+3d, maximum 50d, bank 75d\n' >> t-corr.ini
 SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
     --settings t-corr.ini > sortie-pty 2>&1
 cat analyse-t-noms-*/contexte.md > extrait 2>/dev/null
 verifier "T63 ICCF Triple Block: clock, increment, maximum, bank" \
-    contient extrait "capital de 50 jours + 3 jours par coup, plafonné à 50 jours, réserve de 75 jours"
+    contient extrait "clock of 50 days + 3 days per move, maximum of 50 days, bank of 75 days"
 grep Cadence extrait > ligne 2>/dev/null
 joindre ligne
 rm -rf analyse-t-noms-*
 # Settings file missing: the username is asked first, then, for lack
 # of a username, the side.
-SCRIPT="$SCRIPT" python3 t-pty.py "|c|p|10|40||b|||||" t-noms.pgn $P \
+SCRIPT="$SCRIPT" python3 t-pty.py "|c|p|10|40||w|||||" t-noms.pgn $P \
     --settings t-vide2.ini > sortie-pty 2>&1
 verifier "T63 moves per period typed on the keyboard" \
-    contient t-vide2.ini "cadence = 10 coups en 40 jours"
+    contient t-vide2.ini "time_control = 10 moves in 40 days"
 rm -rf analyse-t-noms-*
+# English plural, in the settings form and in the sentence: 0 and 2
+# take an s, 1 does not. The forms checked above never reach 0 or 1.
+SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t63 2> journal-t63 <<'EOF'
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+print(cp.noter_cadence({"type": "correspondance", "capital": 0,
+                        "increment": 1, "plafond": 0, "reserve": 0}))
+print(cp.noter_cadence({"type": "correspondance", "capital": 1,
+                        "increment": 48, "plafond": 0, "reserve": 0}))
+print(cp.decrire_cadence({"type": "reel", "initial": 0, "increment": 1}))
+EOF
+printf '%s\n' "0 days + 1 hour" "1 day + 2 days" \
+    "bullet, 0 minutes + 1 second per move" > attendu-t63
+verifier "T63 English plural: 0 days, 1 day, 2 days" \
+    cmp -s attendu-t63 sortie-t63
+joindre sortie-t63
+joindre journal-t63 5
+rm -rf "$DEPOT/__pycache__"
 
 titre "T61: no more username in the script"
 egal "T61 help of --usernames without a hard-coded value" 1 \
@@ -1314,7 +1336,7 @@ egal "T61 username constant removed" 0 "$(grep -c 'PSEUDOS_DEFAUT' "$SCRIPT")"
 
 printf '[White "Alice"]\n[Black "Bob"]\n[BlackElo "1500"]\n\n' > t-pr.pgn
 printf '1. e4 e5 *\n' >> t-pr.pgn
-printf '[joueur]\npseudos = Alice\ncadence = 14 jours\nniveau = 1300\n' \
+printf '[player]\nusernames = Alice\ntime_control = 14 days\nrating = 1300\n' \
     > t-pr.ini
 # Options of the prompt tests, outside a terminal, with their own
 # settings.
@@ -1342,7 +1364,7 @@ verifier "T64 side deduced outside a terminal" \
 verifier "T64 declared rating" \
     contient "$PR" "- niveau : environ 1300 Elo, déclaré par le joueur"
 verifier "T64 usual time control written" \
-    contient "$PR" "celle de la partie : correspondance, 14 jours par coup"
+    contient "$PR" "celle de la partie : correspondence, 14 days per move"
 unzip -p "$ARCH" '*/collecte.json' > extrait 2>/dev/null
 verifier "T64 collecte.json names the prompt" contient extrait '"prompt_ecrit": "analyse-t-pr-'
 head -n 12 "$PR" > ligne
@@ -1518,7 +1540,7 @@ egal "T67 no prompt written" 0 \
     "$(find . -maxdepth 1 -name 'analyse-t-pr-*.prompt.txt' | wc -l)"
 
 titre "T68: rating in Elo points, checked"
-printf '[joueur]\npseudos = Alice\ncadence = 14 jours\nniveau = fort\n' \
+printf '[player]\nusernames = Alice\ntime_control = 14 days\nrating = strong\n' \
     > t-niv.ini
 rm -rf analyse-t-pr-*
 SCRIPT="$SCRIPT" python3 t-pty.py "abc|50|9999|1450|||||" t-pr.pgn $P \
@@ -1526,15 +1548,15 @@ SCRIPT="$SCRIPT" python3 t-pty.py "abc|50|9999|1450|||||" t-pr.pgn $P \
 verifier "T68 unreadable rating of the settings asked again" \
     contient sortie-pty "the saved rating,"
 egal "T68 three answers refused" 3 \
-    "$(grep -c 'entre 100 et 3500' sortie-pty)"
-verifier "T68 rating saved" contient t-niv.ini "niveau = 1450"
+    "$(grep -c 'between 100 and 3500' sortie-pty)"
+verifier "T68 rating saved" contient t-niv.ini "rating = 1450"
 cat analyse-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T68 rating declared in the prompt" \
     contient extrait "- niveau : environ 1450 Elo, déclaré par le joueur"
 verifier "T68 on a terminal, answers collected" \
     contient extrait "contient les réponses du joueur"
 egal "T68 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
-printf '[joueur]\npseudos = Bob\ncadence = 14 jours\nniveau = inconnu\n' \
+printf '[player]\nusernames = Bob\ntime_control = 14 days\nrating = unknown\n' \
     > t-niv.ini
 rm -rf analyse-t-pr-*
 "$SCRIPT" t-pr.pgn --no-explorer --no-questions --depth 1 \
@@ -1660,8 +1682,8 @@ print(cp.consignes_joueur(
     "- Contexte particulier : rien (défaut)\n"))
 print("[%s]" % cp.consignes_joueur(None))
 print("[%s]" % cp.consignes_joueur(
-    "- Cadence : balise TimeControl `600+5`, soit rapide\n"
-    "- Cadence : non précisée\n"))
+    "- Cadence : balise TimeControl `600+5`, soit rapid\n"
+    "- Cadence : unspecified\n"))
 EOF
 printf '%s\n' "- Objectif : la sortie de la dame" "[]" "[]" > attendu-t74
 verifier "T74 answers of the player repeated, defaults, side and tag set aside" \
@@ -1991,7 +2013,7 @@ egal "T27 no working folder created" 0 \
 
 titre "T69: purge of the settings"
 
-printf '[joueur]\npseudos = Alice\n' > t-purge.ini
+printf '[player]\nusernames = Alice\n' > t-purge.ini
 mkdir -p t-rep
 "$SCRIPT" --purge-settings --settings t-purge.ini > sortie 2> journal
 egal "T69 file present, exit code" 0 "$?"
@@ -2008,14 +2030,14 @@ egal "T69 directory, exit code" 1 "$?"
 verifier "T69 directory refused" contient journal "is not a file"
 verifier "T69 the directory is still there" test -d t-rep
 # A typo after --settings must not destroy another file: only a file
-# carrying the [joueur] section, or an empty one, goes.
+# carrying the [player] section, or an empty one, goes.
 printf '[White "Alice"]\n\n1. e4 e5 *\n' > t-pas-reglages.pgn
 "$SCRIPT" --purge-settings --settings t-pas-reglages.pgn > sortie 2> journal
 egal "T69 other file, exit code" 1 "$?"
 verifier "T69 other file refused" \
     contient journal "is not a settings file"
 verifier "T69 the other file is still there" test -f t-pas-reglages.pgn
-printf 'pseudos = Alice\n[joueur\n[joueur]\n' > t-purge.ini
+printf 'usernames = Alice\n[player\n[player]\n' > t-purge.ini
 "$SCRIPT" --purge-settings --settings t-purge.ini > sortie 2> journal
 egal "T69 damaged settings, deleted all the same" "0 0" \
     "$? $(find . -maxdepth 1 -name t-purge.ini | wc -l)"
@@ -2916,24 +2938,24 @@ egal "T09 five files downloaded" 5 \
 verifier "T09 message Catalog installed" contient journal "Catalog installed:"
 grep 'Catalog installed' journal > ligne 2>/dev/null
 joindre ligne
-if [ ! -f "$CAT/catalogue.tsv" ]; then
+if [ ! -f "$CAT/catalog.tsv" ]; then
     noter "  FAIL   catalog missing, the following tests make no sense"
     printf 'Catalog not installed, stopping. See the log below.\n' >&2
     cat journal >&2
     exit 1
 fi
-head -n 1 "$CAT/catalogue.tsv" | tr '\t' ' ' > ligne
-verifier "T10 first line: format 1" contient ligne "#format=1 date="
+head -n 1 "$CAT/catalog.tsv" | tr '\t' ' ' > ligne
+verifier "T10 first line: format 2" contient ligne "#format=2 date="
 joindre ligne
 egal "T10 no leftover temporary file" 0 \
-    "$(find "$CAT" -name '.catalogue-*' | wc -l)"
+    "$(find "$CAT" -name '.catalog-*' | wc -l)"
 
 titre "T11: identical reinstallation"
-tail -n +2 "$CAT/catalogue.tsv" > cat1.tsv
+tail -n +2 "$CAT/catalog.tsv" > cat1.tsv
 "$SCRIPT" --install-catalog --catalog "$CAT" --venv "$VENV" \
     > sortie 2> journal
 egal "T11 exit code" 0 $?
-tail -n +2 "$CAT/catalogue.tsv" > cat2.tsv
+tail -n +2 "$CAT/catalog.tsv" > cat2.tsv
 verifier "T11 identical content except the dated line" cmp -s cat1.tsv cat2.tsv
 
 titre "T12, T13: catalog missing, catalog truncated"
@@ -2944,8 +2966,8 @@ egal "T12 exit code" 1 $?
 verifier "T12 missing catalog reported" \
     contient journal "Opening catalog missing"
 mkdir abime
-head -n $(($(lignes "$CAT/catalogue.tsv") - 10)) "$CAT/catalogue.tsv" \
-    > abime/catalogue.tsv
+head -n $(($(lignes "$CAT/catalog.tsv") - 10)) "$CAT/catalog.tsv" \
+    > abime/catalog.tsv
 "$SCRIPT" italienne.pgn $EXPL --catalog "$TRAVAIL/abime" \
     --token-file "$JETON" --venv "$VENV" --settings "$REGL" \
     > sortie 2> journal

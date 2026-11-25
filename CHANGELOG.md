@@ -38,9 +38,9 @@ Icône de la licence CC-0
   `verifier-analyse.py` and `test-app.sh` look for the virtual
   environment at the same place. The former locations,
   `~/.local/share/IAnalyze` and `~/.config/IAnalyze`, are no longer
-  read: run `--install-venv` and `--install-catalog` again, move
-  `~/.config/IAnalyze/reglages.ini` to `settings.ini` to keep your
-  answers, then delete them by hand.
+  read: run `--install-venv` and `--install-catalog` again, then
+  delete them by hand. The settings questions are asked again once:
+  the settings file has a new format, see below.
 - The command line options are in English, and their former names are
   no longer accepted. Those of `ianalyze.py`:
 
@@ -85,6 +85,34 @@ Icône de la licence CC-0
 - The environment variable that marks the relaunch of `ianalyze.py` in
   its virtual environment is `IANALYZE_RELAUNCHED` instead of
   `IANALYZE_DEJA_RELANCE`.
+- The questions asked in the terminal, and the answers they accept, are
+  in English; the French answers are no longer understood. Beware of
+  the side: `b` used to mean White (Blancs) and now means Black, White
+  being `w`, in "Did you play White or Black? [w/b]". The time control
+  is `[r]eal time`, `[c]orrespondence` or `[u]nknown`, a correspondence
+  system a fixed `[d]elay`, a `[p]eriod` or a `[c]lock`, an increment
+  `36h` or `3d`, and an unknown rating `unknown`. "(Enter: ...)" shows
+  what the Enter key keeps. The four startup questions about the game
+  (scope, goal, context, comments) stay in French for now.
+- The settings file is in English: section `[player]`, keys
+  `usernames`, `time_control` and `rating`, optional key `annotator`,
+  and English comments. A time control is written `15+10`, `14 days`,
+  `10 moves in 50 days` or `5 days + 36 hours, maximum 20 days, bank
+  50 days`, and an unknown one `unknown`. A settings file written by an
+  earlier version is not read: its questions are asked again, and its
+  `[joueur]` section stays in the file, as a section of your own, after
+  the new `[player]` section. `--purge-settings` refuses such a file,
+  which lacks `[player]`: delete it by hand before the first run.
+- The sentence that describes a time control is in English, in
+  `contexte.md`, in the prompt and as the value suggested in the
+  terminal: "rapid, 15 minutes + 10 seconds per move", "correspondence,
+  clock of 5 days + 36 hours per move, maximum of 20 days",
+  "unspecified". The labels around it stay in French for now. Counts
+  follow the English plural: `1 day`, `0 days`, `2 days`.
+- The opening catalog is `local/catalog.tsv`, in format 2, with English
+  column names (`epd`, `eco`, `name`) and description keys (`lines`,
+  `named`, `known`), which `collecte.json` repeats. The former
+  `catalogue.tsv` is ignored: run `--install-catalog` once.
 
 ### Fixed
 
