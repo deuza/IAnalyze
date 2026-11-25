@@ -15,8 +15,9 @@ test.pgn (partie d'essai), test-app.sh (suite de tests),
 example-games/ (fichiers des exemples d'EXAMPLES.md),
 README.md (installation et usage courant), README.fr.md (sa version
 française), EXAMPLES.md (commandes, options et sorties, sur le plan
-d'une page de manuel), TECHNICAL.md (fonctionnement), TESTS.md
-(lancement des tests et tableau de tous les tests), CHANGELOG.md.
+d'une page de manuel), EXAMPLES.fr.md (sa version française),
+TECHNICAL.md (fonctionnement), TESTS.md (lancement des tests et
+tableau de tous les tests), CHANGELOG.md.
 
 ## Plateformes
 
@@ -59,8 +60,12 @@ d'une page de manuel), TECHNICAL.md (fonctionnement), TESTS.md
 - Tout passe en anglais, sans alias : sorties (journal, erreurs,
   questions, aide), options, réglages, archive (noms et contenu),
   modèles de prompt, vérificateur, commentaires, docstrings,
-  documentation et noms des fichiers du dépôt. README.fr.md est la
-  version française du README, tenue à jour avec lui.
+  documentation et noms des fichiers du dépôt.
+- Documentation bilingue : README, EXAMPLES, TECHNICAL et TESTS ont
+  chacun leur version française, `<nom>.fr.md`, au vouvoiement, sur le
+  même plan, tenue à jour avec la version anglaise dans le même lot.
+  Commandes et sorties y sont les mêmes, en anglais. Le CHANGELOG
+  reste en anglais seul.
 - Restent en français : les noms de fonctions, de variables et de
   constantes, et les dest d'argparse (--output-dir remplit toujours
   options.sortie). Les algorithmes ne changent pas : seuls les
@@ -107,12 +112,13 @@ d'une page de manuel), TECHNICAL.md (fonctionnement), TESTS.md
   collection.json passent par une table dest -> clef (CLEFS_COLLECTE),
   avec un test qui exige une clef par option ; le langage des modèles
   passe en anglais, sans alias.
-- Lot 5 : renommage des fichiers du dépôt et documentation, en sept
+- Lot 5 : renommage des fichiers du dépôt et documentation, en huit
   sous-lots : 5a, renommages des fichiers du dépôt et leurs
   références ; 5b, exemples (noms et contenu) et textes de LLM
   simulés des tests ; 5c, README.md et README.fr.md ; 5d,
-  TECHNICAL.md ; 5e, EXAMPLES.md, sorties réelles ; 5f, TESTS.md ;
-  5g, historique du CHANGELOG, traduit. Le contenu des exemples
+  TECHNICAL.md ; 5e, EXAMPLES.md et EXAMPLES.fr.md, sorties
+  réelles ; 5f, TESTS.md et TESTS.fr.md ; 5g, TECHNICAL.fr.md ;
+  5h, historique du CHANGELOG, traduit. Le contenu des exemples
   passe en anglais, sauf french-notation.pgn, dont la notation est
   le sujet.
 - Dérogation : la documentation (README, EXAMPLES, TECHNICAL, TESTS)
@@ -227,11 +233,12 @@ d'une page de manuel), TECHNICAL.md (fonctionnement), TESTS.md
 - Modification d'un fichier existant : changement ciblé, pas de
   réécriture complète non demandée.
 - Chaque ajout de comportement s'accompagne d'un test dans test-app.sh
-  et d'une mise à jour de la documentation : EXAMPLES.md pour une
-  option ou un message, avec sa sortie réelle, README.md si l'usage
-  courant change, TECHNICAL.md pour le fonctionnement, TESTS.md pour
-  les tests. TESTS.md porte une ligne par test : un test ajouté y
-  reçoit sa ligne, un test modifié y voit la sienne mise à jour.
+  et d'une mise à jour de la documentation, dans ses deux langues :
+  EXAMPLES.md pour une option ou un message, avec sa sortie réelle,
+  README.md si l'usage courant change, TECHNICAL.md pour le
+  fonctionnement, TESTS.md pour les tests. TESTS.md porte une ligne
+  par test : un test ajouté y reçoit sa ligne, un test modifié y voit
+  la sienne mise à jour.
 
 ## Vérifications avant livraison
 
@@ -260,7 +267,7 @@ factice, et le vrai jeton n'entre jamais dans le bac à sable.
   jamais d'espaces, que git signale comme parasites. Elle ne marche
   pas sous Obsidian, l'utilisateur le sait. La documentation ne parle
   pas de cette convention.
-- Documents en anglais, sauf README.fr.md, en français et au
+- Documents en anglais, sauf leurs versions françaises (.fr.md), au
   vouvoiement. Nos échanges restent en français, au tutoiement.
 
 ## Façon de travailler

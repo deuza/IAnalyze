@@ -21,6 +21,8 @@ Icône de la licence CC-0
   with `--purge-settings`.
 - `README.fr.md`, the French version of the README, kept up to date
   with it.
+- `EXAMPLES.fr.md`, the French version of `EXAMPLES.md`, kept up to
+  date with it.
 
 ### Changed
 
@@ -259,6 +261,14 @@ Icône de la licence CC-0
 - The temporary files that the script writes before renaming them are
   named `.<name>.partial` and `.<folder>.partial.zip`, formerly
   `.partiel`.
+- `EXAMPLES.md` is in English, and gives the commands, options and
+  real outputs of this version, taken on 25 November 2026. The
+  options and messages of the settings have their examples:
+  confirmation of a new name given to `--settings`, refusal of a
+  path, warning for a file that is not a settings file,
+  `--no-settings`, refusal of a settings file of version 4 by
+  `--purge-settings`. Its earlier French text, brought up to date,
+  is now `EXAMPLES.fr.md`.
 
 ### Fixed
 
@@ -288,6 +298,12 @@ Icône de la licence CC-0
   serve the current run, and a warning says why they are not kept,
   suggesting `--no-settings` for a device, a FIFO or a directory. The
   flaw dates from version 4.0.0, where the option was `--reglages`.
+- `example-games/llm-annotated.pgn` and `llm-conversation.txt` quote
+  the evaluations of the engine rounded to one decimal, which the
+  checker accepts. Their values with two decimals came from a single
+  run of Stockfish, whose evaluations vary from one run to another:
+  replayed, the check shown in `EXAMPLES.md` ended on a `FAIL`, an
+  evaluation not found. The flaw dates from version 4.0.0.
 
 ## [4.0.2] - 2026-11-21
 
