@@ -368,7 +368,7 @@ verifier "défaut de --venv dans le dossier de l'application" \
 verifier "défaut de --catalogue dans le dossier de l'application" \
     contient aide "/local)"
 verifier "défaut de --reglages dans le dossier de l'application" \
-    contient aide "/local/reglages.ini)"
+    contient aide "/settings.ini)"
 
 titre "T05 : collecte minimale"
 lancer italienne.pgn $O

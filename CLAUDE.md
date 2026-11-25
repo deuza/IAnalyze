@@ -24,9 +24,11 @@ tests), CHANGELOG.md.
   /usr/games/stockfish.
 - Poste : macOS M1 (Homebrew).
 - Sur les deux : tout ce que le script crée pour lui-même vit dans le
-  dossier local/ de l'application, ignoré par git : venv (local/venv),
-  catalogue, réglages. Supprimer le dossier de l'application ne laisse
-  rien, hors le jeton (~/.lichess_token).
+  dossier de l'application. Dans local/, ce qu'il sait refaire seul :
+  venv (local/venv) et catalogue. À la racine, les réglages :
+  settings.ini. Les deux sont ignorés par git. Supprimer le dossier ne
+  laisse rien, hors le jeton (~/.lichess_token) ; vider local/ garde
+  les réglages.
 - Le comportement doit rester identique sur les deux.
 - Python : modules hors apt installés dans un venv dédié, jamais dans
   l'environnement système. Signale tout nouveau module requis.
@@ -88,10 +90,11 @@ tests), CHANGELOG.md.
   est traduite et remise à jour au lot 5, une fois l'interface figée.
   Le CHANGELOG suit chaque lot, en anglais, sous Unreleased. CLAUDE.md
   suit chaque renommage dans le lot qui le fait.
-- Renommages du lot 3 : reglages.ini -> settings.ini, catalogue.tsv ->
-  catalog.tsv, variable JETON de test-app.sh -> TOKEN, option --reseau
-  de test-app.sh -> --network. Les noms des autres options sont fixés
-  au lot 3.
+- Renommages du lot 3 : catalogue.tsv -> catalog.tsv, variable JETON de
+  test-app.sh -> TOKEN, option --reseau de test-app.sh -> --network.
+  Les noms des autres options sont fixés au lot 3. reglages.ini est
+  déjà devenu settings.ini, à la racine de l'application ; son contenu
+  passe en anglais au lot 3.
 - Renommages du lot 5 : verifier-analyse.py -> verify-analysis.py,
   prompt-modele.txt -> prompt-template.txt, prompt-seul-modele.txt ->
   prompt-only-template.txt, parties-exemples/ -> example-games/

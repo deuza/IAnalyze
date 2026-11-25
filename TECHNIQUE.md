@@ -213,7 +213,7 @@ Dans la suite, "sans terminal" désigne ces quatre cas.
 
 ## 6. Réglages
 
-Le fichier de réglages, `local/reglages.ini` dans le dossier de l'application ou celui de `--reglages`, est au format INI. Sa section `[joueur]` porte trois clefs que le script demande, `pseudos`, `cadence` et `niveau`, et une clef facultative, `annotateur`.
+Le fichier de réglages, `settings.ini` à la racine du dossier de l'application ou celui de `--reglages`, est au format INI. Sa section `[joueur]` porte trois clefs que le script demande, `pseudos`, `cadence` et `niveau`, et une clef facultative, `annotateur`.
 
 ### Clefs et formes admises
 

@@ -156,20 +156,22 @@ Relancez-la de temps en temps pour le mettre à jour.
 
 Les mêmes sur les deux plateformes, sauf pour le moteur.
 
-Tout ce que le script crée pour lui-même va dans le dossier `local/` de l'application : supprimer ce dossier ne laisse rien derrière, hors votre jeton.
+Tout ce que le script crée pour lui-même reste dans le dossier de l'application : supprimer ce dossier ne laisse rien derrière, hors votre jeton.
+
+Le dossier `local/` ne garde que ce que le script sait refaire seul, l'environnement virtuel et le catalogue : le vider remet l'application à neuf sans toucher à vos réglages.
 
 | | Emplacement |
 |---|---|
 | `--venv` | `local/venv`, dans le dossier de l'application |
 | `--catalogue` | `local/`, dans le dossier de l'application |
-| réglages | `local/reglages.ini`, dans le dossier de l'application |
+| réglages | `settings.ini`, à la racine du dossier de l'application |
 | jeton | `~/.lichess_token` |
 | `--stockfish`, Debian | `/usr/games/stockfish` |
 | `--stockfish`, macOS | le binaire trouvé dans le PATH, sinon `/opt/homebrew/bin/stockfish` |
 
 Jusqu'à la version 4.0.2, l'environnement virtuel et le catalogue étaient rangés dans `~/.local/share/IAnalyze`, les réglages dans `~/.config/IAnalyze`.
 
-Le script ne les y lit plus : relancez `--installer-venv` et `--installer-catalogue`, puis supprimez ces deux répertoires.
+Le script ne les y lit plus : relancez `--installer-venv` et `--installer-catalogue`, déplacez `~/.config/IAnalyze/reglages.ini` en `settings.ini` si vous voulez garder vos réponses, puis supprimez ces deux répertoires.
 
 ### Jeton Lichess
 
@@ -201,7 +203,7 @@ Sans jeton, lancez le script avec `--sans-explorateur`.
 
 ### Réglages personnels
 
-Votre pseudo, votre cadence habituelle et votre niveau sont gardés dans `local/reglages.ini`, dans le dossier de l'application.
+Votre pseudo, votre cadence habituelle et votre niveau sont gardés dans `settings.ini`, à la racine du dossier de l'application.
 
 Le script les demande une seule fois, au premier lancement dans un terminal.
 

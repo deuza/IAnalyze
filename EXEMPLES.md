@@ -143,13 +143,13 @@ Entrée retient la valeur proposée entre parenthèses.
 ```text
 [01:08:35] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:08:35] Lecture du PGN local : ma-partie.pgn
-[01:08:35] Réglages : 3 réponse(s) à donner une seule fois, gardée(s) dans ~/IAnalyze/local/reglages.ini.
+[01:08:35] Réglages : 3 réponse(s) à donner une seule fois, gardée(s) dans ~/IAnalyze/settings.ini.
 Votre pseudo de joueur, ou plusieurs séparés par des virgules ? (Entrée : aucun) MonPseudo
 Votre cadence habituelle : [t]emps réel, [c]orrespondance ou [i]nconnue ? (Entrée : non précisée) t
   Minutes par joueur ? 15
   Incrément en secondes ? 10
 Votre niveau, en points Elo approximatifs ? (Entrée : inconnu) 1300
-[01:08:36] Réglages enregistrés : ~/IAnalyze/local/reglages.ini
+[01:08:36] Réglages enregistrés : ~/IAnalyze/settings.ini
 [01:08:36] Questions de démarrage, Entrée retient la valeur proposée.
 Cadence de la partie : [t]emps réel, [c]orrespondance ou [i]nconnue ? (Entrée : rapide, 15 minutes + 10 secondes par coup)
 Périmètre : les N premiers coups, ou la partie complète ? (Entrée : la partie complète)
@@ -573,7 +573,7 @@ grep "camp dans cette partie" analyse-ma-partie-*.prompt.txt
 
 #### `--reglages FICHIER`
 
-*Défaut : `local/reglages.ini`, dans le dossier de l'application*
+*Défaut : `settings.ini`, à la racine du dossier de l'application*
 
 Fichier de réglages à employer à la place du vôtre : pseudos, cadence habituelle et niveau (README, section 2).
 
@@ -581,17 +581,17 @@ Si le fichier n'existe pas encore, le script pose ses trois questions dans le te
 C'est la façon de tenir plusieurs profils sur un même compte, un par joueur par exemple.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --reglages ~/IAnalyze/local/joueur2.ini
+./ianalyze.py ma-partie.pgn --sans-explorateur --reglages ~/IAnalyze/settings-joueur2.ini
 ```
 
 ```text
 [01:12:11] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:12:11] Lecture du PGN local : ma-partie.pgn
-[01:12:11] Réglages : 3 réponse(s) à donner une seule fois, gardée(s) dans ~/IAnalyze/local/joueur2.ini.
+[01:12:11] Réglages : 3 réponse(s) à donner une seule fois, gardée(s) dans ~/IAnalyze/settings-joueur2.ini.
 Votre pseudo de joueur, ou plusieurs séparés par des virgules ? (Entrée : aucun) Joueur2
 Votre cadence habituelle : [t]emps réel, [c]orrespondance ou [i]nconnue ? (Entrée : non précisée) i
 Votre niveau, en points Elo approximatifs ? (Entrée : inconnu) 1800
-[01:12:12] Réglages enregistrés : ~/IAnalyze/local/joueur2.ini
+[01:12:12] Réglages enregistrés : ~/IAnalyze/settings-joueur2.ini
 [01:12:12] Questions de démarrage, Entrée retient la valeur proposée.
 Avez-vous joué les Blancs ou les Noirs ? [b/n] n
 Cadence de la partie : [t]emps réel, [c]orrespondance ou [i]nconnue ? (Entrée : non précisée)
@@ -633,7 +633,7 @@ Un fichier qui n'est pas un fichier de réglages est refusé lui aussi : seul un
 ```
 
 ```text
-[01:11:14] Réglages supprimés : ~/IAnalyze/local/reglages.ini. Ils seront redemandés à la prochaine collecte lancée sur un terminal.
+[01:11:14] Réglages supprimés : ~/IAnalyze/settings.ini. Ils seront redemandés à la prochaine collecte lancée sur un terminal.
 ```
 
 Relancée aussitôt :
@@ -643,7 +643,7 @@ Relancée aussitôt :
 ```
 
 ```text
-[01:11:14] Aucun fichier de réglages à supprimer : ~/IAnalyze/local/reglages.ini
+[01:11:14] Aucun fichier de réglages à supprimer : ~/IAnalyze/settings.ini
 ```
 
 ### Catalogue des ouvertures
@@ -1642,7 +1642,7 @@ Ce que le script lit :
 |---|---|
 | `local/venv` | l'environnement virtuel, où vit python-chess |
 | `local/catalogue.tsv` | le catalogue des ouvertures |
-| `local/reglages.ini` | vos réglages : pseudos, cadence habituelle, niveau |
+| `settings.ini` | vos réglages : pseudos, cadence habituelle, niveau |
 | `~/.lichess_token` | votre jeton Lichess, en mode 600 |
 | `prompt-modele.txt`, `prompt-seul-modele.txt` | les modèles de prompt, à côté du script |
 | `/usr/games/stockfish` | le moteur sous Debian. Sous macOS, celui du PATH |

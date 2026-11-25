@@ -111,17 +111,22 @@ def est_repertoire(candidat: pathlib.Path) -> bool:
 #: and the location of the engine depend on it.
 EST_MACOS = sys.platform == "darwin"
 
-#: Data directory of the script, the local/ folder of the application,
-#: at the same place on Debian and on macOS: the virtual environment,
-#: the catalog and the settings go there. Deleting the application
-#: folder thus removes everything the script created, and you need no
-#: root rights to install anything. The real path of the script is
-#: followed, so that a symbolic link placed elsewhere finds the folder
-#: of the repository. Up to version 4.0.2, the data lived in
+#: Folder of the application, found through the real path of the script:
+#: a symbolic link placed elsewhere still leads to the folder of the
+#: repository. Everything the script creates for itself lives in it, at
+#: the same place on Debian and on macOS: deleting the folder removes
+#: everything, and you need no root rights to install anything.
+DOSSIER_APPLICATION = os.path.dirname(os.path.realpath(__file__))
+
+#: Data directory of the script, the local/ folder of the application:
+#: the virtual environment and the catalog go there, everything that the
+#: script can rebuild by itself. Emptying it brings the application back
+#: to a fresh clone without touching the settings, which stay outside
+#: (REGLAGES_DEFAUT). Up to version 4.0.2, the data lived in
 #: ~/.local/share/IAnalyze and the settings in ~/.config/IAnalyze; up to
 #: version 3.8.0, Debian kept the data in /opt/venv/lichess and in
 #: /usr/local/share.
-DONNEES = os.path.join(os.path.dirname(os.path.realpath(__file__)), "local")
+DONNEES = os.path.join(DOSSIER_APPLICATION, "local")
 
 #: Installation commands for the prerequisites, repeated in the messages
 #: and in the help. On macOS, the Homebrew Python already provides the
@@ -332,12 +337,15 @@ CATALOGUE_FORMAT = "1"
 #: Move number in a catalog line, "1." or "12." for example.
 RE_NUMERO_COUP = re.compile(r"\d+\.+")
 
-#: User settings file, in the data directory of the script (DONNEES),
-#: at the same place on Debian and on macOS. It holds what depends on
-#: the person and not on the game: their usernames and their usual time
-#: control. Nothing personal therefore appears in this script, which
-#: anyone can reuse as it is.
-REGLAGES_DEFAUT = DONNEES + "/reglages.ini"
+#: User settings file, settings.ini at the root of the application
+#: folder, at the same place on Debian and on macOS. It holds what
+#: depends on the person and not on the game: their usernames, their
+#: usual time control and their rating. Nothing personal therefore
+#: appears in this script, which anyone can reuse as it is. It stays out
+#: of local/, which only holds what the script can rebuild: emptying
+#: local/ keeps the answers, and the file stays in sight, to be edited
+#: by hand.
+REGLAGES_DEFAUT = os.path.join(DOSSIER_APPLICATION, "settings.ini")
 
 #: Section of the settings file that describes the player.
 REGLAGES_SECTION = "joueur"
