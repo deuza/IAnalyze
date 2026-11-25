@@ -239,6 +239,10 @@ Icône de la licence CC-0
 - The README is in English, and describes the commands, options and
   files of this version. Its earlier French text, brought up to date,
   is now `README.fr.md`.
+- `TECHNICAL.md` is in English, and up to date with this version: the
+  command line and its rules, the settings and their profiles, the
+  language of the templates, the files produced and the rules of the
+  checker.
 - The files of the repository have English names: `verify-analysis.py`,
   formerly `verifier-analyse.py`; `prompt-template.txt` and
   `prompt-only-template.txt`, formerly `prompt-modele.txt` and

@@ -1,726 +1,741 @@
-# IAnalyze : documentation technique
+# IAnalyze: technical documentation
 
-Le [README](README.md) suffit pour installer IAnalyze et analyser une partie. [EXAMPLES.md](EXAMPLES.md) donne toutes les commandes, toutes les options et ce qu'elles affichent.
+The [README](README.md) is enough to install IAnalyze and analyze a game. [EXAMPLES.md](EXAMPLES.md) gives every command, every option and what they display.
 
-Ce document va plus loin. Il s'adresse à qui veut comprendre ce que fait le script, l'appeler depuis un autre programme, lire les fichiers qu'il produit, ou écrire son propre modèle de prompt. Les tests ont leur document, [TESTS.md](TESTS.md).
+This document goes further. It is meant for whoever wants to understand what the script does, call it from another program, read the files it produces, or write their own prompt template. The tests have their own document, [TESTS.md](TESTS.md).
 
-## Sommaire
+## Contents
 
-- [1. Ce que fait le script, étape par étape](#1-ce-que-fait-le-script-étape-par-étape)
-- [2. Fichiers du dépôt](#2-fichiers-du-dépôt)
-- [3. Ligne de commande](#3-ligne-de-commande)
-- [4. La partie, sa source et ses contrôles](#4-la-partie-sa-source-et-ses-contrôles)
-- [5. Questions de démarrage et terminal](#5-questions-de-démarrage-et-terminal)
-- [6. Réglages](#6-réglages)
-- [7. Jeton](#7-jeton)
-- [8. Explorateur](#8-explorateur)
-- [9. Moteur](#9-moteur)
-- [10. Fichiers produits](#10-fichiers-produits)
-- [11. Encodages et caractères](#11-encodages-et-caractères)
-- [12. Modèle de prompt](#12-modèle-de-prompt)
-- [13. Le vérificateur en détail](#13-le-vérificateur-en-détail)
+- [1. What the script does, step by step](#1-what-the-script-does-step-by-step)
+- [2. Files of the repository](#2-files-of-the-repository)
+- [3. Command line](#3-command-line)
+- [4. The game, its source and its checks](#4-the-game-its-source-and-its-checks)
+- [5. Startup questions and terminal](#5-startup-questions-and-terminal)
+- [6. Settings](#6-settings)
+- [7. Token](#7-token)
+- [8. Explorer](#8-explorer)
+- [9. Engine](#9-engine)
+- [10. Files produced](#10-files-produced)
+- [11. Encodings and characters](#11-encodings-and-characters)
+- [12. Prompt template](#12-prompt-template)
+- [13. The checker in detail](#13-the-checker-in-detail)
 
-## 1. Ce que fait le script, étape par étape
+## 1. What the script does, step by step
 
-Une collecte suit toujours le même ordre. Les contrôles viennent d'abord : tant qu'ils ne sont pas tous passés, rien n'est écrit dans le répertoire de sortie et aucune requête ne part vers l'explorateur.
+A collection always follows the same order. The checks come first: as long as they have not all passed, nothing is written in the output directory and no request goes to the explorer.
 
-1. **Options.** Elles sont lues et contrôlées (section 3). Une option refusée arrête le script avec le code 2.
-2. **Environnement virtuel.** Le Python du système n'a pas python-chess : le script se relance lui-même avec le Python de son environnement virtuel. Le journal l'annonce par "Environnement virtuel : relance via ...". C'est le fonctionnement normal, à chaque lancement.
-3. **Réglages et modèle de prompt.** Le fichier de réglages est lu (section 6), le modèle de prompt est lu et contrôlé (section 12).
-4. **Partie.** Le PGN est lu depuis le fichier, ou téléchargé depuis Lichess. Il est décodé (section 11), puis contrôlé (section 4).
-5. **Jeton et catalogue.** Sauf avec `--sans-explorateur`, le jeton est lu (section 7) et le catalogue des ouvertures chargé (section 8).
-6. **Moteur.** Le binaire de Stockfish est vérifié, puis lancé une première fois, seulement pour lui demander les bornes de ses options (section 9).
-7. **Questions.** Dans un terminal, le script pose ses questions (section 5).
-8. **Dossier de travail.** Il est créé dans le répertoire de sortie. Le script y écrit `partie.pgn` et, si vous avez répondu aux questions, `contexte.md`.
-9. **Explorateur.** Une requête par demi-coup, jusqu'à un critère d'arrêt (section 8).
-10. **Stockfish.** Une évaluation par demi-coup (section 9). C'est la phase la plus longue.
-11. **Synthèse.** `collecte.json` et `synthese.md` sont écrits (section 10).
-12. **Archive.** Le dossier est compressé, l'archive vérifiée, le dossier supprimé. Avec `--prompt-seul`, il n'y a pas d'archive.
-13. **Prompt.** Il est écrit à côté de l'archive.
-14. **Sortie standard.** Le chemin de l'archive, ou celui du prompt avec `--prompt-seul`, y est écrit seul.
+1. **Options.** They are read and checked (section 3). A refused option stops the script with the code 2.
+2. **Virtual environment.** The system's Python does not have python-chess: the script restarts itself with the Python of its virtual environment. The log announces it with "Virtual environment: restarting with ...". This is the normal behavior, at each run.
+3. **Settings and prompt template.** The settings file is read (section 6), the prompt template is read and checked (section 12).
+4. **Game.** The PGN is read from the file, or downloaded from Lichess. It is decoded (section 11), then checked (section 4).
+5. **Token and catalog.** Except with `--no-explorer`, the token is read (section 7) and the catalog of openings loaded (section 8).
+6. **Engine.** The Stockfish binary is checked, then started a first time, only to ask it for the bounds of its options (section 9).
+7. **Questions.** In a terminal, the script asks its questions (section 5).
+8. **Working folder.** It is created in the output directory. The script writes `game.pgn` into it and, if you answered the questions, `context.md`.
+9. **Explorer.** One request per ply, up to a stop criterion (section 8).
+10. **Stockfish.** One evaluation per ply (section 9). This is the longest phase.
+11. **Summary.** `collection.json` and `summary.md` are written (section 10).
+12. **Archive.** The folder is compressed, the archive checked, the folder deleted. With `--prompt-only`, there is no archive.
+13. **Prompt.** It is written next to the archive.
+14. **Standard output.** The path of the archive, or the one of the prompt with `--prompt-only`, is written there alone.
 
-Trois commandes ne collectent rien et s'arrêtent une fois leur travail fait : `--installer-venv`, `--installer-catalogue` et `--purge-reglages`.
+Three commands collect nothing and stop once their work is done: `--install-venv`, `--install-catalog` and `--purge-settings`.
 
-`--installer-venv` contrôle le code de retour de `python -m venv`. Une création interrompue avant ce retour, par Ctrl-C ou une coupure, laisse un environnement sans pip, que le lancement suivant retrouve à moitié fait. Le script le reconnaît : `pyvenv.cfg` et l'interpréteur sont là, mais `python -m pip --version` échoue. Il le reconstruit alors par `python -m venv --clear`, puis installe python-chess. Sans `pyvenv.cfg`, un répertoire n'est jamais pris pour un environnement à reconstruire, et `--clear` ne peut rien y effacer.
+`--install-venv` checks the exit code of `python -m venv`. A creation interrupted before this return, by Ctrl-C or a power cut, leaves an environment without pip, which the next run finds half done. The script recognizes it: `pyvenv.cfg` and the interpreter are there, but `python -m pip --version` fails. It then rebuilds it with `python -m venv --clear`, then installs python-chess. Without `pyvenv.cfg`, a directory is never taken for an environment to rebuild, and `--clear` cannot erase anything in it.
 
-Un `--venv` qui n'est pas un environnement virtuel est refusé avant tout le reste : un répertoire existant, non vide et sans `pyvenv.cfg`, comme `/usr` ou un répertoire personnel. pip aurait tourné sur le Python trouvé là, souvent celui du système, et `python -m venv` aurait mêlé ses fichiers à ceux qui y étaient. Un répertoire absent ou vide reçoit l'environnement. Une création interrompue dans les tout premiers instants, avant l'écriture de `pyvenv.cfg`, laisse un répertoire que ce refus écarte aussi : il suffit alors de le supprimer.
+A `--venv` that is not a virtual environment is refused before anything else: an existing directory, not empty and without `pyvenv.cfg`, such as `/usr` or a home directory. pip would have run on the Python found there, often the one of the system, and `python -m venv` would have mixed its files with the ones already there. A missing or empty directory receives the environment. A creation interrupted in the very first moments, before `pyvenv.cfg` is written, leaves a directory that this refusal also sets aside: it is then enough to delete it.
 
-Après l'étape 8, un échec laisse le dossier de travail en place, tel quel, pour diagnostic.
+After step 8, a failure leaves the working folder in place, as it is, for diagnosis.
 
-## 2. Fichiers du dépôt
+## 2. Files of the repository
 
-| Fichier | Rôle |
+| File | Role |
 |---|---|
-| `ianalyze.py` | la collecte, en un seul fichier. Il ne demande que python-chess et Stockfish |
-| `verify-analysis.py` | le contrôle du PGN rendu par un LLM (section 13) |
-| `prompt-template.txt`, `prompt-only-template.txt` | les deux modèles de prompt (section 12) |
-| `test-app.sh` | la suite de tests, pour Linux et macOS, décrite dans [TESTS.md](TESTS.md) |
-| `test.pgn` | une partie d'essai qui réunit les cas tordus d'un PGN, décrite dans [TESTS.md](TESTS.md) |
-| `example-games/` | les fichiers cités dans [EXAMPLES.md](EXAMPLES.md) : parties, PGN refusés, PGN annotés |
-| `README.md`, `EXAMPLES.md`, `TECHNICAL.md`, `TESTS.md`, `CHANGELOG.md` | la documentation et l'historique des versions |
-| `LICENSE` | la licence, CC0 |
+| `ianalyze.py` | the collection, in a single file. It only needs python-chess and Stockfish |
+| `verify-analysis.py` | the check of the PGN returned by an LLM (section 13) |
+| `prompt-template.txt`, `prompt-only-template.txt` | the two prompt templates (section 12) |
+| `test-app.sh` | the test suite, for Linux and macOS, described in [TESTS.md](TESTS.md) |
+| `test.pgn` | a test game that gathers the tricky cases of a PGN, described in [TESTS.md](TESTS.md) |
+| `example-games/` | the files quoted in [EXAMPLES.md](EXAMPLES.md): games, refused PGNs, annotated PGNs |
+| `README.md`, `README.fr.md`, `EXAMPLES.md`, `TECHNICAL.md`, `TESTS.md`, `CHANGELOG.md` | the documentation, the French version of the README, and the history of the versions |
+| `LICENSE` | the license, CC0 |
 
-Le HTTP passe par urllib et l'archive par zipfile, tous deux de la bibliothèque standard de Python.
+HTTP goes through urllib and the archive through zipfile, both from the standard library of Python.
 
-## 3. Ligne de commande
+## 3. Command line
 
-### Règles de cohérence
+### Consistency rules
 
-Une option sans effet, ou une valeur hors bornes, est refusée plutôt qu'ignorée en silence :
+An option without effect, or a value out of bounds, is refused rather than silently ignored:
 
-- `--cadences` et `--classements` exigent `--base lichess`.
-- `--pause` ne descend pas sous 2, `--seuil-frequence` reste entre 0 et 100, `--coups-min`, `--coups-stockfish` et `--longueur-pv` valent 0 ou plus, `--profondeur` va de 1 à 60, les autres valeurs numériques valent au moins 1.
-- `--pause` et `--seuil-frequence` refusent nan et inf.
-- `--fils`, `--hachage` et `--multipv` sont contrôlés auprès du moteur, qui annonce ses bornes : une valeur qu'il n'admet pas est refusée avant toute requête à l'explorateur et avant la création du dossier de travail.
-- `--purge-reglages` s'emploie seule, sans partie ni autre action.
-- `--sans-prompt` s'exclut avec `--prompt` et avec `--prompt-seul`.
-- `--pseudos` et `--prompt` refusent une valeur vide.
+- `--speeds` and `--ratings` require `--database lichess`.
+- `--pause` does not go below 2, `--min-frequency` stays between 0 and 100, `--min-moves`, `--stockfish-moves` and `--pv-length` are 0 or more, `--depth` goes from 1 to 60, the other numeric values are at least 1.
+- `--pause` and `--min-frequency` refuse nan and inf.
+- `--threads`, `--hash` and `--multipv` are checked against the engine, which announces its bounds: a value that it does not accept is refused before any request to the explorer and before the working folder is created.
+- `--settings` takes a file name ending in `.ini`, without a folder (section 6): a path is refused, `/dev/null` included.
+- `--settings` and `--no-settings` exclude each other, and so do `--purge-settings` and `--no-settings`.
+- `--purge-settings` is used alone, without a game or another action.
+- `--no-prompt` excludes `--prompt` and `--prompt-only`.
+- `--usernames` and `--prompt` refuse an empty value.
 
-### Codes de retour
+### Exit codes
 
-| Code | Signification |
+| Code | Meaning |
 |---|---|
-| 0 | succès |
-| 1 | erreur signalée par un message, dont une valeur que le moteur n'admet pas, ou erreur inattendue |
-| 2 | option inconnue, ou valeur refusée avant toute lecture de la partie |
+| 0 | success |
+| 1 | error reported by a message, among them a value that the engine does not accept, or unexpected error |
+| 2 | unknown option, or value refused before any reading of the game |
 | 130 | interruption (Ctrl-C) |
 
-Ceux de `verify-analysis.py` sont donnés en section 13.
+Those of `verify-analysis.py` are given in section 13.
 
-### Sortie standard et journal
+### Standard output and log
 
-Le chemin de l'archive est écrit seul sur la sortie standard, le journal horodaté va sur la sortie d'erreur :
+The path of the archive is written alone on standard output, the timestamped log goes to standard error:
 
 ```bash
 ARCHIVE=$(./ianalyze.py my-game.pgn 2>/dev/null)
 ```
 
-Avec `--prompt-seul`, c'est le chemin du prompt qui est écrit sur la sortie standard.
+With `--prompt-only`, it is the path of the prompt that is written on standard output.
 
-Le journal, les questions et les messages d'erreur vont tous sur la sortie d'erreur. Chaque ligne du journal porte l'heure :
+The log, the questions and the error messages all go to standard error. Each line of the log carries the time:
 
 ```text
-[16:41:40] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
-[16:41:40] Lecture du PGN local : my-game.pgn
-[16:41:41] Dossier de travail : analyse-ma-partie-20261119-164141
-[16:41:41] Stockfish : évaluation de 49 demi-coups, profondeur 18, multipv 3, threads 8. C'est la phase la plus longue.
+[14:20:16] Virtual environment: restarting with /home/user/IAnalyze/local/venv/bin/python3
+[14:20:16] Reading the local PGN: my-game.pgn
+[14:20:17] Working folder: analysis-my-game-20261125-142017
+[14:20:33] Stockfish: evaluation of 9 plies, depth 18, multipv 3, threads 4. This is the longest phase.
 ```
 
-Un message d'erreur, lui, n'est pas horodaté : c'est la dernière ligne, et le code de retour vaut 1 ou 2.
+An error message, for its part, is not timestamped: it is the last line, and the exit code is 1 or 2.
 
-### Appeler le script depuis un autre programme
+### Calling the script from another program
 
 ```bash
-ARCHIVE=$(./ianalyze.py my-game.pgn --sans-questions 2> collecte.log)
+ARCHIVE=$(./ianalyze.py my-game.pgn --no-questions 2> collection.log)
 ```
 
-Le code de retour dit si la collecte a abouti, `collecte.log` garde le journal et `$ARCHIVE` reçoit le chemin de l'archive.
+The exit code says whether the collection succeeded, `collection.log` keeps the log and `$ARCHIVE` receives the path of the archive.
 
-Rediriger la sortie d'erreur suffit à faire taire les questions (section 5) : `--sans-questions` le dit seulement en clair.
+Redirecting standard error is enough to silence the questions (section 5): `--no-questions` only says it plainly.
 
-Sous macOS, cette commande met le prompt court dans le presse-papiers, prêt à être collé dans la conversation. La sortie d'erreur n'étant pas redirigée, les questions restent posées :
+On macOS, this command puts the short prompt into the clipboard, ready to be pasted into the conversation. Standard error not being redirected, the questions are still asked:
 
 ```bash
-pbcopy < "$(./ianalyze.py my-game.pgn --prompt-seul)"
+pbcopy < "$(./ianalyze.py my-game.pgn --prompt-only)"
 ```
 
-## 4. La partie, sa source et ses contrôles
+## 4. The game, its source and its checks
 
-SOURCE désigne la partie de trois façons : un fichier PGN, l'adresse d'une partie de Lichess, ou son identifiant.
+SOURCE designates the game in three ways: a PGN file, the address of a Lichess game, or its identifier.
 
-**Une URL** doit viser lichess.org et porter l'identifiant en tête de chemin.
+**A URL** must target lichess.org and carry the identifier at the head of the path.
 
-L'identifiant est la suite de 8 caractères qui suit `lichess.org/` dans l'adresse de la partie. Les formes `/<id>/black`, `/embed/game/<id>`, `/embed/<id>` et `/game/export/<id>` sont acceptées.
+The identifier is the string of 8 characters that follows `lichess.org/` in the address of the game. The forms `/<id>/black`, `/embed/game/<id>`, `/embed/<id>` and `/game/export/<id>` are accepted.
 
-Un autre hôte, ou une autre page du site (étude, analyse, exercices), est refusé sans rien envoyer à Lichess.
+Another host, or another page of the site (study, analysis, puzzles), is refused without sending anything to Lichess.
 
-**Un identifiant** fait exactement 8 ou 12 caractères alphanumériques.
+**An identifier** is exactly 8 or 12 alphanumeric characters.
 
-Une source qui ressemble à un chemin (point, barre oblique ou tilde) et qui n'existe pas est signalée comme fichier introuvable. Un répertoire est refusé, même si son nom a la forme d'un identifiant.
+A source that looks like a path (dot, slash or tilde) and does not exist is reported as a file not found. A directory is refused, even if its name has the form of an identifier.
 
-**Un PGN** doit contenir une seule partie, en échecs standard. Un fichier qui en réunit plusieurs est refusé : isolez celle à analyser dans un fichier à part.
+**A PGN** must contain a single game, in standard chess. A file that gathers several of them is refused: isolate the one to analyze in a separate file.
 
-**Un résultat répété** en fin de fichier n'est pas une seconde partie. Certains sites écrivent le résultat, une ligne vide, puis le résultat encore : python-chess y lit une partie de plus, sans une balise ni un coup. Le script l'ignore et l'écrit au journal. Le fichier gardé dans l'archive reste celui que vous avez fourni.
+**A repeated result** at the end of the file is not a second game. Some sites write the result, a blank line, then the result again: python-chess reads one more game there, without a single tag or move. The script ignores it and writes it in the log. The file kept in the archive stays the one you gave.
 
-Un PGN corrompu est refusé plutôt qu'analysé tronqué. Une partie qui ne part pas de la position initiale, c'est-à-dire qui porte une balise FEN, est refusée elle aussi : IAnalyze analyse une partie entière, du premier coup au dernier. Pour étudier une position, chargez-la dans un échiquier d'analyse.
+A corrupt PGN is refused rather than analyzed truncated. A game that does not start from the initial position, that is, one that carries a FEN tag, is refused too: IAnalyze analyzes a whole game, from the first move to the last. To study a position, load it into an analysis board.
 
-Les coups doivent être écrits en notation anglaise : K, Q, R, B, N. Une partie notée en français (R, D, T, F, C) ou en figurines est refusée, avec le premier mot qui n'a pas été compris. Sans ce refus, "Cf3" serait lu "f3", un coup de pion, et l'analyse porterait sur une autre partie que la vôtre.
+The moves must be written in English notation: K, Q, R, B, N. A game written in French notation (R, D, T, F, C) or in figurines is refused, with the first word that was not understood. Without this refusal, "Cf3" would be read "f3", a pawn move, and the analysis would be about another game than yours.
 
-Sont refusés de la même façon :
+Refused in the same way:
 
-- un commentaire dont l'accolade n'est jamais fermée
-- une variante dont la parenthèse n'est jamais fermée, ou une parenthèse fermante en trop
-- du texte libre hors des accolades, après la partie par exemple
+- a comment whose brace is never closed
+- a variation whose parenthesis is never closed, or an extra closing parenthesis
+- free text outside the braces, after the game for example
 
-Une partie de Lichess est téléchargée depuis `https://lichess.org/game/export/<identifiant>`, qui ne demande pas de jeton.
+A Lichess game is downloaded from `https://lichess.org/game/export/<identifier>`, which requires no token.
 
-Le contrôle de la notation passe avant la lecture par python-chess, qui, lui, ne refuserait rien : il saute sans rien dire les caractères qu'il ne connaît pas. Sont admis hors des commentaires : les balises en début de ligne, les numéros de coup, les coups en notation anglaise, le coup nul `--`, les NAG, les signes d'appréciation, les parenthèses de variante et le résultat.
+The check of the notation comes before the reading by python-chess, which, for its part, would refuse nothing: it silently skips the characters it does not know. Allowed outside the comments: the tags at the start of a line, the move numbers, the moves in English notation, the null move `--`, the NAGs, the annotation signs, the parentheses of variations and the result.
 
-Un coup illégal arrête lui aussi le script. python-chess, à cet endroit, cesserait de lire sans lever d'erreur, et la partie serait analysée tronquée.
+An illegal move stops the script too. python-chess, at that point, would stop reading without raising an error, and the game would be analyzed truncated.
 
-## 5. Questions de démarrage et terminal
+## 5. Startup questions and terminal
 
-### Ordre des questions
+### Order of the questions
 
-1. Au premier lancement, les réglages qui manquent : pseudo, cadence habituelle, niveau (section 6).
-2. Votre camp, s'il ne se déduit pas de vos pseudos : "Avez-vous joué les Blancs ou les Noirs ? [b/n]". Les balises White et Black vides sont alors complétées : la vôtre par votre premier pseudo, ou par votre nom, demandé faute de pseudo, celle de l'adversaire par son nom, demandé lui aussi.
-3. La cadence de la partie, si la balise TimeControl manque, est vide, ou vaut "?" ou "-".
-4. Les quatre questions de contexte : périmètre, ce que vous cherchez à comprendre, contexte particulier, autres commentaires à inclure dans le PGN final.
+1. On the first run, the missing settings: username, usual time control, rating (section 6). With `--settings`, a name whose file does not exist yet is confirmed first.
+2. Your side, if it cannot be deduced from your usernames: "Did you play White or Black? [w/b]". The empty White and Black tags are then filled in: yours with your first username, or with your name, asked for lack of a username, the one of the opponent with their name, asked too.
+3. The time control of the game, if the TimeControl tag is missing, empty, or is "?" or "-".
+4. The four context questions: scope, what you want to understand, particular context, other comments to include in the final PGN.
 
-Entrée retient la valeur proposée. Ctrl-D met fin aux questions : celles qui restent prennent leur valeur par défaut.
+Enter keeps the suggested value. Ctrl-D ends the questions: the remaining ones take their default value.
 
-Les questions de réglages font exception : interrompues par Ctrl-D, elles n'enregistrent rien et reviendront au prochain lancement.
+The settings questions are the exception: interrupted by Ctrl-D, they save nothing and will come back at the next run.
 
-### Ce que deviennent les réponses
+### What becomes of the answers
 
-Les réponses vont dans `contexte.md`, repris en tête de la synthèse sous le titre "Consignes d'analyse".
+The answers go into `context.md`, repeated at the top of the summary under the title "Analysis instructions".
 
-Une réponse laissée à sa valeur proposée y porte la mention "(défaut)" : l'analyste distingue ainsi votre choix d'une valeur par défaut.
+An answer left at its suggested value carries the mention "(default)" there: the analyst thus tells your choice from a default value.
 
 ```text
-Réponses du joueur aux questions de démarrage, recueillies par le script avant la collecte. "(défaut)" signale une réponse validée par Entrée.
+The player's answers to the startup questions, asked by the script before the collection. "(default)" marks an answer confirmed with Enter.
 
-- Camp du joueur : Blancs, déduit des en-têtes
-- Cadence : balise TimeControl `600+5`, soit rapide, 10 minutes + 5 secondes par coup
-- a. Périmètre : la partie complète (défaut)
-- b. Ce que le joueur cherche à comprendre : la sortie de la dame
-- c. Contexte particulier : rien (défaut)
-- d. Autres commentaires à inclure dans le PGN final : rien (défaut)
+- Player's side: White, deduced from the headers
+- Time control: TimeControl tag `600+5`, that is rapid, 10 minutes + 5 seconds per move
+- a. Scope: the whole game (default)
+- b. What the player wants to understand: the early queen sortie
+- c. Particular context: nothing (default)
+- d. Other comments to include in the final PGN: nothing (default)
 ```
 
-Quand une balise White ou Black a été complétée, `partie.pgn` porte la partie avec ses nouvelles balises, et le PGN fourni est gardé sous `partie-origine.pgn`.
+When a White or Black tag has been filled in, `game.pgn` carries the game with its new tags, and the PGN given is kept as `game-original.pgn`.
 
-### Quand les questions ne sont pas posées
+### When the questions are not asked
 
-Les questions s'affichent dans le terminal et attendent une réponse au clavier.
+The questions are displayed in the terminal and wait for an answer at the keyboard.
 
-Le script ne les pose donc que s'il est lancé à la main, dans un terminal. Il ne demande rien dans ces quatre cas :
+The script therefore only asks them if it is run by hand, in a terminal. It asks nothing in these four cases:
 
-- vous passez `--sans-questions`
-- un autre programme le lance sans terminal : cron, un service
-- son entrée ne vient pas du clavier : `./ianalyze.py my-game.pgn < /dev/null`
-- son journal ne va pas à l'écran : `./ianalyze.py my-game.pgn 2> journal.log`
+- you pass `--no-questions`
+- another program runs it without a terminal: cron, a service
+- its input does not come from the keyboard: `./ianalyze.py my-game.pgn < /dev/null`
+- its log does not go to the screen: `./ianalyze.py my-game.pgn 2> log.txt`
 
-Le dernier cas surprend : les questions s'écrivent au même endroit que le journal, la sortie d'erreur. Si vous la redirigez, vous ne les verriez pas.
+The last case is surprising: the questions are written at the same place as the log, standard error. If you redirect it, you would not see them.
 
-L'exemple de la section 3, avec `2>/dev/null`, ne pose donc aucune question. Sans cette redirection, `ARCHIVE=$(./ianalyze.py my-game.pgn)` les pose normalement.
+The example of section 3, with `2>/dev/null`, therefore asks no question. Without this redirection, `ARCHIVE=$(./ianalyze.py my-game.pgn)` asks them normally.
 
-Dans la suite, "sans terminal" désigne ces quatre cas.
+In what follows, "without a terminal" denotes these four cases.
 
-### Sans questions, ce qui change
+### Without questions, what changes
 
-- Le journal le dit : "Questions de démarrage sautées", suivi de la raison, l'option ou le terminal non interactif.
-- Les réglages qui manquent ne sont ni demandés ni écrits.
-- `contexte.md` n'est pas écrit, et la synthèse n'a pas de section "Consignes d'analyse".
-- Le camp se déduit de vos pseudos, sans question. Il faut pour cela qu'une seule des deux balises, White ou Black, porte l'un d'eux. Sinon le camp reste "inconnu".
-- Le prompt dit au LLM que vos réponses n'ont pas été recueillies : c'est lui qui pose les quatre questions de contexte, en un seul message, avant d'analyser.
+- The log says so: "Startup questions skipped", followed by the reason, the option or the non-interactive terminal.
+- The missing settings are neither asked nor written.
+- `context.md` is not written, and the summary has no "Analysis instructions" section.
+- The side is deduced from your usernames, without a question. For that, only one of the two tags, White or Black, must carry one of them. Otherwise the side stays "unknown".
+- The prompt tells the LLM that your answers were not collected: it is the LLM that asks the four context questions, in a single message, before analyzing.
 
-## 6. Réglages
+## 6. Settings
 
-Le fichier de réglages, `settings.ini` à la racine du dossier de l'application ou celui de `--reglages`, est au format INI. Sa section `[joueur]` porte trois clefs que le script demande, `pseudos`, `cadence` et `niveau`, et une clef facultative, `annotateur`.
+The settings file, `settings.ini` or the one named by `--settings`, is kept at the root of the folder of the application, in INI format. Its `[player]` section carries three keys that the script asks for, `usernames`, `time_control` and `rating`, and an optional key, `annotator`.
 
-### Clefs et formes admises
+### Keys and accepted forms
 
-**Les pseudos** sont vos noms de joueur, séparés par des virgules. Ils sont cherchés, sans tenir compte de la casse, dans les balises White et Black pour déduire votre camp. Le premier sert à compléter une balise vide.
+**The usernames** are your player names, separated by commas. They are looked up, ignoring case, in the White and Black tags to deduce your side. The first one is used to fill in an empty tag.
 
-**Le niveau** est un nombre de points Elo approximatifs, de 100 à 3500, ou "inconnu".
+**The rating** is a number of approximate Elo points, from 100 to 3500, or "unknown".
 
-**L'annotateur** est une clef facultative, que le script ne demande pas. Elle fixe la balise Annotator du PGN annoté :
+**The annotator** is an optional key, which the script does not ask for. It sets the Annotator tag of the annotated PGN:
 
 ```text
-annotateur = Claude (Anthropic)
+annotator = Claude (Anthropic)
 ```
 
-Sans elle, le prompt demande à l'analyste d'y mettre son propre nom de modèle.
+Without it, the prompt asks the analyst to put its own model name there.
 
-**La cadence** s'écrit de l'une de ces façons :
+**The time control** is written in one of these ways:
 
-| Vous écrivez | Système | Où on le trouve |
+| You write | System | Where it is found |
 |---|---|---|
-| `15+10` | temps réel : minutes par joueur, puis incrément en secondes | Lichess |
-| `14 jours` | correspondance à délai fixe : jours par coup, rien n'est reporté d'un coup au suivant | Lichess, chess.com |
-| `10 coups en 50 jours` | correspondance par période : le temps économisé est reporté | ICCF, cadence standard |
-| `5 jours + 36 heures, plafond 20 jours` | correspondance à capital de temps : jours au départ, puis incrément par coup en heures ou en jours, plafond facultatif | chess-mail.com |
-| `50 jours + 3 jours, plafond 50 jours, réserve 75 jours` | le même, avec une réserve à côté du capital | ICCF, Triple Block |
-| `inconnue` | | |
+| `15+10` | real time: minutes per player, then increment in seconds | Lichess |
+| `14 days` | correspondence with a fixed delay: days per move, nothing is carried over from one move to the next | Lichess, chess.com |
+| `10 moves in 50 days` | correspondence by period: the time saved is carried over | ICCF, standard time control |
+| `5 days + 36 hours, maximum 20 days` | correspondence with a clock: days at the start, then increment per move in hours or in days, optional maximum | chess-mail.com |
+| `50 days + 3 days, maximum 50 days, bank 75 days` | the same, with a bank beside the clock | ICCF, Triple Block |
+| `unknown` | | |
 
-Les deux systèmes de l'ICCF suivent ses règles en vigueur depuis le 1er janvier 2026, section 2.4.
+The two systems of the ICCF follow its rules in force since January 1, 2026, section 2.4.
 
-Le délai fixe par coup, lui, n'existe pas à l'ICCF.
+The fixed delay per move, for its part, does not exist at the ICCF.
 
-Le script tolère quelques variantes d'écriture : "j" ou "jour" pour "jours", "h" ou "heure" pour "heures", "reserve" sans accent. Une cadence vide, "?" ou "non précisée" vaut "inconnue".
+The script tolerates a few variants of spelling: "d" or "day" for "days", "h" or "hour" for "hours", "move" for "moves". An empty time control, "?" or "unspecified" counts as "unknown".
 
-Pour le temps réel, la catégorie est calculée comme le fait Lichess, sur une durée estimée : le temps initial plus quarante fois l'incrément.
+For real time, the category is computed as Lichess does, on an estimated duration: the initial time plus forty times the increment.
 
-| Durée estimée | Catégorie |
+| Estimated duration | Category |
 |---|---|
-| moins de 30 secondes | ultrabullet |
-| de 30 secondes à moins de 3 minutes | bullet |
-| de 3 à moins de 8 minutes | blitz |
-| de 8 à moins de 25 minutes | rapide |
-| 25 minutes et plus | classique |
+| less than 30 seconds | ultrabullet |
+| from 30 seconds to less than 3 minutes | bullet |
+| from 3 to less than 8 minutes | blitz |
+| from 8 to less than 25 minutes | rapid |
+| 25 minutes and more | classical |
 
-`15+10` donne 900 + 400 = 1300 secondes : rapide.
+`15+10` gives 900 + 400 = 1300 seconds: rapid.
 
-### Lecture
+### Reading
 
-- Un fichier absent vaut des réglages vides.
-- Une clef absente est demandée, une seule fois, dans un terminal.
-- Une clef présente, même vide, n'est jamais redemandée.
-- Une cadence ou un niveau illisible est redemandé, et le journal le dit.
-- Un fichier mal formé arrête le script, avec le remède : le corriger ou le supprimer.
-- Le signe "%" est un caractère comme un autre, il ne déclenche aucune substitution.
-- Le fichier passe par le même décodage que le PGN (section 11) : son encodage n'a pas d'importance.
-- `--pseudos` remplace les pseudos du fichier le temps d'un lancement. Au tout premier lancement, il est proposé comme réponse à la question du pseudo.
+- A missing file counts as empty settings.
+- A missing key is asked for, only once, in a terminal.
+- A key that is present, even empty, is never asked for again.
+- An unreadable time control or rating is asked for again, and the log says so.
+- A badly formed file stops the script, with the remedy: fix it or delete it.
+- The "%" sign is a character like any other, it triggers no substitution.
+- The file goes through the same decoding as the PGN (section 11): its encoding does not matter.
+- `--usernames` replaces the usernames of the file for a run. On the very first run, it is suggested as the answer to the username question.
+- A settings file written by a version before 5.0.0 carries a `[joueur]` section, which is no longer read: its questions are asked again, and the section stays in the file after `[player]`, as a section of your own.
 
-### Écriture
+### Writing
 
-Le script n'écrit le fichier que lorsqu'il vient d'obtenir une réponse. Il le réécrit alors en entier :
+The script writes the file only when it has just obtained an answer. It then rewrites it entirely:
 
-1. un en-tête de commentaires
-2. les clefs qu'il connaît, chacune sous un commentaire qui rappelle ses formes admises
-3. les autres clefs que vous avez ajoutées à `[joueur]`
-4. vos autres sections
+1. a header of comments
+2. the keys that it knows, each one under a comment that recalls its accepted forms
+3. the other keys that you added to `[player]`
+4. your other sections
 
-Vos propres lignes de commentaire ne survivent donc pas à une réécriture. Le répertoire du fichier est créé au besoin.
+Your own comment lines therefore do not survive a rewrite.
 
-Si l'écriture échoue, la collecte continue : le journal le signale, et la question sera reposée au prochain lancement.
+The file is written only over a settings file: a path that does not exist yet, or a regular file that is empty or carries the `[player]` section, or the `[joueur]` section of an earlier version. Anything else, a device, a FIFO, a directory or the file of another program, is left untouched.
 
-Sans terminal, rien n'est demandé ni écrit.
+If the writing fails, or if the file must not be replaced, the collection goes on: the log reports it, and the question will be asked again at the next run.
 
-### Plusieurs profils
+Without a terminal, nothing is asked or written.
 
-`--reglages FICHIER` désigne un autre fichier. S'il n'existe pas, il est créé par les mêmes questions : c'est la façon de tenir un profil par joueur.
+### Several profiles
 
-`--purge-reglages` supprime le fichier de réglages, celui de `--reglages` s'il est donné, puis quitte. Le répertoire reste en place. Un fichier absent n'est pas une erreur, un répertoire est refusé.
+`--settings NAME` designates another file: a file name ending in `.ini`, kept at the root of the folder of the application, next to `settings.ini`. A path is refused, even inside the folder: the settings never leave the folder, and deleting it leaves nothing behind. If the file does not exist, it is created by the same questions: this is the way to keep one profile per player.
 
-## 7. Jeton
+In a terminal, a name whose file does not exist yet is first confirmed: "Settings: player2.ini does not exist yet in ... Create it? [y/n]". `n`, or Ctrl-D, stops the script before anything is written or collected: a typo does not start a new file. The default file, `settings.ini`, is created without this question.
 
-Le jeton n'est transmis que dans l'en-tête Authorization, jamais dans l'URL. Il n'apparaît ni dans le journal, ni dans l'archive, où `collecte.json` note seulement sa présence.
+`--no-settings` leaves the settings aside for a single run: no file is read or written, and the settings questions are not asked. The side is asked, or deduced from `--usernames`, and the rating comes from the Elo tag of your side.
 
-Il n'est envoyé qu'à l'adresse de l'explorateur : si celui-ci répondait par une redirection, elle ne serait pas suivie, et l'interrogation s'arrêterait là.
+`--purge-settings` deletes the settings file, the one of `--settings` if given, then exits. Only a file that carries the `[player]` section, or an empty file, is deleted: a typo must not destroy another file. A missing file is not an error, a directory is refused.
 
-Un fichier de jeton lisible par d'autres déclenche un avertissement. Le fichier ne porte que le jeton : une affectation, `LICHESS_TOKEN=...`, ou des guillemets sont refusés.
+## 7. Token
 
-Le fichier peut porter une marque d'ordre des octets ou être en UTF-16, comme en produisent certains éditeurs Windows : le journal le signale et le jeton est lu normalement.
+The token is only sent in the Authorization header, never in the URL. It appears neither in the log, nor in the archive, where `collection.json` only notes its presence.
 
-Le fichier n'est ouvert que si l'explorateur sert : avec `--sans-explorateur`, il n'est pas lu. Le téléchargement d'une partie de Lichess, lui, se fait sans jeton.
+It is only sent to the address of the explorer: if the explorer answered with a redirect, it would not be followed, and the querying would stop there.
 
-Contrôles à la lecture :
+A token file that others can read triggers a warning. The file carries only the token: an assignment, `LICHESS_TOKEN=...`, or quotes are refused.
 
-- un fichier absent ou vide arrête le script
-- une espace, un signe égal ou un guillemet dans le jeton arrêtent le script : le fichier ne doit porter que le jeton
-- un caractère hors de l'ASCII imprimable arrête le script, sans que le message reproduise le jeton
+The file may carry a byte order mark or be in UTF-16, as some Windows editors produce: the log reports it and the token is read normally.
 
-La réponse de l'explorateur est expurgée du jeton avant d'être gardée dans l'archive, au cas où un serveur renverrait l'en-tête qu'il a reçu. Il en va de même de la trace d'une erreur inattendue, avec `--debug`.
+The file is only opened if the explorer is used: with `--no-explorer`, it is not read. The download of a Lichess game, for its part, is done without a token.
 
-## 8. Explorateur
+Checks at reading:
 
-### Requêtes
+- a missing or empty file stops the script
+- a space, an equal sign or a quote in the token stops the script: the file must carry only the token
+- a character outside printable ASCII stops the script, without the message reproducing the token
 
-Le script envoie une requête par demi-coup, à `https://explorer.lichess.org/lichess` ou à `https://explorer.lichess.org/masters` selon `--base`. La position y est désignée par la suite des coups joués depuis le début de la partie, et non par une FEN.
+The answer of the explorer is redacted of the token before being kept in the archive, in case a server sent back the header that it received. The same goes for the traceback of an unexpected error, with `--debug`.
 
-| Paramètre | Valeur | Rôle |
+## 8. Explorer
+
+### Requests
+
+The script sends one request per ply, to `https://explorer.lichess.org/lichess` or to `https://explorer.lichess.org/masters` according to `--database`. The position is designated there by the sequence of the moves played since the start of the game, and not by a FEN.
+
+| Parameter | Value | Role |
 |---|---|---|
-| `play` | les coups déjà joués, en notation UCI, séparés par des virgules | la position interrogée |
-| `moves` | `256` | tous les coups connus de la position, et non les premiers seulement |
-| `topGames` | `0` | aucune partie de référence, seules les statistiques servent |
+| `play` | the moves already played, in UCI notation, separated by commas | the position queried |
+| `moves` | `256` | all the moves known in the position, and not only the first ones |
+| `topGames` | `0` | no reference game, only the statistics are used |
 
-La base `lichess` reçoit en plus les filtres :
+The `lichess` database also receives the filters:
 
-| Paramètre | Valeur |
+| Parameter | Value |
 |---|---|
 | `variant` | `standard` |
-| `speeds` | la liste de `--cadences` |
-| `ratings` | la liste de `--classements` |
+| `speeds` | the list of `--speeds` |
+| `ratings` | the list of `--ratings` |
 | `since` | `2017-01` |
 | `recentGames` | `0` |
 
-Chaque requête porte l'en-tête d'agent `IAnalyze/4.0.2 (+https://github.com/deuza/IAnalyze)` et le jeton, dans l'en-tête Authorization.
+Each request carries the agent header `IAnalyze/<version> (+https://github.com/deuza/IAnalyze)` and the token, in the Authorization header.
 
-Chaque réponse est gardée telle quelle dans `explorateur/NNN-<uci>.json` : NNN est le numéro du demi-coup, `<uci>` le coup joué. C'est la réponse sur la position d'avant ce coup.
+Each answer is kept as it is in `explorer/NNN-<uci>.json`: NNN is the number of the ply, `<uci>` the move played. It is the answer about the position before this move.
 
-### Pause, HTTP 429 et erreurs
+### Pause, HTTP 429 and errors
 
-Le script attend `--pause` secondes entre deux requêtes, 2 au minimum, et rien avant la première.
+The script waits `--pause` seconds between two requests, 2 at least, and nothing before the first one.
 
-Sur un HTTP 429, le script attend 60 secondes et retente une seule fois. Au second refus, il cesse d'interroger : mieux vaut s'arrêter que se faire bannir.
+On an HTTP 429, the script waits 60 seconds and tries again only once. At the second refusal, it stops querying: better to stop than to get banned.
 
-Toute autre réponse inexploitable arrête l'interrogation à ce demi-coup : une erreur HTTP, un délai dépassé (`--delai`), une réponse qui n'est pas du JSON, une redirection. La collecte, elle, continue : la table de l'explorateur s'arrête là, et Stockfish évalue toute la partie.
+Any other unusable answer stops the querying at this ply: an HTTP error, a timeout (`--timeout`), an answer that is not JSON, a redirect. The collection, for its part, goes on: the table of the explorer stops there, and Stockfish evaluates the whole game.
 
-Sans jeton, la base `lichess` répond 401. Le script demande un jeton pour les deux bases, et s'arrête avant toute requête si le fichier manque.
+Without a token, the `lichess` database answers 401. The script requires a token for both databases, and stops before any request if the file is missing.
 
-### Critères d'arrêt
+### Stop criteria
 
-Pour chaque demi-coup, la position AVANT le coup est interrogée, ce qui donne le rang et la fréquence du coup réellement joué.
+For each ply, the position BEFORE the move is queried, which gives the rank and the frequency of the move really played.
 
-L'interrogation s'arrête, dans cet ordre de test :
+The querying stops, in this order of testing:
 
-1. sur une erreur HTTP ou une position absente de la base.
-2. sur un échantillon inférieur à `--seuil-parties`.
-3. sur une sortie de théorie, hors de la fenêtre `--coups-min`.
-4. au plafond `--max-demicoups`, ou à la fin de la partie.
+1. on an HTTP error or a position missing from the database.
+2. on a sample smaller than `--min-games`.
+3. on an exit from theory, outside the `--min-moves` window.
+4. at the `--max-plies` cap, or at the end of the game.
 
-Un coup nul, "--" dans le PGN, arrête aussi l'interrogation, avant toute requête pour ce demi-coup et quel que soit le mode : ce n'est pas un coup des échecs, la base ne peut pas suivre la partie au delà.
+A null move, "--" in the PGN, also stops the querying, before any request for this ply and whatever the mode: it is not a chess move, the database cannot follow the game beyond it.
 
-Il n'est pas compté comme une sortie de théorie, et la section 4 de la synthèse le signale.
+It is not counted as an exit from theory, and section 4 of the summary reports it.
 
-### Sortie de théorie
+### Exit from theory
 
-Un coup est rare quand il est joué dans moins de `--seuil-frequence` pour cent des parties de la position.
+A move is rare when it is played in less than `--min-frequency` percent of the games of the position.
 
-Un coup rare est une sortie de théorie s'il mène à une position absente du catalogue des ouvertures. S'il reste dans une ligne que le catalogue connaît, ce n'en est pas une.
+A rare move is an exit from theory if it leads to a position missing from the catalog of openings. If it stays in a line that the catalog knows, it is not one.
 
-La première sortie est toujours notée. Elle n'arrête l'interrogation qu'après les `--coups-min` premiers coups, pour que la table couvre le début de la partie même après une sortie précoce.
+The first exit is always noted. It only stops the querying after the first `--min-moves` moves, so that the table covers the start of the game even after an early exit.
 
-### Catalogue des ouvertures
+### Catalog of openings
 
-Le catalogue vient des cinq fichiers `a.tsv` à `e.tsv` du dépôt [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings).
+The catalog comes from the five files `a.tsv` to `e.tsv` of the repository [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings).
 
-`--installer-catalogue` les télécharge et rejoue chaque ligne avec python-chess. Un coup illisible ou illégal, ou une position nommée deux fois, arrête l'installation sans toucher au catalogue en place.
+`--install-catalog` downloads them and replays each line with python-chess. An unreadable or illegal move, or a position named twice, stops the installation without touching the catalog in place.
 
-L'index est ensuite écrit dans `catalogue.tsv`, dans le répertoire de `--catalogue`. Il est écrit sous un nom provisoire, puis renommé : une collecte lancée pendant une mise à jour lit l'ancien index ou le nouveau, jamais un mélange.
+The index is then written into `catalog.tsv`, in the directory of `--catalog`. It is written under a temporary name, then renamed: a collection started during an update reads the old index or the new one, never a mix.
 
 ```text
-#format=1  date=2026-11-20T21:03:14+01:00  lignes=3865  nommees=3865  connues=7982  source=...
-epd  eco  nom
+#format=2  date=2026-11-25T14:20:09+00:00  lines=3865  named=3865  known=7982  source=...
+epd  eco  name
 ```
 
-La première ligne décrit l'index, la deuxième nomme les colonnes, et chaque ligne suivante porte une position : son EPD, son code ECO et son nom, séparés par des tabulations. Les positions sont triées, si bien que deux installations du même catalogue donnent deux fichiers identiques.
+The first line describes the index, the second one names the columns, and each following line carries a position: its EPD, its ECO code and its name, separated by tabs. The positions are sorted, so that two installations of the same catalog give two identical files.
 
-Une position est repérée par son EPD, la case de prise en passant n'y figurant que si la prise est jouable : c'est aussi la règle du serveur de l'explorateur.
+A position is identified by its EPD, the en passant square appearing in it only if the capture can be played: this is also the rule of the server of the explorer.
 
-Le catalogue dit "connu", jamais "bon" : "Barnes Opening: Fool's Mate" y figure.
+The catalog says "known", never "good": "Barnes Opening: Fool's Mate" is in it.
 
-Il compte aussi les positions intermédiaires des lignes nommées, que l'explorateur ne nomme pas lui-même.
+It also counts the intermediate positions of the named lines, which the explorer does not name itself.
 
-Ces positions intermédiaires ont un nom vide dans l'index. Le 20 novembre 2026, le catalogue comptait 3865 lignes nommées, soit 7982 positions connues en les comptant.
+These intermediate positions have an empty name in the index. On November 25, 2026, the catalog counted 3865 named lines, that is 7982 known positions counting them.
 
-Au chargement, le format et le nombre de positions annoncés sont vérifiés : un index absent, abîmé ou tronqué arrête le script, qui donne la commande à relancer.
+At loading, the format and the number of positions announced are checked: a missing, damaged or truncated index stops the script, which gives the command to run again.
 
-## 9. Moteur
+A catalog index written before version 5.0.0, `catalogue.tsv`, is not read: run `--install-catalog` again.
 
-### Dialogue avec Stockfish
+## 9. Engine
 
-Le script pilote Stockfish par le protocole UCI, à travers python-chess. Il le lance deux fois :
+### Dialogue with Stockfish
 
-1. avant la collecte, pour lire les bornes que le moteur annonce pour ses options, puis l'arrêter. Une valeur hors bornes est ainsi refusée tout de suite, et non après plusieurs minutes d'explorateur
-2. pour l'analyse : il règle `Threads` et `Hash`, demande les chances de gain avec `UCI_ShowWDL` si le moteur connaît cette option, puis fait analyser chaque position jusqu'à la profondeur demandée
+The script drives Stockfish over the UCI protocol, through python-chess. It starts it twice:
 
-### Threads, Hash et MultiPV
+1. before the collection, to read the bounds that the engine announces for its options, then stop it. A value out of bounds is thus refused at once, and not after several minutes of explorer
+2. for the analysis: it sets `Threads` and `Hash`, asks for the winning chances with `UCI_ShowWDL` if the engine knows this option, then has each position analyzed up to the requested depth
 
-| Option du script | Option UCI | Défaut du script | Défaut de Stockfish |
+### Threads, Hash and MultiPV
+
+| Option of the script | UCI option | Default of the script | Default of Stockfish |
 |---|---|---|---|
-| `--fils` | `Threads` | le nombre de processeurs | 1 |
-| `--hachage` | `Hash` | 256 | 16 |
+| `--threads` | `Threads` | the number of processors | 1 |
+| `--hash` | `Hash` | 256 | 16 |
 | `--multipv` | `MultiPV` | 3 | 1 |
 
-**Threads, les fils.** C'est le nombre de fils d'exécution que le moteur emploie pour explorer une position. Plus il en a, plus vite il atteint la profondeur demandée. La documentation de Stockfish conseille de lui en donner autant que la machine a de cœurs : c'est le défaut du script.
+**Threads.** This is the number of threads of execution that the engine uses to explore a position. The more it has, the faster it reaches the requested depth. The documentation of Stockfish advises giving it as many as the machine has cores: this is the default of the script.
 
-Une conséquence à connaître : avec plusieurs fils, deux analyses de la même position ne rendent pas exactement les mêmes chiffres. Mesuré avec Stockfish 16 à la profondeur 16 : trois analyses identiques avec un fil, trois analyses différentes de quelques centipions avec quatre fils, l'ordre des meilleurs coups pouvant changer quand ils se valent. Deux collectes de la même partie diffèrent donc un peu. Pour des chiffres reproductibles, lancez le script avec `--fils 1`.
+A consequence to know: with several threads, two analyses of the same position do not give exactly the same figures. Measured with Stockfish 16 at depth 16: three identical analyses with one thread, three analyses differing by a few centipawns with four threads, the order of the best moves possibly changing when they are worth the same. Two collections of the same game therefore differ a little. For reproducible figures, run the script with `--threads 1`.
 
-**Hash, la table de hachage.** En explorant, un moteur retombe sans cesse sur les mêmes positions par des ordres de coups différents. La table de hachage, ou table de transposition, garde le résultat des recherches déjà faites pour ne pas les refaire. `--hachage` en fixe la taille, en mégaoctets. Trop petite, elle se remplit et le moteur recalcule. Trop grande pour la mémoire libre, le système refuse de l'allouer et le moteur s'arrête : le script le dit alors, et nomme `--hachage`.
+**Hash, the hash table.** While exploring, an engine keeps falling back on the same positions through different move orders. The hash table, or transposition table, keeps the result of the searches already done so as not to redo them. `--hash` sets its size, in megabytes. Too small, it fills up and the engine recomputes. Too large for the free memory, the system refuses to allocate it and the engine stops: the script then says so, and names `--hash`.
 
-**MultiPV, les meilleurs coups.** Par défaut, un moteur ne cherche que la meilleure suite, sa "variante principale". Avec MultiPV, il en rend plusieurs, classées. Le script en demande 3, pour que la synthèse montre ce que le moteur préférait au coup joué. La recherche en est ralentie : la documentation de Stockfish conseille de laisser 1 pour la meilleure performance.
+**MultiPV, the best moves.** By default, an engine only looks for the best continuation, its "principal variation". With MultiPV, it returns several of them, ranked. The script asks for 3, so that the summary shows what the engine preferred to the move played. The search is slowed down by it: the documentation of Stockfish advises leaving 1 for the best performance.
 
-Si le coup joué ne figure pas parmi ces meilleurs coups, le script lance une seconde recherche, restreinte à ce seul coup, pour lui donner une évaluation et mesurer l'écart.
+If the move played is not among these best moves, the script starts a second search, restricted to this single move, to give it an evaluation and measure the loss.
 
-**La profondeur.** `--profondeur` arrête la recherche quand le moteur a atteint cette profondeur. Le temps de calcul croît très vite avec elle. Le script la borne à 60.
+**The depth.** `--depth` stops the search when the engine has reached this depth. The computing time grows very fast with it. The script bounds it to 60.
 
-Les bornes sont celles que le moteur annonce. Stockfish 17.1 et Stockfish 19 admettent de 1 à 1024 pour Threads, de 1 à 33554432 pour Hash et de 1 à 256 pour MultiPV.
+The bounds are the ones that the engine announces. Stockfish 17.1 and Stockfish 19 accept from 1 to 1024 for Threads, from 1 to 33554432 for Hash and from 1 to 256 for MultiPV.
 
-Sources : [options UCI de Stockfish](https://official-stockfish.github.io/docs/stockfish-wiki/UCI-Protocol-and-Stockfish-Commands.html) pour Threads, Hash, MultiPV et UCI_ShowWDL, et [Transposition Table](https://www.chessprogramming.org/Transposition_Table), sur le wiki Chess Programming, pour la table de hachage. Les deux pages sont en anglais.
+Sources: [UCI options of Stockfish](https://official-stockfish.github.io/docs/stockfish-wiki/UCI-Protocol-and-Stockfish-Commands.html) for Threads, Hash, MultiPV and UCI_ShowWDL, and [Transposition Table](https://www.chessprogramming.org/Transposition_Table), on the Chess Programming wiki, for the hash table.
 
-### Ce que le script tire des évaluations
+### What the script draws from the evaluations
 
-- **L'évaluation** est donnée du point de vue des Blancs, en pions : `+0.35`. Un mat s'écrit `#+2`, les Blancs matent en deux coups, ou `#-1`, les Noirs matent en un coup.
-- **Un mat se compte après le coup**, comme toute évaluation du tableau. Le moteur, lui, compte avant le coup, celui-ci compris : le script retire donc un coup au camp qui mate quand c'est lui qui vient de jouer. `#+0` ou `#-0` : le coup de la ligne donne mat.
-- **L'écart** est ce que le coup joué perd par rapport au premier choix du moteur, en centipions, du point de vue du joueur au trait.
-- **La nature** suit l'écart : imprécision à partir de 50, erreur à partir de 100, gaffe à partir de 300.
-- **Un écart négatif** n'est pas une faute. Le coup joué, évalué à part quand il n'est pas dans les premiers choix, sort alors un peu au-dessus du premier : les deux se valent.
-- **Les mats** ne se chiffrent pas en centipions. Entre deux mats de même sens, mater en deux coups au lieu d'un par exemple, l'écart vaut 0. Un coup qui manque un mat ou en concède un porte l'écart "mat" et la nature "gaffe".
-- **G/N/P** donne les chances de gain, de nulle et de perte des Blancs. Ce sont celles du modèle de Stockfish, établi sur des parties du moteur contre lui-même : une tendance, et non une probabilité entre joueurs humains.
-- **Un coup nul**, `--`, n'est pas évalué : ce n'est pas un coup des échecs, le moteur ne peut pas le juger. Sa ligne garde les meilleurs coups de la position.
+- **The evaluation** is given from White's point of view, in pawns: `+0.35`. A mate is written `#+2`, White mates in two moves, or `#-1`, Black mates in one move.
+- **A mate is counted after the move**, like any evaluation of the table. The engine, for its part, counts before the move, this one included: the script therefore removes one move from the side that mates when it has just played. `#+0` or `#-0`: the move of the line gives mate.
+- **The loss** is what the move played loses compared with the first choice of the engine, in centipawns, from the point of view of the side to move.
+- **The category** follows the loss: inaccuracy from 50, mistake from 100, blunder from 300.
+- **A negative loss** is not a fault. The move played, evaluated apart when it is not among the first choices, then comes out slightly above the first one: the two are worth the same.
+- **The mates** are not counted in centipawns. Between two mates of the same direction, mating in two moves instead of one for example, the loss is 0. A move that misses a mate or concedes one carries the loss "mate" and the category "blunder".
+- **W/D/L** gives the chances of win, draw and loss of White. They are those of the model of Stockfish, built on games of the engine against itself: a trend, and not a probability between human players.
+- **A null move**, `--`, is not evaluated: it is not a chess move, the engine cannot judge it. Its line keeps the best moves of the position.
 
 ### `stockfish/evaluations.json`
 
-Le fichier est une liste, un objet par demi-coup évalué :
+The file is a list, one object per evaluated ply:
 
-| Clef | Contenu |
+| Key | Content |
 |---|---|
-| `demicoup`, `numero`, `trait` | le rang du demi-coup, le numéro du coup, "Blancs" ou "Noirs" |
-| `fen` | la position avant le coup |
-| `joue` | le coup joué et son évaluation |
-| `meilleurs` | les meilleurs coups du moteur, dans l'ordre, autant que `--multipv` |
-| `ecart_cp` | l'écart en centipions. À partir de 10000, il ne mesure plus rien : l'un des deux coups est un mat |
-| `nature` | "imprécision", "erreur", "gaffe", ou rien |
+| `ply`, `move_number`, `side_to_move` | the rank of the ply, the number of the move, "White" or "Black" |
+| `fen` | the position before the move |
+| `played` | the move played and its evaluation |
+| `best` | the best moves of the engine, in order, as many as `--multipv` |
+| `cp_loss` | the loss in centipawns. From 10000 on, it no longer measures anything: one of the two moves is a mate |
+| `category` | "inaccuracy", "mistake", "blunder", or null |
 
-Pour un coup nul, `joue` porte `non_evalue`, et `ecart_cp` comme `nature` sont vides.
+For a null move, `played` carries `not_evaluated`, and `cp_loss` as well as `category` are null.
 
-`joue` et chaque élément de `meilleurs` portent les mêmes clefs :
+`played` and each element of `best` carry the same keys:
 
-| Clef | Contenu |
+| Key | Content |
 |---|---|
-| `san`, `uci` | le coup, en notation algébrique et en notation UCI |
-| `score` | l'évaluation du point de vue des Blancs, comme dans la synthèse |
-| `valeur_trait` | la même en centipions, du point de vue du joueur au trait. Un mat en n coups y vaut 100000 - n |
-| `profondeur` | la profondeur atteinte |
-| `pv_san`, `pv_uci` | la variante principale entière, que la synthèse coupe à `--longueur-pv` demi-coups |
-| `wdl` | `gain`, `nulle` et `perte` des Blancs, en pour mille |
+| `san`, `uci` | the move, in algebraic notation and in UCI notation |
+| `score` | the evaluation from White's point of view, as in the summary |
+| `value_for_side` | the same in centipawns, from the point of view of the side to move. A mate in n moves is worth 100000 - n there |
+| `depth` | the depth reached |
+| `pv_san`, `pv_uci` | the whole principal variation, which the summary cuts at `--pv-length` plies |
+| `wdl` | `win`, `draw` and `loss` of White, per thousand |
 
-## 10. Fichiers produits
+## 10. Files produced
 
-### Dossier de travail et archive
+### Working folder and archive
 
-Le dossier de travail s'appelle `analyse-<étiquette>-<AAAAMMJJ-HHMMSS>`. L'étiquette est le nom du PGN sans son extension, assaini (section 11), ou l'identifiant Lichess. Un dossier ou une archive du même nom fait ajouter un suffixe, -2, -3 et ainsi de suite.
+The working folder is named `analysis-<label>-<YYYYMMDD-HHMMSS>`. The label is the name of the PGN without its extension, sanitized (section 11), or the Lichess identifier. A folder or an archive of the same name adds a suffix, -2, -3 and so on.
 
-Une archive présente sous son nom définitif est toujours complète et vérifiée : elle est écrite sous le nom provisoire `.<dossier>.partiel.zip`, puis renommée.
+An archive present under its final name is always complete and checked: it is written under the temporary name `.<folder>.partiel.zip`, then renamed.
 
-Il en va de même de chaque fichier du dossier de travail, écrit sous `.<nom>.partiel`. Après une interruption (Ctrl-C) ou un échec, ces fichiers provisoires sont retirés et le dossier de travail reste, sans archive.
+The same goes for each file of the working folder, written as `.<name>.partiel`. After an interruption (Ctrl-C) or a failure, these temporary files are removed and the working folder stays, without an archive.
 
-### `partie.pgn` et `partie-origine.pgn`
+### `game.pgn` and `game-original.pgn`
 
-`partie.pgn` est le PGN fourni, converti en UTF-8 s'il ne l'était pas.
+`game.pgn` is the PGN given, converted to UTF-8 if it was not.
 
-Si vos réponses ont complété une balise White ou Black, `partie.pgn` porte la partie réécrite par python-chess avec ses nouvelles balises, et `partie-origine.pgn` garde le texte fourni.
+If your answers filled in a White or Black tag, `game.pgn` carries the game rewritten by python-chess with its new tags, and `game-original.pgn` keeps the text given.
 
-### `collecte.json`
+### `collection.json`
 
-Le fichier garde les paramètres exacts de la collecte : toutes les options de la ligne de commande, sous leur nom, les tirets devenant des soulignés, plus ces clefs :
+The file keeps the exact parameters of the collection: all the options of the command line, under their name, the hyphens becoming underscores, plus these keys:
 
-| Clef | Contenu |
+| Key | Content |
 |---|---|
-| `jeton_present` | vrai si un jeton a été lu. Le jeton lui-même n'y figure jamais |
-| `catalogue_utilise` | la description du catalogue : date, nombre de lignes et de positions |
-| `camp` | votre camp, son origine, déduit ou déclaré, et les balises complétées |
-| `contexte_recueilli` | vrai si vous avez répondu aux questions |
-| `pgn_encodage`, `pgn_remarques` | comment le PGN a été décodé |
-| `prompt_ecrit` | le nom du prompt, ou rien avec `--sans-prompt` |
+| `token_present` | true if a token was read. The token itself never appears there |
+| `catalog_used` | the description of the catalog: date, number of lines and of positions |
+| `side` | your side, its origin, deduced or declared, and the tags filled in |
+| `context_collected` | true if you answered the questions |
+| `pgn_encoding`, `pgn_remarks` | how the PGN was decoded |
+| `prompt_written` | the name of the prompt, or null with `--no-prompt` |
 
-`pseudos` y porte les pseudos réellement employés, ceux de `--pseudos` ou ceux des réglages.
+`usernames` carries there the usernames really used, those of `--usernames` or those of the settings.
 
-### `synthese.md`
+### `summary.md`
 
-Sections de `synthese.md` :
+Sections of `summary.md`:
 
-| Section | Contenu |
+| Section | Content |
 |---|---|
-| Consignes d'analyse | `contexte.md`, vos réponses aux questions de démarrage. Absente quand elles ne sont pas posées |
-| 1. En-têtes et coups | en-têtes, ligne principale, repères de phase (roques, dames, entrée en finale) |
-| 2. Explorateur | filtres, seuils, table, première sortie |
-| 3. Évaluations Stockfish | nature et G/N/P de chaque coup |
-| 3 bis | variantes principales du moteur |
-| 3 ter | erreurs et gaffes par camp, avec la FEN |
-| 4. Positions non exploitables | là où la base ne dit plus rien, ou le demi-coup d'un coup nul |
-| 5. Données brutes de l'archive | le contenu du zip, et l'encodage du PGN s'il a été converti. Le dossier `explorateur/` n'y figure que s'il existe |
+| Analysis instructions | `context.md`, your answers to the startup questions. Missing when they are not asked |
+| 1. Headers and moves of the game | headers, main line, phase markers (castling, queens, entry into the endgame) |
+| 2. Explorer of the ... database, exit from theory | filters, thresholds, table, first exit |
+| 3. Stockfish evaluations | category and W/D/L of each move |
+| 3a. Principal variations of the engine | the principal variations of the engine |
+| 3b. Mistakes and blunders by side | mistakes and blunders by side, with the FEN |
+| 4. Positions with an unusable sample | where the database says nothing more, or the ply of a null move |
+| 5. Raw data of the archive | the content of the zip, and the encoding of the PGN if it was converted. The `explorer/` folder only appears there if it exists |
 
-**Table de l'explorateur**, une ligne par demi-coup :
+**Table of the explorer**, one line per ply, under the columns `#`, `Move`, `Side`, `Pos. games`, `Played`, `Rank`, `Freq.`, `White score`, `Top move`, `Top freq.`, `Top White score` and `Opening`:
 
-- demi-coup, numéro du coup, trait
-- parties de la position
-- coup joué, son rang, sa fréquence, le score des Blancs sur ce coup
-- coup majoritaire, sa fréquence et son score
-- Ouverture : nom ECO de la position atteinte, "(intermédiaire)" pour une position de passage d'une ligne nommée, "-" hors catalogue
+- ply, number of the move, side to move
+- games of the position
+- move played, its rank, its frequency, the score of White on this move
+- most played move, its frequency and its score
+- Opening: ECO name of the position reached, "(intermediate)" for a passing position of a named line, "-" outside the catalog
 
-**Table Stockfish**, une ligne par demi-coup :
+**Table of Stockfish**, one line per ply, under the columns `#`, `Move`, `Side`, `Played`, `Eval`, `W/D/L`, `CP loss`, `Category`, `1st`, `2nd` and `3rd`:
 
-- demi-coup, numéro du coup, trait, coup joué
-- évaluation, du point de vue des Blancs
-- G/N/P : chances de gain, de nulle et de perte des Blancs selon le modèle de Stockfish, à lire comme une tendance plutôt que comme une probabilité entre joueurs humains
-- écart au premier choix du moteur, du point de vue du joueur au trait
-- nature : imprécision à partir de 50 cp d'écart, erreur à partir de 100, gaffe à partir de 300
-- les trois meilleurs coups
+- ply, number of the move, side to move, move played
+- evaluation, from White's point of view
+- W/D/L: chances of win, draw and loss of White according to the model of Stockfish, to be read as a trend rather than as a probability between human players
+- loss compared with the first choice of the engine, from the point of view of the side to move
+- category: inaccuracy from 50 cp of loss, mistake from 100, blunder from 300
+- the three best moves
 
-Trois cas particuliers :
+Three special cases:
 
-- l'écart porte "mat" quand le coup joué manque un mat ou en concède un : il ne se chiffre pas en centipions
-- sous le tableau, une ligne "Résultat et évaluation finale se contredisent" apparaît quand le camp déclaré vainqueur est nettement moins bien après le dernier coup, d'au moins 300 cp : la partie ne s'est pas décidée sur l'échiquier, et l'analyste doit le dire au lieu de raconter une victoire méritée
-- un coup nul, "--" dans le PGN, n'est pas évalué : sa ligne garde les trois meilleurs coups de la position, ses autres colonnes portent "-"
+- the loss reads "mate" when the move played misses a mate or concedes one: it is not counted in centipawns
+- under the table, a line "Result and final evaluation contradict each other" appears when the side declared the winner is clearly worse after the last move, by at least 300 cp: the game was not decided on the board, and the analyst must say so instead of telling the story of a deserved win
+- a null move, "--" in the PGN, is not evaluated: its line keeps the three best moves of the position, its other columns carry "-"
 
-## 11. Encodages et caractères
+## 11. Encodings and characters
 
-Aucune entrée mal encodée ne doit arrêter le script sur une trace Python : au pire, une ligne "Attention" du journal et une dégradation propre.
+No badly encoded input must stop the script on a Python traceback: at worst, a "Warning" line of the log and a clean degradation.
 
-PGN, modèle de prompt et fichier de jeton, essais dans cet ordre :
+PGN, prompt template and token file, tried in this order:
 
-1. marque d'ordre des octets (BOM) UTF-8, UTF-16 ou UTF-32
-2. UTF-16 sans marque, reconnu à son octet nul sur deux
+1. byte order mark (BOM) UTF-8, UTF-16 or UTF-32
+2. UTF-16 without a mark, recognized by its null byte out of two
 3. UTF-8
-4. UTF-8 abîmé : au moins un caractère accentué correctement codé et au plus quatre octets invalides pour chacun d'eux, ces octets deviennent U+FFFD
-5. cp1252, puis latin-1, qui accepte n'importe quel octet
+4. damaged UTF-8: at least one correctly encoded accented character and at most four invalid bytes for each of them, these bytes becoming U+FFFD
+5. cp1252, then latin-1, which accepts any byte
 
-Hors UTF-8 sans défaut, le journal nomme l'encodage retenu :
-
-```text
-Attention, PGN : le contenu n'est pas en UTF-8, encodage retenu : cp1252.
-```
-
-Les fins de ligne CRLF et CR sont ramenées à LF. Les caractères de contrôle, NUL compris, sont retirés et comptés dans le journal, la tabulation et le saut de ligne sont conservés.
-
-Le fichier `partie.pgn` est donc toujours de l'UTF-8 propre : si le fichier fourni a dû être converti, la section 5 de la synthèse le dit, et `collecte.json` garde le détail.
-
-Un texte latin-1 se décode aussi sans erreur en cp1252, les deux ne différant que sur les octets 0x80 à 0x9F : c'est cp1252 qui est annoncé.
-
-Un PGN qui n'est ni en UTF-8, ni en UTF-16, ni en cp1252 est refusé, avec le conseil de le convertir. Le script le reconnaît à l'un des cinq octets que cp1252 ne définit pas.
-
-Limite : un fichier en cp850 ou en MacRoman qui ne contient aucun de ces cinq octets passe pour du cp1252. Ses lettres accentuées sortent fausses dans les noms et les commentaires, et rien ne permet de le voir. Les coups, écrits en ASCII, restent justes.
-
-Balises du PGN (White, Black, Event, Site et les autres) : tabulations et caractères de contrôle en sont retirés avant l'écriture des en-têtes de la synthèse et avant tout affichage.
-
-Autres lectures :
-
-- le fichier de jeton suit la même détection que le PGN, et un jeton hors de l'ASCII imprimable est refusé avant toute requête
-- le catalogue et les réponses de l'explorateur sont lus en UTF-8, marque d'ordre des octets tolérée
-- la sortie du moteur est décodée en UTF-8 par python-chess, qui écarte une ligne illisible sans s'arrêter
-
-Rien ne dépend de la locale.
-
-Écritures : tous les fichiers de l'archive sont en UTF-8, fins de ligne LF.
-
-Dans l'étiquette de l'archive, les caractères de contrôle, les caractères `/ \ : * ? " < > |` et les octets non décodables du nom du PGN deviennent "\_", et les espaces des tirets : `partie contre machin.pgn` donne `analyse-partie-contre-machin-...`. L'étiquette est bornée à 80 octets.
-
-Les lettres accentuées sont conservées.
-
-Console : un caractère que le terminal ne sait pas afficher devient "?" au lieu d'arrêter le script, sous LANG=C comme avec PYTHONIOENCODING=ascii.
-
-Le chemin de l'archive est écrit en octets sur la sortie standard : ARCHIVE=$(...) reste exact dans tous les cas.
-
-Questions de démarrage : une réponse saisie dans un autre encodage que celui du terminal est redécodée, cp1252 puis latin-1.
-
-## 12. Modèle de prompt
-
-Le prompt de chaque partie est tiré d'un modèle : `prompt-template.txt`, ou `prompt-only-template.txt` avec `--prompt-seul`. Vous pouvez les modifier, ou désigner le vôtre avec `--prompt`.
-
-Deux sortes de repères sont interprétés :
-
-| Repère | Effet |
-|---|---|
-| `{{NOM}}` | une valeur, remplacée |
-| `#! si CONDITION` | garde ce qui suit si la condition est vraie |
-| `#! si non CONDITION` | garde ce qui suit si elle est fausse |
-| `#! sinon` | bascule |
-| `#! fin` | ferme le dernier "si" ouvert |
-| `#! note ...` | commentaire du modèle, jamais recopié |
-
-Une directive occupe une ligne entière, et les "si" peuvent s'emboîter. Les lignes vides laissées par un passage retiré sont resserrées.
-
-Valeurs :
-
-| Valeur | Contenu |
-|---|---|
-| `VERSION` | version du script |
-| `DEPOT` | adresse du dépôt d'IAnalyze |
-| `ARCHIVE` | nom du fichier de l'archive |
-| `PSEUDOS` | vos pseudos, séparés par des virgules |
-| `CAMP` | Blancs, Noirs ou inconnu |
-| `NIVEAU` | votre niveau, rédigé : "environ 1300 Elo, déclaré par le joueur", sinon l'Elo de votre balise, sinon "non précisé" |
-| `CADENCE` | votre cadence habituelle, rédigée |
-| `ANNOTATEUR` | valeur de la balise Annotator |
-| `BASE` | base interrogée : "Lichess (tous joueurs)" ou "maîtres" |
-| `SEUIL_IMPRECISION`, `SEUIL_ERREUR`, `SEUIL_GAFFE` | seuils de nature du coup, en centipions : 50, 100 et 300 |
-| `PROFONDEUR`, `MULTIPV` | valeurs de `--profondeur` et de `--multipv` |
-| `PARTIE_PGN` | le PGN de la partie, tel que l'archive le contient |
-| `TABLEAU_MOTEUR` | les évaluations de Stockfish, une ligne par demi-coup. Derrière un coup faible : sa nature, son écart, le meilleur coup, sa suite sur `--longueur-pv` demi-coups et son évaluation |
-| `ALERTE_RESULTAT` | la phrase qui signale un résultat contraire à l'évaluation finale, vide sinon |
-| `CONSIGNES_JOUEUR` | celles de vos réponses aux questions de démarrage que vous n'avez pas laissées par défaut |
-| `OUVERTURE` | l'ouverture et la sortie de théorie en une phrase, d'après l'explorateur |
-| `DEMI_COUPS` | nombre de demi-coups de la partie |
-| `DEMI_COUPS_EVALUES` | nombre de demi-coups que le moteur a évalués, plus petit avec `--coups-stockfish` |
-| `COUPS_FAIBLES_JOUEUR` | nombre de vos coups que `TABLEAU_MOTEUR` marque imprécision, erreur ou gaffe, "inconnu" si votre camp ne l'est pas |
-
-Conditions :
-
-| Condition | Vraie quand |
-|---|---|
-| `STOCKFISH` | toujours, depuis la version 4.0.0. Gardée pour les modèles personnels qui l'emploient |
-| `EXPLORATEUR` | la section 2 a été collectée |
-| `BASE_LICHESS` | base de tous les joueurs |
-| `BASE_MAITRES` | base des maîtres |
-| `REPONSES` | le script a recueilli vos réponses aux questions de démarrage |
-| `CAMP_CONNU` | votre camp est connu |
-| `PSEUDO_CONNU` | au moins un pseudo est connu |
-| `NIVEAU_DECLARE` | votre niveau figure dans les réglages |
-| `RESULTAT_CONTREDIT` | le résultat de la partie contredit l'évaluation finale |
-| `CONSIGNES_DONNEES` | `CONSIGNES_JOUEUR` n'est pas vide |
-| `OUVERTURE_CONNUE` | `OUVERTURE` n'est pas vide |
-| `COUVERTURE_PARTIELLE` | `--coups-stockfish` a limité le moteur aux premiers coups |
-| `COUP_NUL` | la partie contient un coup nul, noté `--` |
-| `PEU_DE_COUPS_FAIBLES` | votre camp est connu et `COUPS_FAIBLES_JOUEUR` est inférieur à trois |
-| `AUCUN_COUP_FAIBLE` | votre camp est connu et `COUPS_FAIBLES_JOUEUR` vaut zéro |
-
-Les deux modèles, `prompt-template.txt` et `prompt-only-template.txt`, partagent ces repères. `PARTIE_PGN`, `TABLEAU_MOTEUR`, `ALERTE_RESULTAT`, `CONSIGNES_JOUEUR`, `OUVERTURE`, `COUPS_FAIBLES_JOUEUR` et les conditions `RESULTAT_CONTREDIT`, `CONSIGNES_DONNEES`, `OUVERTURE_CONNUE`, `COUP_NUL`, `PEU_DE_COUPS_FAIBLES`, `AUCUN_COUP_FAIBLE` servent au prompt court.
-
-Le prompt court finit par un bilan : les trois erreurs les plus coûteuses du joueur et le thème à travailler. Quand le tableau marque moins de trois coups faibles de votre côté, la phrase change : elle donne leur nombre et demande de s'en tenir à ceux-là.
+Outside flawless UTF-8, the log names the encoding used:
 
 ```text
-Après le bloc de code, donnez en quelques lignes les erreurs les plus
-coûteuses du joueur et le thème qu'il doit travailler en priorité.
-Coups faibles du joueur dans le tableau : 2.
-Tenez-vous-en à ceux-là, sans en ajouter.
+Warning, PGN: the content is not UTF-8, encoding used: cp1252.
 ```
 
-Sans aucun coup faible de votre côté, le prompt demande de ne vous prêter aucune erreur. Quand votre camp n'est pas connu, il demande de commenter les deux camps de la même façon et de donner le bilan pour chacun.
+The CRLF and CR line ends are brought back to LF. The control characters, NUL included, are removed and counted in the log, the tab and the line feed are kept.
 
-La raison vient des essais du 21 novembre 2026 (README, section 7) : le joueur n'avait commis que deux erreurs, et trois réponses sur cinq en ont présenté une troisième pour arriver au compte demandé.
+The `game.pgn` file is therefore always clean UTF-8: if the file given had to be converted, section 5 of the summary says so, and `collection.json` keeps the detail.
 
-Un repère inconnu ou mal écrit, comme `{{ NIVEAU }}`, un "si" jamais fermé, une directive mal formée ou un modèle sans une ligne de texte arrêtent le script avant la collecte :
+A latin-1 text also decodes without error in cp1252, the two only differing on the bytes 0x80 to 0x9F: it is cp1252 that is announced.
+
+A PGN that is neither in UTF-8, nor in UTF-16, nor in cp1252 is refused, with the advice to convert it. The script recognizes it by one of the five bytes that cp1252 does not define.
+
+Limit: a file in cp850 or in MacRoman that contains none of these five bytes passes for cp1252. Its accented letters come out wrong in the names and the comments, and nothing allows to see it. The moves, written in ASCII, stay right.
+
+Tags of the PGN (White, Black, Event, Site and the others): tabs and control characters are removed from them before the headers of the summary are written and before any display.
+
+Other readings:
+
+- the token file follows the same detection as the PGN, and a token outside printable ASCII is refused before any request
+- the catalog and the answers of the explorer are read in UTF-8, byte order mark tolerated
+- the output of the engine is decoded in UTF-8 by python-chess, which sets aside an unreadable line without stopping
+
+Nothing depends on the locale.
+
+Writing: all the files of the archive are in UTF-8, LF line ends.
+
+In the label of the archive, the control characters, the characters `/ \ : * ? " < > |` and the undecodable bytes of the name of the PGN become "\_", and the spaces become hyphens: `game against machine.pgn` gives `analysis-game-against-machine-...`. The label is bounded to 80 bytes.
+
+The accented letters are kept.
+
+Console: a character that the terminal cannot display becomes "?" instead of stopping the script, under LANG=C as with PYTHONIOENCODING=ascii.
+
+The path of the archive is written in bytes on standard output: ARCHIVE=$(...) stays exact in every case.
+
+Startup questions: an answer typed in another encoding than the one of the terminal is decoded again, cp1252 then latin-1.
+
+## 12. Prompt template
+
+The prompt of each game is drawn from a template: `prompt-template.txt`, or `prompt-only-template.txt` with `--prompt-only`. You can edit them, or designate your own with `--prompt`.
+
+Two kinds of markers are interpreted:
+
+| Marker | Effect |
+|---|---|
+| `{{NAME}}` | a value, replaced |
+| `#! if CONDITION` | keeps what follows if the condition is true |
+| `#! if not CONDITION` | keeps what follows if it is false |
+| `#! else` | switches |
+| `#! end` | closes the last "if" opened |
+| `#! note ...` | comment of the template, never copied |
+
+A directive takes a whole line, and the "if" may be nested. The blank lines left by a removed passage are tightened.
+
+Values:
+
+| Value | Content |
+|---|---|
+| `VERSION` | version of the script |
+| `REPOSITORY` | address of the repository of IAnalyze |
+| `ARCHIVE` | name of the file of the archive |
+| `USERNAMES` | your usernames, separated by commas |
+| `SIDE` | White, Black or unknown |
+| `RATING` | your rating, phrased: "about 1300 Elo, declared by the player", otherwise the Elo of your tag, otherwise "unspecified: judge from the game, and stay accessible" |
+| `TIME_CONTROL` | your usual time control, phrased |
+| `ANNOTATOR` | value of the Annotator tag |
+| `DATABASE` | database queried: "Lichess (all players)" or "masters" |
+| `INACCURACY_THRESHOLD`, `MISTAKE_THRESHOLD`, `BLUNDER_THRESHOLD` | thresholds of the category of the move, in centipawns: 50, 100 and 300 |
+| `DEPTH`, `MULTIPV` | values of `--depth` and of `--multipv` |
+| `GAME_PGN` | the PGN of the game, as the archive contains it |
+| `ENGINE_TABLE` | the evaluations of Stockfish, one line per ply. Behind a weak move: its category, its loss, the best move, its continuation over `--pv-length` plies and its evaluation |
+| `RESULT_ALERT` | the sentence that reports a result contrary to the final evaluation, empty otherwise |
+| `PLAYER_INSTRUCTIONS` | those of your answers to the startup questions that you did not leave at their default |
+| `OPENING` | the opening and the exit from theory in one sentence, according to the explorer |
+| `PLIES` | number of plies of the game |
+| `PLIES_EVALUATED` | number of plies that the engine evaluated, smaller with `--stockfish-moves` |
+| `PLAYER_WEAK_MOVES` | number of your moves that `ENGINE_TABLE` marks inaccuracy, mistake or blunder, "unknown" if your side is not known |
+
+Conditions:
+
+| Condition | True when |
+|---|---|
+| `STOCKFISH` | always, since version 4.0.0. Kept for the personal templates that use it |
+| `EXPLORER` | section 2 was collected |
+| `LICHESS_DATABASE` | database of all the players |
+| `MASTERS_DATABASE` | masters database |
+| `ANSWERS` | the script collected your answers to the startup questions |
+| `SIDE_KNOWN` | your side is known |
+| `USERNAME_KNOWN` | at least one username is known |
+| `RATING_DECLARED` | your rating is in the settings |
+| `RESULT_CONTRADICTED` | the result of the game contradicts the final evaluation |
+| `INSTRUCTIONS_GIVEN` | `PLAYER_INSTRUCTIONS` is not empty |
+| `OPENING_KNOWN` | `OPENING` is not empty |
+| `PARTIAL_COVERAGE` | `--stockfish-moves` limited the engine to the first moves |
+| `NULL_MOVE` | the game contains a null move, written `--` |
+| `FEW_WEAK_MOVES` | your side is known and `PLAYER_WEAK_MOVES` is less than three |
+| `NO_WEAK_MOVE` | your side is known and `PLAYER_WEAK_MOVES` is zero |
+
+The two templates, `prompt-template.txt` and `prompt-only-template.txt`, share these markers. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `PLAYER_WEAK_MOVES` and the conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` serve the short prompt.
+
+The short prompt ends with a report: the three costliest errors of the player and the theme to work on. When the table marks fewer than three weak moves on your side, the sentence changes: it gives their number and asks to keep to those.
 
 ```text
-Modèle de prompt prompt-template.txt, ligne 12 : condition inconnue MOTEUR, conditions admises : STOCKFISH, EXPLORATEUR, ...
+After the code block, give in a few lines the costliest errors of the
+player and the theme they must work on first.
+Weak moves of the player in the table: 2.
+Keep to those, without adding any.
 ```
 
-Le contrôle du modèle a lieu avant la collecte, pour ne pas la faire pour rien.
+Without any weak move on your side, the prompt asks to attribute no error to you. When your side is not known, it asks to comment on both sides in the same way and to give the report for each one.
 
-Un fichier désigné par `--prompt` doit exister. Le modèle par défaut, lui, peut manquer quand le script a été copié seul : la collecte se fait alors sans prompt, et le journal le signale. Avec `--prompt-seul`, dont le prompt est le but, le script s'arrête.
+The reason comes from the trials of November 21, 2026 (README, section 7): the player had made only two errors, and three answers out of five presented a third one to reach the count asked for.
 
-Avec `--prompt-seul`, le modèle doit placer `{{PARTIE_PGN}}` dans une ligne de texte, et non dans une note : sans la partie, le prompt n'aurait rien à faire analyser. Si le repère est placé sous une condition qui ne s'applique pas à la partie, le prompt est écrit, mais le journal prévient qu'il ne peut pas être collé seul.
+An unknown or badly written marker, such as `{{ RATING }}`, an "if" never closed, a badly formed directive or a template without a single line of text stop the script before the collection:
 
-## 13. Le vérificateur en détail
+```text
+Prompt template prompt-template.txt, line 12: unknown condition ENGINE, accepted conditions: STOCKFISH, EXPLORER, ...
+```
 
-Le README dit comment lancer le script et ce qu'il contrôle. Cette section donne ses règles exactes.
+The check of the template takes place before the collection, so as not to do it for nothing.
 
-### Ce qu'il lit
+A file designated by `--prompt` must exist. The default template, for its part, may be missing when the script was copied alone: the collection is then done without a prompt, and the log reports it. With `--prompt-only`, whose prompt is the goal, the script stops.
 
-Trois fichiers de l'archive : `partie.pgn`, `synthese.md` et `stockfish/evaluations.json`. Il les prend dans le zip, ou dans un dossier : le dossier de travail lui-même, ou celui qui le contient.
+With `--prompt-only`, the template must place `{{GAME_PGN}}` in a line of text, and not in a note: without the game, the prompt would have nothing to have analyzed. If the marker is placed under a condition that does not apply to the game, the prompt is written, but the log warns that it cannot be pasted alone.
 
-Les trois fichiers viennent toujours de la même collecte. Dans un dossier parent, seule une collecte complète est retenue, et le bilan la nomme : une collecte interrompue rangée à côté est ignorée. Si le dossier en contient plusieurs complètes, le script s'arrête et les nomme, plutôt que d'en choisir une.
+A template written before version 5.0.0, with the directives `si`, `sinon` and `fin` and the French values, is refused in the same way, at its first marker of the old language, `{{DEPOT}}` for example: its directives, conditions and values must be renamed.
 
-Si l'un d'eux manque, ou si l'archive ne se lit pas, aucun contrôle n'a lieu et le code de retour vaut 2.
+## 13. The checker in detail
 
-Comme `ianalyze.py`, il se relance dans l'environnement virtuel quand python-chess manque, mais seulement à son emplacement par défaut : il n'a pas d'option `--venv`.
+The README says how to run the script and what it checks. This section gives its exact rules.
 
-### Repères du bilan
+### What it reads
 
-| Repère | Compte comme | Exemple |
+Three files of the archive: `game.pgn`, `summary.md` and `stockfish/evaluations.json`. It takes them in the zip, or in a folder: the working folder itself, or the one that contains it.
+
+The three files always come from the same collection. In a parent folder, only a complete collection is kept, and the report names it: an interrupted collection kept beside it is ignored. If the folder contains several complete ones, the script stops and names them, rather than choosing one.
+
+If one of them is missing, or if the archive cannot be read, no check takes place and the exit code is 2. An archive written before version 5.0.0, with its French names, is in this case.
+
+Like `ianalyze.py`, it restarts in the virtual environment when python-chess is missing, but only at its default location: it has no `--venv` option.
+
+### Markers of the report
+
+| Marker | Counts as | Example |
 |---|---|---|
-| `ECHEC` | un échec, le code de retour vaut 1 | une erreur de Stockfish laissée sans commentaire |
-| `ATTENTION` | un point à regarder, sans échec | une variante de plus de 5 demi-coups |
-| `INFO` | une mesure | le nombre de coups commentés |
-| `OK` | un contrôle passé | |
+| `FAIL` | a failure, the exit code is 1 | a mistake of Stockfish left without a comment |
+| `WARNING` | a point to look at, without a failure | a variation of more than 5 plies |
+| `INFO` | a measure | the number of commented moves |
+| `OK` | a check passed | |
 
-Code de retour : 0 sans `ECHEC`, 1 avec au moins un `ECHEC`, 2 si aucun contrôle n'a pu avoir lieu.
+The report ends with its totals, under `=== Totals ===`: the number of failures and of warnings.
 
-### Règles chiffrées
+Exit code: 0 without `FAIL`, 1 with at least one `FAIL`, 2 if no check could take place.
 
-- **Lignes** : 79 caractères au plus.
-- **Résumé** : un commentaire avant le premier coup. Son absence est un échec.
-- **Signes interdits dans un commentaire** : accolade, signe pour cent, tiret cadratin. Un point-virgule vaut `ATTENTION`.
-- **Balises** : les sept obligatoires en tête et dans l'ordre, leurs valeurs reprises de la partie d'origine. Les autres par ordre alphabétique, Annotator renseignée et PlyCount exact, sinon `ATTENTION`.
-- **Coups commentés** : chaque erreur et chaque gaffe de Stockfish doit l'être. Le nombre total de coups commentés est donné pour information, le prompt en visant 15 à 25.
-- **Périmètre** : le prompt limite les commentaires au périmètre convenu. Une erreur jouée au-delà n'est pas attendue. Le périmètre est le premier nombre de votre réponse à la question de démarrage, lue dans les consignes de `synthese.md` : "les 20 premiers coups" vaut 20 coups. Une réponse sans nombre, ou laissée par défaut, vaut la partie complète. `--perimetre N` le donne à la main, quand il a été convenu dans la conversation.
-- **NAG de position** : `$14`, `$16`, `$18` et `$20` donnent les Blancs mieux, `$15`, `$17`, `$19` et `$21` les Noirs. Un tel NAG est contraire au moteur quand celui-ci donne l'autre camp mieux d'au moins un demi-pion, ou un mat.
-- **NAG de qualité** : `$6` pour une imprécision, `$2` pour une erreur, `$4` pour une gaffe. Un autre avis que celui du moteur est donné pour information.
-- **Variantes** : 5 demi-coups au plus, sinon `ATTENTION`. Une variante est dite appuyée sur le moteur quand ses deux premiers coups sont ceux d'une ligne que le moteur donne pour ce demi-coup.
-- **Positions citées dans la conversation** : une FEN doit être valide et venir d'une position de la partie, reconnue à ses quatre premiers champs. Deux FEN sont demandées, sinon `ATTENTION`.
+### Rules with figures
 
-### Évaluations citées
+- **Lines**: 79 characters at most.
+- **Overview**: a comment before the first move. Its absence is a failure.
+- **Signs forbidden in a comment**: brace, percent sign, em dash. A semicolon counts as `WARNING`.
+- **Tags**: the seven mandatory ones at the top and in order, their values taken from the original game. The others in alphabetical order, Annotator filled in and PlyCount exact, otherwise `WARNING`.
+- **Commented moves**: each mistake and each blunder of Stockfish must be. The total number of commented moves is given for information, the prompt aiming at 15 to 25.
+- **Scope**: the prompt limits the comments to the agreed scope. A mistake played beyond it is not expected. The scope is the first number of your answer to the startup question, read in the instructions of `summary.md`: "the first 20 moves" counts as 20 moves. An answer without a number, or left at its default, counts as the whole game. `--scope N` gives it by hand, when it was agreed in the conversation.
+- **Position NAGs**: `$14`, `$16`, `$18` and `$20` give White better, `$15`, `$17`, `$19` and `$21` Black. Such a NAG is contrary to the engine when the engine gives the other side better by at least half a pawn, or a mate.
+- **Quality NAGs**: `$6` for an inaccuracy, `$2` for a mistake, `$4` for a blunder. Another opinion than the one of the engine is given for information.
+- **Variations**: 5 plies at most, otherwise `WARNING`. A variation is said to be backed by the engine when its first two moves are those of a line that the engine gives for this ply.
+- **Positions quoted in the conversation**: a FEN must be valid and come from a position of the game, recognized by its first four fields. Two FENs are asked for, otherwise `WARNING`.
 
-Une évaluation se reconnaît à son signe : `+0.35`, `-1,20`, `+ 0.35`, le signe moins typographique, ou `#-3` pour un mat. Un nombre sans signe n'en est pas une, sauf pour un mat : `#2` est lu comme `#+2`, la forme du dossier.
+### Evaluations quoted
 
-Elle doit exister dans `evaluations.json`, pour le coup joué ou pour l'un des meilleurs coups, telle quelle ou arrondie à une décimale : `+0.35` peut être cité `+0.4` ou `+0.3`.
+An evaluation is recognized by its sign: `+0.35`, `-1,20`, `+ 0.35`, the typographic minus sign, or `#-3` for a mate. A number without a sign is not one, except for a mate: `#2` is read as `#+2`, the form of the folder.
 
-### Avec `--prompt-seul`
+It must exist in `evaluations.json`, for the move played or for one of the best moves, as it is or rounded to one decimal: `+0.35` may be quoted `+0.4` or `+0.3`.
 
-Le prompt court demande moins que le prompt complet. Les contrôles qu'il ne fonde pas sont sautés : longueur des lignes, résumé, NAG, signe pour cent, tiret cadratin, notation suffixe, balises Annotator et PlyCount, longueur des variantes. Avec `--synthese`, le tiret cadratin de la conversation et le nombre de FEN ne sont pas contrôlés non plus : une FEN citée doit seulement être valide et venir de la partie.
+### With `--prompt-only`
 
-Les balises sont contrôlées autrement. Le prompt complet veut les sept balises obligatoires du standard PGN, dans leur ordre. Le prompt court demande seulement de recopier celles de la partie : parmi les sept, seules celles que porte la partie d'origine sont attendues, dans l'ordre où elle les écrit.
+The short prompt asks for less than the full prompt. The checks that it does not ask for are skipped: length of the lines, overview, NAGs, percent sign, em dash, suffix notation, Annotator and PlyCount tags, length of the variations. With `--summary`, the em dash of the conversation and the number of FENs are not checked either: a quoted FEN must only be valid and come from the game.
+
+The tags are checked differently. The full prompt wants the seven mandatory tags of the PGN standard, in their order. The short prompt only asks to copy those of the game: among the seven, only those that the original game carries are expected, in the order in which it writes them.
