@@ -41,6 +41,8 @@ Une collecte suit toujours le même ordre. Les contrôles viennent d'abord : tan
 
 Trois commandes ne collectent rien et s'arrêtent une fois leur travail fait : `--installer-venv`, `--installer-catalogue` et `--purge-reglages`.
 
+`--installer-venv` contrôle le code de retour de `python -m venv`. Une création interrompue avant ce retour, par Ctrl-C ou une coupure, laisse un environnement sans pip, que le lancement suivant retrouve à moitié fait. Le script le reconnaît : `pyvenv.cfg` et l'interpréteur sont là, mais `python -m pip --version` échoue. Il le reconstruit alors par `python -m venv --clear`, puis installe python-chess. Sans `pyvenv.cfg`, un répertoire n'est jamais pris pour un environnement à reconstruire, et `--clear` ne peut rien y effacer.
+
 Après l'étape 8, un échec laisse le dossier de travail en place, tel quel, pour diagnostic.
 
 ## 2. Fichiers du dépôt

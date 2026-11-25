@@ -39,6 +39,13 @@ Icône de la licence CC-0
   `~/.config/IAnalyze/reglages.ini` to `settings.ini` to keep your
   answers, then delete them by hand.
 
+### Fixed
+
+- `--installer-venv` rebuilds a virtual environment left without pip
+  by an interrupted creation, instead of failing on "No module named
+  pip". Only a directory that carries `pyvenv.cfg` can be rebuilt, so
+  that a wrong `--venv` never loses its content.
+
 ## [4.0.2] - 2026-11-21
 
 ### Added

@@ -34,7 +34,8 @@
 #
 # Load on Lichess, with --reseau: about 70 requests to the explorer,
 # spaced 2 seconds apart by ianalyze.py, 10 catalog files from GitHub
-# and, if you give a game, 2 exports of that game.
+# and, if you give a game, 2 exports of that game. PyPI is also asked
+# once, for python-chess, to rebuild a virtual environment (T84).
 #
 # Optional variables:
 #
@@ -369,6 +370,31 @@ verifier "défaut de --catalogue dans le dossier de l'application" \
     contient aide "/local)"
 verifier "défaut de --reglages dans le dossier de l'application" \
     contient aide "/settings.ini)"
+
+titre "T84 : environnement virtuel laissé incomplet, reconnu"
+# A venv without pip, as an interrupted creation leaves it, a directory
+# that only looks like a venv, without pyvenv.cfg, and the complete venv
+# of the tests: only the first one may be rebuilt, and the second one,
+# a wrong --venv, must never be emptied. The rebuild itself needs PyPI:
+# it is played with --reseau.
+rm -rf t84-sans-pip t84-pas-venv
+"$PYVENV" -m venv --without-pip t84-sans-pip
+mkdir -p t84-pas-venv/bin
+ln -s "$(command -v python3)" t84-pas-venv/bin/python3
+SCRIPT="$SCRIPT" VENV="$VENV" "$PYVENV" - > sortie-t84 2> journal-t84 <<'EOF'
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+print(cp.venv_incomplet("t84-sans-pip"), cp.venv_incomplet("t84-pas-venv"),
+      cp.venv_incomplet(os.environ["VENV"]))
+EOF
+egal "T84 sans pip, sans pyvenv.cfg, complet" "True False False" \
+    "$(cat sortie-t84)"
+joindre journal-t84 5
+rm -rf "$DEPOT/__pycache__"
 
 titre "T05 : collecte minimale"
 lancer italienne.pgn $O
@@ -2828,6 +2854,20 @@ printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 d6 6. O-O O-O *\n' \
     > roques.pgn
 # A null move on the third ply.
 printf '1. e4 e5 2. -- Nc6 *\n' > nul.pgn
+
+# --- Virtual environment -------------------------------------------------
+
+titre "T84 : environnement virtuel sans pip, reconstruit"
+# The venv without pip of the offline part: --installer-venv rebuilds
+# it, then installs python-chess from PyPI.
+rm -rf "$TRAVAIL/t84-sans-pip"
+"$PYVENV" -m venv --without-pip "$TRAVAIL/t84-sans-pip"
+"$SCRIPT" --installer-venv --venv "$TRAVAIL/t84-sans-pip" > sortie 2> journal
+egal "T84 reconstruction, code de retour" 0 $?
+verifier "T84 reconstruction annoncée" contient journal "rebuilding it"
+verifier "T84 python-chess installé après reconstruction" \
+    "$TRAVAIL/t84-sans-pip/bin/python3" -c "import chess"
+joindre journal 5
 
 # --- Catalog -------------------------------------------------------------
 

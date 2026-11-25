@@ -195,22 +195,70 @@ def venv_operationnel(venv: str) -> bool:
     return True
 
 
+def venv_incomplet(venv: str) -> bool:
+    """
+    Tells whether a virtual environment was left incomplete: its
+    pyvenv.cfg and its interpreter exist, but pip does not answer.
+
+    A creation interrupted before its end (Ctrl-C, killed process, cut
+    power) leaves such an environment: python -m venv writes pyvenv.cfg
+    and the interpreter first, pip last. --installer-venv took it for
+    complete, then failed on "No module named pip". An interpreter that
+    exists but can no longer be run gives the same verdict. A timeout
+    does not: in doubt, nothing is rebuilt.
+
+    A directory without pyvenv.cfg is not a virtual environment: it is
+    never taken for an incomplete one, so that the rebuild, which empties
+    the directory, can only ever reach a virtual environment. A wrong
+    --venv, /usr for example, must not lose its content.
+    """
+    racine = pathlib.Path(os.path.expanduser(venv))
+    interpreteur = python_du_venv(venv)
+    if not (est_fichier(racine / "pyvenv.cfg")
+            and est_fichier(interpreteur)):
+        return False
+    try:
+        rendu = subprocess.run([str(interpreteur), "-m", "pip", "--version"],
+                               capture_output=True, timeout=60, check=False)
+    except subprocess.TimeoutExpired:
+        return False
+    except OSError:
+        return True
+    return rendu.returncode != 0
+
+
 def installer_venv(venv: str) -> None:
     """
     Creates the virtual environment if missing, then installs python-chess.
 
     The operation is idempotent: you can safely run it again on an
     environment already in place, it will then simply update the module.
+    An environment left incomplete by an interrupted creation is rebuilt
+    from scratch first (see venv_incomplet).
     """
     racine = pathlib.Path(os.path.expanduser(venv))
     interpreteur = python_du_venv(venv)
 
+    # The exit code of python -m venv is checked below; what it cannot
+    # catch is a creation interrupted before it returns, which the next
+    # run finds half done.
     if not est_fichier(interpreteur):
         journal("Creating the virtual environment: %s" % racine)
+        creation = [sys.executable, "-m", "venv", str(racine)]
+    elif venv_incomplet(venv):
+        # --clear empties the directory before building it again: only a
+        # directory carrying pyvenv.cfg gets here.
+        journal("Virtual environment incomplete, pip does not answer: "
+                "rebuilding it: %s" % racine)
+        creation = [sys.executable, "-m", "venv", "--clear", str(racine)]
+    else:
+        journal("Virtual environment already present: %s" % racine)
+        creation = []
+
+    if creation:
         try:
             racine.parent.mkdir(parents=True, exist_ok=True)
-            subprocess.run([sys.executable, "-m", "venv", str(racine)],
-                           check=True)
+            subprocess.run(creation, check=True)
         except OSError as err:
             raise SystemExit("Cannot create %s: %s" % (racine, err)) \
                 from err
@@ -224,8 +272,6 @@ def installer_venv(venv: str) -> None:
                    "Is the python3-venv package installed?",
                    CMD_PAQUET_VENV)
             ) from err
-    else:
-        journal("Virtual environment already present: %s" % racine)
 
     journal("Installing python-chess in the virtual environment.")
     try:

@@ -503,6 +503,20 @@ Les fois suivantes :
 [01:07:03] Environnement virtuel opérationnel : ~/IAnalyze/local/venv/bin/python3
 ```
 
+Après une création interrompue, par Ctrl-C par exemple, l'environnement reste sans pip : le script le reconstruit avant d'installer python-chess.
+
+```bash
+./ianalyze.py --installer-venv
+```
+
+```text
+[03:21:38] Virtual environment incomplete, pip does not answer: rebuilding it: ~/IAnalyze/local/venv
+[03:21:40] Installing python-chess in the virtual environment.
+[03:21:42] Virtual environment ready: ~/IAnalyze/local/venv/bin/python3
+```
+
+Un répertoire sans `pyvenv.cfg`, un `--venv /usr` par erreur par exemple, n'est jamais pris pour un environnement à reconstruire : rien n'y est effacé.
+
 #### `--venv CHEMIN`
 
 *Défaut : `local/venv`, dans le dossier de l'application*
