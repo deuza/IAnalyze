@@ -233,6 +233,17 @@ Icône de la licence CC-0
   ...`: without `--scope`, it expected a comment on the mistakes and
   blunders played beyond the agreed scope. The flaw dates from version
   4.0.0, and its test checked a line that the script never writes.
+- The settings are written only over a settings file. The writing goes
+  through a neighboring file renamed over the path: in a terminal, as
+  root on Linux, `--settings /dev/null` replaced the device with a
+  regular file, and a typo in the path rewrote the INI file of another
+  program, its comments lost. The path is now written only if it does
+  not exist yet, or if it is a regular file that is empty or carries
+  the `[player]` section, or the `[joueur]` section of a file written
+  by an earlier version. Anything else is left untouched: the answers
+  serve the current run, and a warning says why they are not kept,
+  suggesting `--no-settings` for a device, a FIFO or a directory. The
+  flaw dates from version 4.0.0, where the option was `--reglages`.
 
 ## [4.0.2] - 2026-11-21
 

@@ -426,6 +426,12 @@ REGLAGES_DEFAUT = os.path.join(DOSSIER_APPLICATION, "settings.ini")
 #: Section of the settings file that describes the player.
 REGLAGES_SECTION = "player"
 
+#: Section that described the player before version 5.0.0, at the time
+#: of the French names. A file that still carries it is a settings file
+#: of IAnalyze: it may be written again, the old section being copied
+#: after [player] like any section unknown to the script.
+REGLAGES_SECTION_ANCIENNE = "joueur"
+
 #: Known keys of this section, with the comment lines written above each
 #: one in the file. The usernames are looked up, ignoring case, in the
 #: White and Black tags to deduce the player's side; the first one is
@@ -2006,6 +2012,45 @@ def decouper_pseudos(texte: str) -> list[str]:
     return [x.strip() for x in texte.split(",") if x.strip()]
 
 
+def refus_ecriture_reglages(p: pathlib.Path) -> str | None:
+    """
+    Reason not to write the settings in p, or None if they may be.
+
+    The writing goes through a neighboring file renamed over p: whatever
+    p names is replaced. As root, --settings /dev/null would thus turn
+    the device into a regular file, and a typo in the path would rewrite
+    the INI file of another program, its comments lost. So p is written
+    only if it does not exist yet, or if it is a regular file that is
+    empty or already a settings file: it carries the [player] section,
+    or the [joueur] section of the files written before version 5.0.0.
+    A device, a FIFO, a directory or any other file is left untouched.
+
+    The section is looked up in the raw text, as for --purge-settings. A
+    file that is not a regular file is never opened: reading a FIFO
+    would block the script.
+    """
+    try:
+        if not p.exists():
+            return None
+    except OSError as err:
+        return "cannot check it: %s" % err
+    if not est_fichier(p):
+        return ("it is not a regular file. To run without settings, use "
+                "--no-settings")
+    try:
+        brut = p.read_bytes()
+    except OSError as err:
+        return "cannot read it: %s" % err
+    sections = b"|".join(re.escape(s).encode("ascii") for s in
+                         (REGLAGES_SECTION, REGLAGES_SECTION_ANCIENNE))
+    en_tete = re.compile(rb"^[ \t]*\[(%s)\][ \t]*\r?$" % sections,
+                         re.MULTILINE)
+    if brut.strip() and not en_tete.search(brut):
+        return ("it is not a settings file, it does not carry the [%s] "
+                "section" % REGLAGES_SECTION)
+    return None
+
+
 def ecrire_reglages(chemin: str, reglages: configparser.ConfigParser) -> bool:
     """
     Writes the settings file, comments included.
@@ -2013,8 +2058,9 @@ def ecrire_reglages(chemin: str, reglages: configparser.ConfigParser) -> bool:
     The known keys come first, each one under its comment; the other keys
     of [player] and the other sections, which you may have added, are
     copied after them. A failure to write does not stop the collection: it
-    is reported, and the question will be asked again on the next run.
-    Returns true if the file was written.
+    is reported, and the question will be asked again on the next run. The
+    same goes for a path that must not be replaced, which is left as it
+    is: see refus_ecriture_reglages. Returns true if the file was written.
     """
     def ligne(clef: str, valeur: str) -> str:
         # A value on several lines continues with indented lines: this is
@@ -2041,6 +2087,10 @@ def ecrire_reglages(chemin: str, reglages: configparser.ConfigParser) -> bool:
             out.extend(ligne(c, v) for c, v in reglages.items(section))
 
     p = chemin_reglages(chemin)
+    refus = refus_ecriture_reglages(p)
+    if refus is not None:
+        journal("Warning: settings not saved in %s: %s." % (p, refus))
+        return False
     try:
         p.parent.mkdir(parents=True, exist_ok=True)
         ecrire_texte(p, "\n".join(out) + "\n")

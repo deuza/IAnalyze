@@ -1720,6 +1720,71 @@ egal "T88 from 1st to 112th" \
 joindre journal-t88 5
 rm -rf "$DEPOT/__pycache__"
 
+titre "T89: settings written only over a settings file"
+# The settings are written through a neighboring file renamed over the
+# path: whatever was there is replaced. As root, --settings /dev/null
+# would have turned the device into a regular file. A FIFO stands for
+# the device here: making one needs no root, on Linux as on macOS. The
+# file of another program, which configparser reads, stays untouched
+# too; an empty file, a new one and one in the format written before
+# version 5.0.0, with its [joueur] section, are written.
+rm -rf t-89
+mkdir t-89 t-89/dossier
+mkfifo t-89/fifo
+printf '[core]\n# kept as it is\neditor = vi\n' > t-89/autre.ini
+cp t-89/autre.ini t-89/autre-avant.ini
+printf '[joueur]\npseudos = Zoe42\n' > t-89/ancien.ini
+: > t-89/vide.ini
+SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t89 2> journal-t89 <<'EOF'
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+res = []
+for nom in ("fifo", "dossier", "autre.ini", "ancien.ini", "vide.ini",
+            "neuf.ini"):
+    chemin = os.path.join("t-89", nom)
+    reglages = cp.lire_reglages(chemin)
+    reglages.set(cp.REGLAGES_SECTION, "usernames", "Zoe42")
+    res.append("%s=%s" % (nom, cp.ecrire_reglages(chemin, reglages)))
+print(" ".join(res))
+EOF
+egal "T89 written only over a settings file, or a new one" \
+    "fifo=False dossier=False autre.ini=False ancien.ini=True vide.ini=True neuf.ini=True" \
+    "$(cat sortie-t89)"
+verifier "T89 FIFO left as it is" test -p t-89/fifo
+verifier "T89 directory left as it is" test -d t-89/dossier
+verifier "T89 file of another program untouched" \
+    cmp -s t-89/autre-avant.ini t-89/autre.ini
+verifier "T89 not a regular file, said" \
+    contient journal-t89 "it is not a regular file. To run without settings, use --no-settings."
+verifier "T89 not a settings file, said" \
+    contient journal-t89 "it is not a settings file, it does not carry the [player] section."
+grep -v '^#' t-89/ancien.ini > extrait 2>/dev/null
+printf '\n[player]\nusernames = Zoe42\n\n[joueur]\npseudos = Zoe42\n' > attendu
+verifier "T89 old format written, its section kept" cmp -s attendu extrait
+find t-89 -name '*.partiel' > ligne
+egal "T89 no partial file left" 0 "$(lignes ligne)"
+joindre journal-t89 5
+rm -rf "$DEPOT/__pycache__"
+# On a terminal, as with --settings /dev/null: the answers serve this
+# run, and the warning says why they are not kept.
+rm -rf analysis-italienne-*
+SCRIPT="$SCRIPT" python3 t-pty.py "Zoe42|r|15|10|1300|w||||||" \
+    italienne.pgn $P --settings t-89/fifo > sortie-pty 2>&1
+verifier "T89 on a terminal, warning" \
+    contient sortie-pty "Warning: settings not saved in t-89/fifo: it is not a regular file."
+egal "T89 on a terminal, nothing saved" 0 \
+    "$(grep -c 'Settings saved' sortie-pty)"
+verifier "T89 on a terminal, FIFO left as it is" test -p t-89/fifo
+cat analysis-italienne-*/game.pgn > extrait 2>/dev/null
+verifier "T89 on a terminal, the answers serve this run" \
+    contient extrait '[White "Zoe42"]'
+egal "T89 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
+rm -rf analysis-italienne-*
+
 titre "T74: prompt only, short, to be pasted without an attachment"
 
 # With --prompt-only, the prompt is drawn from a short template: a few
