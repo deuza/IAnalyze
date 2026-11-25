@@ -32,7 +32,7 @@ Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec Cl
 **IAnalyze est fait pour Claude :**   
 Avec un compte gratuit, ou pour un autre LLM, l'option `--prompt-seul` écrit un prompt court qui porte la partie et les évaluations de Stockfish, à coller seul, sans pièce jointe : voir la section 7.
 
-Un outil supplémentaire, `verifier-analyse.py`, contrôle le PGN que le LLM vous a rendu : voir la section 8.
+Un outil supplémentaire, `verify-analysis.py`, contrôle le PGN que le LLM vous a rendu : voir la section 8.
 
 Plateformes : Debian et macOS (Homebrew).   
 Python 3.10 ou plus récent et python-chess, que le script installe lui-même dans un environnement virtuel dédié.
@@ -40,8 +40,8 @@ Python 3.10 ou plus récent et python-chess, que le script installe lui-même da
 La documentation tient en quatre fichiers :
 
 - ce README, pour installer IAnalyze et analyser une partie
-- [EXEMPLES.md](EXEMPLES.md), l'aide-mémoire : toutes les commandes, toutes les options, et ce que le terminal affiche
-- [TECHNIQUE.md](TECHNIQUE.md), pour le fonctionnement du script, son emploi depuis un autre programme, et le détail des fichiers produits
+- [EXAMPLES.md](EXAMPLES.md), l'aide-mémoire : toutes les commandes, toutes les options, et ce que le terminal affiche
+- [TECHNICAL.md](TECHNICAL.md), pour le fonctionnement du script, son emploi depuis un autre programme, et le détail des fichiers produits
 - [TESTS.md](TESTS.md), pour lancer les tests et savoir ce que chacun vérifie
 
 ## Sommaire
@@ -81,7 +81,7 @@ La chaîne complète tient en trois temps :
 
    Il explique, il ne calcule pas : les évaluations viennent de Stockfish, la théorie vient de l'explorateur et du catalogue.
 
-Le prompt est tiré du modèle `prompt-modele.txt`, rangé à côté du script.   
+Le prompt est tiré du modèle `prompt-template.txt`, rangé à côté du script.   
 Il décrit toujours la synthèse que cette version du script vient d'écrire : les deux ne peuvent pas diverger.
 
 Les fichiers du dépôt :
@@ -89,16 +89,16 @@ Les fichiers du dépôt :
 | Fichier | Rôle |
 |---|---|
 | `ianalyze.py` | le script, en un seul fichier |
-| `prompt-modele.txt` | le modèle dont est tiré le prompt de chaque partie (section 6) |
-| `prompt-seul-modele.txt` | le modèle du prompt court de `--prompt-seul` (section 7) |
-| `verifier-analyse.py` | l'outil supplémentaire qui contrôle le PGN rendu par le LLM (section 8) |
-| [`EXEMPLES.md`](EXEMPLES.md) | l'aide-mémoire : commandes, options et sorties |
-| [`TECHNIQUE.md`](TECHNIQUE.md) | la documentation technique |
+| `prompt-template.txt` | le modèle dont est tiré le prompt de chaque partie (section 6) |
+| `prompt-only-template.txt` | le modèle du prompt court de `--prompt-seul` (section 7) |
+| `verify-analysis.py` | l'outil supplémentaire qui contrôle le PGN rendu par le LLM (section 8) |
+| [`EXAMPLES.md`](EXAMPLES.md) | l'aide-mémoire : commandes, options et sorties |
+| [`TECHNICAL.md`](TECHNICAL.md) | la documentation technique |
 | [`TESTS.md`](TESTS.md) | les tests : comment les lancer, ce que chacun vérifie |
 | [`CHANGELOG.md`](CHANGELOG.md) | l'historique des versions |
 | [`LICENSE`](LICENSE) | la licence du code (voir Licences) |
 | `test-app.sh`, `test.pgn` | la suite de tests et sa partie d'essai, décrites dans [TESTS.md](TESTS.md) |
-| `parties-exemples/` | les parties et les fichiers des exemples d'[EXEMPLES.md](EXEMPLES.md), dont une vraie partie anonymisée pour un premier essai |
+| `example-games/` | les parties et les fichiers des exemples d'[EXAMPLES.md](EXAMPLES.md), dont une vraie partie anonymisée pour un premier essai |
 
 ## 2. Prérequis et installation
 
@@ -222,7 +222,7 @@ Il est transmis à l'analyste, qui y adapte ses explications. Sans lui, c'est l'
 
 **La cadence** s'écrit `15+10` pour le temps réel, minutes par joueur puis incrément en secondes, et `14 jours` pour la correspondance à délai fixe.
 
-Les autres formes de correspondance, la clef facultative `annotateur` et la façon dont le script réécrit ce fichier sont décrites dans [TECHNIQUE.md](TECHNIQUE.md), section 6.
+Les autres formes de correspondance, la clef facultative `annotateur` et la façon dont le script réécrit ce fichier sont décrites dans [TECHNICAL.md](TECHNICAL.md), section 6.
 
 ## 3. Utilisation
 
@@ -254,7 +254,7 @@ Les exports de ces sites et logiciels ont été essayés, et passent tels quels 
 | ajedrezmail.org | un coup par ligne |
 | Lucas Chess | durées et horloges en commentaires |
 
-Une partie de chacun est dans le répertoire `parties-exemples`, anonymisée. Lichess en a deux : `partie-lichess-org.pgn`, l'export simple, et `partie-commentee.pgn`, l'export avec l'analyse du site.
+Une partie de chacun est dans le répertoire `example-games`, anonymisée. Lichess en a deux : `partie-lichess-org.pgn`, l'export simple, et `partie-commentee.pgn`, l'export avec l'analyse du site.
 
 Le script refuse plutôt que d'analyser de travers :
 
@@ -263,7 +263,7 @@ Le script refuse plutôt que d'analyser de travers :
 - une partie notée en français (R, D, T, F, C) ou en figurines : sans ce refus, "Cf3" serait lu "f3", un coup de pion, et l'analyse porterait sur une autre partie que la vôtre
 - un PGN abîmé : accolade ou parenthèse jamais fermée, texte libre hors des accolades
 
-Le message d'erreur nomme ce qui est refusé. Les formes d'adresse acceptées et le détail de ces contrôles sont dans [TECHNIQUE.md](TECHNIQUE.md), section 4.
+Le message d'erreur nomme ce qui est refusé. Les formes d'adresse acceptées et le détail de ces contrôles sont dans [TECHNICAL.md](TECHNICAL.md), section 4.
 
 ### Les questions du script
 
@@ -297,7 +297,7 @@ Une réponse refusée est redemandée.
 Pour lancer une collecte sans répondre à rien, ajoutez `--sans-questions`.   
 Le prompt dit alors au LLM que vos réponses n'ont pas été recueillies, et c'est lui qui vous les demande avant d'analyser.
 
-Le script ne pose pas non plus ses questions quand il n'est pas lancé à la main dans un terminal, depuis un autre programme par exemple : voir [TECHNIQUE.md](TECHNIQUE.md), section 5.
+Le script ne pose pas non plus ses questions quand il n'est pas lancé à la main dans un terminal, depuis un autre programme par exemple : voir [TECHNICAL.md](TECHNICAL.md), section 5.
 
 ## 4. Options courantes
 
@@ -320,7 +320,7 @@ Quelques options suffisent à la plupart des usages :
 ./ianalyze.py ma-partie.pgn --sans-explorateur --sortie ~/analyses
 ```
 
-Toutes les options sont dans [EXEMPLES.md](EXEMPLES.md), chacune avec sa commande et ce que le terminal affiche.   
+Toutes les options sont dans [EXAMPLES.md](EXAMPLES.md), chacune avec sa commande et ce que le terminal affiche.   
 - `./ianalyze.py --help` en donne le résumé.
 
 ## 5. Résultat
@@ -330,7 +330,7 @@ Un dossier ou une archive homonyme fait ajouter un suffixe -2, -3...
 
 En cas d'échec, le dossier de travail est conservé tel quel pour diagnostic.
 
-L'étiquette est assainie (voir [TECHNIQUE.md](TECHNIQUE.md), section 11) : le journal l'annonce alors par "Nom du dossier assaini : ..."
+L'étiquette est assainie (voir [TECHNICAL.md](TECHNICAL.md), section 11) : le journal l'annonce alors par "Nom du dossier assaini : ..."
 
 Contenu :
 
@@ -355,16 +355,16 @@ Son chemin est donné par le journal, la sortie standard ne porte que celui de l
 
 Avec `--prompt-seul`, il n'y a pas d'archive : la sortie standard porte le chemin du prompt.
 
-Le contenu de chacun de ces fichiers est détaillé dans [TECHNIQUE.md](TECHNIQUE.md), section 10.
+Le contenu de chacun de ces fichiers est détaillé dans [TECHNICAL.md](TECHNICAL.md), section 10.
 
 ## 6. Prompt d'analyse
 
 Les données ne suffisent pas : il faut dire à l'analyste ce qu'il doit en faire.   
-Ce texte vit dans le modèle `prompt-modele.txt`, que vous pouvez modifier librement, sans toucher au script.
+Ce texte vit dans le modèle `prompt-template.txt`, que vous pouvez modifier librement, sans toucher au script.
 
 À chaque collecte, le script en tire le prompt de la partie : il remplit les valeurs et ne garde que les passages qui s'appliquent.
 
-Pour écrire votre propre modèle, la liste des repères, des valeurs et des conditions est dans [TECHNIQUE.md](TECHNIQUE.md), section 12.
+Pour écrire votre propre modèle, la liste des repères, des valeurs et des conditions est dans [TECHNICAL.md](TECHNICAL.md), section 12.
 
 Le prompt suit ce que la collecte a réellement fait. Sans explorateur, il ne demande ni fréquence ni coup majoritaire.   
 Avec `--coups-stockfish`, il dit jusqu'où le moteur a évalué. Avec `--multipv 1`, il n'annonce pas trois coups par position.
@@ -441,7 +441,7 @@ Ce qu'il faut savoir de ce mode :
 - Aucune archive n'est écrite, le prompt est le seul fichier produit
 - Les cinq réponses essayées ont rendu la partie entière, tous les coups commentés, sans une évaluation inventée
 
-Pour contrôler le PGN rendu avec `verifier-analyse.py --prompt-seul` (section 8), ajoutez `--garder-dossier` à la collecte : le vérificateur a besoin des évaluations qui ont servi au prompt.
+Pour contrôler le PGN rendu avec `verify-analysis.py --prompt-seul` (section 8), ajoutez `--garder-dossier` à la collecte : le vérificateur a besoin des évaluations qui ont servi au prompt.
 
 ### Fiez-vous aux chiffres, vérifiez les récits
 
@@ -453,7 +453,7 @@ Ce qui vient du tableau du moteur est recopié fidèlement : les écarts, les me
 Ce que le LLM déduit seul de la position peut être faux : un sacrifice qui n'en est pas un, une pièce en prise que personne ne signale, un mat en un qui est un mat en deux.
 
 Quand un commentaire vous surprend, posez les pièces et regardez.   
-Le script `verifier-analyse.py` contrôle la forme du PGN et les chiffres cités, il ne juge pas ce qui est raconté.
+Le script `verify-analysis.py` contrôle la forme du PGN et les chiffres cités, il ne juge pas ce qui est raconté.
 
 ### Essais menés
 
@@ -466,7 +466,7 @@ Un essai ne dit rien de la régularité d'un modèle. Mais les deux séries vont
 
 Une partie de 49 demi-coups, le même zip et le même prompt pour tous, celui de la version 4.0.0 avant les consignes et l'option `--prompt-seul` que ces essais ont fait ajouter.
 
-| LLM, tel qu'il se nomme lui-même | Offre | PGN rendu | Bilan de `verifier-analyse.py` |
+| LLM, tel qu'il se nomme lui-même | Offre | PGN rendu | Bilan de `verify-analysis.py` |
 |---|---|---|---|
 | Claude Opus 5.5 (Anthropic) | abonnement | oui, construit avec python-chess | aucun échec : 24 erreurs et gaffes commentées sur 24, 27 variantes jouables |
 | GPT-6 (OpenAI) | gratuite | oui, écrit à la main, python-chess n'ayant pas pu être installé | 3 échecs : une ligne vide arrête la lecture, les 25 variantes sont dans les commentaires, un NAG contredit le moteur |
@@ -478,7 +478,7 @@ Ce que cette série montre :
 - **Les données tiennent partout.** Aucun des quatre n'a inventé une évaluation, et tous donnent les trois mêmes erreurs principales, avec les bons écarts.
 - **C'est la fabrication du PGN qui les sépare.** Seul le LLM qui a construit son fichier avec python-chess a rendu un PGN utilisable tel quel.
 - **Le fond peut être bon sous une forme fautive.** Les 25 variantes écrites à la main par GPT-6 étaient toutes légales et tirées des lignes du moteur.
-- **La partie était notée gagnée dans une position perdue.** Deux LLM sur quatre ont raconté une victoire méritée, d'où la ligne ajoutée à la synthèse (voir [TECHNIQUE.md](TECHNIQUE.md), section 10).
+- **La partie était notée gagnée dans une position perdue.** Deux LLM sur quatre ont raconté une victoire méritée, d'où la ligne ajoutée à la synthèse (voir [TECHNICAL.md](TECHNICAL.md), section 10).
 
 L'offre gratuite de Claude annonce elle aussi la création de fichiers et l'exécution de code, sur d'autres modèles que celui de cet essai, d'après [sa page de tarifs](https://claude.com/pricing) lue le 20 novembre 2026. 
 
@@ -486,7 +486,7 @@ Elle n'a pas été testée avec le fichier .zip
 
 #### Le 21 novembre 2026, avec `--prompt-seul`
 
-Une partie de 39 demi-coups, gagnée par le joueur, et le même prompt court collé seul dans cinq conversations. C'est `parties-exemples/partie-lichess-org.pgn`.   
+Une partie de 39 demi-coups, gagnée par le joueur, et le même prompt court collé seul dans cinq conversations. C'est `example-games/partie-lichess-org.pgn`.   
 Le tableau du moteur y marque dix coups faibles, dont deux du joueur.
 
 Les cinq réponses ont en commun l'essentiel :
@@ -512,30 +512,30 @@ Ce que cette série montre :
 - **Le prompt court fait le travail.** Sans pièce jointe et sans exécution de code, les cinq réponses sont lisibles et leurs chiffres sont justes. C'est mieux que ce que la chaîne complète avait donné la veille chez les trois autres LLM.
 - **Claude est devant sur les deux offres.** Ses deux PGN sont conformes, et ses explications sont celles qui résistent le mieux à la vérification : aucune erreur trouvée d'un côté, une seule de l'autre. Le compte gratuit fait presque jeu égal avec l'abonnement, en deux fois plus long : 1968 mots de commentaires contre 943.
 - **Le même piège a pris trois LLM sur quatre.** Un fou prend un pion en h7 avec échec, défendu par sa dame : le roi ne peut pas le reprendre. ChatGPT, Gemini et Copilot parlent de sacrifice. Claude écrit, dans l'essai du compte gratuit, "ici il n'y a aucun sacrifice, le pion tombe gratuitement".
-- **Demander trois erreurs en fait inventer une.** Le joueur n'en avait commis que deux. ChatGPT, Gemini et Copilot en ont présenté une troisième, Claude a répondu les deux fois qu'il n'y en avait que deux. Le prompt court donne depuis le nombre réel de coups faibles du joueur (voir [TECHNIQUE.md](TECHNIQUE.md), section 12).
+- **Demander trois erreurs en fait inventer une.** Le joueur n'en avait commis que deux. ChatGPT, Gemini et Copilot en ont présenté une troisième, Claude a répondu les deux fois qu'il n'y en avait que deux. Le prompt court donne depuis le nombre réel de coups faibles du joueur (voir [TECHNICAL.md](TECHNICAL.md), section 12).
 - **Le vérificateur n'aurait presque rien vu.** En mode `--prompt-seul`, il contrôle les balises, la ligne principale et les chiffres cités. Les suites écrites dans le texte, les balises HTML et les récits faux passent : c'est à vous de les relire.
 
 ## 8. Vérifier le PGN rendu
 
-`verifier-analyse.py` est un outil supplémentaire, indépendant de la collecte : il contrôle ce que le LLM vous a rendu.
+`verify-analysis.py` est un outil supplémentaire, indépendant de la collecte : il contrôle ce que le LLM vous a rendu.
 
 Un LLM peut rendre un PGN qui a l'air juste et ne l'est pas : un coup illégal dans une variante, un chiffre arrangé, une gaffe passée sous silence.   
-`verifier-analyse.py` compare le PGN rendu à l'archive que le LLM a reçue, et sort le même bilan pour chaque LLM essayé.
+`verify-analysis.py` compare le PGN rendu à l'archive que le LLM a reçue, et sort le même bilan pour chaque LLM essayé.
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn
+./verify-analysis.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn
 ```
 
 Copiez la conversation dans un fichier texte pour faire contrôler aussi les positions et les évaluations qu'elle cite :
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn --synthese conversation.txt --nom "Nom du modèle"
+./verify-analysis.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn --synthese conversation.txt --nom "Nom du modèle"
 ```
 
 Si le LLM n'a rendu aucun PGN, mettez un tiret à la place du fichier :
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261119-164140.zip - --synthese conversation.txt
+./verify-analysis.py analyse-ma-partie-20261119-164140.zip - --synthese conversation.txt
 ```
 
 Pour un PGN obtenu avec le prompt court de `--prompt-seul`, ajoutez la même option, et donnez le dossier de travail gardé par `--garder-dossier` :
@@ -545,7 +545,7 @@ Pour un PGN obtenu avec le prompt court de `--prompt-seul`, ajoutez la même opt
 ```
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261119-164140 analyse-llm.pgn --prompt-seul
+./verify-analysis.py analyse-ma-partie-20261119-164140 analyse-llm.pgn --prompt-seul
 ```
 
 Le prompt court demande moins que le prompt complet. Avec cette option, les contrôles qu'il ne fonde pas sont sautés : lignes de 79 caractères, résumé avant le premier coup, NAG, `%`, tiret cadratin, notation suffixe, balises Annotator et PlyCount, longueur des variantes, nombre de FEN. Restent la lecture, la ligne principale, les accolades, les balises recopiées, le marqueur de fin, les erreurs et gaffes commentées, les évaluations citées et les variantes.
@@ -554,13 +554,13 @@ Si vous avez convenu avec le LLM d'un périmètre, les 20 premiers coups par exe
 Quand le périmètre a été fixé dans la conversation, donnez-le :
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn --perimetre 20
+./verify-analysis.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn --perimetre 20
 ```
 
 Le script accepte le zip ou son dossier décompressé, et se relance tout seul dans l'environnement virtuel d'IAnalyze, à son emplacement par défaut.   
 Un dossier qui contient plusieurs collectes est refusé : donnez celui de la collecte que le LLM a reçue.
 
-Il n'a pas d'option `--venv`. Si votre environnement est ailleurs, lancez-le avec le Python de cet environnement : `~/venv/echecs/bin/python3 verifier-analyse.py ...`
+Il n'a pas d'option `--venv`. Si votre environnement est ailleurs, lancez-le avec le Python de cet environnement : `~/venv/echecs/bin/python3 verify-analysis.py ...`
 
 ### Ce qui est contrôlé
 

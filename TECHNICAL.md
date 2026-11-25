@@ -1,6 +1,6 @@
 # IAnalyze : documentation technique
 
-Le [README](README.md) suffit pour installer IAnalyze et analyser une partie. [EXEMPLES.md](EXEMPLES.md) donne toutes les commandes, toutes les options et ce qu'elles affichent.
+Le [README](README.md) suffit pour installer IAnalyze et analyser une partie. [EXAMPLES.md](EXAMPLES.md) donne toutes les commandes, toutes les options et ce qu'elles affichent.
 
 Ce document va plus loin. Il s'adresse à qui veut comprendre ce que fait le script, l'appeler depuis un autre programme, lire les fichiers qu'il produit, ou écrire son propre modèle de prompt. Les tests ont leur document, [TESTS.md](TESTS.md).
 
@@ -52,12 +52,12 @@ Après l'étape 8, un échec laisse le dossier de travail en place, tel quel, po
 | Fichier | Rôle |
 |---|---|
 | `ianalyze.py` | la collecte, en un seul fichier. Il ne demande que python-chess et Stockfish |
-| `verifier-analyse.py` | le contrôle du PGN rendu par un LLM (section 13) |
-| `prompt-modele.txt`, `prompt-seul-modele.txt` | les deux modèles de prompt (section 12) |
+| `verify-analysis.py` | le contrôle du PGN rendu par un LLM (section 13) |
+| `prompt-template.txt`, `prompt-only-template.txt` | les deux modèles de prompt (section 12) |
 | `test-app.sh` | la suite de tests, pour Linux et macOS, décrite dans [TESTS.md](TESTS.md) |
 | `test.pgn` | une partie d'essai qui réunit les cas tordus d'un PGN, décrite dans [TESTS.md](TESTS.md) |
-| `parties-exemples/` | les fichiers cités dans [EXEMPLES.md](EXEMPLES.md) : parties, PGN refusés, PGN annotés |
-| `README.md`, `EXEMPLES.md`, `TECHNIQUE.md`, `TESTS.md`, `CHANGELOG.md` | la documentation et l'historique des versions |
+| `example-games/` | les fichiers cités dans [EXAMPLES.md](EXAMPLES.md) : parties, PGN refusés, PGN annotés |
+| `README.md`, `EXAMPLES.md`, `TECHNICAL.md`, `TESTS.md`, `CHANGELOG.md` | la documentation et l'historique des versions |
 | `LICENSE` | la licence, CC0 |
 
 Le HTTP passe par urllib et l'archive par zipfile, tous deux de la bibliothèque standard de Python.
@@ -85,7 +85,7 @@ Une option sans effet, ou une valeur hors bornes, est refusée plutôt qu'ignor�
 | 2 | option inconnue, ou valeur refusée avant toute lecture de la partie |
 | 130 | interruption (Ctrl-C) |
 
-Ceux de `verifier-analyse.py` sont donnés en section 13.
+Ceux de `verify-analysis.py` sont donnés en section 13.
 
 ### Sortie standard et journal
 
@@ -589,7 +589,7 @@ Questions de démarrage : une réponse saisie dans un autre encodage que celui d
 
 ## 12. Modèle de prompt
 
-Le prompt de chaque partie est tiré d'un modèle : `prompt-modele.txt`, ou `prompt-seul-modele.txt` avec `--prompt-seul`. Vous pouvez les modifier, ou désigner le vôtre avec `--prompt`.
+Le prompt de chaque partie est tiré d'un modèle : `prompt-template.txt`, ou `prompt-only-template.txt` avec `--prompt-seul`. Vous pouvez les modifier, ou désigner le vôtre avec `--prompt`.
 
 Deux sortes de repères sont interprétés :
 
@@ -648,7 +648,7 @@ Conditions :
 | `PEU_DE_COUPS_FAIBLES` | votre camp est connu et `COUPS_FAIBLES_JOUEUR` est inférieur à trois |
 | `AUCUN_COUP_FAIBLE` | votre camp est connu et `COUPS_FAIBLES_JOUEUR` vaut zéro |
 
-Les deux modèles, `prompt-modele.txt` et `prompt-seul-modele.txt`, partagent ces repères. `PARTIE_PGN`, `TABLEAU_MOTEUR`, `ALERTE_RESULTAT`, `CONSIGNES_JOUEUR`, `OUVERTURE`, `COUPS_FAIBLES_JOUEUR` et les conditions `RESULTAT_CONTREDIT`, `CONSIGNES_DONNEES`, `OUVERTURE_CONNUE`, `COUP_NUL`, `PEU_DE_COUPS_FAIBLES`, `AUCUN_COUP_FAIBLE` servent au prompt court.
+Les deux modèles, `prompt-template.txt` et `prompt-only-template.txt`, partagent ces repères. `PARTIE_PGN`, `TABLEAU_MOTEUR`, `ALERTE_RESULTAT`, `CONSIGNES_JOUEUR`, `OUVERTURE`, `COUPS_FAIBLES_JOUEUR` et les conditions `RESULTAT_CONTREDIT`, `CONSIGNES_DONNEES`, `OUVERTURE_CONNUE`, `COUP_NUL`, `PEU_DE_COUPS_FAIBLES`, `AUCUN_COUP_FAIBLE` servent au prompt court.
 
 Le prompt court finit par un bilan : les trois erreurs les plus coûteuses du joueur et le thème à travailler. Quand le tableau marque moins de trois coups faibles de votre côté, la phrase change : elle donne leur nombre et demande de s'en tenir à ceux-là.
 
@@ -666,7 +666,7 @@ La raison vient des essais du 21 novembre 2026 (README, section 7) : le joueur n
 Un repère inconnu ou mal écrit, comme `{{ NIVEAU }}`, un "si" jamais fermé, une directive mal formée ou un modèle sans une ligne de texte arrêtent le script avant la collecte :
 
 ```text
-Modèle de prompt prompt-modele.txt, ligne 12 : condition inconnue MOTEUR, conditions admises : STOCKFISH, EXPLORATEUR, ...
+Modèle de prompt prompt-template.txt, ligne 12 : condition inconnue MOTEUR, conditions admises : STOCKFISH, EXPLORATEUR, ...
 ```
 
 Le contrôle du modèle a lieu avant la collecte, pour ne pas la faire pour rien.

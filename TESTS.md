@@ -4,7 +4,7 @@ Tous les tests sont joués par un seul script, `test-app.sh`, sous Debian comme 
 
 Ce document dit comment le lancer, puis ce que vérifie chaque test. Le détail, commande par commande, est dans le script, qui fait foi.
 
-Le [README](README.md) explique l'installation et l'usage courant, [EXEMPLES.md](EXEMPLES.md) les commandes et leurs sorties, [TECHNIQUE.md](TECHNIQUE.md) le fonctionnement.
+Le [README](README.md) explique l'installation et l'usage courant, [EXAMPLES.md](EXAMPLES.md) les commandes et leurs sorties, [TECHNICAL.md](TECHNICAL.md) le fonctionnement.
 
 ## Sommaire
 
@@ -47,7 +47,7 @@ Le script se termine par un bilan :
 
 ```text
 Réussis : 556, échecs : 0, sautés : 0
-Rapport : /chemin/du/depot/rapport-tests-Linux-20261120-002933.txt
+Rapport : /chemin/du/depot/test-report-Linux-20261120-002933.txt
 ```
 
 Le rapport reprend l'environnement (système, Python, python-chess, Stockfish), le résultat de chaque contrôle et les extraits utiles au diagnostic. Vous pouvez le transmettre tel quel.
@@ -150,7 +150,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | T80 | Nom long | un nom de PGN long, en caractères de plusieurs octets, donne une étiquette bornée et valide |
 | T81 | Cas combinés | la purge s'emploie seule, un modèle vide est refusé, un jeton mal écrit est refusé sans être affiché |
 | T82 | Vérificateur, suite | mats cités, périmètre convenu, contrôles sautés du mode court, dossier parent à une ou plusieurs collectes |
-| T83 | Parties d'exemples | les fichiers de `parties-exemples` restent ce qu'`EXEMPLES.md` en dit : huit parties acceptées, dont les exports de quatre sites et d'un logiciel, quatre refusées avec leur cause, deux PGN annotés contrôlés, aucune adresse ni identifiant de partie réelle |
+| T83 | Parties d'exemples | les fichiers de `example-games` restent ce qu'`EXAMPLES.md` en dit : huit parties acceptées, dont les exports de quatre sites et d'un logiciel, quatre refusées avec leur cause, deux PGN annotés contrôlés, aucune adresse ni identifiant de partie réelle |
 | T84 | Environnement virtuel incomplet | un environnement sans pip est reconnu, un répertoire sans `pyvenv.cfg` ne l'est jamais ; avec `--reseau`, `--installer-venv` reconstruit le premier et y installe python-chess |
 | T85 | `--venv` qui n'est pas un environnement virtuel | un répertoire non vide sans `pyvenv.cfg`, avec ou sans interpréteur, est refusé par `--installer-venv` avant tout pip, et rien n'y est ajouté ; un répertoire absent ou vide ne l'est pas |
 | M1 | Collecte, noms | nom de PGN accentué, chemin de sortie avec espace et accent |

@@ -1,8 +1,6 @@
 # Output of the script and of the tests run from the repository.
-rapport-tests-*.txt
-analyse-*
-# Except the annotated PGNs of the examples, which carry this prefix.
-!parties-exemples/analyse-*.pgn
+test-report-*.txt
+analysis-*
 __pycache__/
 # What the script creates for itself and can rebuild: virtual
 # environment and catalog. Deleting this folder brings the application

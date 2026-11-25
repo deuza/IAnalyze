@@ -26,9 +26,9 @@ terminal, and they are then kept in a settings file that you can edit
 by hand.
 
 Next to the archive, the script writes the analysis prompt for the
-game, drawn from the template prompt-modele.txt: you paste it into the
+game, drawn from the template prompt-template.txt: you paste it into the
 conversation, with the archive as an attachment. With --prompt-only,
-it is a short prompt, drawn from prompt-seul-modele.txt, that carries
+it is a short prompt, drawn from prompt-only-template.txt, that carries
 the game and the Stockfish evaluations: it is pasted on its own,
 without an attachment, and no archive is written then.
 
@@ -473,13 +473,13 @@ NIVEAU_MIN, NIVEAU_MAX = 100, 3500
 
 #: Template of the analysis prompt, looked up next to the script, and
 #: suffix of the prompt written next to the archive.
-PROMPT_MODELE = "prompt-modele.txt"
+PROMPT_MODELE = "prompt-template.txt"
 PROMPT_SUFFIXE = ".prompt.txt"
 
 #: Template of the short prompt of --prompt-only: a few instructions, the
 #: game and the engine evaluations, to be pasted alone, without an
 #: attachment.
-PROMPT_SEUL_MODELE = "prompt-seul-modele.txt"
+PROMPT_SEUL_MODELE = "prompt-only-template.txt"
 
 #: Value through which a template places the game. With --prompt-only, a
 #: template that did not place it would give nothing to analyze.
@@ -2222,7 +2222,7 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
 # Analysis prompt
 #
 # The data of the archive are not enough: the analyst must be told what
-# to do with them. This text lives in a template, prompt-modele.txt,
+# to do with them. This text lives in a template, prompt-template.txt,
 # which you edit without opening this script. At each collection, the
 # script derives the prompt of the game from it: it fills in the values
 # (username, rating, archive name) and keeps only the passages that apply
@@ -2245,8 +2245,8 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
 def chemin_modele(option: str | None, seul: bool = False) -> pathlib.Path:
     """
     Path of the prompt template: the one of --prompt, otherwise, next to
-    the script, prompt-modele.txt or, with --prompt-only, the short
-    template prompt-seul-modele.txt. The real path of the script is
+    the script, prompt-template.txt or, with --prompt-only, the short
+    template prompt-only-template.txt. The real path of the script is
     followed, so that a symbolic link placed elsewhere finds the template
     of the repository.
     """
@@ -4122,7 +4122,7 @@ result
   Next to the archive, the analysis prompt of the game, under the name
   analysis-<game>-<timestamp>.prompt.txt: paste it into the conversation,
   with the archive as an attachment. It is drawn from the template
-  prompt-modele.txt, kept next to the script, which you can edit.
+  prompt-template.txt, kept next to the script, which you can edit.
 
 prerequisites
 -------------
@@ -4932,7 +4932,7 @@ def main(argv: list[str]) -> int:
     if options.prompt_seul:
         # The prompt is written: the working folder has no more use,
         # unless the player asked to keep it, for example to pass it
-        # to verifier-analyse.py.
+        # to verify-analysis.py.
         prompt = archive.with_name(dossier.name + PROMPT_SUFFIXE)
         if options.garder_dossier:
             journal("Folder kept on request: %s" % dossier)

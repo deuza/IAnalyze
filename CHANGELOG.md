@@ -22,7 +22,7 @@ Icône de la licence CC-0
 
 ### Changed
 
-- The comments and docstrings of `ianalyze.py`, `verifier-analyse.py`
+- The comments and docstrings of `ianalyze.py`, `verify-analysis.py`
   and `test-app.sh`, and the comments of `.gitignore`, are in English.
   The code is unchanged: the Python syntax trees, docstrings set aside,
   and the shell code, comments set aside, are identical to those of
@@ -43,7 +43,7 @@ Icône de la licence CC-0
   application folder removes everything, the Lichess token aside,
   which stays in `~/.lichess_token`; emptying `local/` brings the
   application back to a fresh clone and keeps the settings.
-  `verifier-analyse.py` and `test-app.sh` look for the virtual
+  `verify-analysis.py` and `test-app.sh` look for the virtual
   environment at the same place. The former locations,
   `~/.local/share/IAnalyze` and `~/.config/IAnalyze`, are no longer
   read: run `--install-venv` and `--install-catalog` again, then
@@ -85,7 +85,7 @@ Icône de la licence CC-0
 - The values of `--database` are `lichess` and `masters`, formerly
   `maitres`. `--venv`, `--prompt`, `--pause`, `--multipv`,
   `--stockfish` and `--debug` keep their names.
-- `verifier-analyse.py` takes `--summary`, `--name`, `--prompt-only`
+- `verify-analysis.py` takes `--summary`, `--name`, `--prompt-only`
   and `--scope` instead of `--synthese`, `--nom`, `--prompt-seul` and
   `--perimetre`.
 - `test-app.sh` takes `--network` instead of `--reseau`, and reads the
@@ -137,7 +137,7 @@ Icône de la licence CC-0
   `pgn_encoding`, `pgn_remarks` and `prompt_written`. A failed explorer
   query records `_error`, and a token found in a message becomes
   `<TOKEN-REDACTED>`.
-- `verifier-analyse.py` reads the new names and keys, and therefore no
+- `verify-analysis.py` reads the new names and keys, and therefore no
   longer reads an archive made by an earlier version.
 - The four startup questions about the game are in English, with their
   labels and defaults: "a. Scope" (the whole game), "b. What the player
@@ -161,7 +161,7 @@ Icône de la licence CC-0
   `declared`, `not declared`), a centipawn loss due to a mate `mate`,
   the databases `masters` and `Lichess (all players)`, the remarks on
   the encoding of the PGN, and the errors and stop reasons of the
-  explorer, which the log repeats. `verifier-analyse.py` reads them, and
+  explorer, which the log repeats. `verify-analysis.py` reads them, and
   the agreed scope from the line `- a. Scope: ...`.
 - The prompt templates are in English, and ask for the analysis in
   English, addressing the player as "you". Their language is in English
@@ -228,12 +228,21 @@ Icône de la licence CC-0
   into the folder, and a shared installation, such as one in `/opt`,
   no longer keeps the settings of each user: each one uses their own
   clone.
-- The report of `verifier-analyse.py` is in English: the markers
+- The report of `verify-analysis.py` is in English: the markers
   `FAIL` and `WARNING`, `OK` and `INFO` being unchanged, the titles of
   its eight sections, its checks and their details, and the totals
   under `=== Totals ===`, as `failures` and `warnings`. Its help and
   its errors follow, with `--summary FILE` and `--name NAME`. A script
   that read the French report must follow: `ECHEC` is now `FAIL`.
+- The files of the repository have English names: `verify-analysis.py`,
+  formerly `verifier-analyse.py`; `prompt-template.txt` and
+  `prompt-only-template.txt`, formerly `prompt-modele.txt` and
+  `prompt-seul-modele.txt`; `example-games/`, formerly
+  `parties-exemples/`; `EXAMPLES.md` and `TECHNICAL.md`, formerly
+  `EXEMPLES.md` and `TECHNIQUE.md`. A template kept next to the
+  script under its old name is no longer read: the script reads
+  `prompt-template.txt` and `prompt-only-template.txt`. The report of
+  `test-app.sh` is named `test-report-<system>-<date>.txt`.
 
 ### Fixed
 
@@ -246,7 +255,7 @@ Icône de la licence CC-0
   `pyvenv.cfg`, such as `/usr` or a home directory. It used to run pip
   on the Python found there, often the one of the system, or to
   scatter a new environment among the files already in place.
-- `verifier-analyse.py` reads the scope agreed at the first startup
+- `verify-analysis.py` reads the scope agreed at the first startup
   question, in the instructions of the summary. It looked for a line
   `- Périmètre : ...`, whereas the summary writes `- a. Périmètre :
   ...`: without `--scope`, it expected a comment on the mistakes and

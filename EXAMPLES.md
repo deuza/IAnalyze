@@ -2,7 +2,7 @@
 
 Cette page est l'aide-mémoire d'IAnalyze, bâtie comme une page de manuel : chaque commande, chaque option, et ce que le terminal affiche.
 
-Le [README](README.md) explique l'installation et l'usage courant. [TECHNIQUE.md](TECHNIQUE.md) explique le fonctionnement.
+Le [README](README.md) explique l'installation et l'usage courant. [TECHNICAL.md](TECHNICAL.md) explique le fonctionnement.
 
 ## Sommaire
 
@@ -40,7 +40,7 @@ Le [README](README.md) explique l'installation et l'usage courant. [TECHNIQUE.md
 
 **ianalyze.py** : prépare l'analyse d'une partie d'échecs par un LLM.
 
-**verifier-analyse.py** : contrôle le PGN annoté que le LLM a rendu.
+**verify-analysis.py** : contrôle le PGN annoté que le LLM a rendu.
 
 ## SYNOPSIS
 
@@ -51,7 +51,7 @@ Le [README](README.md) explique l'installation et l'usage courant. [TECHNIQUE.md
 ./ianalyze.py --purge-reglages [--reglages FICHIER]
 ./ianalyze.py --help
 
-./verifier-analyse.py ARCHIVE PGN [--synthese FICHIER] [--nom NOM] [--prompt-seul] [--perimetre N]
+./verify-analysis.py ARCHIVE PGN [--synthese FICHIER] [--nom NOM] [--prompt-seul] [--perimetre N]
 ```
 
 SOURCE est un fichier PGN, l'adresse d'une partie de Lichess ou son identifiant de 8 caractères.
@@ -61,7 +61,7 @@ SOURCE est un fichier PGN, l'adresse d'une partie de Lichess ou son identifiant 
 `ianalyze.py` rassemble le PGN d'une partie, les statistiques de l'explorateur Lichess et les évaluations de Stockfish.   
 Il écrit une archive zip et le prompt qui va avec, à donner à un LLM. Il n'analyse rien lui-même.
 
-`verifier-analyse.py` compare ensuite le PGN annoté rendu par le LLM à cette archive.
+`verify-analysis.py` compare ensuite le PGN annoté rendu par le LLM à cette archive.
 
 ### Lire cette page
 
@@ -81,12 +81,12 @@ Pour être rejoués sans jeton Lichess et sans rien saisir, la plupart des exemp
 
 ### Les parties des exemples
 
-Tous les fichiers cités dans cette page sont dans le répertoire `parties-exemples` du dépôt.
+Tous les fichiers cités dans cette page sont dans le répertoire `example-games` du dépôt.
 
 Pour rejouer un exemple tel quel, placez-vous dans ce répertoire et appelez le script un niveau plus haut : `../ianalyze.py` à la place de `./ianalyze.py`.
 
 ```bash
-cd parties-exemples
+cd example-games
 ```
 
 ```bash
@@ -310,7 +310,7 @@ Noirs matent en un coup. Le compte se lit après le coup de la ligne :
 Le vérificateur le compare à l'archive :
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261121-010838.zip analyse-llm.pgn
+./verify-analysis.py analyse-ma-partie-20261121-010838.zip analyse-llm.pgn
 ```
 
 ```text
@@ -366,7 +366,7 @@ Un PGN fautif, lui, voit chacun de ses défauts nommé.
 Celui-ci porte une ligne vide entre deux coups, un signe pour cent, un chiffre inventé et une variante écrite dans un commentaire :
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261121-010838.zip analyse-fautive.pgn --nom "Modèle essayé"
+./verify-analysis.py analyse-ma-partie-20261121-010838.zip analyse-fautive.pgn --nom "Modèle essayé"
 ```
 
 ```text
@@ -824,7 +824,7 @@ Pour l'archive et ses données, lancez une collecte sans cette option.
 analyse-ma-partie-20261121-010921.prompt.txt
 ```
 
-Ajoutez `--garder-dossier` si vous comptez faire contrôler la réponse du LLM par `verifier-analyse.py` : le dossier de travail reste alors à côté du prompt.
+Ajoutez `--garder-dossier` si vous comptez faire contrôler la réponse du LLM par `verify-analysis.py` : le dossier de travail reste alors à côté du prompt.
 
 ```bash
 ./ianalyze.py ma-partie.pgn --sans-explorateur --sans-questions --prompt-seul --garder-dossier
@@ -866,7 +866,7 @@ analyse-ma-partie-20261121-010939.zip
 
 #### `--prompt FICHIER`
 
-*Défaut : `prompt-modele.txt`, rangé à côté du script*
+*Défaut : `prompt-template.txt`, rangé à côté du script*
 
 À n'employer que si vous avez écrit votre propre modèle de prompt.
 
@@ -893,9 +893,9 @@ analyse-ma-partie-20261121-010949.zip
 ```
 
 Le fichier doit exister.   
-Pour écrire un modèle, partez d'une copie de `prompt-modele.txt` : ce qu'il peut contenir est décrit dans [TECHNIQUE.md](TECHNIQUE.md), section 12.
+Pour écrire un modèle, partez d'une copie de `prompt-template.txt` : ce qu'il peut contenir est décrit dans [TECHNICAL.md](TECHNICAL.md), section 12.
 
-Avec `--prompt-seul`, le modèle par défaut est `prompt-seul-modele.txt`, et c'est de lui qu'il faut partir.
+Avec `--prompt-seul`, le modèle par défaut est `prompt-only-template.txt`, et c'est de lui qu'il faut partir.
 
 ### Explorateur
 
@@ -1213,7 +1213,7 @@ Le journal nomme le nombre de fils, "threads", pas la taille de la table :
 ...
 ```
 
-Ces trois réglages, MultiPV, Threads et Hash pour Stockfish, sont expliqués dans [TECHNIQUE.md](TECHNIQUE.md), section 9.
+Ces trois réglages, MultiPV, Threads et Hash pour Stockfish, sont expliqués dans [TECHNICAL.md](TECHNICAL.md), section 9.
 
 #### `--stockfish CHEMIN`
 
@@ -1267,7 +1267,7 @@ Variantes tronquées à 2 demi-coups ; les variantes complètes sont dans `stock
 
 ### Vérificateur
 
-Les options qui suivent sont celles de `verifier-analyse.py`.
+Les options qui suivent sont celles de `verify-analysis.py`.
 
 #### `ARCHIVE PGN`
 
@@ -1282,7 +1282,7 @@ Voir [Vérifier la réponse du LLM](#vérifier-la-réponse-du-llm) pour un bilan
 Nom du modèle essayé, repris en tête du bilan.
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261121-010838.zip analyse-fautive.pgn --nom "Modèle essayé"
+./verify-analysis.py analyse-ma-partie-20261121-010838.zip analyse-fautive.pgn --nom "Modèle essayé"
 ```
 
 ```text
@@ -1299,7 +1299,7 @@ La conversation du LLM, copiée dans un fichier texte.
 Les positions et les évaluations qu'elle cite sont alors contrôlées aussi, dans deux sections de plus.
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261121-010838.zip analyse-llm.pgn --synthese conversation.txt
+./verify-analysis.py analyse-ma-partie-20261121-010838.zip analyse-llm.pgn --synthese conversation.txt
 ```
 
 ```text
@@ -1325,7 +1325,7 @@ Contrôle d'une analyse rendue par un LLM
 Sans PGN rendu, seule la conversation est contrôlée :
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261121-010838.zip - --synthese conversation.txt
+./verify-analysis.py analyse-ma-partie-20261121-010838.zip - --synthese conversation.txt
 ```
 
 ```text
@@ -1359,7 +1359,7 @@ Ce prompt demande moins que le prompt complet : les contrôles qu'il ne fonde pa
 L'archive est ici le dossier gardé par `--prompt-seul --garder-dossier`.
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261121-010931 analyse-courte.pgn --prompt-seul
+./verify-analysis.py analyse-ma-partie-20261121-010931 analyse-courte.pgn --prompt-seul
 ```
 
 ```text
@@ -1407,7 +1407,7 @@ Sans cette option, le périmètre est celui de votre réponse à la question de 
 Elle sert quand il a été fixé dans la conversation.
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261121-010838.zip analyse-llm.pgn --perimetre 3
+./verify-analysis.py analyse-ma-partie-20261121-010838.zip analyse-llm.pgn --perimetre 3
 ```
 
 ```text
@@ -1620,7 +1620,7 @@ Le répertoire courant contient ici deux dossiers de collecte complets :
 Le code de retour vaut 2.
 
 ```bash
-./verifier-analyse.py . analyse-llm.pgn
+./verify-analysis.py . analyse-llm.pgn
 ```
 
 ```text
@@ -1632,7 +1632,7 @@ Lecture impossible : . contient 2 collectes complètes : analyse-ma-partie-20261
 Le code de retour vaut 2.
 
 ```bash
-./verifier-analyse.py archive-absente.zip analyse-llm.pgn
+./verify-analysis.py archive-absente.zip analyse-llm.pgn
 ```
 
 ```text
@@ -1650,7 +1650,7 @@ Lecture impossible : [Errno 2] No such file or directory: 'archive-absente.zip'
 | 2 | option inconnue, ou valeur refusée avant toute lecture de la partie |
 | 130 | interruption (Ctrl-C) |
 
-`verifier-analyse.py` :
+`verify-analysis.py` :
 
 | Code | Signification |
 |---|---|
@@ -1668,7 +1668,7 @@ Ce que le script lit :
 | `local/catalogue.tsv` | le catalogue des ouvertures |
 | `settings.ini` | vos réglages : pseudos, cadence habituelle, niveau |
 | `~/.lichess_token` | votre jeton Lichess, en mode 600 |
-| `prompt-modele.txt`, `prompt-seul-modele.txt` | les modèles de prompt, à côté du script |
+| `prompt-template.txt`, `prompt-only-template.txt` | les modèles de prompt, à côté du script |
 | `/usr/games/stockfish` | le moteur sous Debian. Sous macOS, celui du PATH |
 
 Ce qu'il écrit, dans le répertoire courant ou dans celui de `--sortie` :
@@ -1715,7 +1715,7 @@ niveau = 1300
 ## VOIR AUSSI
 
 - [README.md](README.md) : l'installation, l'usage courant, le choix du LLM
-- [TECHNIQUE.md](TECHNIQUE.md) : le fonctionnement du script, le format des fichiers
+- [TECHNICAL.md](TECHNICAL.md) : le fonctionnement du script, le format des fichiers
 - [TESTS.md](TESTS.md) : la suite de tests, test par test
 - [CHANGELOG.md](CHANGELOG.md) : l'historique des versions
 - `./ianalyze.py --help` : le résumé des options, dans le terminal

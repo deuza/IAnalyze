@@ -14,7 +14,7 @@
 #! note     "if CONDITION", "if not CONDITION", "else", "end" keep or
 #! note     remove a passage, "note" is a comment.
 #! note
-#! note The list of the values and conditions is in TECHNIQUE.md. An
+#! note The list of the values and conditions is in TECHNICAL.md. An
 #! note unknown marker stops the script before the collection, giving
 #! note the number of the line.
 #! note ===============================================================

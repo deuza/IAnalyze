@@ -8,13 +8,13 @@ et produit un zip avec summary.md, plus le prompt d'analyse de la
 partie, écrit à côté. Les deux alimentent une conversation avec un LLM,
 où l'analyse est faite. Le script ne produit lui-même aucune analyse.
 
-Fichiers : ianalyze.py, prompt-modele.txt (modèle du prompt),
-prompt-seul-modele.txt (modèle du prompt court de --prompt-only),
-verifier-analyse.py (contrôle du PGN rendu par le LLM),
+Fichiers : ianalyze.py, prompt-template.txt (modèle du prompt),
+prompt-only-template.txt (modèle du prompt court de --prompt-only),
+verify-analysis.py (contrôle du PGN rendu par le LLM),
 test.pgn (partie d'essai), test-app.sh (suite de tests),
-parties-exemples/ (fichiers des exemples d'EXEMPLES.md),
-README.md (installation et usage courant), EXEMPLES.md (commandes,
-options et sorties, sur le plan d'une page de manuel), TECHNIQUE.md
+example-games/ (fichiers des exemples d'EXAMPLES.md),
+README.md (installation et usage courant), EXAMPLES.md (commandes,
+options et sorties, sur le plan d'une page de manuel), TECHNICAL.md
 (fonctionnement), TESTS.md (lancement des tests et tableau de tous les
 tests), CHANGELOG.md.
 
@@ -107,8 +107,15 @@ tests), CHANGELOG.md.
   collection.json passent par une table dest -> clef (CLEFS_COLLECTE),
   avec un test qui exige une clef par option ; le langage des modèles
   passe en anglais, sans alias.
-- Lot 5 : renommage des fichiers du dépôt et documentation.
-- Dérogation : la documentation (README, EXEMPLES, TECHNIQUE, TESTS)
+- Lot 5 : renommage des fichiers du dépôt et documentation, en sept
+  sous-lots : 5a, renommages des fichiers du dépôt et leurs
+  références ; 5b, exemples (noms et contenu) et textes de LLM
+  simulés des tests ; 5c, README.md et README.fr.md ; 5d,
+  TECHNICAL.md ; 5e, EXAMPLES.md, sorties réelles ; 5f, TESTS.md ;
+  5g, historique du CHANGELOG, traduit. Le contenu des exemples
+  passe en anglais, sauf french-notation.pgn, dont la notation est
+  le sujet.
+- Dérogation : la documentation (README, EXAMPLES, TECHNICAL, TESTS)
   est traduite et remise à jour au lot 5, une fois l'interface figée.
   Le CHANGELOG suit chaque lot, en anglais, sous Unreleased. CLAUDE.md
   suit chaque renommage dans le lot qui le fait.
@@ -151,11 +158,14 @@ tests), CHANGELOG.md.
   quoted in the conversation) ; métavariables FICHIER, NOM -> FILE,
   NAME, --name recevant metavar="NAME", seul changement hors
   littéraux.
-- Renommages du lot 5 : verifier-analyse.py -> verify-analysis.py,
-  prompt-modele.txt -> prompt-template.txt, prompt-seul-modele.txt ->
-  prompt-only-template.txt, parties-exemples/ -> example-games/
-  (fichiers compris), EXEMPLES.md -> EXAMPLES.md, TECHNIQUE.md ->
-  TECHNICAL.md.
+- Renommages du lot 5a, faits : verifier-analyse.py ->
+  verify-analysis.py, prompt-modele.txt -> prompt-template.txt,
+  prompt-seul-modele.txt -> prompt-only-template.txt,
+  parties-exemples/ -> example-games/, EXEMPLES.md -> EXAMPLES.md,
+  TECHNIQUE.md -> TECHNICAL.md ; `rapport-tests-<système>-<date>.txt`
+  -> `test-report-<system>-<date>.txt` ; dans le .gitignore,
+  analyse-* -> analysis-*. Les fichiers de example-games/ sont
+  renommés au 5b, d'après la table validée.
 - Points d'attention : au terminal, "b" voulait dire Blancs, il veut
   dire Black ([w/b]) depuis le lot 3b, signalé dans le CHANGELOG ;
   verify-analysis.py ne lira plus les archives 4.x ; le prompt traduit
@@ -202,9 +212,9 @@ tests), CHANGELOG.md.
 - Modification d'un fichier existant : changement ciblé, pas de
   réécriture complète non demandée.
 - Chaque ajout de comportement s'accompagne d'un test dans test-app.sh
-  et d'une mise à jour de la documentation : EXEMPLES.md pour une
+  et d'une mise à jour de la documentation : EXAMPLES.md pour une
   option ou un message, avec sa sortie réelle, README.md si l'usage
-  courant change, TECHNIQUE.md pour le fonctionnement, TESTS.md pour
+  courant change, TECHNICAL.md pour le fonctionnement, TESTS.md pour
   les tests. TESTS.md porte une ligne par test : un test ajouté y
   reçoit sa ligne, un test modifié y voit la sienne mise à jour.
 
@@ -221,8 +231,10 @@ Le jeton Lichess est dans ~/.lichess_token (mode 600). Ne le lis pas
 pour l'afficher, ne le journalise pas, ne le copie dans aucun fichier
 du dépôt ni dans aucun test. Les tests utilisent un faux jeton ou un
 faux explorateur, sauf ceux de test-app.sh --network, qui emploient le
-vrai jeton sans l'afficher ni le copier, et que seul l'utilisateur
-lance.
+vrai jeton sans l'afficher ni le copier. L'utilisateur les lance, ou
+Claude avec le jeton que le proxy de son environnement injecte dans
+les requêtes à explorer.lichess.org : TOKEN désigne alors un fichier
+factice, et le vrai jeton n'entre jamais dans le bac à sable.
 
 ## Style
 

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-verifier-analyse.py: checks the annotated PGN returned by an LLM.
+verify-analysis.py: checks the annotated PGN returned by an LLM.
 
 The script compares what an LLM produced with the IAnalyze archive it
 received, and gives the same report for each LLM tried. It does not
 judge the quality of the commentary: it checks what a machine can
 check.
 
-    ./verifier-analyse.py ARCHIVE PGN [--summary FICHIER] [--name NOM]
+    ./verify-analysis.py ARCHIVE PGN [--summary FILE] [--name NAME]
                           [--prompt-only] [--scope N]
 
     ARCHIVE     the zip produced by ianalyze.py, or its unzipped

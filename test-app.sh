@@ -174,7 +174,7 @@ elif [ "$RESEAU" = 1 ]; then
     echo "    sh test-app.sh --network <identifier or address of the game>" >&2
 fi
 
-RAPPORT="$DEPOT/rapport-tests-$SYSTEME-$(date +%Y%m%d-%H%M%S).txt"
+RAPPORT="$DEPOT/test-report-$SYSTEME-$(date +%Y%m%d-%H%M%S).txt"
 TRAVAIL=$(mktemp -d "${TMPDIR:-/tmp}/ianalyze-tests.XXXXXX") || exit 2
 # Path cleaned up: on macOS, TMPDIR ends with a slash and the path built
 # carries two of them, which prevented masking it in the report.
@@ -354,7 +354,7 @@ fi
 # written, even if a check fails. The templates come along, as in the
 # repository.
 cp "$SCRIPT" "$TRAVAIL/" || exit 2
-for modele in prompt-modele.txt prompt-seul-modele.txt; do
+for modele in prompt-template.txt prompt-only-template.txt; do
     if [ -f "$DEPOT/$modele" ]; then
         cp "$DEPOT/$modele" "$TRAVAIL/"
     fi
@@ -1598,7 +1598,7 @@ printf '[player]\nusernames = Bob\ntime_control = 14 days\nrating = 1300\n' \
 cp t-86/settings.ini t-86-avant.ini
 rm -rf analysis-t-pr-*
 t-86/ianalyze.py t-pr.pgn --no-explorer --no-questions --depth 1 \
-    --venv "$VENV" --prompt "$DEPOT/prompt-modele.txt" > sortie 2> journal
+    --venv "$VENV" --prompt "$DEPOT/prompt-template.txt" > sortie 2> journal
 cat analysis-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T86 without the option, the copy reads its settings" \
     contient extrait "- rating: about 1300 Elo, declared by the player"
@@ -1606,7 +1606,7 @@ verifier "T86 without the option, usual time control of the settings" \
     contient extrait "the one of the game: correspondence, 14 days per move"
 rm -rf analysis-t-pr-*
 t-86/ianalyze.py t-pr.pgn --no-explorer --no-questions --depth 1 \
-    --venv "$VENV" --prompt "$DEPOT/prompt-modele.txt" --no-settings \
+    --venv "$VENV" --prompt "$DEPOT/prompt-template.txt" --no-settings \
     > sortie 2> journal
 egal "T86 exit code" 0 "$?"
 verifier "T86 said in the log" \
@@ -1622,7 +1622,7 @@ unzip -p "$(head -n 1 sortie)" '*/collection.json' > ligne 2>/dev/null
 verifier "T86 recorded in collection.json" contient ligne '"no_settings": true'
 rm -rf analysis-t-pr-*
 t-86/ianalyze.py t-pr.pgn --no-explorer --no-questions --depth 1 \
-    --venv "$VENV" --prompt "$DEPOT/prompt-modele.txt" --no-settings \
+    --venv "$VENV" --prompt "$DEPOT/prompt-template.txt" --no-settings \
     --usernames Bob > sortie 2> journal
 cat analysis-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T86 side deduced from --usernames" \
@@ -1914,7 +1914,7 @@ else
         "$(grep -c 'Weak moves of the player' "$PR")"
 fi
 # With --keep-folder, the working folder stays, without an archive:
-# verifier-analyse.py can read it, with the very figures of the prompt.
+# verify-analysis.py can read it, with the very figures of the prompt.
 rm -f analysis-t-seul-*
 "$SCRIPT" t-seul.pgn $S74 --prompt-only --keep-folder \
     > sortie 2> journal
@@ -2044,18 +2044,18 @@ PR="$(head -n 1 sortie)"
 PR="${PR%.zip}.prompt.txt"
 egal "T74 without the option, the full prompt" "0 1" \
     "$(grep -c '^The game:' "$PR") $(grep -c 'EXPECTED ATTACHMENTS' "$PR")"
-# verifier-analyse.py --prompt-only expects the tags of the original
+# verify-analysis.py --prompt-only expects the tags of the original
 # game, and not the seven of the standard: t-seul.pgn carries only
 # three, and its faithful copy must not be found at fault. The same
 # tags returned in another order, for their part, are.
 ARCH74="$(head -n 1 sortie)"
-"$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH74" t-seul.pgn --prompt-only \
+"$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH74" t-seul.pgn --prompt-only \
     > bilan 2>&1
 verifier "T74 checker: three tags copied, no fault" \
     contient bilan "OK        the mandatory tags of the original game"
 printf '[Black "Bob"]\n[White "Alice"]\n[Result "1-0"]\n\n' > t-seul-inverse.pgn
 printf '1. e4 e5 2. Qh5 Nc6 3. Qxf7+ Kxf7 1-0\n' >> t-seul-inverse.pgn
-"$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH74" t-seul-inverse.pgn \
+"$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH74" t-seul-inverse.pgn \
     --prompt-only > bilan 2>&1
 verifier "T74 checker: tags in another order, reported" \
     contient bilan "FAIL      the mandatory tags of the original game"
@@ -2650,9 +2650,9 @@ FIN
         sauter "T70: test.pgn missing from the repository"
     fi
 
-    titre "T73: verifier-analyse.py, check of the PGN returned by an LLM"
-    if [ -f "$DEPOT/test.pgn" ] && [ -f "$DEPOT/verifier-analyse.py" ]; then
-        VERIF="$DEPOT/verifier-analyse.py"
+    titre "T73: verify-analysis.py, check of the PGN returned by an LLM"
+    if [ -f "$DEPOT/test.pgn" ] && [ -f "$DEPOT/verify-analysis.py" ]; then
+        VERIF="$DEPOT/verify-analysis.py"
         cp "$DEPOT/test.pgn" test.pgn
         lancer test.pgn $MOTEUR $RAPIDE
         # Two PGNs are built from the archive, as an LLM would do: a
@@ -2930,12 +2930,12 @@ EOF
         egal "T73 no Python traceback in these cases" 0 \
             "$(grep -c 'Traceback' bilan)"
     else
-        sauter "T73: test.pgn or verifier-analyse.py missing from the repository"
+        sauter "T73: test.pgn or verify-analysis.py missing from the repository"
     fi
 
     titre "T82: checker, mates, scope, short mode, parent folder"
-    if [ -f "$DEPOT/verifier-analyse.py" ]; then
-        VERIF="$DEPOT/verifier-analyse.py"
+    if [ -f "$DEPOT/verify-analysis.py" ]; then
+        VERIF="$DEPOT/verify-analysis.py"
         # Légal's mate: 5... Bxd1 concedes a mate, which 7. Nd5# gives.
         printf '[White "Alice"]\n[Black "Bob"]\n[Result "1-0"]\n\n' > t-legal.pgn
         printf '1. e4 e5 2. Nf3 d6 3. Bc4 Bg4 4. Nc3 g6 5. Nxe5 Bxd1 ' \
@@ -3067,14 +3067,14 @@ EOF
         joindre bilan
         rm -rf t-parent
     else
-        sauter "T82: verifier-analyse.py missing from the repository"
+        sauter "T82: verify-analysis.py missing from the repository"
     fi
 
     titre "T83: example games of the repository"
-    # EXEMPLES.md runs its commands on the files of parties-exemples:
+    # EXAMPLES.md runs its commands on the files of example-games:
     # each one must stay what the page says of it, accepted or refused
     # with its cause. The collections are done in the test directory.
-    EX="$DEPOT/parties-exemples"
+    EX="$DEPOT/example-games"
     if [ -d "$EX" ]; then
         for partie in ma-partie polonaise partie-lichess-org partie-commentee \
             partie-chess-com partie-chess-mail partie-ajedrezmail \
@@ -3103,11 +3103,11 @@ FIN
         # the second one with.
         lancer "$EX/ma-partie.pgn" $MOTEUR --depth 1 --threads 1 \
             --hash 16
-        "$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH" "$EX/analyse-llm.pgn" \
+        "$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH" "$EX/analyse-llm.pgn" \
             > bilan 2>&1
         verifier "T83 analyse-llm.pgn, report produced" \
             contient bilan "=== Totals ==="
-        "$PYVENV" "$DEPOT/verifier-analyse.py" "$ARCH" \
+        "$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH" \
             "$EX/analyse-fautive.pgn" > bilan 2>&1
         egal "T83 analyse-fautive.pgn, failures" 1 "$?"
         verifier "T83 export of chess-mail.com, repeated result ignored" \
@@ -3116,7 +3116,7 @@ FIN
             "$(cat "$EX"/* | grep -c -i 'lichess.org/\|GameId')"
         rm -rf "$DEPOT/__pycache__"
     else
-        sauter "T83: parties-exemples missing from the repository"
+        sauter "T83: example-games missing from the repository"
     fi
 
     titre "M2: full analysis of the Italian, engine only"
