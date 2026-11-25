@@ -136,8 +136,13 @@ tests), CHANGELOG.md.
   erreur, gaffe, mat, maîtres -> White, Black, inaccuracy, mistake,
   blunder, mate, masters ; libellés de context.md (a. Scope, Player's
   side...) et (défaut) -> (default) ; titres de summary.md, dont
-  3 bis et 3 ter -> 3a et 3b, et colonnes, dont G/N/P -> W/D/L. Le
-  modèle du prompt cite déjà ces noms, son texte attend le 4c.
+  3 bis et 3 ter -> 3a et 3b, et colonnes, dont G/N/P -> W/D/L.
+- Renommages du lot 4c, faits : directives si, si non, sinon, fin ->
+  if, if not, else, end ; conditions et valeurs des modèles en anglais
+  (EXPLORER, SIDE_KNOWN, {{GAME_PGN}}, {{USERNAMES}}... ; STOCKFISH,
+  VERSION, ARCHIVE, MULTIPV inchangés) ; sections du prompt en
+  anglais, dont RÉSUMÉ DE LA PARTIE -> OVERVIEW OF THE GAME ; le
+  tutoiement devient "you", sur un ton amical.
 - Renommages du lot 5 : verifier-analyse.py -> verify-analysis.py,
   prompt-modele.txt -> prompt-template.txt, prompt-seul-modele.txt ->
   prompt-only-template.txt, parties-exemples/ -> example-games/
@@ -169,7 +174,8 @@ tests), CHANGELOG.md.
   unspecified ; délai fixe = fixed delay ; repères de phase = phase
   markers ; fenêtre de départ = starting window ; échantillon =
   sample ; coup majoritaire = most played move (colonne Top move) ;
-  motif d'arrêt = stop reason ; dans le rapport des tests,
+  motif d'arrêt = stop reason ; résumé d'avant le coup 1 = overview ;
+  dans le rapport des tests,
   réussi, échec, sauté = passed, failed, skipped, et les marqueurs
   ECHEC, SAUTE = FAIL, SKIP.
 - Correspondance à capital : capital, incrément, plafond, réserve =

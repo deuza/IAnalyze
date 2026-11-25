@@ -1355,16 +1355,16 @@ egal "T64 no marker of the template remains" 0 "$(grep -c -E '^#!|\{\{' "$PR")"
 egal "T64 the prompt is not in the zip" 0 \
     "$(unzip -l "$ARCH" 2>/dev/null | grep -c prompt)"
 verifier "T64 version and archive named" \
-    contient "$PR" "Prompt produit par IAnalyze v"
+    contient "$PR" "Prompt produced by IAnalyze v"
 verifier "T64 name of the archive repeated" contient "$PR" "$ARCH"
 verifier "T64 username of the settings" \
-    contient "$PR" "- pseudo, sur Lichess et en général : Alice"
+    contient "$PR" "- username, on Lichess and in general: Alice"
 verifier "T64 side deduced outside a terminal" \
-    contient "$PR" "- camp dans cette partie : White"
+    contient "$PR" "- side in this game: White"
 verifier "T64 declared rating" \
-    contient "$PR" "- niveau : environ 1300 Elo, déclaré par le joueur"
+    contient "$PR" "- rating: about 1300 Elo, declared by the player"
 verifier "T64 usual time control written" \
-    contient "$PR" "celle de la partie : correspondence, 14 days per move"
+    contient "$PR" "the one of the game: correspondence, 14 days per move"
 unzip -p "$ARCH" '*/collection.json' > extrait 2>/dev/null
 verifier "T64 collection.json names the prompt" contient extrait '"prompt_written": "analysis-t-pr-'
 head -n 12 "$PR" > ligne
@@ -1373,46 +1373,46 @@ noter "  note   lines of the prompt: $(lignes "$PR")"
 
 titre "T65: the prompt keeps only what applies"
 egal "T65 the engine figures are authoritative" 1 \
-    "$(grep -c 'Les chiffres de la section 3 font foi' "$PR")"
+    "$(grep -c 'The figures of section 3 are authoritative' "$PR")"
 egal "T65 Stockfish useless to the analyst" 1 \
-    "$(grep -c 'Stockfish est inutile' "$PR")"
+    "$(grep -c 'Stockfish is useless' "$PR")"
 egal "T65 all the files of the archive to be used" 1 \
-    "$(grep -c 'Servez-vous de TOUS les fichiers fournis' "$PR")"
+    "$(grep -c 'Use ALL the files provided' "$PR")"
 egal "T65 evaluations.json described" 1 \
-    "$(grep -c '^- stockfish/evaluations.json :' "$PR")"
+    "$(grep -c '^- stockfish/evaluations.json:' "$PR")"
 egal "T65 without the explorer, its files are not announced" 0 \
     "$(grep -c '^- explorer/NNN' "$PR")"
 egal "T65 comments cut at 75 columns, not at 76" "2 0" \
-    "$(grep -c 'à 75' "$PR") $(grep -c 'à 76' "$PR")"
+    "$(grep -c 'at 75 columns' "$PR") $(grep -c 'at 76' "$PR")"
 # Instructions added after the trials on four LLMs: each one answers a
 # flaw found in a PGN actually returned.
-for consigne in "9. LIGNES VIDES" \
-    "N'écrivez jamais la variante à l'intérieur des accolades" \
-    "vous êtes en cas B" \
-    "N'annoncez un fichier que si vous l'avez réellement créé" \
-    "ne rendez jamais un PGN sans commentaires"; do
+for consigne in "9. BLANK LINES" \
+    "Never write the variation inside the braces" \
+    "you are in case B" \
+    "Only announce a file if you really created it" \
+    "never return a PGN without comments"; do
     egal "T65 instruction: $consigne" 1 "$(grep -c -F "$consigne" "$PR")"
 done
 egal "T65 without the explorer, said in the prompt" 1 \
-    "$(grep -c "collecte de l'explorateur n'a pas" "$PR")"
+    "$(grep -c 'the explorer collection was not done' "$PR")"
 egal "T65 without the explorer, said in the task" 1 \
-    "$(grep -c 'Aucune base n.a été interrogée' "$PR")"
+    "$(grep -c 'No database was queried' "$PR")"
 egal "T65 without the explorer, no database announced" 0 \
-    "$(grep -c 'La base interrogée' "$PR")"
+    "$(grep -c 'The database queried' "$PR")"
 egal "T65 without the explorer, no theoretical moves requested" 0 \
-    "$(grep -c 'trois coups théoriques' "$PR")"
+    "$(grep -c 'three theoretical moves' "$PR")"
 egal "T65 without the explorer, only section 3 is authoritative" 1 \
-    "$(grep -c 'Seuls les chiffres de la section 3 font foi' "$PR")"
+    "$(grep -c 'Only the figures of section 3 are authoritative' "$PR")"
 egal "T65 without the explorer, section 2 is not authoritative" 0 \
-    "$(grep -c 'Les chiffres des sections 2 et 3 font foi' "$PR")"
+    "$(grep -c 'The figures of sections 2 and 3 are authoritative' "$PR")"
 # The recap, the Opening tag and the final instruction still referred
 # to section 2, which this collection does not have.
 egal "T65 without the explorer, no reference to section 2" "0 0 0" \
-    "$(grep -c 'sortie de théorie)' "$PR") $(grep -c 'sections 2 et 3' "$PR") $(grep -c 'position nommée' "$PR")"
+    "$(grep -c 'theory), ask' "$PR") $(grep -c 'sections 2 and 3' "$PR") $(grep -c 'named position' "$PR")"
 verifier "T65 without the explorer, section 3 alone prevails" \
-    contient "$PR" "Les chiffres de la section 3 priment"
+    contient "$PR" "The figures of section 3 prevail"
 egal "T65 outside a terminal, answers not collected" 1 \
-    "$(grep -c "n'a pas recueilli les réponses" "$PR")"
+    "$(grep -c 'did not collect the answers' "$PR")"
 "$SCRIPT" t-pr.pgn $R --depth 1 --database masters > sortie 2> journal
 PR="$(head -n 1 sortie)"
 PR="${PR%.zip}.prompt.txt"
@@ -1431,19 +1431,19 @@ cp = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cp)
 modele = pathlib.Path(os.environ["SCRIPT"]).with_name(
     cp.PROMPT_MODELE).read_text(encoding="utf-8")
-for base in ("BASE_LICHESS", "BASE_MAITRES"):
+for base in ("LICHESS_DATABASE", "MASTERS_DATABASE"):
     conditions = dict.fromkeys(cp.PROMPT_CONDITIONS, False)
-    conditions.update({"EXPLORATEUR": True, base: True})
+    conditions.update({"EXPLORER": True, base: True})
     rendu = cp.rendre_modele(modele, conditions,
                              dict.fromkeys(cp.PROMPT_VALEURS, "x"), "essai")
-    print(base, rendu.count("celle de tous les joueurs de Lichess"),
-          rendu.count("celle des maîtres"),
-          rendu.count("trois coups théoriques"),
-          rendu.count("Aucune base n'a été interrogée"),
-          rendu.count("Les chiffres des sections 2 et 3 priment"),
-          rendu.count("position nommée de la section"))
+    print(base, rendu.count("that of all the Lichess players"),
+          rendu.count("that of the masters"),
+          rendu.count("three theoretical moves"),
+          rendu.count("No database was queried"),
+          rendu.count("The figures of sections 2 and 3 prevail"),
+          rendu.count("named position of section"))
 EOF
-printf 'BASE_LICHESS 1 0 1 0 1 1\nBASE_MAITRES 0 1 1 0 1 1\n' > attendu-t65
+printf 'LICHESS_DATABASE 1 0 1 0 1 2\nMASTERS_DATABASE 0 1 1 0 1 2\n' > attendu-t65
 verifier "T65 with the explorer, a single database branch" \
     cmp -s attendu-t65 sortie-t65
 joindre sortie-t65
@@ -1452,22 +1452,22 @@ rm -rf "$DEPOT/__pycache__"
 
 titre "T66: faulty template refused before the collection"
 rm -f analysis-t-pr-*
-printf 'Bonjour {{PSEUDO}}\n' > t-modele.txt
+printf 'Hello {{USERNAME}}\n' > t-modele.txt
 "$SCRIPT" t-pr.pgn $R --depth 1 --prompt t-modele.txt \
     > sortie 2> journal
 egal "T66 unknown value, exit code" 1 $?
 verifier "T66 unknown value, line and name given" \
-    contient journal "t-modele.txt, line 1: unknown value {{PSEUDO}}"
-printf 'a\n#! si MOTEUR\nb\n#! fin\n' > t-modele.txt
+    contient journal "t-modele.txt, line 1: unknown value {{USERNAME}}"
+printf 'a\n#! if ENGINE\nb\n#! end\n' > t-modele.txt
 "$SCRIPT" t-pr.pgn $R --depth 1 --prompt t-modele.txt \
     > sortie 2> journal
 verifier "T66 unknown condition" \
-    contient journal "line 2: unknown condition MOTEUR"
-printf 'a\n#! si STOCKFISH\nb\n' > t-modele.txt
+    contient journal "line 2: unknown condition ENGINE"
+printf 'a\n#! if STOCKFISH\nb\n' > t-modele.txt
 "$SCRIPT" t-pr.pgn $R --depth 1 --prompt t-modele.txt \
     > sortie 2> journal
-verifier "T66 si never closed" contient journal "is never closed by"
-printf 'a\n#! tantque STOCKFISH\n' > t-modele.txt
+verifier "T66 if never closed" contient journal "is never closed by"
+printf 'a\n#! while STOCKFISH\n' > t-modele.txt
 "$SCRIPT" t-pr.pgn $R --depth 1 --prompt t-modele.txt \
     > sortie 2> journal
 verifier "T66 unknown directive" contient journal "unknown directive"
@@ -1480,14 +1480,14 @@ verifier "T66 missing template, message" \
 egal "T66 exclusive options, exit code" 2 $?
 egal "T66 no folder or archive created by these refusals" 0 \
     "$(find . -maxdepth 1 -name 'analysis-t-pr-*' | wc -l)"
-printf 'Pour {{PSEUDOS}}.\n#! si non EXPLORATEUR\nsans base\n' > t-modele.txt
-printf '#! si BASE_LICHESS\nlichess\n#! sinon\nmaitres\n#! fin\n' >> t-modele.txt
-printf '#! sinon\navec base\n#! fin\n\n\n\nfin\n' >> t-modele.txt
+printf 'For {{USERNAMES}}.\n#! if not EXPLORER\nno database\n' > t-modele.txt
+printf '#! if LICHESS_DATABASE\nlichess\n#! else\nmasters\n#! end\n' >> t-modele.txt
+printf '#! else\nwith database\n#! end\n\n\n\nend\n' >> t-modele.txt
 "$SCRIPT" t-pr.pgn $R --depth 1 --prompt t-modele.txt \
     > sortie 2> journal
 PR="$(head -n 1 sortie)"
 PR="${PR%.zip}.prompt.txt"
-printf 'Pour Alice.\nsans base\nlichess\n\nfin\n' > attendu
+printf 'For Alice.\nno database\nlichess\n\nend\n' > attendu
 verifier "T66 nesting, negation and blank lines tightened" \
     cmp -s attendu "$PR"
 joindre "$PR"
@@ -1501,10 +1501,10 @@ egal "T66 --no-prompt, no prompt written" 0 \
 # marker, which went as it is into the prompt, a template without a
 # single line of text, and a prompt-only template whose game is only
 # quoted in a note.
-printf 'Camp : {{ CAMP }}\n' > t-modele-espace.txt
-printf 'Camp : {{CAMP1}}\n' > t-modele-chiffre.txt
-printf '#! note rien\n\n' > t-modele-vide.txt
-printf '#! note {{PARTIE_PGN}}\nAnalysez.\n' > t-modele-note.txt
+printf 'Side: {{ SIDE }}\n' > t-modele-espace.txt
+printf 'Side: {{SIDE1}}\n' > t-modele-chiffre.txt
+printf '#! note nothing\n\n' > t-modele-vide.txt
+printf '#! note {{GAME_PGN}}\nAnalyze.\n' > t-modele-note.txt
 for cas in "t-modele-espace.txt|badly formed marker" \
            "t-modele-chiffre.txt|badly formed marker" \
            "t-modele-vide.txt|no line of text"; do
@@ -1515,10 +1515,10 @@ done
 lancer t-pr.pgn $R --depth 1 --prompt-only --prompt t-modele-note.txt
 egal "T66 game quoted in a note, exit code" 1 "$RC"
 verifier "T66 game quoted in a note, message" \
-    contient journal "does not contain {{PARTIE_PGN}}"
+    contient journal "does not contain {{GAME_PGN}}"
 # The game placed under a false condition: the prompt is written, but
 # the log says that it cannot be pasted alone.
-printf '#! si BASE_MAITRES\n{{PARTIE_PGN}}\n#! fin\nAnalysez.\n' > t-modele-branche.txt
+printf '#! if MASTERS_DATABASE\n{{GAME_PGN}}\n#! end\nAnalyze.\n' > t-modele-branche.txt
 lancer t-pr.pgn $R --depth 1 --prompt-only --prompt t-modele-branche.txt
 egal "T66 game under a false condition, exit code" 0 "$RC"
 verifier "T66 game under a false condition, said in the log" \
@@ -1552,9 +1552,9 @@ egal "T68 three answers refused" 3 \
 verifier "T68 rating saved" contient t-niv.ini "rating = 1450"
 cat analysis-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T68 rating declared in the prompt" \
-    contient extrait "- niveau : environ 1450 Elo, déclaré par le joueur"
+    contient extrait "- rating: about 1450 Elo, declared by the player"
 verifier "T68 on a terminal, answers collected" \
-    contient extrait "contient les réponses du joueur"
+    contient extrait "holds the answers of the player"
 egal "T68 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
 printf '[player]\nusernames = Bob\ntime_control = 14 days\nrating = unknown\n' \
     > t-niv.ini
@@ -1563,9 +1563,9 @@ rm -rf analysis-t-pr-*
     --venv "$VENV" --settings t-niv.ini > sortie 2> journal
 cat analysis-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T68 side deduced from the other username" \
-    contient extrait "- camp dans cette partie : Black"
+    contient extrait "- side in this game: Black"
 verifier "T68 without a declared rating, Elo of the tag" \
-    contient extrait "- niveau : 1500 Elo, d'après la balise BlackElo de la partie"
+    contient extrait "- rating: 1500 Elo, from the BlackElo tag of the game"
 rm -rf analysis-t-pr-*
 
 titre "T86: --no-settings, settings neither read nor written"
@@ -1583,9 +1583,9 @@ t-86/ianalyze.py t-pr.pgn --no-explorer --no-questions --depth 1 \
     --venv "$VENV" --prompt "$DEPOT/prompt-modele.txt" > sortie 2> journal
 cat analysis-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T86 without the option, the copy reads its settings" \
-    contient extrait "- niveau : environ 1300 Elo, déclaré par le joueur"
+    contient extrait "- rating: about 1300 Elo, declared by the player"
 verifier "T86 without the option, usual time control of the settings" \
-    contient extrait "celle de la partie : correspondence, 14 days per move"
+    contient extrait "the one of the game: correspondence, 14 days per move"
 rm -rf analysis-t-pr-*
 t-86/ianalyze.py t-pr.pgn --no-explorer --no-questions --depth 1 \
     --venv "$VENV" --prompt "$DEPOT/prompt-modele.txt" --no-settings \
@@ -1595,11 +1595,11 @@ verifier "T86 said in the log" \
     contient journal "Settings neither read nor written: option --no-settings."
 cat analysis-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T86 usernames of the settings ignored, side unknown" \
-    contient extrait "- camp dans cette partie : inconnu"
+    contient extrait "- side in this game: unknown"
 verifier "T86 rating of the settings ignored" \
-    contient extrait "- niveau : non précisé"
+    contient extrait "- rating: unspecified"
 verifier "T86 usual time control of the settings ignored" \
-    contient extrait "celle de la partie : unspecified"
+    contient extrait "the one of the game: unspecified"
 unzip -p "$(head -n 1 sortie)" '*/collection.json' > ligne 2>/dev/null
 verifier "T86 recorded in collection.json" contient ligne '"no_settings": true'
 rm -rf analysis-t-pr-*
@@ -1608,9 +1608,9 @@ t-86/ianalyze.py t-pr.pgn --no-explorer --no-questions --depth 1 \
     --usernames Bob > sortie 2> journal
 cat analysis-t-pr-*.prompt.txt > extrait 2>/dev/null
 verifier "T86 side deduced from --usernames" \
-    contient extrait "- camp dans cette partie : Black"
+    contient extrait "- side in this game: Black"
 verifier "T86 rating taken from the Elo tag of that side" \
-    contient extrait "- niveau : 1500 Elo, d'après la balise BlackElo de la partie"
+    contient extrait "- rating: 1500 Elo, from the BlackElo tag of the game"
 verifier "T86 settings file untouched" cmp -s t-86-avant.ini t-86/settings.ini
 rm -rf analysis-t-pr-*
 # On a terminal, without a settings file: its questions, which would
@@ -1747,13 +1747,13 @@ verifier "T74 short prompt, fewer than a hundred lines" \
 while IFS= read -r present; do
     verifier "T74 present: $present" contient "$PR" "$present"
 done <<'FIN'
-Vous êtes Maître International d'échecs.
-Le joueur avait les White.
-dans un seul bloc de code
-hors des accolades
-La partie :
+You are an International Master of chess.
+The player had White.
+in a single code block
+outside the braces
+The game:
 [White "Alice"]
-Évaluations de Stockfish, profondeur 8
+Evaluations of Stockfish, depth 8
 FIN
 while IFS= read -r absent; do
     egal "T74 absent: $absent" 0 "$(grep -c -F "$absent" "$PR")"
@@ -1762,17 +1762,17 @@ IAnalyze
 archive
 summary.md
 Raw data
-CAS A
+CASE A
 FIN
 # The table has one line per ply, and the queen given away on move 3
 # is a blunder there, followed by the best move and its continuation.
 egal "T74 table: one line per ply" 6 \
     "$(grep -c -E '^[1-3]\.(\.\.)? [A-Za-z0-9+#x=-]+ +[+#-]' "$PR")"
 egal "T74 table: blunder, loss and best move" 1 \
-    "$(grep -c -E '^3\. Qxf7\+ .* blunder \([0-9a-z]+\) : mieux 3\. ' "$PR")"
+    "$(grep -c -E '^3\. Qxf7\+ .* blunder \([0-9a-z]+\): better 3\. ' "$PR")"
 # Scored 1-0, the game ends with White a queen down.
 egal "T74 result contrary to the evaluation, told to the LLM" 1 \
-    "$(grep -c '^Attention : Result and final evaluation' "$PR")"
+    "$(grep -c '^Warning: Result and final evaluation' "$PR")"
 # The review asks for three errors. An LLM asked for three makes one up
 # when the player made fewer: the prompt then gives the number of weak
 # moves that its table carries. White played only three moves, and the
@@ -1781,14 +1781,14 @@ egal "T74 result contrary to the evaluation, told to the LLM" 1 \
 FAIBLES74="$(grep -c -E '^[0-9]+\. .* (inaccuracy|mistake|blunder) \(' "$PR")"
 if [ "$FAIBLES74" -lt 3 ]; then
     verifier "T74 review: the number of weak moves of the player is given" \
-        contient "$PR" "Coups faibles du joueur dans le tableau : $FAIBLES74."
+        contient "$PR" "Weak moves of the player in the table: $FAIBLES74."
     egal "T74 review: only one of the two sentences" 0 \
-        "$(grep -c 'les trois erreurs' "$PR")"
+        "$(grep -c 'the three costliest errors' "$PR")"
 else
     verifier "T74 review: three weak moves, three errors requested" \
-        contient "$PR" "les trois erreurs"
+        contient "$PR" "the three costliest errors"
     egal "T74 review: only one of the two sentences" 0 \
-        "$(grep -c 'Coups faibles du joueur' "$PR")"
+        "$(grep -c 'Weak moves of the player' "$PR")"
 fi
 # With --keep-folder, the working folder stays, without an archive:
 # verifier-analyse.py can read it, with the very figures of the prompt.
@@ -1811,7 +1811,7 @@ partie = open(sys.argv[2], encoding="utf-8").read().strip("\n")
 sys.exit(0 if partie in prompt else 1)
 ' "$PR" t-partie.pgn
 egal "T74 without instructions, nothing is specified" 0 \
-    "$(grep -c 'Ce que le joueur a précisé' "$PR")"
+    "$(grep -c 'What the player specified' "$PR")"
 noter "  note   size of the prompt only: $(wc -c < "$PR") octets, $(lignes "$PR") lignes"
 head -n 6 "$PR" > ligne
 joindre ligne
@@ -1872,22 +1872,23 @@ print(cp.coups_faibles_joueur(resultats, "White"),
 modele = pathlib.Path(os.environ["SCRIPT"]).with_name(
     cp.PROMPT_SEUL_MODELE).read_text(encoding="utf-8")
 # Four cases: no weak move, fewer than three, three or more, and an
-# unknown side, where "le joueur" belongs to no side.
-for cas, vraies in (("aucun", ("CAMP_CONNU", "PEU_DE_COUPS_FAIBLES",
-                               "AUCUN_COUP_FAIBLE")),
-                    ("peu", ("CAMP_CONNU", "PEU_DE_COUPS_FAIBLES")),
-                    ("trois", ("CAMP_CONNU",)),
+# unknown side, where "the player" belongs to no side.
+for cas, vraies in (("aucun", ("SIDE_KNOWN", "FEW_WEAK_MOVES",
+                               "NO_WEAK_MOVE")),
+                    ("peu", ("SIDE_KNOWN", "FEW_WEAK_MOVES")),
+                    ("trois", ("SIDE_KNOWN",)),
                     ("inconnu", ())):
     conditions = dict.fromkeys(cp.PROMPT_CONDITIONS, False)
     conditions.update(dict.fromkeys(vraies, True))
     valeurs = dict.fromkeys(cp.PROMPT_VALEURS, "x")
-    valeurs["COUPS_FAIBLES_JOUEUR"] = "2"
+    valeurs["PLAYER_WEAK_MOVES"] = "2"
     rendu = cp.rendre_modele(modele, conditions, valeurs, "essai")
-    print(cas, rendu.count("ne marque aucun coup faible du joueur"),
-          rendu.count("Coups faibles du joueur dans le tableau : 2."),
-          rendu.count("sans en ajouter"), rendu.count("les trois erreurs"),
-          rendu.count("pour chaque camp"),
-          rendu.count("Le camp du joueur n'est pas connu"))
+    print(cas, rendu.count("marks no weak move of the player"),
+          rendu.count("Weak moves of the player in the table: 2."),
+          rendu.count("without adding any"),
+          rendu.count("the three costliest errors"),
+          rendu.count("for each side"),
+          rendu.count("The side of the player is not known"))
 EOF
 printf '3 2 None 0\naucun 1 0 0 0 0 0\npeu 0 1 1 0 0 0\n' > attendu-t74
 printf 'trois 0 0 0 1 0 0\ninconnu 0 0 0 0 1 1\n' >> attendu-t74
@@ -1919,7 +1920,7 @@ rm -rf t-meme-seconde
 PR="$(head -n 1 sortie)"
 PR="${PR%.zip}.prompt.txt"
 egal "T74 without the option, the full prompt" "0 1" \
-    "$(grep -c '^La partie :' "$PR") $(grep -c 'PIÈCES JOINTES ATTENDUES' "$PR")"
+    "$(grep -c '^The game:' "$PR") $(grep -c 'EXPECTED ATTACHMENTS' "$PR")"
 # verifier-analyse.py --prompt-only expects the tags of the original
 # game, and not the seven of the standard: t-seul.pgn carries only
 # three, and its faithful copy must not be found at fault. The same
@@ -1943,12 +1944,12 @@ verifier "T74 exclusive options, message" \
     contient journal "--prompt-only and --no-prompt are mutually exclusive"
 # A personal template that does not place the game is refused before
 # the collection: the prompt would have nothing to have analyzed.
-printf 'Bonjour {{PSEUDOS}}.\n' > t-modele.txt
+printf 'Hello {{USERNAMES}}.\n' > t-modele.txt
 "$SCRIPT" t-seul.pgn $S74 --prompt t-modele.txt --prompt-only \
     > sortie 2> journal
 egal "T74 template without the game, exit code" 1 $?
 verifier "T74 template without the game, message" \
-    contient journal "does not contain {{PARTIE_PGN}}"
+    contient journal "does not contain {{GAME_PGN}}"
 mkdir -p t-seul-74 && cp "$SCRIPT" t-seul-74/
 t-seul-74/ianalyze.py t-seul.pgn $S74 --prompt-only \
     > sortie 2> journal
@@ -2351,7 +2352,7 @@ EOF
         contient extrait 'The Termination tag reads `Normal`.'
     PR="${ARCH%.zip}.prompt.txt"
     egal "T72 prompt: instruction to tell the player" 1 \
-        "$(grep -c 'le résultat contredit' "$PR")"
+        "$(grep -c 'the result contradicts the final' "$PR")"
     sed 's/1-0/0-1/g' t-contre.pgn > t-coherent.pgn
     lancer t-coherent.pgn $MOTEUR $RAPIDE
     egal "T72 consistent result, exit code" 0 "$RC"
@@ -2391,13 +2392,13 @@ EOF
     lancer t-nul-coup.pgn $MOTEUR $RAPIDE --prompt-only
     PR="$ARCH"
     verifier "T52 short prompt: the null move is explained" \
-        contient "$PR" 'Un coup noté "--" est un coup nul'
+        contient "$PR" 'A move written "--" is a null move'
     lancer italienne.pgn $MOTEUR --depth 4 --prompt-only
     PR="$ARCH"
     egal "T52 short prompt: nothing about the null move without a null move" 0 \
-        "$(grep -c 'coup nul' "$PR")"
+        "$(grep -c 'null move' "$PR")"
     verifier "T52 short prompt: each move played, without limit" \
-        contient "$PR" "après chaque coup joué."
+        contient "$PR" "after each move played."
 
     titre "T25: engine limited to the first moves"
     lancer italienne.pgn $MOTEUR --stockfish-moves 3 --depth 10 \
@@ -2410,16 +2411,16 @@ EOF
         "$(grep -c -E '^\| [1-9] \| [1-5] \| (White|Black) \| [A-Za-z]' extrait)"
     PR="${ARCH%.zip}.prompt.txt"
     verifier "T25 prompt: partial coverage stated" contient "$PR" \
-        "que les 6 premiers demi-coups sur 9"
+        "only evaluated the first 6 plies out of 9"
     verifier "T25 prompt: two moves per position, not three" \
-        contient "$PR" "meilleurs coups du moteur, 2 par position"
+        contient "$PR" "best moves of the engine, 2 per position"
     lancer italienne.pgn $MOTEUR --stockfish-moves 3 --depth 4 \
         --prompt-only
     PR="$ARCH"
     verifier "T25 short prompt: partial coverage stated" contient "$PR" \
-        "après chacun des 6 premiers demi-coups sur 9"
+        "after each of the first 6 plies out of 9"
     egal "T25 short prompt: no more each move played" 0 \
-        "$(grep -c 'après chaque coup joué' "$PR")"
+        "$(grep -c 'after each move played' "$PR")"
     lancer italienne.pgn $MOTEUR --stockfish-moves 3 --depth 10 \
         --multipv 2 --pv-length 4 --threads 2 --hash 128
     extraire '*/collection.json'
@@ -2519,7 +2520,7 @@ FIN
             "$(grep -c -E '^\| [0-9]+ \| [0-9]+ \| (White|Black) \| ' extrait)"
         PR="${ARCH%.zip}.prompt.txt"
         verifier "T70 prompt: side deduced despite the case" \
-            contient "$PR" "- camp dans cette partie : White"
+            contient "$PR" "- side in this game: White"
         grep -E '^\| (3|4|9|17|29) \|' extrait | cut -c1-110 > lignes
         joindre lignes
     else
@@ -3007,11 +3008,11 @@ FIN
     sleep 1
     PR="${ARCH%.zip}.prompt.txt"
     egal "M2 prompt: the engine figures are authoritative" 1 \
-        "$(grep -c 'Les chiffres de la section 3 font foi' "$PR")"
+        "$(grep -c 'The figures of section 3 are authoritative' "$PR")"
     egal "M2 prompt: Stockfish useless to the analyst" 1 \
-        "$(grep -c 'Stockfish est inutile' "$PR")"
+        "$(grep -c 'Stockfish is useless' "$PR")"
     egal "M2 prompt: the mention mate is explained" 1 \
-        "$(grep -c 'porte .mate. quand le coup' "$PR")"
+        "$(grep -c 'reads .mate. when the move' "$PR")"
     egal "M2 no engine process left by the tests" \
         "[$MOTEURS_AVANT]" "[$(processus_moteur)]"
 fi

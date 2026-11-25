@@ -100,8 +100,7 @@ Icône de la licence CC-0
   is `[r]eal time`, `[c]orrespondence` or `[u]nknown`, a correspondence
   system a fixed `[d]elay`, a `[p]eriod` or a `[c]lock`, an increment
   `36h` or `3d`, and an unknown rating `unknown`. "(Enter: ...)" shows
-  what the Enter key keeps. The four startup questions about the game
-  (scope, goal, context, comments) stay in French for now.
+  what the Enter key keeps.
 - The settings file is in English: section `[player]`, keys
   `usernames`, `time_control` and `rating`, optional key `annotator`,
   and English comments. A time control is written `15+10`, `14 days`,
@@ -115,8 +114,8 @@ Icône de la licence CC-0
   `context.md`, in the prompt and as the value suggested in the
   terminal: "rapid, 15 minutes + 10 seconds per move", "correspondence,
   clock of 5 days + 36 hours per move, maximum of 20 days",
-  "unspecified". The labels around it stay in French for now. Counts
-  follow the English plural: `1 day`, `0 days`, `2 days`.
+  "unspecified". Counts follow the English plural: `1 day`, `0 days`,
+  `2 days`.
 - The opening catalog is `local/catalog.tsv`, in format 2, with English
   column names (`epd`, `eco`, `name`) and description keys (`lines`,
   `named`, `known`), which `collection.json` repeats. The former
@@ -137,8 +136,7 @@ Icône de la licence CC-0
   `side`, `origin` and `modified_tags`), `context_collected`,
   `pgn_encoding`, `pgn_remarks` and `prompt_written`. A failed explorer
   query records `_error`, and a token found in a message becomes
-  `<TOKEN-REDACTED>`. The values, and the text of `summary.md` and
-  `context.md`, stay in French for now.
+  `<TOKEN-REDACTED>`.
 - `verifier-analyse.py` reads the new names and keys, and therefore no
   longer reads an archive made by an earlier version.
 - The four startup questions about the game are in English, with their
@@ -164,9 +162,59 @@ Icône de la licence CC-0
   the databases `masters` and `Lichess (all players)`, the remarks on
   the encoding of the PGN, and the errors and stop reasons of the
   explorer, which the log repeats. `verifier-analyse.py` reads them, and
-  the agreed scope from the line `- a. Scope: ...`. The prompt templates
-  quote the new titles, columns and values, and their text stays in
-  French for now.
+  the agreed scope from the line `- a. Scope: ...`.
+- The prompt templates are in English, and ask for the analysis in
+  English, addressing the player as "you". Their language is in English
+  as well, with no alias for the former names: the directives are
+  `if`, `if not`, `else`, `end` and `note` (formerly `si`, `si non`,
+  `sinon`, `fin` and `note`), and the conditions and values are renamed
+  as below. A personal template must be adapted: an unknown name stops
+  the script before the collection, giving the line.
+
+| Former name            | New name               |
+| ---------------------- | ---------------------- |
+| `EXPLORATEUR`          | `EXPLORER`             |
+| `BASE_LICHESS`         | `LICHESS_DATABASE`     |
+| `BASE_MAITRES`         | `MASTERS_DATABASE`     |
+| `REPONSES`             | `ANSWERS`              |
+| `CAMP_CONNU`           | `SIDE_KNOWN`           |
+| `PSEUDO_CONNU`         | `USERNAME_KNOWN`       |
+| `NIVEAU_DECLARE`       | `RATING_DECLARED`      |
+| `RESULTAT_CONTREDIT`   | `RESULT_CONTRADICTED`  |
+| `CONSIGNES_DONNEES`    | `INSTRUCTIONS_GIVEN`   |
+| `OUVERTURE_CONNUE`     | `OPENING_KNOWN`        |
+| `COUVERTURE_PARTIELLE` | `PARTIAL_COVERAGE`     |
+| `COUP_NUL`             | `NULL_MOVE`            |
+| `PEU_DE_COUPS_FAIBLES` | `FEW_WEAK_MOVES`       |
+| `AUCUN_COUP_FAIBLE`    | `NO_WEAK_MOVE`         |
+| `{{DEPOT}}`            | `{{REPOSITORY}}`       |
+| `{{PSEUDOS}}`          | `{{USERNAMES}}`        |
+| `{{CAMP}}`             | `{{SIDE}}`             |
+| `{{NIVEAU}}`           | `{{RATING}}`           |
+| `{{CADENCE}}`          | `{{TIME_CONTROL}}`     |
+| `{{ANNOTATEUR}}`       | `{{ANNOTATOR}}`        |
+| `{{BASE}}`             | `{{DATABASE}}`         |
+| `{{SEUIL_IMPRECISION}}` | `{{INACCURACY_THRESHOLD}}` |
+| `{{SEUIL_ERREUR}}`     | `{{MISTAKE_THRESHOLD}}` |
+| `{{SEUIL_GAFFE}}`      | `{{BLUNDER_THRESHOLD}}` |
+| `{{PROFONDEUR}}`       | `{{DEPTH}}`            |
+| `{{PARTIE_PGN}}`       | `{{GAME_PGN}}`         |
+| `{{TABLEAU_MOTEUR}}`   | `{{ENGINE_TABLE}}`     |
+| `{{ALERTE_RESULTAT}}`  | `{{RESULT_ALERT}}`     |
+| `{{CONSIGNES_JOUEUR}}` | `{{PLAYER_INSTRUCTIONS}}` |
+| `{{OUVERTURE}}`        | `{{OPENING}}`          |
+| `{{DEMI_COUPS}}`       | `{{PLIES}}`            |
+| `{{DEMI_COUPS_EVALUES}}` | `{{PLIES_EVALUATED}}` |
+| `{{COUPS_FAIBLES_JOUEUR}}` | `{{PLAYER_WEAK_MOVES}}` |
+
+- `STOCKFISH`, `{{VERSION}}`, `{{ARCHIVE}}` and `{{MULTIPV}}` keep their
+  names. The values that the script computes for the prompt are in
+  English: the rating ("about 1300 Elo, declared by the player", "1500
+  Elo, from the BlackElo tag of the game", "unspecified: judge from the
+  game, and stay accessible"), the default Annotator ("your model
+  name, followed by its publisher in parentheses"), an unknown side or
+  number of weak moves ("unknown"), the table of the short prompt
+  ("blunder (350): better ...") and the sentence on the opening.
 
 ### Fixed
 

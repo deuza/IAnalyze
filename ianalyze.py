@@ -468,27 +468,28 @@ PROMPT_SEUL_MODELE = "prompt-seul-modele.txt"
 
 #: Value through which a template places the game. With --prompt-only, a
 #: template that did not place it would give nothing to analyze.
-PROMPT_DONNEES = "{{PARTIE_PGN}}"
+PROMPT_DONNEES = "{{GAME_PGN}}"
 
 #: Markers of the template. A line starting with PROMPT_DIRECTIVE is a
 #: directive, never copied; a value is written between double braces.
 PROMPT_DIRECTIVE = "#!"
 RE_VALEUR_MODELE = re.compile(r"\{\{([A-Za-z_]+)\}\}")
 
-#: Conditions known to a "si" directive, and replaceable values. A name
+#: Conditions known to an "if" directive, and replaceable values. A name
 #: missing from these lists stops the script before the collection.
-PROMPT_CONDITIONS = ("STOCKFISH", "EXPLORATEUR", "BASE_LICHESS",
-                     "BASE_MAITRES", "REPONSES",
-                     "CAMP_CONNU", "PSEUDO_CONNU", "NIVEAU_DECLARE",
-                     "RESULTAT_CONTREDIT", "CONSIGNES_DONNEES",
-                     "OUVERTURE_CONNUE", "COUVERTURE_PARTIELLE", "COUP_NUL",
-                     "PEU_DE_COUPS_FAIBLES", "AUCUN_COUP_FAIBLE")
-PROMPT_VALEURS = ("VERSION", "DEPOT", "ARCHIVE", "PSEUDOS", "CAMP", "NIVEAU",
-                  "CADENCE", "ANNOTATEUR", "BASE", "SEUIL_IMPRECISION",
-                  "SEUIL_ERREUR", "SEUIL_GAFFE", "PROFONDEUR", "MULTIPV",
-                  "PARTIE_PGN", "TABLEAU_MOTEUR", "ALERTE_RESULTAT",
-                  "CONSIGNES_JOUEUR", "OUVERTURE", "DEMI_COUPS",
-                  "DEMI_COUPS_EVALUES", "COUPS_FAIBLES_JOUEUR")
+PROMPT_CONDITIONS = ("STOCKFISH", "EXPLORER", "LICHESS_DATABASE",
+                     "MASTERS_DATABASE", "ANSWERS",
+                     "SIDE_KNOWN", "USERNAME_KNOWN", "RATING_DECLARED",
+                     "RESULT_CONTRADICTED", "INSTRUCTIONS_GIVEN",
+                     "OPENING_KNOWN", "PARTIAL_COVERAGE", "NULL_MOVE",
+                     "FEW_WEAK_MOVES", "NO_WEAK_MOVE")
+PROMPT_VALEURS = ("VERSION", "REPOSITORY", "ARCHIVE", "USERNAMES", "SIDE",
+                  "RATING", "TIME_CONTROL", "ANNOTATOR", "DATABASE",
+                  "INACCURACY_THRESHOLD", "MISTAKE_THRESHOLD",
+                  "BLUNDER_THRESHOLD", "DEPTH", "MULTIPV",
+                  "GAME_PGN", "ENGINE_TABLE", "RESULT_ALERT",
+                  "PLAYER_INSTRUCTIONS", "OPENING", "PLIES",
+                  "PLIES_EVALUATED", "PLAYER_WEAK_MOVES")
 
 #: Number of errors that the short prompt asks for in its review. When
 #: the engine table marks fewer of them for the player, the prompt gives
@@ -497,8 +498,8 @@ ERREURS_DU_BILAN = 3
 
 #: Value of the Annotator tag when the settings do not give one: the
 #: script does not know which model will write the analysis.
-ANNOTATEUR_DEFAUT = ("votre nom de modèle, suivi de son éditeur entre "
-                     "parenthèses")
+ANNOTATEUR_DEFAUT = ("your model name, followed by its publisher in "
+                     "parentheses")
 
 #: Label of an unknown time control, when neither the TimeControl tag
 #: nor the settings give it.
@@ -2127,13 +2128,13 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
 # Two kinds of markers in the template:
 #
 #     {{NAME}}            a value, replaced
-#     #! si CONDITION     keeps what follows if the condition is true
-#     #! si non CONDITION keeps what follows if it is false
-#     #! sinon            switches
-#     #! fin              closes the last open "si"
+#     #! if CONDITION     keeps what follows if the condition is true
+#     #! if not CONDITION keeps what follows if it is false
+#     #! else             switches
+#     #! end              closes the last open "if"
 #     #! note ...         comment of the template, never copied
 #
-# The "si" can be nested.
+# The "if" can be nested.
 # ===========================================================================
 
 def chemin_modele(option: str | None, seul: bool = False) -> pathlib.Path:
@@ -2165,7 +2166,7 @@ def rendre_modele(texte: str, conditions: dict[str, bool],
     the values.
 
     The whole template is checked, discarded passages included: an
-    unknown directive, a "si" never closed, a condition or a value that
+    unknown directive, an "if" never closed, a condition or a value that
     the script does not know stop the script with the line number. The
     extra blank lines left by a removed passage are tightened.
     """
@@ -2174,8 +2175,8 @@ def rendre_modele(texte: str, conditions: dict[str, bool],
                           % (source, numero, message))
 
     sortie: list[str] = []
-    # Stack of the open "si": the line of the "si", the value of its
-    # condition, and whether a "sinon" has already been met.
+    # Stack of the open "if": the line of the "if", the value of its
+    # condition, and whether an "else" has already been met.
     pile: list[tuple[int, bool, bool]] = []
     for numero, ligne in enumerate(texte.split("\n"), start=1):
         mots = lire_directive(ligne)
@@ -2198,30 +2199,30 @@ def rendre_modele(texte: str, conditions: dict[str, bool],
             continue
         if not mots or mots[0] == "note":
             continue
-        if mots[0] == "si":
-            negation = len(mots) == 3 and mots[1] == "non"
+        if mots[0] == "if":
+            negation = len(mots) == 3 and mots[1] == "not"
             if len(mots) != (3 if negation else 2):
-                raise erreur(numero, "expected form: \"si CONDITION\" or \"si "
-                             "non CONDITION\"")
+                raise erreur(numero, "expected form: \"if CONDITION\" or \"if "
+                             "not CONDITION\"")
             if mots[-1] not in PROMPT_CONDITIONS:
                 raise erreur(numero, "unknown condition %s, accepted "
                              "conditions: %s"
                              % (mots[-1], ", ".join(PROMPT_CONDITIONS)))
             pile.append((numero, conditions[mots[-1]] != negation, False))
-        elif mots == ["sinon"]:
+        elif mots == ["else"]:
             if not pile or pile[-1][2]:
-                raise erreur(numero, "\"sinon\" without an open \"si\", or "
+                raise erreur(numero, "\"else\" without an open \"if\", or "
                              "repeated")
             pile[-1] = (pile[-1][0], not pile[-1][1], True)
-        elif mots == ["fin"]:
+        elif mots == ["end"]:
             if not pile:
-                raise erreur(numero, "\"fin\" without an open \"si\"")
+                raise erreur(numero, "\"end\" without an open \"if\"")
             pile.pop()
         else:
             raise erreur(numero, "unknown directive \"%s\", accepted "
-                         "directives: si, sinon, fin, note" % " ".join(mots))
+                         "directives: if, else, end, note" % " ".join(mots))
     if pile:
-        raise erreur(pile[-1][0], "this \"si\" is never closed by \"fin\"")
+        raise erreur(pile[-1][0], "this \"if\" is never closed by \"end\"")
 
     # Blank lines: at most one in a row, none at the start or at the end.
     resserre: list[str] = []
@@ -2260,14 +2261,13 @@ def decrire_niveau(niveau: int, partie: chess.pgn.Game,
     side is known; otherwise nothing precise.
     """
     if niveau:
-        return "environ %d Elo, déclaré par le joueur" % niveau
+        return "about %d Elo, declared by the player" % niveau
     balise = {"White": "WhiteElo", "Black": "BlackElo"}.get(camp or "")
     if balise:
         elo = partie.headers.get(balise, "").strip()
         if re.fullmatch(r"[0-9]{3,4}", elo):
-            return "%s Elo, d'après la balise %s de la partie" % (elo, balise)
-    return ("non précisé : jugez-en d'après la partie, et restez "
-            "accessible")
+            return "%s Elo, from the %s tag of the game" % (elo, balise)
+    return "unspecified: judge from the game, and stay accessible"
 
 
 # ===========================================================================
@@ -3381,7 +3381,7 @@ def tableau_compact(partie: chess.pgn.Game, resultats: list[dict],
         ligne = "%-13s %7s" % (tete, r["played"]["score"])
         if r.get("category") and r["best"]:
             meilleur = r["best"][0]
-            ligne += "   %s (%s) : mieux %s (%s)" % (
+            ligne += "   %s (%s): better %s (%s)" % (
                 r["category"], _ecart(r["cp_loss"]),
                 tronquer_variante(plateau, meilleur["pv_uci"], longueur_pv),
                 meilleur["score"])
@@ -3421,11 +3421,11 @@ def phrase_ouverture(explorateur: dict | None, libelle_base: str) -> str:
                if lg["ply"] < limite and lg.get("ouverture")]
     phrases = []
     if nommees:
-        phrases.append("Ouverture : %s." % nommees[-1])
+        phrases.append("Opening: %s." % nommees[-1])
     if sortie:
         phrases.append(
-            "La théorie est quittée au coup %d par les %s, avec %s, joué "
-            "dans %s %% des parties de la base %s."
+            "Theory is left at move %d by %s, with %s, played in %s %% "
+            "of the games of the %s database."
             % (sortie["move_number"], sortie["side_to_move"], sortie["san"],
                _cellule(sortie["frequence"]), libelle_base))
     return " ".join(phrases)
@@ -4724,56 +4724,56 @@ def main(argv: list[str]) -> int:
             # Always true since version 4.0.0, kept for the personal
             # templates that use it.
             "STOCKFISH": True,
-            "EXPLORATEUR": resume_explorateur is not None,
-            "BASE_LICHESS": options.base == "lichess",
-            "BASE_MAITRES": options.base == "masters",
-            "REPONSES": contexte is not None,
-            "CAMP_CONNU": camp_joueur is not None,
-            "PSEUDO_CONNU": bool(options.pseudos),
-            "NIVEAU_DECLARE": bool(niveau),
-            "RESULTAT_CONTREDIT": bool(alerte),
-            "CONSIGNES_DONNEES": bool(precisions),
-            "OUVERTURE_CONNUE": bool(ouverture),
+            "EXPLORER": resume_explorateur is not None,
+            "LICHESS_DATABASE": options.base == "lichess",
+            "MASTERS_DATABASE": options.base == "masters",
+            "ANSWERS": contexte is not None,
+            "SIDE_KNOWN": camp_joueur is not None,
+            "USERNAME_KNOWN": bool(options.pseudos),
+            "RATING_DECLARED": bool(niveau),
+            "RESULT_CONTRADICTED": bool(alerte),
+            "INSTRUCTIONS_GIVEN": bool(precisions),
+            "OPENING_KNOWN": bool(ouverture),
             # --stockfish-moves limited the engine to the first moves: the
             # prompt must say so, otherwise it promises a figure for every
             # move.
-            "COUVERTURE_PARTIELLE": evalues < len(coups_partie),
-            "COUP_NUL": any(not coup for coup in coups_partie),
+            "PARTIAL_COVERAGE": evalues < len(coups_partie),
+            "NULL_MOVE": any(not coup for coup in coups_partie),
             # The review of the short prompt asks for three errors: when the
             # table marks fewer of them for the player, the prompt says so, so
             # that the LLM does not make one up.
-            "PEU_DE_COUPS_FAIBLES": (faibles is not None
-                                     and faibles < ERREURS_DU_BILAN),
-            # Without a single weak move, "tenez-vous-en à ceux-là" makes no
-            # sense: the short template has a sentence for this case.
-            "AUCUN_COUP_FAIBLE": faibles == 0,
+            "FEW_WEAK_MOVES": (faibles is not None
+                               and faibles < ERREURS_DU_BILAN),
+            # Without a single weak move, "Keep to those" makes no sense:
+            # the short template has a sentence for this case.
+            "NO_WEAK_MOVE": faibles == 0,
         }
         valeurs = {
             "VERSION": VERSION,
-            "DEPOT": DEPOT,
+            "REPOSITORY": DEPOT,
             "ARCHIVE": archive.name,
-            "PSEUDOS": ", ".join(options.pseudos),
-            "CAMP": camp_joueur or "inconnu",
-            "NIVEAU": decrire_niveau(niveau, partie, camp_joueur),
-            "CADENCE": decrire_cadence(habituelle),
-            "ANNOTATEUR": (nettoyer_valeur(reglage(reglages, "annotator"))
-                           or ANNOTATEUR_DEFAUT),
-            "BASE": base["libelle"],
-            "SEUIL_IMPRECISION": str(SEUIL_IMPRECISION),
-            "SEUIL_ERREUR": str(SEUIL_ERREUR),
-            "SEUIL_GAFFE": str(SEUIL_GAFFE),
-            "PROFONDEUR": str(options.profondeur),
+            "USERNAMES": ", ".join(options.pseudos),
+            "SIDE": camp_joueur or "unknown",
+            "RATING": decrire_niveau(niveau, partie, camp_joueur),
+            "TIME_CONTROL": decrire_cadence(habituelle),
+            "ANNOTATOR": (nettoyer_valeur(reglage(reglages, "annotator"))
+                          or ANNOTATEUR_DEFAUT),
+            "DATABASE": base["libelle"],
+            "INACCURACY_THRESHOLD": str(SEUIL_IMPRECISION),
+            "MISTAKE_THRESHOLD": str(SEUIL_ERREUR),
+            "BLUNDER_THRESHOLD": str(SEUIL_GAFFE),
+            "DEPTH": str(options.profondeur),
             "MULTIPV": str(options.multipv),
-            "PARTIE_PGN": texte_partie.strip("\n"),
-            "TABLEAU_MOTEUR": tableau_compact(
+            "GAME_PGN": texte_partie.strip("\n"),
+            "ENGINE_TABLE": tableau_compact(
                 partie, resume_stockfish["resultats"], options.longueur_pv),
-            "ALERTE_RESULTAT": alerte,
-            "CONSIGNES_JOUEUR": precisions,
-            "OUVERTURE": ouverture,
-            "DEMI_COUPS": str(len(coups_partie)),
-            "DEMI_COUPS_EVALUES": str(evalues),
-            "COUPS_FAIBLES_JOUEUR": ("inconnu" if faibles is None
-                                     else str(faibles)),
+            "RESULT_ALERT": alerte,
+            "PLAYER_INSTRUCTIONS": precisions,
+            "OPENING": ouverture,
+            "PLIES": str(len(coups_partie)),
+            "PLIES_EVALUATED": str(evalues),
+            "PLAYER_WEAK_MOVES": ("unknown" if faibles is None
+                                  else str(faibles)),
         }
         prompt = archive.with_name(dossier.name + PROMPT_SUFFIXE)
         try:
@@ -4784,7 +4784,7 @@ def main(argv: list[str]) -> int:
             # rendre_modele removes the trailing spaces of the lines: a PGN
             # ending with a space is therefore compared without it.
             if (options.prompt_seul
-                    and valeurs["PARTIE_PGN"].rstrip() not in rendu):
+                    and valeurs["GAME_PGN"].rstrip() not in rendu):
                 # The marker exists in the template, but under a condition that
                 # is false for this game: say so rather than announce a
                 # complete prompt.

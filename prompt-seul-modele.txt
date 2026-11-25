@@ -1,113 +1,114 @@
 #! note ===============================================================
-#! note Modèle du prompt court, écrit avec l'option --prompt-only.
+#! note Template of the short prompt, written with the --prompt-only
+#! note option.
 #! note
-#! note Ce prompt se colle seul dans une conversation, sans pièce jointe :
-#! note quelques consignes, la partie, puis les évaluations de Stockfish.
-#! note Il est fait pour un LLM qui n'ouvre pas les zip ou n'exécute pas
-#! note de code. Le prompt complet, lui, vient de prompt-modele.txt.
+#! note This prompt is pasted alone into a conversation, without an
+#! note attachment: a few instructions, the game, then the evaluations of
+#! note Stockfish. It is made for an LLM that does not open zip files or
+#! note run code. The full prompt, for its part, comes from
+#! note prompt-modele.txt.
 #! note
-#! note Les repères sont les mêmes que dans prompt-modele.txt : une valeur
-#! note entre doubles accolades est remplacée, une ligne commençant par
-#! note "#!" est une directive ("si CONDITION", "si non CONDITION",
-#! note "sinon", "fin", "note"). Leur liste est dans TECHNIQUE.md.
+#! note The markers are the same as in prompt-modele.txt: a value between
+#! note double braces is replaced, a line starting with "#!" is a
+#! note directive ("if CONDITION", "if not CONDITION", "else", "end",
+#! note "note"). Their list is in TECHNIQUE.md.
 #! note
-#! note Gardez-le court : c'est sa raison d'être.
+#! note Keep it short: that is its reason for being.
 #! note ===============================================================
-Vous êtes Maître International d'échecs.
+You are an International Master of chess.
 
-Analysez la partie ci-dessous coup par coup, pour un joueur qui cherche
-à progresser. Le style est instructif et détaillé, en français, et vous
-tutoyez le joueur.
-#! si CAMP_CONNU
-Le joueur avait les {{CAMP}}.
-Son niveau : {{NIVEAU}}.
-#! sinon
-Le camp du joueur n'est pas connu : commentez les deux camps de la même
-façon, sans supposer lequel est le sien.
-Niveau du joueur : {{NIVEAU}}.
-#! fin
+Analyze the game below move by move, for a player who wants to
+improve. The style is instructive and detailed, in English, and you
+address the player as "you", in a friendly tone.
+#! if SIDE_KNOWN
+The player had {{SIDE}}.
+Their rating: {{RATING}}.
+#! else
+The side of the player is not known: comment on both sides in the same
+way, without assuming which one is theirs.
+Rating of the player: {{RATING}}.
+#! end
 
-Rendez la partie entière dans un seul bloc de code, au format PGN, vos
-commentaires entre accolades après les coups :
+Return the whole game in a single code block, in PGN format, your
+comments between braces after the moves:
 
-- recopiez les balises et les coups sans en changer un seul ;
-- commentez les deux camps : l'idée du coup, la tactique, la stratégie
-  et l'évaluation de la position ;
-- commentez tous les coups marqués erreur ou gaffe dans le tableau, en
-  disant ce qu'il fallait jouer et pourquoi ;
-- pour montrer une suite, reprenez celle du tableau, entre parenthèses
-  et hors des accolades :
-  11. Ne4 { ton commentaire } ( 11. dxc5 Bc7 ) 11... dxe4
-- n'écrivez ni accolade dans un commentaire, ni ligne vide entre les
-  coups.
+- copy the tags and the moves without changing a single one;
+- comment on both sides: the idea of the move, the tactics, the
+  strategy and the evaluation of the position;
+- comment on all the moves marked mistake or blunder in the table,
+  saying what should have been played and why;
+- to show a continuation, take it from the table, between
+  parentheses and outside the braces:
+  11. Ne4 { your comment } ( 11. dxc5 Bc7 ) 11... dxe4
+- write neither a brace in a comment nor a blank line between the
+  moves.
 
-Les évaluations du tableau viennent de Stockfish et font foi : n'en
-inventez aucune et ne les contredisez pas. Les plans et les
-explications sont votre travail : dites ce que vous estimez, sans le
-présenter comme un calcul.
+The evaluations in the table come from Stockfish and are
+authoritative: make none up and do not contradict them. The plans and
+the explanations are your work: say what you estimate, without
+presenting it as a calculation.
 
-#! note Le bilan demande trois erreurs. Quand le tableau en marque
-#! note moins chez le joueur, le prompt donne leur nombre : un LLM à qui
-#! note l'on en réclame trois en invente une.
-#! si AUCUN_COUP_FAIBLE
-Le tableau ne marque aucun coup faible du joueur : après le bloc de
-code, ne lui prêtez aucune erreur, et donnez en quelques lignes le
-thème qu'il peut travailler en priorité.
-#! sinon
-#! si PEU_DE_COUPS_FAIBLES
-Après le bloc de code, donnez en quelques lignes les erreurs les plus
-coûteuses du joueur et le thème qu'il doit travailler en priorité.
-Coups faibles du joueur dans le tableau : {{COUPS_FAIBLES_JOUEUR}}.
-Tenez-vous-en à ceux-là, sans en ajouter.
-#! sinon
-#! si CAMP_CONNU
-Après le bloc de code, donnez en quelques lignes les trois erreurs les
-plus coûteuses du joueur et le thème qu'il doit travailler en priorité.
-#! sinon
-Après le bloc de code, donnez en quelques lignes, pour chaque camp, ses
-erreurs les plus coûteuses, trois au plus, et le thème à travailler en
-priorité.
-#! fin
-#! fin
-#! fin
-#! si RESULTAT_CONTREDIT
+#! note The review asks for three errors. When the table marks fewer of
+#! note them for the player, the prompt gives their number: an LLM asked
+#! note for three makes one up.
+#! if NO_WEAK_MOVE
+The table marks no weak move of the player: after the code block,
+attribute no error to them, and give in a few lines the theme they can
+work on first.
+#! else
+#! if FEW_WEAK_MOVES
+After the code block, give in a few lines the costliest errors of the
+player and the theme they must work on first.
+Weak moves of the player in the table: {{PLAYER_WEAK_MOVES}}.
+Keep to those, without adding any.
+#! else
+#! if SIDE_KNOWN
+After the code block, give in a few lines the three costliest errors
+of the player and the theme they must work on first.
+#! else
+After the code block, give in a few lines, for each side, its costliest
+errors, three at most, and the theme to work on first.
+#! end
+#! end
+#! end
+#! if RESULT_CONTRADICTED
 
-Attention : {{ALERTE_RESULTAT}}
-Dites-le au joueur, sans présenter ce résultat comme la suite logique
-du jeu.
-#! fin
-#! si CONSIGNES_DONNEES
+Warning: {{RESULT_ALERT}}
+Tell the player, without presenting this result as the logical outcome
+of the play.
+#! end
+#! if INSTRUCTIONS_GIVEN
 
-Ce que le joueur a précisé :
-{{CONSIGNES_JOUEUR}}
-#! fin
-#! si OUVERTURE_CONNUE
+What the player specified:
+{{PLAYER_INSTRUCTIONS}}
+#! end
+#! if OPENING_KNOWN
 
-{{OUVERTURE}}
-#! fin
+{{OPENING}}
+#! end
 
-La partie :
+The game:
 
-{{PARTIE_PGN}}
+{{GAME_PGN}}
 
-Évaluations de Stockfish, profondeur {{PROFONDEUR}}, du point de vue des Blancs,
-#! si COUVERTURE_PARTIELLE
-après chacun des {{DEMI_COUPS_EVALUES}} premiers demi-coups sur {{DEMI_COUPS}}. Le moteur n'a pas
-évalué la suite de la partie : n'y avancez aucun chiffre.
-#! sinon
-après chaque coup joué.
-#! fin
-Derrière un coup faible viennent sa nature, ce qu'il perd en centipions
-par rapport au meilleur coup, puis ce meilleur coup, sa suite et son
-évaluation. "mate" à la place du nombre : le coup manque un mat ou en
-concède un.
-Un mat s'écrit "#+2", les Blancs matent en deux coups, ou "#-1", les
-Noirs matent en un coup. Le compte se lit après le coup de la ligne :
-"#+0" ou "#-0", ce coup donne mat.
-#! si COUP_NUL
-Un coup noté "--" est un coup nul : le trait passe sans qu'une pièce
-bouge. Le moteur ne l'évalue pas : quand le tableau le couvre, sa
-ligne porte un tiret à la place de l'évaluation.
-#! fin
+Evaluations of Stockfish, depth {{DEPTH}}, from White's point of view,
+#! if PARTIAL_COVERAGE
+after each of the first {{PLIES_EVALUATED}} plies out of {{PLIES}}. The engine did not
+evaluate the rest of the game: give no figure there.
+#! else
+after each move played.
+#! end
+After a weak move come its category, what it loses in centipawns
+against the best move, then this best move, its continuation and its
+evaluation. "mate" instead of the number: the move misses a mate or
+concedes one.
+A mate is written "#+2", White mates in two moves, or "#-1", Black
+mates in one move. The count reads after the move of the line: "#+0"
+or "#-0", this move gives mate.
+#! if NULL_MOVE
+A move written "--" is a null move: the turn passes without a piece
+moving. The engine does not evaluate it: when the table covers it, its
+line carries a dash instead of the evaluation.
+#! end
 
-{{TABLEAU_MOTEUR}}
+{{ENGINE_TABLE}}
