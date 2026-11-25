@@ -373,6 +373,9 @@ and the project applies [Semantic Versioning](https://semver.org/).
   continued line no longer opens on a figure, such as "3 writes", which
   could read as an item of a list. Only the line breaks change: the
   words are the same in every combination of the conditions.
+- The docstring of `etiquette_sure()`, in `ianalyze.py`, gives `game`
+  as the label of an empty name, the one that the code returns since
+  the names of the archive are in English. It still gave `partie`.
 
 ## [4.0.2] - 2026-11-21
 

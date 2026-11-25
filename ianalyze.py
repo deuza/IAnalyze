@@ -972,7 +972,7 @@ def etiquette_sure(nom: str) -> str:
     Each risky character becomes "_", each run of spaces a hyphen: an
     archive name without spaces needs no quotes in a command line. Dots
     and hyphens at the edges are removed, and an empty label becomes
-    "partie".
+    "game".
 
     The length is bounded in bytes, not in characters: the file system
     counts in bytes, and eighty ideograms make two hundred and forty of
