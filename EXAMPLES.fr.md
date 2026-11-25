@@ -4,7 +4,7 @@ English version: [EXAMPLES.md](EXAMPLES.md)
 
 Cette page est l'aide-mémoire d'IAnalyze, bâtie comme une page de manuel : chaque commande, chaque option, et ce que le terminal affiche.
 
-Le [README](README.fr.md) explique l'installation et l'usage courant. [TECHNICAL.md](TECHNICAL.md), en anglais, explique le fonctionnement.
+Le [README](README.fr.md) explique l'installation et l'usage courant. [TECHNICAL.fr.md](TECHNICAL.fr.md) explique le fonctionnement.
 
 Le script, ses messages et ses fichiers sont en anglais : les commandes et les sorties de cette page sont donc les mêmes que dans sa version anglaise.
 
@@ -994,7 +994,7 @@ analysis-my-game-20261125-153457.zip
 ```
 
 Le fichier doit exister.\
-Pour écrire un modèle, partez d'une copie de `prompt-template.txt` : ce qu'il peut contenir est décrit dans [TECHNICAL.md](TECHNICAL.md), section 12.
+Pour écrire un modèle, partez d'une copie de `prompt-template.txt` : ce qu'il peut contenir est décrit dans [TECHNICAL.fr.md](TECHNICAL.fr.md), section 12.
 
 Avec `--prompt-only`, le modèle par défaut est `prompt-only-template.txt`, et c'est de lui qu'il faut partir.
 
@@ -1318,7 +1318,7 @@ Le journal nomme le nombre de fils, "threads", pas la taille de la table :
 ...
 ```
 
-Ces trois réglages, MultiPV, Threads et Hash pour Stockfish, sont expliqués dans [TECHNICAL.md](TECHNICAL.md), section 9.
+Ces trois réglages, MultiPV, Threads et Hash pour Stockfish, sont expliqués dans [TECHNICAL.fr.md](TECHNICAL.fr.md), section 9.
 
 #### `--stockfish PATH`
 
@@ -1820,7 +1820,7 @@ rating = 1300
 ## VOIR AUSSI
 
 - [README.fr.md](README.fr.md) : l'installation, l'usage courant, le choix du LLM
-- [TECHNICAL.md](TECHNICAL.md) : le fonctionnement du script, le format des fichiers (en anglais)
+- [TECHNICAL.fr.md](TECHNICAL.fr.md) : le fonctionnement du script, le format des fichiers
 - [TESTS.fr.md](TESTS.fr.md) : la suite de tests, test par test
 - [CHANGELOG.md](CHANGELOG.md) : l'historique des versions (en anglais)
 - `./ianalyze.py --help` : le résumé des options, dans le terminal, en anglais

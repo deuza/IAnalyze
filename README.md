@@ -39,7 +39,7 @@ An additional tool, `verify-analysis.py`, checks the PGN that the LLM returned t
 Platforms: Debian and macOS (Homebrew).\
 Python 3.10 or more recent, and python-chess, which the script installs by itself in a dedicated virtual environment.
 
-The documentation fits in four files:
+The documentation fits in four files, each one also in French, under the same name ending in `.fr.md`:
 
 - this README, to install IAnalyze and analyze a game
 - [EXAMPLES.md](EXAMPLES.md), the quick reference: every command, every option, and what the terminal shows
@@ -100,6 +100,7 @@ The files of the repository:
 | [`CHANGELOG.md`](CHANGELOG.md) | the history of the versions |
 | [`README.fr.md`](README.fr.md) | the French version of this README |
 | [`EXAMPLES.fr.md`](EXAMPLES.fr.md) | the French version of EXAMPLES.md |
+| [`TECHNICAL.fr.md`](TECHNICAL.fr.md) | the French version of TECHNICAL.md |
 | [`TESTS.fr.md`](TESTS.fr.md) | the French version of TESTS.md |
 | [`LICENSE`](LICENSE) | the license of the code (see Licenses) |
 | `test-app.sh`, `test.pgn` | the test suite and its test game, described in [TESTS.md](TESTS.md) |

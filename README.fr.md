@@ -39,11 +39,11 @@ Un outil supplémentaire, `verify-analysis.py`, contrôle le PGN que le LLM vous
 Plateformes : Debian et macOS (Homebrew).\
 Python 3.10 ou plus récent, et python-chess, que le script installe lui-même dans un environnement virtuel dédié.
 
-Le script, ses messages, l'archive et le prompt sont en anglais depuis la version 5.0.0, et l'analyse est demandée en anglais. La documentation tient en quatre fichiers, en anglais ; ce README, l'aide-mémoire et la page des tests ont leur version française :
+Le script, ses messages, l'archive et le prompt sont en anglais depuis la version 5.0.0, et l'analyse est demandée en anglais. La documentation tient en quatre fichiers, chacun en anglais et en français :
 
 - [README.md](README.md), pour installer IAnalyze et analyser une partie, dont ce fichier est la traduction
 - [EXAMPLES.fr.md](EXAMPLES.fr.md), l'aide-mémoire : toutes les commandes, toutes les options, et ce que le terminal affiche, version française d'[EXAMPLES.md](EXAMPLES.md)
-- [TECHNICAL.md](TECHNICAL.md), pour le fonctionnement du script, son emploi depuis un autre programme, et le détail des fichiers produits
+- [TECHNICAL.fr.md](TECHNICAL.fr.md), pour le fonctionnement du script, son emploi depuis un autre programme, et le détail des fichiers produits, version française de [TECHNICAL.md](TECHNICAL.md)
 - [TESTS.fr.md](TESTS.fr.md), pour lancer les tests et savoir ce que chacun vérifie, version française de [TESTS.md](TESTS.md)
 
 ## Sommaire
@@ -95,11 +95,12 @@ Les fichiers du dépôt :
 | `prompt-only-template.txt` | le modèle du prompt court de `--prompt-only` (section 7) |
 | `verify-analysis.py` | l'outil supplémentaire qui contrôle le PGN rendu par le LLM (section 8) |
 | [`EXAMPLES.md`](EXAMPLES.md) | l'aide-mémoire : commandes, options et sorties, en anglais |
-| [`TECHNICAL.md`](TECHNICAL.md) | la documentation technique |
+| [`TECHNICAL.md`](TECHNICAL.md) | la documentation technique, en anglais |
 | [`TESTS.md`](TESTS.md) | les tests : comment les lancer, ce que chacun vérifie, en anglais |
 | [`CHANGELOG.md`](CHANGELOG.md) | l'historique des versions |
 | [`README.md`](README.md) | ce README, en anglais |
 | [`EXAMPLES.fr.md`](EXAMPLES.fr.md) | l'aide-mémoire, en français |
+| [`TECHNICAL.fr.md`](TECHNICAL.fr.md) | la documentation technique, en français |
 | [`TESTS.fr.md`](TESTS.fr.md) | les tests, en français |
 | [`LICENSE`](LICENSE) | la licence du code (voir Licences) |
 | `test-app.sh`, `test.pgn` | la suite de tests et sa partie d'essai, décrites dans [TESTS.fr.md](TESTS.fr.md) |
@@ -232,7 +233,7 @@ Il est transmis à l'analyste, qui y adapte ses explications. Sans lui, c'est l'
 
 **Pour un seul lancement** qui laisse vos réglages de côté, la partie d'un ami par exemple, `--no-settings` ne lit ni n'écrit aucun fichier de réglages.
 
-Les autres formes de correspondance, la clef facultative `annotator` et la façon dont le script réécrit ce fichier sont décrites dans [TECHNICAL.md](TECHNICAL.md), section 6.
+Les autres formes de correspondance, la clef facultative `annotator` et la façon dont le script réécrit ce fichier sont décrites dans [TECHNICAL.fr.md](TECHNICAL.fr.md), section 6.
 
 ## 3. Utilisation
 
@@ -273,7 +274,7 @@ Le script refuse plutôt que d'analyser de travers :
 - une partie notée en français (R, D, T, F, C) ou en figurines : sans ce refus, "Cf3" serait lu "f3", un coup de pion, et l'analyse porterait sur une autre partie que la vôtre
 - un PGN abîmé : accolade ou parenthèse jamais fermée, texte libre hors des accolades
 
-Le message d'erreur nomme ce qui est refusé. Les formes d'adresse acceptées et le détail de ces contrôles sont dans [TECHNICAL.md](TECHNICAL.md), section 4.
+Le message d'erreur nomme ce qui est refusé. Les formes d'adresse acceptées et le détail de ces contrôles sont dans [TECHNICAL.fr.md](TECHNICAL.fr.md), section 4.
 
 ### Les questions du script
 
@@ -307,7 +308,7 @@ Une réponse refusée est redemandée.
 Pour lancer une collecte sans répondre à rien, ajoutez `--no-questions`.\
 Le prompt dit alors au LLM que vos réponses n'ont pas été recueillies, et c'est lui qui vous les demande avant d'analyser.
 
-Le script ne pose pas non plus ses questions quand il n'est pas lancé à la main dans un terminal, depuis un autre programme par exemple : voir [TECHNICAL.md](TECHNICAL.md), section 5.
+Le script ne pose pas non plus ses questions quand il n'est pas lancé à la main dans un terminal, depuis un autre programme par exemple : voir [TECHNICAL.fr.md](TECHNICAL.fr.md), section 5.
 
 ## 4. Options courantes
 
@@ -341,7 +342,7 @@ Un dossier ou une archive homonyme fait ajouter un suffixe -2, -3...
 
 En cas d'échec, le dossier de travail est conservé tel quel pour diagnostic.
 
-L'étiquette est assainie (voir [TECHNICAL.md](TECHNICAL.md), section 11) : le journal l'annonce alors par "Folder name sanitized: ..."
+L'étiquette est assainie (voir [TECHNICAL.fr.md](TECHNICAL.fr.md), section 11) : le journal l'annonce alors par "Folder name sanitized: ..."
 
 Contenu :
 
@@ -366,7 +367,7 @@ Son chemin est donné par le journal ; la sortie standard ne porte que celui de 
 
 Avec `--prompt-only`, il n'y a pas d'archive : la sortie standard porte le chemin du prompt.
 
-Le contenu de chacun de ces fichiers est détaillé dans [TECHNICAL.md](TECHNICAL.md), section 10.
+Le contenu de chacun de ces fichiers est détaillé dans [TECHNICAL.fr.md](TECHNICAL.fr.md), section 10.
 
 ## 6. Prompt d'analyse
 
@@ -375,7 +376,7 @@ Ce texte vit dans le modèle `prompt-template.txt`, que vous pouvez modifier lib
 
 À chaque collecte, le script en tire le prompt de la partie : il remplit les valeurs et ne garde que les passages qui s'appliquent.
 
-Pour écrire votre propre modèle, la liste des repères, des valeurs et des conditions est dans [TECHNICAL.md](TECHNICAL.md), section 12.
+Pour écrire votre propre modèle, la liste des repères, des valeurs et des conditions est dans [TECHNICAL.fr.md](TECHNICAL.fr.md), section 12.
 
 Le prompt suit ce que la collecte a réellement fait. Sans explorateur, il ne demande ni fréquence ni coup majoritaire.\
 Avec `--stockfish-moves`, il dit jusqu'où le moteur a évalué. Avec `--multipv 1`, il n'annonce pas trois coups par position.
@@ -492,7 +493,7 @@ Ce que cette série montre :
 - **Les données tiennent partout.** Aucun des quatre n'a inventé une évaluation, et tous donnent les trois mêmes erreurs principales, avec les bons écarts.
 - **C'est la fabrication du PGN qui les sépare.** Seul le LLM qui a construit son fichier avec python-chess a rendu un PGN utilisable tel quel.
 - **Le fond peut être bon sous une forme fautive.** Les 25 variantes écrites à la main par GPT-6 étaient toutes légales et tirées des lignes du moteur.
-- **La partie était notée gagnée dans une position perdue.** Deux LLM sur quatre ont raconté une victoire méritée, d'où la ligne ajoutée à la synthèse (voir [TECHNICAL.md](TECHNICAL.md), section 10).
+- **La partie était notée gagnée dans une position perdue.** Deux LLM sur quatre ont raconté une victoire méritée, d'où la ligne ajoutée à la synthèse (voir [TECHNICAL.fr.md](TECHNICAL.fr.md), section 10).
 
 L'offre gratuite de Claude annonce elle aussi la création de fichiers et l'exécution de code, sur d'autres modèles que celui de cet essai, d'après [sa page de tarifs](https://claude.com/pricing), lue le 20 novembre 2026 et de nouveau le 25 novembre 2026.
 
@@ -526,7 +527,7 @@ Ce que cette série montre :
 - **Le prompt court fait le travail.** Sans pièce jointe et sans exécution de code, les cinq réponses sont lisibles et leurs chiffres sont justes. C'est mieux que ce que la chaîne complète avait donné la veille chez les trois autres LLM.
 - **Claude est devant sur les deux offres.** Ses deux PGN sont conformes, et ses explications sont celles qui résistent le mieux à la vérification : aucune erreur trouvée d'un côté, une seule de l'autre. Le compte gratuit fait presque jeu égal avec l'abonnement, en deux fois plus long : 1968 mots de commentaires contre 943.
 - **Le même piège a pris trois LLM sur quatre.** Un fou prend un pion en h7 avec échec, défendu par sa dame : le roi ne peut pas le reprendre. ChatGPT, Gemini et Copilot parlent de sacrifice. Claude écrit, dans l'essai du compte gratuit, "ici il n'y a aucun sacrifice, le pion tombe gratuitement".
-- **Demander trois erreurs en fait inventer une.** Le joueur n'en avait commis que deux. ChatGPT, Gemini et Copilot en ont présenté une troisième, Claude a répondu les deux fois qu'il n'y en avait que deux. Le prompt court donne depuis le nombre réel de coups faibles du joueur (voir [TECHNICAL.md](TECHNICAL.md), section 12).
+- **Demander trois erreurs en fait inventer une.** Le joueur n'en avait commis que deux. ChatGPT, Gemini et Copilot en ont présenté une troisième, Claude a répondu les deux fois qu'il n'y en avait que deux. Le prompt court donne depuis le nombre réel de coups faibles du joueur (voir [TECHNICAL.fr.md](TECHNICAL.fr.md), section 12).
 - **Le vérificateur n'aurait presque rien vu.** En mode `--prompt-only`, il contrôle les balises, la ligne principale et les chiffres cités. Les suites écrites dans le texte, les balises HTML et les récits faux passent : c'est à vous de les relire.
 
 ## 8. Vérifier le PGN rendu

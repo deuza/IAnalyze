@@ -6,7 +6,7 @@ Tous les tests sont joués par un seul script, `test-app.sh`, sous Debian comme 
 
 Ce document dit comment le lancer, puis ce que vérifie chaque test. Le détail, commande par commande, est dans le script, qui fait foi.
 
-Le [README](README.fr.md) explique l'installation et l'usage courant, [EXAMPLES.fr.md](EXAMPLES.fr.md) les commandes et leurs sorties, [TECHNICAL.md](TECHNICAL.md), en anglais, le fonctionnement du script.
+Le [README](README.fr.md) explique l'installation et l'usage courant, [EXAMPLES.fr.md](EXAMPLES.fr.md) les commandes et leurs sorties, [TECHNICAL.fr.md](TECHNICAL.fr.md) le fonctionnement du script.
 
 Le script de tests écrit ses titres, ses contrôles et son rapport en anglais, comme `ianalyze.py`.
 

@@ -25,6 +25,8 @@ Icône de la licence CC-0
   date with it.
 - `TESTS.fr.md`, the French version of `TESTS.md`, kept up to date
   with it.
+- `TECHNICAL.fr.md`, the French version of `TECHNICAL.md`, kept up to
+  date with it.
 
 ### Changed
 
@@ -278,6 +280,11 @@ Icône de la licence CC-0
   T27, T57, T60, T62, T63 and T69 say all that these tests now
   check. Its earlier French text, brought up to date, is now
   `TESTS.fr.md`.
+- Each of the four documents, README, `EXAMPLES.md`, `TECHNICAL.md`
+  and `TESTS.md`, has its French version, under the same name ending
+  in `.fr.md`, as the README says. The French versions link to one
+  another. In `TECHNICAL.md`, the exit code 2 also covers the options
+  that exclude each other, as `EXAMPLES.md` already said.
 
 ### Fixed
 

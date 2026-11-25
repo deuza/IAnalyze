@@ -16,9 +16,9 @@ example-games/ (fichiers des exemples d'EXAMPLES.md),
 README.md (installation et usage courant), README.fr.md (sa version
 française), EXAMPLES.md (commandes, options et sorties, sur le plan
 d'une page de manuel), EXAMPLES.fr.md (sa version française),
-TECHNICAL.md (fonctionnement), TESTS.md (lancement des tests et
-tableau de tous les tests), TESTS.fr.md (sa version française),
-CHANGELOG.md.
+TECHNICAL.md (fonctionnement), TECHNICAL.fr.md (sa version
+française), TESTS.md (lancement des tests et tableau de tous les
+tests), TESTS.fr.md (sa version française), CHANGELOG.md.
 
 ## Plateformes
 

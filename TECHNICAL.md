@@ -1,5 +1,7 @@
 # IAnalyze: technical documentation
 
+Version française : [TECHNICAL.fr.md](TECHNICAL.fr.md)
+
 The [README](README.md) is enough to install IAnalyze and analyze a game. [EXAMPLES.md](EXAMPLES.md) gives every command, every option and what they display.
 
 This document goes further. It is meant for whoever wants to understand what the script does, call it from another program, read the files it produces, or write their own prompt template. The tests have their own document, [TESTS.md](TESTS.md).
@@ -57,7 +59,7 @@ After step 8, a failure leaves the working folder in place, as it is, for diagno
 | `test-app.sh` | the test suite, for Linux and macOS, described in [TESTS.md](TESTS.md) |
 | `test.pgn` | a test game that gathers the tricky cases of a PGN, described in [TESTS.md](TESTS.md) |
 | `example-games/` | the files quoted in [EXAMPLES.md](EXAMPLES.md): games, refused PGNs, annotated PGNs |
-| `README.md`, `README.fr.md`, `EXAMPLES.md`, `EXAMPLES.fr.md`, `TECHNICAL.md`, `TESTS.md`, `TESTS.fr.md`, `CHANGELOG.md` | the documentation, the French versions of the README, of EXAMPLES.md and of TESTS.md, and the history of the versions |
+| `README.md`, `README.fr.md`, `EXAMPLES.md`, `EXAMPLES.fr.md`, `TECHNICAL.md`, `TECHNICAL.fr.md`, `TESTS.md`, `TESTS.fr.md`, `CHANGELOG.md` | the documentation, each document with its French version, and the history of the versions |
 | `LICENSE` | the license, CC0 |
 
 HTTP goes through urllib and the archive through zipfile, both from the standard library of Python.
@@ -84,7 +86,7 @@ An option without effect, or a value out of bounds, is refused rather than silen
 |---|---|
 | 0 | success |
 | 1 | error reported by a message, among them a value that the engine does not accept, or unexpected error |
-| 2 | unknown option, or value refused before any reading of the game |
+| 2 | unknown option, options that exclude each other, or value refused before any reading of the game |
 | 130 | interruption (Ctrl-C) |
 
 Those of `verify-analysis.py` are given in section 13.
