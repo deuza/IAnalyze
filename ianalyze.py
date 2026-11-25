@@ -4697,9 +4697,9 @@ def main(argv: list[str]) -> int:
     # only file that remains, and a second run within the same second
     # overwrote it.
     horodatage = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    base = pathlib.Path(options.sortie) / ("analysis-%s-%s"
-                                           % (etiquette, horodatage))
-    dossier = base
+    dossier_horodate = (pathlib.Path(options.sortie)
+                        / ("analysis-%s-%s" % (etiquette, horodatage)))
+    dossier = dossier_horodate
     suffixe = 1
     while True:
         try:
@@ -4716,8 +4716,9 @@ def main(argv: list[str]) -> int:
         suffixe += 1
         if suffixe > 100:
             raise SystemExit("Too many folders with the same name in %s."
-                             % base.parent)
-        dossier = base.with_name("%s-%d" % (base.name, suffixe))
+                             % dossier_horodate.parent)
+        dossier = dossier_horodate.with_name(
+            "%s-%d" % (dossier_horodate.name, suffixe))
     annexes: list[str] = []
     try:
         if camp and camp["modified_tags"]:

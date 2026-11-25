@@ -315,6 +315,11 @@ and the project applies [Semantic Versioning](https://semver.org/).
   that `--help` shows carry the number of their test, T02, and come
   right after its other checks, instead of standing without a
   number under the title of T31 and T32.
+- In `ianalyze.py`, the timestamped working folder and the database
+  queried by the explorer no longer share the variable `base`, which
+  mypy took for a path everywhere: six of its errors go away. The
+  behavior does not change, the syntax tree being the same, the name
+  aside.
 
 ### Fixed
 
