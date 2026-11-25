@@ -456,7 +456,7 @@ verifier "T05 the archive exists" test -f "$ARCH"
 unzip -l "$ARCH" > liste 2>/dev/null
 verifier "T05 summary.md in the archive" contient liste "/summary.md"
 verifier "T05 collection.json in the archive" contient liste "/collection.json"
-egal "T05 no .partiel file in the archive" 0 "$(grep -c partiel liste)"
+egal "T05 no .partial file in the archive" 0 "$(grep -c partial liste)"
 
 titre "T26: engine not found"
 lancer italienne.pgn --no-explorer --no-questions --stockfish /nulle/part
@@ -1784,7 +1784,7 @@ verifier "T89 not a settings file, said" \
 grep -v '^#' t89-ancien.ini > extrait 2>/dev/null
 printf '\n[player]\nusernames = Zoe42\n\n[joueur]\npseudos = Zoe42\n' > attendu
 verifier "T89 old format written, its section kept" cmp -s attendu extrait
-find . -maxdepth 1 -name '*.partiel' > ligne
+find . -maxdepth 1 -name '*.partial' > ligne
 egal "T89 no partial file left" 0 "$(lignes ligne)"
 joindre journal-t89 5
 rm -rf "$DEPOT/__pycache__"

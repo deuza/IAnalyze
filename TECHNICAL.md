@@ -485,9 +485,9 @@ For a null move, `played` carries `not_evaluated`, and `cp_loss` as well as `cat
 
 The working folder is named `analysis-<label>-<YYYYMMDD-HHMMSS>`. The label is the name of the PGN without its extension, sanitized (section 11), or the Lichess identifier. A folder or an archive of the same name adds a suffix, -2, -3 and so on.
 
-An archive present under its final name is always complete and checked: it is written under the temporary name `.<folder>.partiel.zip`, then renamed.
+An archive present under its final name is always complete and checked: it is written under the temporary name `.<folder>.partial.zip`, then renamed.
 
-The same goes for each file of the working folder, written as `.<name>.partiel`. After an interruption (Ctrl-C) or a failure, these temporary files are removed and the working folder stays, without an archive.
+The same goes for each file of the working folder, written as `.<name>.partial`. After an interruption (Ctrl-C) or a failure, these temporary files are removed and the working folder stays, without an archive.
 
 ### `game.pgn` and `game-original.pgn`
 

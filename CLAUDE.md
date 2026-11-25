@@ -178,6 +178,9 @@ d'une page de manuel), TECHNICAL.md (fonctionnement), TESTS.md
   inchangé) ; pseudos MonPseudo, Adversaire -> MyUsername, Opponent.
   Contenus traduits, sauf french-notation.pgn ; test.pgn garde ses
   noms accentués et un échantillon d'accents.
+- Renommage hors lot, fait : fichiers provisoires `.<nom>.partiel`,
+  `.<dossier>.partiel.zip` -> `.<nom>.partial`,
+  `.<dossier>.partial.zip`.
 - Points d'attention : au terminal, "b" voulait dire Blancs, il veut
   dire Black ([w/b]) depuis le lot 3b, signalé dans le CHANGELOG ;
   verify-analysis.py ne lira plus les archives 4.x ; le prompt traduit

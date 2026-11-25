@@ -256,6 +256,9 @@ Icône de la licence CC-0
   read: the script reads `prompt-template.txt` and
   `prompt-only-template.txt`. The report of `test-app.sh` is named
   `test-report-<system>-<date>.txt`.
+- The temporary files that the script writes before renaming them are
+  named `.<name>.partial` and `.<folder>.partial.zip`, formerly
+  `.partiel`.
 
 ### Fixed
 

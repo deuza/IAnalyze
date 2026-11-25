@@ -933,13 +933,13 @@ def ecrire_texte(chemin: pathlib.Path, texte: str) -> None:
     collection. Line ends stay LF on every platform. Access errors
     (OSError) go up to the caller.
 
-    The writing goes through a neighboring file, ".<name>.partiel", renamed
+    The writing goes through a neighboring file, ".<name>.partial", renamed
     once complete: an interruption (Ctrl-C) or an error along the way
     never leaves a truncated file under its final name. The file that
     already existed, if there was one, then stays intact, and the partial
     file is removed.
     """
-    partiel = chemin.with_name(".%s.partiel" % chemin.name)
+    partiel = chemin.with_name(".%s.partial" % chemin.name)
     try:
         with partiel.open("w", encoding="utf-8", errors="replace",
                           newline="\n") as f:
@@ -3963,7 +3963,7 @@ def archiver(dossier: pathlib.Path, garder: bool) -> pathlib.Path:
     reported.
 
     The archive is first written under a temporary name,
-    ".<folder>.partiel.zip", next to the folder; it only takes its final
+    ".<folder>.partial.zip", next to the folder; it only takes its final
     name once checked. An interruption (Ctrl-C) or a failure therefore
     never leaves a truncated zip under the name of an archive: the
     temporary archive is removed, the working folder stays.
@@ -3976,7 +3976,7 @@ def archiver(dossier: pathlib.Path, garder: bool) -> pathlib.Path:
     # Base of the temporary name: shutil.make_archive appends ".zip" to it.
     # The paths stored in the zip only depend on base_dir, they stay those
     # of the working folder.
-    base_partielle = dossier.with_name(".%s.partiel" % dossier.name)
+    base_partielle = dossier.with_name(".%s.partial" % dossier.name)
     partielle = chemin_archive(base_partielle)
 
     journal("Creating the archive: %s" % archive)
