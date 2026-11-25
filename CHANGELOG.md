@@ -358,6 +358,16 @@ and the project applies [Semantic Versioning](https://semver.org/).
   starts", "the first move" for a scope of one move, and "ply" for a
   single ply. The forms in "(s)", such as "3 move(s) commented",
   stay as they are.
+- Both prompts are wrapped at 71 columns, as rendered, whatever the
+  conditions of the template. A sentence cut by a condition left short
+  lines, such as "variation, scope and goal), then" in the recap of the
+  full prompt, or "questions in a single message, numbered," before
+  the startup questions: each branch now carries whole lines. The
+  fixed text follows the same rule: two lines of 72 columns and one of
+  76 are shortened, others take the first word of the next line, and a
+  continued line no longer opens on a figure, such as "3 writes", which
+  could read as an item of a list. Only the line breaks change: the
+  words are the same in every combination of the conditions.
 
 ## [4.0.2] - 2026-11-21
 

@@ -163,6 +163,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | T89 | Réglages écrits sur un fichier de réglages seulement | une FIFO, un répertoire ou le fichier d'un autre programme restent tels quels, et la raison est dite ; un fichier de l'ancien format est réécrit avec sa section `[joueur]` conservée ; aucun fichier provisoire ne reste ; sur un terminal, un avertissement, et les réponses servent au lancement en cours |
 | T90 | Nom des réglages | `--settings` prend un nom : un chemin ou un autre nom est refusé, rien n'est créé ; `/dev/null` est refusé, `--no-settings` proposé ; l'aide parle d'un nom ; un nom nouveau demande confirmation, redemandée après une réponse inattendue ; refusé, rien n'est fait : ni fichier, ni collecte |
 | T91 | NAG de qualité | `$1` sur une erreur ou une gaffe, et `$6` sur un coup que le moteur ne classe pas, sont comptés et nommés comme autres avis, à côté des NAG conformes à la catégorie |
+| T92 | Coupure des prompts | les deux modèles, rendus dans toutes les combinaisons de leurs conditions : aucune ligne de texte au-delà de 71 colonnes, aucune qui pourrait prendre le premier mot de la suivante, aucune ligne continuée qui commence par un chiffre, qu'on lirait comme un élément de liste |
 | M1 | Collecte, noms | nom de PGN accentué, chemin de sortie avec espace et accent |
 | M2 | Collecte complète | l'italienne analysée en entier, moteur seul, sans processus du moteur laissé derrière |
 

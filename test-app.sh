@@ -2134,6 +2134,136 @@ verifier "T74 script copied without its template, message" \
 egal "T74 no folder or archive created by these refusals" 0 \
     "$(find . -maxdepth 1 -name 'analysis-t-seul-*' | wc -l)"
 
+titre "T92: wrap of the prompt templates"
+
+# Both templates are wrapped at 71 columns, as the prompt shows them: a
+# line of prose takes every word that fits, and a sentence cut by a
+# condition goes on with whole lines in each branch. A continued line
+# never opens on a figure: "2." or "11. Ne4" there would read as an item
+# of a list. Each template is rendered in every combination of the
+# conditions that it uses, with the default values; a line that carries
+# a value of unbounded length (username, time control, game...) is data,
+# left out.
+SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t92 2> journal-t92 <<'EOF'
+import importlib.util
+import itertools
+import os
+import pathlib
+import re
+import sys
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+LARGEUR = 71
+LIBRES = ("REPOSITORY", "ARCHIVE", "USERNAMES", "RATING", "TIME_CONTROL",
+          "ANNOTATOR", "GAME_PGN", "ENGINE_TABLE", "RESULT_ALERT",
+          "PLAYER_INSTRUCTIONS", "OPENING")
+VALEURS = dict.fromkeys(LIBRES, "x")
+VALEURS.update({"VERSION": cp.VERSION, "SIDE": "White",
+                "DATABASE": max((b["libelle"] for b in
+                                 cp.BASES_EXPLORATEUR.values()), key=len),
+                "DEPTH": "18", "MULTIPV": "3",
+                "INACCURACY_THRESHOLD": str(cp.SEUIL_IMPRECISION),
+                "MISTAKE_THRESHOLD": str(cp.SEUIL_ERREUR),
+                "BLUNDER_THRESHOLD": str(cp.SEUIL_GAFFE), "PLIES": "80",
+                "PLIES_EVALUATED": "40", "PLAYER_WEAK_MOVES": "2"})
+# A new value must be classed here, bounded or free.
+if set(VALEURS) != set(cp.PROMPT_VALEURS):
+    sys.exit("values to class: %s"
+             % ", ".join(sorted(set(cp.PROMPT_VALEURS) ^ set(VALEURS))))
+# Start of a block of its own: an item of a list, a heading, a row of
+# the NAG table.
+ELEMENT = re.compile(r"^\s*([-*]|\d+[.)]|[a-z][.)]|===|\$\d+ [=/])\s")
+FIN = re.compile(r"""[.:;!?]["')]*$""")
+NUMERO = re.compile(r"^\d+\.(\.\.)?$")
+
+
+def premiere_unite(ligne):
+    """
+    First word of a line, with what may not leave it: the move after a
+    move number, and a figure, a NAG or a lone capital (case B), which
+    stay with the word before them.
+    """
+    mots = ligne.split()
+    unite = mots[0]
+    for mot in mots[1:]:
+        if (NUMERO.match(unite.split()[-1]) or re.match(r"\d|\$\d", mot)
+                or re.match(r"[A-Z][,;:.)]*$", mot)):
+            unite += " " + mot
+        else:
+            break
+    return unite
+
+
+for nom in (cp.PROMPT_MODELE, cp.PROMPT_SEUL_MODELE):
+    texte = pathlib.Path(os.environ["SCRIPT"]).with_name(nom).read_text(
+        encoding="utf-8").split("\n")
+    # Each line of text carries its number through the rendering, which
+    # tells the prose from the data.
+    marque = "\n".join(
+        "\x01%d\x02%s" % (n, ligne)
+        if ligne.strip() and not ligne.lstrip().startswith("#!") else ligne
+        for n, ligne in enumerate(texte, start=1))
+    donnees = {n for n, ligne in enumerate(texte, start=1)
+               if any("{{%s}}" % v in ligne for v in LIBRES)}
+    utilisees = sorted(set(re.findall(r"^#! if (?:not )?(\w+)",
+                                      "\n".join(texte), re.MULTILINE)))
+    fautes = set()
+    suites = set()
+    rendus = 0
+    for choix in itertools.product((False, True), repeat=len(utilisees)):
+        conditions = dict.fromkeys(cp.PROMPT_CONDITIONS, False)
+        conditions.update(zip(utilisees, choix))
+        lignes = []
+        for ligne in cp.rendre_modele(marque, conditions, VALEURS,
+                                      nom).split("\n"):
+            m = re.match(r"\x01(\d+)\x02(.*)", ligne)
+            numero = int(m.group(1)) if m else 0
+            lignes.append((0 if numero in donnees else numero,
+                           m.group(2) if m else ligne))
+        rendus += 1
+        for numero, ligne in lignes:
+            if numero and len(ligne) > LARGEUR:
+                fautes.add("over %d columns: %s" % (LARGEUR, ligne))
+        for (na, a), (nb, b) in zip(lignes, lignes[1:]):
+            # Only a sentence that goes on from a to b is checked: a line
+            # that ends a sentence may stop short, and a line of PGN that
+            # opens on a move number is an example.
+            if (not (na and nb) or FIN.search(a)
+                    or NUMERO.match(a.split()[0])):
+                continue
+            ra, rb = (len(x) - len(x.lstrip()) for x in (a, b))
+            # A smaller indent opens another block, a greater one only
+            # continues an item of a list.
+            if rb < ra or rb > ra and not ELEMENT.match(a):
+                continue
+            # An item, a heading or a row of a table starts a block of its
+            # own; a numbered one, after a sentence that goes on, is a
+            # figure opening a continued line.
+            if ELEMENT.match(b) and not re.match(r"\s*\d+\.", b):
+                continue
+            suites.add((na, nb))
+            if re.match(r"\s*(\d|\$\d)", b):
+                fautes.add("continued line opening on a figure: %s" % b)
+            elif len(a) + 1 + len(premiere_unite(b)) <= LARGEUR:
+                fautes.add("short line, %s would fit at its end: %s"
+                           % (premiere_unite(b), a))
+    print("%s: %d renderings, %d pairs of lines of a same sentence"
+          % (nom, rendus, len(suites)), file=sys.stderr)
+    if rendus < 2 or not suites:
+        sys.exit("%s: nothing to check" % nom)
+    for faute in sorted(fautes):
+        print("%s: %s" % (nom, faute))
+EOF
+egal "T92 exit code of the check" 0 $?
+egal "T92 no uneven wrap in either template" 0 "$(lignes sortie-t92)"
+joindre sortie-t92
+head -n 20 journal-t92 | while IFS= read -r ligne; do
+    noter "  note   $ligne"
+done
+rm -rf "$DEPOT/__pycache__"
+
 titre "T03: refused options"
 
 # An option without effect or out of bounds is refused, code 2, before
@@ -2573,7 +2703,7 @@ EOF
     egal "T52 short prompt: nothing about the null move without a null move" 0 \
         "$(grep -c 'null move' "$PR")"
     verifier "T52 short prompt: each move played, without limit" \
-        contient "$PR" "after each move played."
+        contient "$PR" "each move played."
 
     titre "T25: engine limited to the first moves"
     lancer italienne.pgn $MOTEUR --stockfish-moves 3 --depth 10 \
@@ -2593,9 +2723,9 @@ EOF
         --prompt-only
     PR="$ARCH"
     verifier "T25 short prompt: partial coverage stated" contient "$PR" \
-        "after each of the first 6 plies out of 9"
+        "each of the first 6 plies out of 9"
     egal "T25 short prompt: no more each move played" 0 \
-        "$(grep -c 'after each move played' "$PR")"
+        "$(grep -c 'each move played' "$PR")"
     lancer italienne.pgn $MOTEUR --stockfish-moves 3 --depth 10 \
         --multipv 2 --pv-length 4 --threads 2 --hash 128
     extraire '*/collection.json'

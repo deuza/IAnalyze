@@ -262,16 +262,16 @@ Stop of the querying: end of the game.
 ```
 
 ```text
-[15:33:40] Virtual environment: restarting with ~/IAnalyze/local/venv/bin/python3
-[15:33:40] Reading the local PGN: my-game.pgn
-[15:33:41] Startup questions skipped: option --no-questions.
-[15:33:41] Working folder: analysis-my-game-20261125-153341
-[15:33:41] Stockfish: evaluation of 9 plies, depth 18, multipv 3, threads 4. This is the longest phase.
+[22:18:17] Virtual environment: restarting with ~/IAnalyze/local/venv/bin/python3
+[22:18:17] Reading the local PGN: my-game.pgn
+[22:18:17] Startup questions skipped: option --no-questions.
+[22:18:17] Working folder: analysis-my-game-20261125-221817
+[22:18:17] Stockfish: evaluation of 9 plies, depth 18, multipv 3, threads 4. This is the longest phase.
 ...
-[15:33:48] Summary written: analysis-my-game-20261125-153341/summary.md
-[15:33:48] Analysis prompt written: analysis-my-game-20261125-153341.prompt.txt, to be pasted alone into the conversation: it carries the game and the evaluations, no attachment is needed.
-[15:33:48] Working folder deleted, no archive is written with --prompt-only.
-analysis-my-game-20261125-153341.prompt.txt
+[22:18:24] Summary written: analysis-my-game-20261125-221817/summary.md
+[22:18:24] Analysis prompt written: analysis-my-game-20261125-221817.prompt.txt, to be pasted alone into the conversation: it carries the game and the evaluations, no attachment is needed.
+[22:18:24] Working folder deleted, no archive is written with --prompt-only.
+analysis-my-game-20261125-221817.prompt.txt
 ```
 
 The prompt carries the instructions, the game, then the evaluations of the engine:
@@ -279,31 +279,31 @@ The prompt carries the instructions, the game, then the evaluations of the engin
 ```text
 You are an International Master of chess.
 
-Analyze the game below move by move, for a player who wants to
-improve. The style is instructive and detailed, in English, and you
-address the player as "you", in a friendly tone.
+Analyze the game below move by move, for a player who wants to improve.
+The style is instructive and detailed, in English, and you address the
+player as "you", in a friendly tone.
 The player had White.
 Their rating: about 1300 Elo, declared by the player.
 ...
-Evaluations of Stockfish, depth 18, from White's point of view,
-after each move played.
+Evaluations of Stockfish, depth 18, from White's point of view, after
+each move played.
 After a weak move come its category, what it loses in centipawns
 against the best move, then this best move, its continuation and its
 evaluation. "mate" instead of the number: the move misses a mate or
 concedes one.
 A mate is written "#+2", White mates in two moves, or "#-1", Black
-mates in one move. The count reads after the move of the line: "#+0"
-or "#-0", this move gives mate.
+mates in one move. The count reads after the move of the line: "#+0" or
+"#-0", this move gives mate.
 
-1. e4           +0.37
-1... e5         +0.32
-2. Nf3          +0.35
-2... Nc6        +0.39
-3. Bc4          +0.11
-3... Bc5        +0.12
+1. e4           +0.28
+1... e5         +0.28
+2. Nf3          +0.26
+2... Nc6        +0.24
+3. Bc4          +0.22
+3... Bc5        +0.19
 4. c3           +0.15
-4... Nf6        +0.15
-5. d3           +0.21
+4... Nf6        +0.21
+5. d3           +0.17
 ```
 
 ### Checking the answer of the LLM
@@ -910,15 +910,15 @@ For the archive and its data, run a collection without this option.
 ```
 
 ```text
-[15:33:40] Virtual environment: restarting with ~/IAnalyze/local/venv/bin/python3
-[15:33:40] Reading the local PGN: my-game.pgn
+[22:18:17] Virtual environment: restarting with ~/IAnalyze/local/venv/bin/python3
+[22:18:17] Reading the local PGN: my-game.pgn
 ...
-[15:33:41] Working folder: analysis-my-game-20261125-153341
+[22:18:17] Working folder: analysis-my-game-20261125-221817
 ...
-[15:33:48] Summary written: analysis-my-game-20261125-153341/summary.md
-[15:33:48] Analysis prompt written: analysis-my-game-20261125-153341.prompt.txt, to be pasted alone into the conversation: it carries the game and the evaluations, no attachment is needed.
-[15:33:48] Working folder deleted, no archive is written with --prompt-only.
-analysis-my-game-20261125-153341.prompt.txt
+[22:18:24] Summary written: analysis-my-game-20261125-221817/summary.md
+[22:18:24] Analysis prompt written: analysis-my-game-20261125-221817.prompt.txt, to be pasted alone into the conversation: it carries the game and the evaluations, no attachment is needed.
+[22:18:24] Working folder deleted, no archive is written with --prompt-only.
+analysis-my-game-20261125-221817.prompt.txt
 ```
 
 Add `--keep-folder` if you intend to have the answer of the LLM checked by `verify-analysis.py`: the working folder then stays next to the prompt.

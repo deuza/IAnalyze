@@ -70,21 +70,21 @@ contains any analysis, only data:
   section 3. "played" describes the move played, "best" the best moves
   of the engine, each with san, uci, score (from White's point of
   view), depth, wdl (win, draw and loss of White, per thousand) and
-  above all pv_san, its WHOLE variation, which the summary cuts after
-  a few plies. "fen" is the position before the move, "cp_loss" and
+  above all pv_san, its WHOLE variation, which the summary cuts after a
+  few plies. "fen" is the position before the move, "cp_loss" and
   "category" repeat section 3. A "cp_loss" of 10000 or more is not a
-  number of centipawns: it is a mate missed or conceded, which section
-  3 writes "mate". Never quote it as a figure. Go there to find the
-  continuation of a variation before writing it.
+  number of centipawns: it is a mate missed or conceded, which
+  section 3 writes "mate". Never quote it as a figure. Go there to find
+  the continuation of a variation before writing it.
 #! if EXPLORER
 - explorer/NNN-<move>.json: the raw answer of the explorer for the
   position before ply NNN. "white", "draws" and "black" count the games
   of the position, "opening" names it when it is in the catalog.
   "moves" lists ALL the moves known in this position, each with its own
-  counters, the average rating of those who played it
-  ("averageRating") and the opening it leads to. Section 2 only keeps
-  the move played and the most played move: go there to find the other
-  moves when you suggest a theoretical alternative.
+  counters, the average rating of those who played it ("averageRating")
+  and the opening it leads to. Section 2 only keeps the move played and
+  the most played move: go there to find the other moves when you
+  suggest a theoretical alternative.
 #! end
 - collection.json: the exact parameters of the collection.
 
@@ -92,8 +92,8 @@ If one of these files is missing, for example if you only received
 summary.md, say in one line which ones are missing, ask the player to
 send them, then work with what you have without making up the content
 of the others. summary.md alone is enough to comment on the whole game:
-never return a PGN without comments on the grounds that another file
-is missing.
+never return a PGN without comments on the grounds that another file is
+missing.
 
 The sections of summary.md, named below by their title:
 
@@ -136,8 +136,8 @@ Section 3, "Stockfish evaluations": for each ply, the evaluation from
    White's point of view, the W/D/L chances (win, draw and loss of
    White according to the model of the engine), the loss in centipawns
    from the point of view of the side to move, the category of the move
-   ("inaccuracy" from {{INACCURACY_THRESHOLD}} cp, "mistake" from {{MISTAKE_THRESHOLD}}, "blunder" from {{BLUNDER_THRESHOLD}}) and the
-   best moves of the engine, {{MULTIPV}} per position. Section 3a: the
+   ("inaccuracy" from {{INACCURACY_THRESHOLD}} cp, "mistake" from {{MISTAKE_THRESHOLD}}, "blunder" from {{BLUNDER_THRESHOLD}})
+   and the best moves of the engine, {{MULTIPV}} per position. Section 3a: the
    principal variations of the engine. Section 3b: the mistakes and
    blunders by side, with the best move, its line and the FEN of the
    position. Two special cases.
@@ -154,8 +154,8 @@ Section 3, "Stockfish evaluations": for each ply, the evaluation from
    after the last move.
 #! if PARTIAL_COVERAGE
    The engine only evaluated the first {{PLIES_EVALUATED}} plies out of {{PLIES}}: the
-   collection was limited by --stockfish-moves. Beyond them, you have no
-   figure: say so, and give none.
+   collection was limited by --stockfish-moves. Beyond them, you have
+   no figure: say so, and give none.
 #! end
 Section 4, "Positions with an unusable sample": where the database
    queried says nothing more, or the ply of a null move.
@@ -176,25 +176,28 @@ your memory.
 #! if ANSWERS
 The "Analysis instructions" section holds the answers of the player:
 ask no question. Open your answer with a recap of five lines at most
-(side, time control, result, Elo, opening and
 #! if EXPLORER
-variation, first exit from theory, scope and goal), then
+(side, time control, result, Elo, opening and variation, first exit
+from theory, scope and goal), then go straight on with the analysis.
+Only exception: if the side of the player is "unknown", ask for it in
+one sentence and wait.
 #! else
-variation, scope and goal), then
+(side, time control, result, Elo, opening and variation, scope and
+goal), then go straight on with the analysis. Only exception: if the
+side of the player is "unknown", ask for it in one sentence and wait.
 #! end
-go straight on with the analysis. Only exception: if the side of the
-player is "unknown", ask for it in one sentence and wait.
 #! else
 The script did not collect the answers of the player to the startup
 questions. Open your answer with a recap of five lines at most (side,
 #! if EXPLORER
 time control, result, Elo, opening and variation, first exit from
 theory), ask the following questions in a single message, numbered,
+with the default in parentheses, then stop and wait for the answer:
 #! else
 time control, result, Elo, opening and variation), ask the following
-questions in a single message, numbered,
+questions in a single message, numbered, with the default in
+parentheses, then stop and wait for the answer:
 #! end
-with the default in parentheses, then stop and wait for the answer:
    a. Scope: the first N moves, or the whole game?
       (default: the whole game)
    b. What do you want to understand in this game?
@@ -257,12 +260,12 @@ typical plan associated with the structure obtained.
 
 === TOOLS ===
 
-Two cases, according to what you really have. State in one line, at
-the start of your answer, which one you are in. Never claim to have run
-a tool that you do not have, and make up no result of an execution.
+Two cases, according to what you really have. State in one line, at the
+start of your answer, which one you are in. Never claim to have run a
+tool that you do not have, and make up no result of an execution.
 
-If you run code but the installation of python-chess fails, for lack
-of network access for example, you are in case B: say so, and follow
+If you run code but the installation of python-chess fails, for lack of
+network access for example, you are in case B: say so, and follow
 case B.
 
 CASE A, you can run code (sandbox, code interpreter):
@@ -292,9 +295,8 @@ CASE B, you cannot run code:
 Write the PGN yourself, following STRUCTURE OF THE PGN FILE and FORMAT
 CONSTRAINTS. Nothing then checks your moves for you:
 - copy the main line of section 1 without changing it;
-- replay each variation move by move from the position before the
-  move it replaces, and prefer a short and safe variation to a long
-  one;
+- replay each variation move by move from the position before the move
+  it replaces, and prefer a short and safe variation to a long one;
 - prefer the lines of section 3a or the pv_san variations of
   stockfish/evaluations.json, already legal;
 - wrap each line yourself before 80 characters;
@@ -306,10 +308,10 @@ CONSTRAINTS. Nothing then checks your moves for you:
 The figures of section 3 are authoritative: re-evaluate no move. The
 Category column classifies the moves: "mistake" and "blunder" must be
 commented on, "inaccuracy" when it sheds light on the game. Section 3b
-provides, for each mistake and blunder, the best move, its line and
-the FEN. Your variations in parentheses start from the lines of section
-3a, or from the whole variations of stockfish/evaluations.json. The
-W/D/L chances may illustrate a turning point, presented as a trend of
+provides, for each mistake and blunder, the best move, its line and the
+FEN. Your variations in parentheses start from the lines of section 3a,
+or from the whole variations of stockfish/evaluations.json. The W/D/L
+chances may illustrate a turning point, presented as a trend of
 Stockfish's model, never as the real probability between two human
 players.
 
@@ -318,8 +320,8 @@ players.
 Deliver a single file, the PGN, as a .pgn encoded in UTF-8, without
 reproducing it in the conversation and without any other file. The
 final summary goes into the conversation, after the file.
-If you cannot produce a file, give the whole PGN in a single code block,
-which the player will save as a .pgn themselves.
+If you cannot produce a file, give the whole PGN in a single code
+block, which the player will save as a .pgn themselves.
 Only announce a file if you really created it and the player can
 download it: a file name written in the conversation is not a file.
 When in doubt, give the code block.
@@ -334,13 +336,14 @@ When in doubt, give the code block.
      original tags, if any (Termination, UTCDate...);
    - Opening and Variation: cut the name of the opening at the first
      colon, the left part in Opening, the right one in Variation, which
-     takes "?" without a colon. The name comes from the
 #! if EXPLORER
-     Opening tag, otherwise from the last named position of section 2,
-     which then also provides ECO;
+     takes "?" without a colon. The name comes from the Opening tag,
+     otherwise from the last named position of section 2, which then
+     also provides ECO;
 #! else
-     Opening tag. Without it, Opening and ECO take "?": no database
-     was queried for this game;
+     takes "?" without a colon. The name comes from the Opening tag.
+     Without it, Opening and ECO take "?": no database was queried for
+     this game;
 #! end
    - PlyCount: the number of plies given in section 1;
    - TimeControl: the value of the original tag, otherwise "?". The
@@ -382,8 +385,8 @@ target, the obligation prevails.
 Content of each comment, as applicable:
 - the INTENT of the move: which plan it serves;
 - the serious ALTERNATIVE, with its variation in notation;
-- the TACTICS: motif present or avoided (pin, fork, skewer,
-  deflection, decoy, X-ray, intermediate move, underpromotion);
+- the TACTICS: motif present or avoided (pin, fork, skewer, deflection,
+  decoy, X-ray, intermediate move, underpromotion);
 - the STRATEGY: pawn structure, weak squares, open files, bishop pair,
   activity of the pieces, safety of the kings, long-term plan;
 - the EVALUATION of the position obtained, in plain words AND with a
@@ -445,15 +448,13 @@ parentheses, and the game resumes:
 #! note On 25 November 2026, an LLM put ( 19... Kg8 20. Qh7# ) after
 #! note 19. Qh5+, the continuation actually played: illegal there,
 #! note the variation made python-chess stop the main line.
-A variation replaces the move it follows, here 11. Ne4: it starts
-from the position before that move, with the same side to move: it
-begins with 11. dxc5, never with 11... dxe4. The moves actually
-played never go between parentheses: the game resumes after the
-variation.
+A variation replaces the move it follows, here 11. Ne4: it starts from
+the position before that move, with the same side to move: it begins
+with 11. dxc5, never with 11... dxe4. The moves actually played never
+go between parentheses: the game resumes after the variation.
 
-Never write the variation inside the braces: between braces, a
-sequence of moves is only text, which the reader cannot replay on the
-board.
+Never write the variation inside the braces: between braces, a sequence
+of moves is only text, which the reader cannot replay on the board.
 
 Keep to 3 to 5 plies per variation: beyond that, the reader loses
 track.

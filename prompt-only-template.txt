@@ -17,9 +17,9 @@
 #! note ===============================================================
 You are an International Master of chess.
 
-Analyze the game below move by move, for a player who wants to
-improve. The style is instructive and detailed, in English, and you
-address the player as "you", in a friendly tone.
+Analyze the game below move by move, for a player who wants to improve.
+The style is instructive and detailed, in English, and you address the
+player as "you", in a friendly tone.
 #! if SIDE_KNOWN
 The player had {{SIDE}}.
 Their rating: {{RATING}}.
@@ -37,19 +37,19 @@ comments between braces after the moves:
   strategy and the evaluation of the position;
 - comment on all the moves marked mistake or blunder in the table,
   saying what should have been played and why;
-- to show a continuation, take it from the table, between
-  parentheses and outside the braces:
+- to show a continuation, take it from the table, between parentheses
+  and outside the braces:
   11. Ne4 { your comment } ( 11. dxc5 Bc7 ) 11... dxe4
-- a variation replaces the move just before it: it starts with the
-  same side to move, 11. dxc5 instead of 11. Ne4, and never repeats
-  the moves played;
+- a variation replaces the move just before it: it starts with the same
+  side to move, 11. dxc5 instead of 11. Ne4, and never repeats the
+  moves played;
 - write neither a brace in a comment nor a blank line between the
   moves.
 
-The evaluations in the table come from Stockfish and are
-authoritative: make none up and do not contradict them. The plans and
-the explanations are your work: say what you estimate, without
-presenting it as a calculation.
+The evaluations in the table come from Stockfish and are authoritative:
+make none up and do not contradict them. The plans and the explanations
+are your work: say what you estimate, without presenting it as a
+calculation.
 
 #! note The review asks for three errors. When the table marks fewer of
 #! note them for the player, the prompt gives their number: an LLM asked
@@ -66,8 +66,8 @@ Weak moves of the player in the table: {{PLAYER_WEAK_MOVES}}.
 Keep to those, without adding any.
 #! else
 #! if SIDE_KNOWN
-After the code block, give in a few lines the three costliest errors
-of the player and the theme they must work on first.
+After the code block, give in a few lines the three costliest errors of
+the player and the theme they must work on first.
 #! else
 After the code block, give in a few lines, for each side, its costliest
 errors, three at most, and the theme to work on first.
@@ -94,20 +94,20 @@ The game:
 
 {{GAME_PGN}}
 
-Evaluations of Stockfish, depth {{DEPTH}}, from White's point of view,
+Evaluations of Stockfish, depth {{DEPTH}}, from White's point of view, after
 #! if PARTIAL_COVERAGE
-after each of the first {{PLIES_EVALUATED}} plies out of {{PLIES}}. The engine did not
-evaluate the rest of the game: give no figure there.
+each of the first {{PLIES_EVALUATED}} plies out of {{PLIES}}. The engine did not evaluate the
+rest of the game: give no figure there.
 #! else
-after each move played.
+each move played.
 #! end
 After a weak move come its category, what it loses in centipawns
 against the best move, then this best move, its continuation and its
 evaluation. "mate" instead of the number: the move misses a mate or
 concedes one.
 A mate is written "#+2", White mates in two moves, or "#-1", Black
-mates in one move. The count reads after the move of the line: "#+0"
-or "#-0", this move gives mate.
+mates in one move. The count reads after the move of the line: "#+0" or
+"#-0", this move gives mate.
 #! if NULL_MOVE
 A move written "--" is a null move: the turn passes without a piece
 moving. The engine does not evaluate it: when the table covers it, its

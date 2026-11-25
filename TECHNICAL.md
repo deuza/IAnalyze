@@ -617,6 +617,8 @@ Two kinds of markers are interpreted:
 
 A directive takes a whole line, and the "if" may be nested. The blank lines left by a removed passage are tightened.
 
+In the templates of the repository, the lines of text are wrapped at 71 columns, as the prompt shows them. A sentence that a condition cuts goes on with whole lines in each branch, even if their beginning repeats: the prompt keeps an even wrap whatever the conditions, which test T92 checks.
+
 Values:
 
 | Value | Content |

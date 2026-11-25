@@ -619,6 +619,8 @@ Deux sortes de repères sont interprétés :
 
 Une directive occupe une ligne entière, et les "if" peuvent s'emboîter. Les lignes vides laissées par un passage retiré sont resserrées.
 
+Dans les modèles du dépôt, les lignes de texte sont coupées à 71 colonnes, telles que le prompt les montre. Une phrase qu'une condition coupe se poursuit par des lignes entières dans chaque branche, même si leur début se répète : le prompt garde une coupure régulière quelles que soient les conditions, ce que vérifie le test T92.
+
 Valeurs :
 
 | Valeur | Contenu |

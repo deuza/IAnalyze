@@ -161,6 +161,7 @@ The numbers follow the order in which the tests were created, not the order in w
 | T89 | Settings written over a settings file only | a FIFO, a directory or the file of another program is left as it is, and the reason is said; a file of the former format is written with its `[joueur]` section kept; no partial file left; on a terminal, a warning, and the answers serve the current run |
 | T90 | Settings name | `--settings` takes a name: a path or another name is refused, nothing created; `/dev/null` is refused, `--no-settings` suggested; the help speaks of a name; a new name asks for a confirmation, asked again after an unexpected answer; refused, nothing is done: no file, no collection |
 | T91 | Quality NAGs | `$1` on a mistake or a blunder, and `$6` on a move that the engine does not classify, are counted and named as other opinions, beside the NAGs that match the category |
+| T92 | Wrap of the prompts | both templates, rendered in every combination of their conditions: no line of prose over 71 columns, none that could take the first word of the next one, no continued line opening on a figure, which would read as an item of a list |
 | M1 | Collection, names | accented PGN name, output path with a space and an accent |
 | M2 | Full collection | the Italian analyzed whole, engine only, without an engine process left behind |
 
