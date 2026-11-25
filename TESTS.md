@@ -134,7 +134,7 @@ The numbers follow the order in which the tests were created, not the order in w
 | T62 | Time control | the answers are checked, the wrong ones refused; a TimeControl tag spares the question |
 | T63 | Correspondence | the three systems of correspondence time control are recognized, with the English plural of the durations |
 | T64 | Prompt written | the prompt is written next to the archive, with its values filled in |
-| T65 | Adapted prompt | the prompt keeps only the passages that apply: explorer, database, answers, section 2; its final summary asks for the errors of the player, according to their count |
+| T65 | Adapted prompt | the prompt keeps only the passages that apply: explorer, database, answers, section 2; it carries the instructions drawn from the trials, among them where a variation starts and where `$7` and `$8` go; its final summary asks for the errors of the player, according to their count |
 | T66 | Faulty template | unknown marker, condition never closed or missing template stop the script before the collection |
 | T67 | Script without template | the script copied alone makes its collection without a prompt, and says so |
 | T68 | Rating | the rating in Elo points is checked and repeated in the prompt |
@@ -143,7 +143,7 @@ The numbers follow the order in which the tests were created, not the order in w
 | T71 | Removed options | `--sans-stockfish`, `--avec-stockfish` and `--consignes` are unknown |
 | T72 | Contrary result | a game marked won in a lost position is reported in the summary and in the prompt |
 | T73 | Checker | a compliant PGN passes, a faulty PGN sees each defect reported, missing PGN, unreadable archive |
-| T74 | Prompt only | short prompt written without an archive, table of the engine, review according to the number of weak moves, unknown side, prompt never overwritten |
+| T74 | Prompt only | short prompt written without an archive, table of the engine, where a variation starts, review according to the number of weak moves, unknown side, prompt never overwritten |
 | T75 | Misread PGNs | the PGNs that python-chess would misread, or with several games, are refused with their cause, without anything written. A result repeated at the end of the file is ignored, unless a real game follows it |
 | T76 | Token and servers | on simulated servers, a redirect is not followed and the token is redacted from the quoted answers |
 | T77 | Unexpected inputs | standard input closed, name too long, badly formed URL, game that starts from a FEN, tilde of `--output-dir`: a message, no longer an unexpected error |

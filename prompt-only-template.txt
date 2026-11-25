@@ -40,6 +40,9 @@ comments between braces after the moves:
 - to show a continuation, take it from the table, between
   parentheses and outside the braces:
   11. Ne4 { your comment } ( 11. dxc5 Bc7 ) 11... dxe4
+- a variation replaces the move just before it: it starts with the
+  same side to move, 11. dxc5 instead of 11. Ne4, and never repeats
+  the moves played;
 - write neither a brace in a comment nor a blank line between the
   moves.
 

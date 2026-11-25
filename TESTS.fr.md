@@ -136,7 +136,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | T62 | Cadence | les réponses sont vérifiées, les fausses refusées ; une balise TimeControl épargne la question |
 | T63 | Correspondance | les trois systèmes de cadence par correspondance sont reconnus, avec le pluriel anglais des durées |
 | T64 | Prompt écrit | le prompt est écrit à côté de l'archive, avec ses valeurs remplies |
-| T65 | Prompt adapté | le prompt ne garde que les passages qui s'appliquent : explorateur, base, réponses, section 2 ; son bilan final demande les erreurs du joueur, selon leur nombre |
+| T65 | Prompt adapté | le prompt ne garde que les passages qui s'appliquent : explorateur, base, réponses, section 2 ; il porte les consignes tirées des essais, dont le point de départ d'une variante et la place de `$7` et `$8` ; son bilan final demande les erreurs du joueur, selon leur nombre |
 | T66 | Modèle fautif | repère inconnu, condition jamais fermée ou modèle absent arrêtent le script avant la collecte |
 | T67 | Script sans modèle | le script copié seul fait sa collecte sans prompt, et le dit |
 | T68 | Niveau | le niveau en points Elo est vérifié et repris dans le prompt |
@@ -145,7 +145,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | T71 | Options retirées | `--sans-stockfish`, `--avec-stockfish` et `--consignes` sont inconnues |
 | T72 | Résultat contraire | une partie notée gagnée dans une position perdue est signalée dans la synthèse et le prompt |
 | T73 | Vérificateur | un PGN conforme passe, un PGN fautif voit chaque défaut relevé, PGN absent, archive illisible |
-| T74 | Prompt seul | prompt court écrit sans archive, tableau du moteur, bilan selon le nombre de coups faibles, camp inconnu, prompt jamais écrasé |
+| T74 | Prompt seul | prompt court écrit sans archive, tableau du moteur, point de départ d'une variante, bilan selon le nombre de coups faibles, camp inconnu, prompt jamais écrasé |
 | T75 | PGN lus de travers | les PGN que python-chess lirait de travers, ou à plusieurs parties, sont refusés avec leur cause, sans rien écrire. Un résultat répété en fin de fichier est ignoré, sauf s'il est suivi d'une vraie partie |
 | T76 | Jeton et serveurs | sur des serveurs simulés, une redirection n'est pas suivie et le jeton est expurgé des réponses citées |
 | T77 | Entrées inattendues | entrée standard fermée, nom trop long, URL mal formée, partie qui part d'une FEN, tilde de `--output-dir` : un message, plus une erreur inattendue |

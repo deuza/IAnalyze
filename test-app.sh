@@ -1411,6 +1411,15 @@ for consigne in "9. BLANK LINES" \
     "never return a PGN without comments"; do
     egal "T65 instruction: $consigne" 1 "$(grep -c -F "$consigne" "$PR")"
 done
+# Instructions added after the trial of 25 November 2026: a variation
+# that repeated the moves played, put after the move it should have
+# replaced, made python-chess stop the main line, and $7 sat on a
+# check instead of on the forced reply.
+for consigne in "never with 11... dxe4" \
+    "never on the move that forces it" \
+    "move by move from the position before the"; do
+    egal "T65 instruction: $consigne" 1 "$(grep -c -F "$consigne" "$PR")"
+done
 egal "T65 without the explorer, said in the prompt" 1 \
     "$(grep -c 'the explorer collection was not done' "$PR")"
 egal "T65 without the explorer, said in the task" 1 \
@@ -1915,6 +1924,7 @@ You are an International Master of chess.
 The player had White.
 in a single code block
 outside the braces
+a variation replaces the move just before it
 The game:
 [White "Alice"]
 Evaluations of Stockfish, depth 8

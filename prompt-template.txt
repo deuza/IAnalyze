@@ -292,8 +292,9 @@ CASE B, you cannot run code:
 Write the PGN yourself, following STRUCTURE OF THE PGN FILE and FORMAT
 CONSTRAINTS. Nothing then checks your moves for you:
 - copy the main line of section 1 without changing it;
-- replay each variation move by move from the position where it
-  starts, and prefer a short and safe variation to a long one;
+- replay each variation move by move from the position before the
+  move it replaces, and prefer a short and safe variation to a long
+  one;
 - prefer the lines of section 3a or the pv_san variations of
   stockfish/evaluations.json, already legal;
 - wrap each line yourself before 80 characters;
@@ -406,6 +407,9 @@ Default mapping from the Category column: "inaccuracy" $6,
 "mistake" $2, "blunder" $4. Your judgment may depart from it, for
 example for a harmless blunder in a position already lost.
 
+$7 and $8 go on the move that had no alternative, the forced reply,
+never on the move that forces it, a check for instance.
+
 Evaluation of the position (values 10 to 21):
   $10 = drawish position             $13 = unclear position
   $14 = += slight advantage White    $15 = =+ slight advantage Black
@@ -437,6 +441,15 @@ parentheses, and the game resumes:
 
   11. Ne4 $4 { Your knight is hanging. } ( 11. dxc5 Bc7 12. Nb3 )
   11... dxe4
+
+#! note On 25 November 2026, an LLM put ( 19... Kg8 20. Qh7# ) after
+#! note 19. Qh5+, the continuation actually played: illegal there,
+#! note the variation made python-chess stop the main line.
+A variation replaces the move it follows, here 11. Ne4: it starts
+from the position before that move, with the same side to move: it
+begins with 11. dxc5, never with 11... dxe4. The moves actually
+played never go between parentheses: the game resumes after the
+variation.
 
 Never write the variation inside the braces: between braces, a
 sequence of moves is only text, which the reader cannot replay on the

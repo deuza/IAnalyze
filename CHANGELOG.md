@@ -296,6 +296,14 @@ and the project applies [Semantic Versioning](https://semver.org/).
   asks to attribute no error to the player. Asked for "the three
   costliest errors" without being told whose, an LLM tried on
   25 November 2026 gave those of the opponent.
+- Both prompts say where a variation starts: from the position
+  before the move it replaces, with the same side to move, and never
+  with the moves actually played. The full prompt adds that `$7` and
+  `$8` go on the forced reply, never on the move that forces it, a
+  check for instance. On 25 November 2026, an LLM had put
+  `( 19... Kg8 20. Qh7# )` after 19.Qh5+: illegal there, the
+  variation made python-chess stop the main line two plies before
+  the mate, and `$7` sat on the check.
 
 ### Fixed
 
