@@ -1963,6 +1963,22 @@ def lire_reglages(chemin: str) -> configparser.ConfigParser:
     return reglages
 
 
+def reglages_vides() -> configparser.ConfigParser:
+    """
+    Empty settings, with only the [player] section: what --no-settings
+    puts in place of the file, which is then neither read nor written.
+
+    The usernames, the usual time control and the rating are missing, as
+    on a first run outside a terminal: the side is asked, or deduced from
+    --usernames, the rating comes from the Elo tag of the player's side,
+    and the time control from the TimeControl tag or from the question
+    about the game, which then suggests "unspecified".
+    """
+    reglages = configparser.ConfigParser(interpolation=None)
+    reglages.add_section(REGLAGES_SECTION)
+    return reglages
+
+
 def reglage(reglages: configparser.ConfigParser, clef: str) -> str:
     """Value of a key of the [player] section, empty if it is missing."""
     return reglages.get(REGLAGES_SECTION, clef, fallback="").strip()
@@ -3920,6 +3936,11 @@ usage examples
       ./ianalyze.py my-game.pgn --no-questions
       ./ianalyze.py my-game.pgn --usernames MyUsername,OtherUsername
 
+  For a single run that leaves your settings aside, for example on a
+  friend's game, neither reading nor writing the settings file:
+
+      ./ianalyze.py friend-game.pgn --no-settings
+
   Going as deep as the database answers, without any threshold:
 
       ./ianalyze.py my-game.pgn --exhaustive
@@ -4079,11 +4100,21 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                    help="your player names, comma-separated, looked up "
                         "ignoring case in White and Black to deduce your side "
                         "(default: those of your settings)")
-    g.add_argument("--settings", dest="reglages",
+    # --settings and --no-settings exclude each other: argparse refuses
+    # the pair whatever the order, the spelling (--settings=FILE) or the
+    # path given, even the default one.
+    m = g.add_mutually_exclusive_group()
+    m.add_argument("--settings", dest="reglages",
                    default=REGLAGES_DEFAUT, metavar="FILE",
                    help="settings file, where your username, your usual time "
                         "control and your rating are kept, asked only once in "
                         "a terminal (default: %(default)s)")
+    m.add_argument("--no-settings", dest="sans_reglages",
+                   action="store_true",
+                   help="for this run only, neither reads nor writes the "
+                        "settings file, nor asks its questions: your side is "
+                        "asked, or deduced from --usernames, and your rating "
+                        "read from the Elo tags of the game")
     g.add_argument("--purge-settings", dest="purge_reglages",
                    action="store_true",
                    help="deletes the settings file, the one of --settings if "
@@ -4214,6 +4245,10 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
 
     options = p.parse_args(argv)
 
+    if options.purge_reglages and options.sans_reglages:
+        # Opposite requests: one deletes the settings file, the other
+        # leaves it alone for this run.
+        p.error("--purge-settings and --no-settings are mutually exclusive")
     if options.purge_reglages and (options.installer_venv
                                    or options.installer_catalogue
                                    or options.source):
@@ -4325,7 +4360,13 @@ def main(argv: list[str]) -> int:
     consignes = None
 
     # -- User settings, read early as well ----------------------------------
-    reglages = lire_reglages(options.reglages)
+    # With --no-settings, empty settings stand in for the file, which is
+    # neither read nor written during this run.
+    if options.sans_reglages:
+        reglages = reglages_vides()
+        journal("Settings neither read nor written: option --no-settings.")
+    else:
+        reglages = lire_reglages(options.reglages)
 
     # -- Prompt template, read and checked before the collection ------------
     # A template named by --prompt must exist. The default template, for
@@ -4441,9 +4482,10 @@ def main(argv: list[str]) -> int:
     camp = None
     contexte = None
     interactif = questions_possibles(options.sans_questions)
-    if interactif:
+    if interactif and not options.sans_reglages:
         # Missing settings: asked for here, once and for all, before the
-        # questions specific to the game.
+        # questions specific to the game. Not with --no-settings, which
+        # leaves the file alone: its questions would write it.
         completer_reglages(options.reglages, reglages, options.pseudos)
     # --usernames wins over the settings. The list kept replaces the
     # option: collecte.json thus records the usernames actually used,

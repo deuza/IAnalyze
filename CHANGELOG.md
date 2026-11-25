@@ -12,6 +12,14 @@ et le projet applique le [versionnage sémantique](https://semver.org/).
 
 Icône de la licence CC-0
 
+- `--no-settings`: for a single run, the settings file is neither read
+  nor written, and its questions are not asked. The side is asked, or
+  deduced from `--usernames`; the rating comes from the Elo tag of the
+  player's side, and the time control from the TimeControl tag or from
+  the question about the game, which then suggests "unspecified". The
+  option is refused with `--settings`, whatever the path given, and
+  with `--purge-settings`.
+
 ### Changed
 
 - The comments and docstrings of `ianalyze.py`, `verifier-analyse.py`

@@ -1568,6 +1568,84 @@ verifier "T68 without a declared rating, Elo of the tag" \
     contient extrait "- niveau : 1500 Elo, d'après la balise BlackElo de la partie"
 rm -rf analyse-t-pr-*
 
+titre "T86: --no-settings, settings neither read nor written"
+# A copy of the script looks for its settings file next to itself: the
+# test gives it its own, so that yours, next to the script of the
+# repository, is never touched, even if a check below fails. The copy
+# has no template next to it: it gets the one of the repository.
+mkdir t-86
+cp "$SCRIPT" t-86/
+printf '[player]\nusernames = Bob\ntime_control = 14 days\nrating = 1300\n' \
+    > t-86/settings.ini
+cp t-86/settings.ini t-86-avant.ini
+rm -rf analyse-t-pr-*
+t-86/ianalyze.py t-pr.pgn --no-explorer --no-questions --depth 1 \
+    --venv "$VENV" --prompt "$DEPOT/prompt-modele.txt" > sortie 2> journal
+cat analyse-t-pr-*.prompt.txt > extrait 2>/dev/null
+verifier "T86 without the option, the copy reads its settings" \
+    contient extrait "- niveau : environ 1300 Elo, déclaré par le joueur"
+verifier "T86 without the option, usual time control of the settings" \
+    contient extrait "celle de la partie : correspondence, 14 days per move"
+rm -rf analyse-t-pr-*
+t-86/ianalyze.py t-pr.pgn --no-explorer --no-questions --depth 1 \
+    --venv "$VENV" --prompt "$DEPOT/prompt-modele.txt" --no-settings \
+    > sortie 2> journal
+egal "T86 exit code" 0 "$?"
+verifier "T86 said in the log" \
+    contient journal "Settings neither read nor written: option --no-settings."
+cat analyse-t-pr-*.prompt.txt > extrait 2>/dev/null
+verifier "T86 usernames of the settings ignored, side unknown" \
+    contient extrait "- camp dans cette partie : inconnu"
+verifier "T86 rating of the settings ignored" \
+    contient extrait "- niveau : non précisé"
+verifier "T86 usual time control of the settings ignored" \
+    contient extrait "celle de la partie : unspecified"
+unzip -p "$(head -n 1 sortie)" '*/collecte.json' > ligne 2>/dev/null
+verifier "T86 recorded in collecte.json" contient ligne '"sans_reglages": true'
+rm -rf analyse-t-pr-*
+t-86/ianalyze.py t-pr.pgn --no-explorer --no-questions --depth 1 \
+    --venv "$VENV" --prompt "$DEPOT/prompt-modele.txt" --no-settings \
+    --usernames Bob > sortie 2> journal
+cat analyse-t-pr-*.prompt.txt > extrait 2>/dev/null
+verifier "T86 side deduced from --usernames" \
+    contient extrait "- camp dans cette partie : Noirs"
+verifier "T86 rating taken from the Elo tag of that side" \
+    contient extrait "- niveau : 1500 Elo, d'après la balise BlackElo de la partie"
+verifier "T86 settings file untouched" cmp -s t-86-avant.ini t-86/settings.ini
+rm -rf analyse-t-pr-*
+# On a terminal, without a settings file: its questions, which would
+# create it, are not asked, and the side is asked instead.
+rm -f t-86/settings.ini
+rm -rf analyse-t-noms-*
+SCRIPT=t-86/ianalyze.py python3 t-pty.py "b|||||" t-noms.pgn $P \
+    --no-settings > sortie-pty 2>&1
+egal "T86 on a terminal, no settings question" 0 \
+    "$(grep -c -E 'Settings:|Your username|Your usual|Your rating' sortie-pty)"
+verifier "T86 on a terminal, the side is asked" \
+    contient sortie-pty "Did you play White or Black? [w/b]"
+verifier "T86 on a terminal, no settings file created" \
+    test ! -e t-86/settings.ini
+cat analyse-t-noms-*/contexte.md > extrait 2>/dev/null
+verifier "T86 on a terminal, side declared" \
+    contient extrait "Camp du joueur : Noirs, déclaré"
+egal "T86 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
+joindre sortie-pty
+rm -rf analyse-t-noms-*
+# Refused with --settings, whatever the path, and with --purge-settings,
+# which would delete what the option leaves alone.
+printf '[player]\nusernames = Bob\n' > t-86/settings.ini
+t-86/ianalyze.py t-pr.pgn --no-settings --settings t-86/settings.ini \
+    > sortie 2> journal
+egal "T86 with --settings, exit code" 2 "$?"
+verifier "T86 with --settings, refused" \
+    contient journal "not allowed with argument"
+t-86/ianalyze.py --purge-settings --no-settings > sortie 2> journal
+egal "T86 with --purge-settings, exit code" 2 "$?"
+verifier "T86 with --purge-settings, refused" \
+    contient journal "--purge-settings and --no-settings are mutually exclusive"
+verifier "T86 with --purge-settings, file kept" test -f t-86/settings.ini
+joindre journal
+
 titre "T74: prompt only, short, to be pasted without an attachment"
 
 # With --prompt-only, the prompt is drawn from a short template: a few
