@@ -120,7 +120,9 @@ tests), CHANGELOG.md.
   instructions ; journal = log ; bilan = report ; palmarès = ranking ;
   modèle = template ; périmètre = scope ; gain, nulle, perte = win,
   draw, loss (W/D/L) ; avertissement "Attention" = "Warning" ; aide =
-  help.
+  help ; code de retour = exit code ; dans le rapport des tests,
+  réussi, échec, sauté = passed, failed, skipped, et les marqueurs
+  ECHEC, SAUTE = FAIL, SKIP.
 - Correspondance à capital : capital, incrément, plafond, réserve =
   clock, increment, maximum, bank, termes des ICCF Rules 2026 (§2.4 et
   annexe 3), vérifiés au lot 1.

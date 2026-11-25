@@ -25,6 +25,11 @@ Icône de la licence CC-0
   examples. A warning now starts with "Warning" instead of
   "Attention". The options keep their names for now, and the messages
   quote them as they are.
+- The messages of `test-app.sh` are in English: section titles, labels
+  of the checks, report and errors. A failed check is now marked
+  `FAIL` instead of `ECHEC`, a skipped one `SKIP` instead of `SAUTE`,
+  and the summary reads "Passed: N, failed: N, skipped: N". The options
+  and variables of `test-app.sh` keep their names for now.
 - Everything the script creates for itself now lives in the
   application folder: the virtual environment (`local/venv`) and the
   opening catalog in `local/`, and the settings in `settings.ini`, at
