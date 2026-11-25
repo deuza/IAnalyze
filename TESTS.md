@@ -74,7 +74,7 @@ Les tests qui ne portent pas sur le moteur le règlent au plus court, `--profond
 
 | Variable | Rôle | Défaut |
 |---|---|---|
-| `VENV` | environnement virtuel de python-chess | `~/.local/share/IAnalyze/venv` |
+| `VENV` | environnement virtuel de python-chess | `local/venv` du dépôt |
 | `STOCKFISH` | moteur employé par les tests | celui du PATH, sinon `/opt/homebrew/bin`, `/usr/local/bin` ou `/usr/games` |
 | `JETON` | fichier du jeton | `~/.lichess_token` |
 | `GARDER` | `1` conserve le répertoire temporaire | supprimé |
@@ -90,7 +90,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | Test | Sujet | Ce qui est vérifié |
 |---|---|---|
 | T01 | Compilation | `ianalyze.py` passe `py_compile` |
-| T02 | Aide | `--help` rend 0 et cite les options attendues |
+| T02 | Aide | `--help` rend 0, cite les options attendues et place les défauts de `--venv`, `--catalogue` et `--reglages` dans le dossier `local/` de l'application |
 | T03 | Options refusées | une option inconnue ou une valeur refusée arrêtent le script avec le code 2 |
 | T04 | PGN introuvable | le fichier absent est nommé, et un nom relatif est pris pour un fichier, non pour un identifiant |
 | T05 | Collecte minimale | l'archive existe et porte `synthese.md` et `collecte.json`, sans fichier provisoire |

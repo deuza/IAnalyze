@@ -111,11 +111,17 @@ def est_repertoire(candidat: pathlib.Path) -> bool:
 #: and the location of the engine depend on it.
 EST_MACOS = sys.platform == "darwin"
 
-#: Data directory of the script, in the home directory on Debian as on
-#: macOS: the virtual environment and the catalog go there, and you need
-#: no root rights to install them. Up to version 3.8.0, Debian kept them
-#: in /opt/venv/lichess and in /usr/local/share.
-DONNEES = "~/.local/share/IAnalyze"
+#: Data directory of the script, the local/ folder of the application,
+#: at the same place on Debian and on macOS: the virtual environment,
+#: the catalog and the settings go there. Deleting the application
+#: folder thus removes everything the script created, and you need no
+#: root rights to install anything. The real path of the script is
+#: followed, so that a symbolic link placed elsewhere finds the folder
+#: of the repository. Up to version 4.0.2, the data lived in
+#: ~/.local/share/IAnalyze and the settings in ~/.config/IAnalyze; up to
+#: version 3.8.0, Debian kept the data in /opt/venv/lichess and in
+#: /usr/local/share.
+DONNEES = os.path.join(os.path.dirname(os.path.realpath(__file__)), "local")
 
 #: Installation commands for the prerequisites, repeated in the messages
 #: and in the help. On macOS, the Homebrew Python already provides the
@@ -326,13 +332,12 @@ CATALOGUE_FORMAT = "1"
 #: Move number in a catalog line, "1." or "12." for example.
 RE_NUMERO_COUP = re.compile(r"\d+\.+")
 
-#: User settings file, at the same place on Debian and on macOS. It holds
-#: what depends on the person and not on the game: their usernames and
-#: their usual time control. Nothing personal therefore appears in this
-#: script, which anyone can reuse as it is.
-#: The directories bear the name of the project, IAnalyze, and not that
-#: of the script: the same goes for the catalog and the data on macOS.
-REGLAGES_DEFAUT = "~/.config/IAnalyze/reglages.ini"
+#: User settings file, in the data directory of the script (DONNEES),
+#: at the same place on Debian and on macOS. It holds what depends on
+#: the person and not on the game: their usernames and their usual time
+#: control. Nothing personal therefore appears in this script, which
+#: anyone can reuse as it is.
+REGLAGES_DEFAUT = DONNEES + "/reglages.ini"
 
 #: Section of the settings file that describes the player.
 REGLAGES_SECTION = "joueur"

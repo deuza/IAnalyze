@@ -66,7 +66,8 @@ Exit code: 0 without ECHEC, 1 with at least one ECHEC, 2 if a file
 cannot be read or if the archive is not an IAnalyze one.
 
 The script needs python-chess. If it does not find it, it restarts
-with the virtual environment of IAnalyze, ~/.local/share/IAnalyze/venv.
+with the virtual environment of IAnalyze, local/venv in the folder of
+the application.
 """
 
 from __future__ import annotations
@@ -83,7 +84,11 @@ import sys
 import zlib
 import zipfile
 
-VENV_IANALYZE = "~/.local/share/IAnalyze/venv/bin/python3"
+#: Interpreter of the virtual environment of IAnalyze, in the local/
+#: folder of the application, next to this script: the same place as
+#: in ianalyze.py, whose real path is followed in the same way.
+VENV_IANALYZE = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                             "local", "venv", "bin", "python3")
 
 try:
     import chess

@@ -106,10 +106,10 @@ fi
 
 SYSTEME=$(uname -s)
 
-# Default virtual environment, according to the platform: the same
-# values as in ianalyze.py.
+# Default virtual environment: the same place as in ianalyze.py, the
+# local/ folder of the repository, on every platform.
 if [ -z "${VENV:-}" ]; then
-    VENV="$HOME/.local/share/IAnalyze/venv"
+    VENV="$DEPOT/local/venv"
 fi
 PYVENV="$VENV/bin/python3"
 
@@ -363,10 +363,12 @@ else
     egal "T31 brew install absent" 0 "$(grep -c 'brew install' aide)"
     egal "T32 apt install cité 4 fois" 4 "$(grep -c 'apt install' aide)"
 fi
-verifier "défaut de --venv sous le répertoire utilisateur" \
-    contient aide ".local/share/IAnalyze/venv"
-verifier "défaut de --catalogue sous le répertoire utilisateur" \
-    contient aide ".local/share/IAnalyze)"
+verifier "défaut de --venv dans le dossier de l'application" \
+    contient aide "/local/venv)"
+verifier "défaut de --catalogue dans le dossier de l'application" \
+    contient aide "/local)"
+verifier "défaut de --reglages dans le dossier de l'application" \
+    contient aide "/local/reglages.ini)"
 
 titre "T05 : collecte minimale"
 lancer italienne.pgn $O

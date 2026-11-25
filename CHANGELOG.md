@@ -25,6 +25,15 @@ Icône de la licence CC-0
   examples. A warning now starts with "Warning" instead of
   "Attention". The options keep their names for now, and the messages
   quote them as they are.
+- Everything the script creates for itself now lives in the `local/`
+  folder of the application, ignored by git: the virtual environment
+  (`local/venv`), the opening catalog and the settings file. Deleting
+  the application folder removes everything, the Lichess token aside,
+  which stays in `~/.lichess_token`. `verifier-analyse.py` and
+  `test-app.sh` look for the virtual environment at the same place.
+  The former locations, `~/.local/share/IAnalyze` and
+  `~/.config/IAnalyze`, are no longer read: run `--installer-venv` and
+  `--installer-catalogue` again, then delete them by hand.
 
 ## [4.0.2] - 2026-11-21
 

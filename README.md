@@ -154,16 +154,22 @@ Relancez-la de temps en temps pour le mettre à jour.
 
 ### Emplacements par défaut
 
-Les mêmes sur les deux plateformes, sauf pour le moteur :
+Les mêmes sur les deux plateformes, sauf pour le moteur.
+
+Tout ce que le script crée pour lui-même va dans le dossier `local/` de l'application : supprimer ce dossier ne laisse rien derrière, hors votre jeton.
 
 | | Emplacement |
 |---|---|
-| `--venv` | `~/.local/share/IAnalyze/venv` |
-| `--catalogue` | `~/.local/share/IAnalyze` |
-| réglages | `~/.config/IAnalyze/reglages.ini` |
+| `--venv` | `local/venv`, dans le dossier de l'application |
+| `--catalogue` | `local/`, dans le dossier de l'application |
+| réglages | `local/reglages.ini`, dans le dossier de l'application |
 | jeton | `~/.lichess_token` |
 | `--stockfish`, Debian | `/usr/games/stockfish` |
 | `--stockfish`, macOS | le binaire trouvé dans le PATH, sinon `/opt/homebrew/bin/stockfish` |
+
+Jusqu'à la version 4.0.2, l'environnement virtuel et le catalogue étaient rangés dans `~/.local/share/IAnalyze`, les réglages dans `~/.config/IAnalyze`.
+
+Le script ne les y lit plus : relancez `--installer-venv` et `--installer-catalogue`, puis supprimez ces deux répertoires.
 
 ### Jeton Lichess
 
@@ -195,7 +201,7 @@ Sans jeton, lancez le script avec `--sans-explorateur`.
 
 ### Réglages personnels
 
-Votre pseudo, votre cadence habituelle et votre niveau sont gardés dans `~/.config/IAnalyze/reglages.ini`.
+Votre pseudo, votre cadence habituelle et votre niveau sont gardés dans `local/reglages.ini`, dans le dossier de l'application.
 
 Le script les demande une seule fois, au premier lancement dans un terminal.
 

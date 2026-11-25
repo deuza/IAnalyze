@@ -141,15 +141,15 @@ Entrée retient la valeur proposée entre parenthèses.
 ```
 
 ```text
-[01:08:35] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:08:35] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:08:35] Lecture du PGN local : ma-partie.pgn
-[01:08:35] Réglages : 3 réponse(s) à donner une seule fois, gardée(s) dans ~/.config/IAnalyze/reglages.ini.
+[01:08:35] Réglages : 3 réponse(s) à donner une seule fois, gardée(s) dans ~/IAnalyze/local/reglages.ini.
 Votre pseudo de joueur, ou plusieurs séparés par des virgules ? (Entrée : aucun) MonPseudo
 Votre cadence habituelle : [t]emps réel, [c]orrespondance ou [i]nconnue ? (Entrée : non précisée) t
   Minutes par joueur ? 15
   Incrément en secondes ? 10
 Votre niveau, en points Elo approximatifs ? (Entrée : inconnu) 1300
-[01:08:36] Réglages enregistrés : ~/.config/IAnalyze/reglages.ini
+[01:08:36] Réglages enregistrés : ~/IAnalyze/local/reglages.ini
 [01:08:36] Questions de démarrage, Entrée retient la valeur proposée.
 Cadence de la partie : [t]emps réel, [c]orrespondance ou [i]nconnue ? (Entrée : rapide, 15 minutes + 10 secondes par coup)
 Périmètre : les N premiers coups, ou la partie complète ? (Entrée : la partie complète)
@@ -185,7 +185,7 @@ La dernière ligne est le chemin de l'archive, celle d'avant nomme le prompt : c
 ```
 
 ```text
-[01:08:11] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:08:11] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:08:11] Lecture du PGN local : ma-partie.pgn
 [01:08:11] Questions de démarrage sautées : option --sans-questions.
 [01:08:11] Dossier de travail : analyse-ma-partie-20261121-010811
@@ -260,7 +260,7 @@ Arrêt de l'interrogation : fin de la partie.
 ```
 
 ```text
-[01:09:21] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:09:21] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:09:21] Lecture du PGN local : ma-partie.pgn
 [01:09:21] Questions de démarrage sautées : option --sans-questions.
 [01:09:21] Dossier de travail : analyse-ma-partie-20261121-010921
@@ -486,9 +486,9 @@ La première fois :
 ```
 
 ```text
-[01:06:52] Création de l'environnement virtuel : ~/.local/share/IAnalyze/venv
+[01:06:52] Création de l'environnement virtuel : ~/IAnalyze/local/venv
 [01:06:54] Installation de python-chess dans l'environnement virtuel.
-[01:06:58] Environnement virtuel opérationnel : ~/.local/share/IAnalyze/venv/bin/python3
+[01:06:58] Environnement virtuel opérationnel : ~/IAnalyze/local/venv/bin/python3
 ```
 
 Les fois suivantes :
@@ -498,14 +498,14 @@ Les fois suivantes :
 ```
 
 ```text
-[01:07:02] Environnement virtuel déjà présent : ~/.local/share/IAnalyze/venv
+[01:07:02] Environnement virtuel déjà présent : ~/IAnalyze/local/venv
 [01:07:02] Installation de python-chess dans l'environnement virtuel.
-[01:07:03] Environnement virtuel opérationnel : ~/.local/share/IAnalyze/venv/bin/python3
+[01:07:03] Environnement virtuel opérationnel : ~/IAnalyze/local/venv/bin/python3
 ```
 
 #### `--venv CHEMIN`
 
-*Défaut : `~/.local/share/IAnalyze/venv`*
+*Défaut : `local/venv`, dans le dossier de l'application*
 
 Emplacement de l'environnement virtuel, à l'installation comme à l'usage.
 
@@ -573,7 +573,7 @@ grep "camp dans cette partie" analyse-ma-partie-*.prompt.txt
 
 #### `--reglages FICHIER`
 
-*Défaut : `~/.config/IAnalyze/reglages.ini`*
+*Défaut : `local/reglages.ini`, dans le dossier de l'application*
 
 Fichier de réglages à employer à la place du vôtre : pseudos, cadence habituelle et niveau (README, section 2).
 
@@ -581,17 +581,17 @@ Si le fichier n'existe pas encore, le script pose ses trois questions dans le te
 C'est la façon de tenir plusieurs profils sur un même compte, un par joueur par exemple.
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --reglages ~/.config/IAnalyze/joueur2.ini
+./ianalyze.py ma-partie.pgn --sans-explorateur --reglages ~/IAnalyze/local/joueur2.ini
 ```
 
 ```text
-[01:12:11] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:12:11] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:12:11] Lecture du PGN local : ma-partie.pgn
-[01:12:11] Réglages : 3 réponse(s) à donner une seule fois, gardée(s) dans ~/.config/IAnalyze/joueur2.ini.
+[01:12:11] Réglages : 3 réponse(s) à donner une seule fois, gardée(s) dans ~/IAnalyze/local/joueur2.ini.
 Votre pseudo de joueur, ou plusieurs séparés par des virgules ? (Entrée : aucun) Joueur2
 Votre cadence habituelle : [t]emps réel, [c]orrespondance ou [i]nconnue ? (Entrée : non précisée) i
 Votre niveau, en points Elo approximatifs ? (Entrée : inconnu) 1800
-[01:12:12] Réglages enregistrés : ~/.config/IAnalyze/joueur2.ini
+[01:12:12] Réglages enregistrés : ~/IAnalyze/local/joueur2.ini
 [01:12:12] Questions de démarrage, Entrée retient la valeur proposée.
 Avez-vous joué les Blancs ou les Noirs ? [b/n] n
 Cadence de la partie : [t]emps réel, [c]orrespondance ou [i]nconnue ? (Entrée : non précisée)
@@ -633,7 +633,7 @@ Un fichier qui n'est pas un fichier de réglages est refusé lui aussi : seul un
 ```
 
 ```text
-[01:11:14] Réglages supprimés : ~/.config/IAnalyze/reglages.ini. Ils seront redemandés à la prochaine collecte lancée sur un terminal.
+[01:11:14] Réglages supprimés : ~/IAnalyze/local/reglages.ini. Ils seront redemandés à la prochaine collecte lancée sur un terminal.
 ```
 
 Relancée aussitôt :
@@ -643,7 +643,7 @@ Relancée aussitôt :
 ```
 
 ```text
-[01:11:14] Aucun fichier de réglages à supprimer : ~/.config/IAnalyze/reglages.ini
+[01:11:14] Aucun fichier de réglages à supprimer : ~/IAnalyze/local/reglages.ini
 ```
 
 ### Catalogue des ouvertures
@@ -658,18 +658,18 @@ Relancer l'option le met à jour. Un échec laisse l'ancien catalogue en place.
 ```
 
 ```text
-[01:07:03] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:07:03] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:07:03] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/a.tsv
 [01:07:04] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/b.tsv
 [01:07:04] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/c.tsv
 [01:07:05] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/d.tsv
 [01:07:05] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/e.tsv
-[01:07:06] Catalogue installé : 3865 lignes, 3865 positions nommées, 7982 positions connues, dans ~/.local/share/IAnalyze/catalogue.tsv
+[01:07:06] Catalogue installé : 3865 lignes, 3865 positions nommées, 7982 positions connues, dans ~/IAnalyze/local/catalogue.tsv
 ```
 
 #### `--catalogue REP`
 
-*Défaut : `~/.local/share/IAnalyze`*
+*Défaut : `local/`, dans le dossier de l'application*
 
 Répertoire du catalogue local, à l'installation comme à l'usage.
 
@@ -678,7 +678,7 @@ Répertoire du catalogue local, à l'installation comme à l'usage.
 ```
 
 ```text
-[01:11:48] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:11:48] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:11:48] Téléchargement du catalogue : https://raw.githubusercontent.com/lichess-org/chess-openings/master/a.tsv
 ...
 [01:11:51] Catalogue installé : 3865 lignes, 3865 positions nommées, 7982 positions connues, dans ~/echecs/catalogue/catalogue.tsv
@@ -712,7 +712,7 @@ Répertoire où le script écrit ses fichiers. Il est créé au besoin.
 ```
 
 ```text
-[01:09:00] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:09:00] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:09:01] Lecture du PGN local : ma-partie.pgn
 ...
 [01:09:01] Dossier de travail : ~/analyses/analyse-ma-partie-20261121-010901
@@ -746,7 +746,7 @@ Il sert quand le LLM n'ouvre pas les zip : vous lui envoyez alors les fichiers d
 ```
 
 ```text
-[01:09:10] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:09:10] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:09:10] Lecture du PGN local : ma-partie.pgn
 ...
 [01:09:10] Dossier de travail : analyse-ma-partie-20261121-010910
@@ -789,7 +789,7 @@ Pour l'archive et ses données, lancez une collecte sans cette option.
 ```
 
 ```text
-[01:09:21] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:09:21] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:09:21] Lecture du PGN local : ma-partie.pgn
 ...
 [01:09:21] Dossier de travail : analyse-ma-partie-20261121-010921
@@ -807,7 +807,7 @@ Ajoutez `--garder-dossier` si vous comptez faire contrôler la réponse du LLM p
 ```
 
 ```text
-[01:09:30] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:09:30] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:09:31] Lecture du PGN local : ma-partie.pgn
 ...
 [01:09:31] Dossier de travail : analyse-ma-partie-20261121-010931
@@ -829,7 +829,7 @@ N'écrit que l'archive, sans prompt. S'exclut avec `--prompt` et avec `--prompt-
 ```
 
 ```text
-[01:09:39] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:09:39] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:09:39] Lecture du PGN local : ma-partie.pgn
 ...
 [01:09:39] Dossier de travail : analyse-ma-partie-20261121-010939
@@ -856,7 +856,7 @@ Cette option lui fait prendre votre modèle à la place de celui du dépôt.
 ```
 
 ```text
-[01:09:48] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:09:48] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:09:48] Lecture du PGN local : ma-partie.pgn
 ...
 [01:09:49] Dossier de travail : analyse-ma-partie-20261121-010949
@@ -972,7 +972,7 @@ Si le fichier manque, le script s'arrête avant toute requête :
 ```
 
 ```text
-[01:11:54] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:11:54] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:11:54] Lecture du PGN local : ma-partie.pgn
 Jeton absent : ~/.jeton-test introuvable.
 ```
@@ -1099,7 +1099,7 @@ Le journal passe alors de la lecture de la partie au moteur, sans ligne "Explora
 ```
 
 ```text
-[01:08:11] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:08:11] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:08:11] Lecture du PGN local : ma-partie.pgn
 [01:08:11] Questions de démarrage sautées : option --sans-questions.
 [01:08:11] Dossier de travail : analyse-ma-partie-20261121-010811
@@ -1210,7 +1210,7 @@ Un chemin qui ne mène à rien arrête le script avant la collecte :
 ```
 
 ```text
-[01:11:53] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:11:53] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:11:53] Lecture du PGN local : ma-partie.pgn
 Stockfish introuvable : /nulle/part. Installez-le (apt install stockfish, dans /usr/games), ou indiquez son chemin avec --stockfish. L'évaluation du moteur fait partie de toute collecte.
 ```
@@ -1408,7 +1408,7 @@ Un message d'erreur n'est pas horodaté : c'est la dernière ligne, et le code d
 ```
 
 ```text
-[01:11:51] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:11:51] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 Fichier PGN introuvable : partie-absente.pgn
 ```
 
@@ -1421,7 +1421,7 @@ Les coups doivent être notés en anglais : K, Q, R, B, N.
 ```
 
 ```text
-[01:11:52] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:11:52] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:11:52] Lecture du PGN local : francais.pgn
 PGN corrompu : "Cf3", ligne 1, n'est ni un coup en notation anglaise (K, Q, R, B, N) ni un autre élément de PGN. Une partie notée en français ou en figurines doit être convertie, un texte libre placé entre accolades.
 ```
@@ -1435,7 +1435,7 @@ Ce n'est pas une erreur : l'export de chess-mail.com écrit le résultat deux fo
 ```
 
 ```text
-[17:04:02] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[17:04:02] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [17:04:03] Lecture du PGN local : partie-chess-mail.pgn
 [17:04:03] Résultat répété en fin de fichier, après la partie : ignoré.
 [17:04:03] Questions de démarrage sautées : option --sans-questions.
@@ -1450,7 +1450,7 @@ analyse-partie-chess-mail-20261121-170403.zip
 ```
 
 ```text
-[01:11:52] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:11:52] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:11:52] Lecture du PGN local : deux-parties.pgn
 Le PGN contient 2 parties : isolez celle à analyser dans un fichier à part.
 ```
@@ -1462,7 +1462,7 @@ Le PGN contient 2 parties : isolez celle à analyser dans un fichier à part.
 ```
 
 ```text
-[01:11:52] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:11:52] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:11:52] Lecture du PGN local : position.pgn
 La partie ne commence pas à la position initiale, elle part d'une balise FEN. IAnalyze analyse une partie entière, du premier coup au dernier : pour étudier une position, chargez-la dans un échiquier d'analyse.
 ```
@@ -1474,7 +1474,7 @@ La partie ne commence pas à la position initiale, elle part d'une balise FEN. I
 ```
 
 ```text
-[01:11:52] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:11:52] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:11:53] Lecture du PGN local : accolade.pgn
 PGN corrompu : le commentaire ouvert par une accolade à la ligne 1 n'est jamais fermé.
 ```
@@ -1516,7 +1516,7 @@ Les bornes sont celles que le moteur annonce : elles changent d'une version de S
 ```
 
 ```text
-[01:11:53] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:11:53] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:11:53] Lecture du PGN local : ma-partie.pgn
 --multipv : 9999 est hors des bornes du moteur /usr/games/stockfish, qui admet de 1 à 500 pour MultiPV.
 ```
@@ -1528,7 +1528,7 @@ Les bornes sont celles que le moteur annonce : elles changent d'une version de S
 ```
 
 ```text
-[01:11:53] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:11:53] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:11:53] Lecture du PGN local : ma-partie.pgn
 Stockfish introuvable : /nulle/part. Installez-le (apt install stockfish, dans /usr/games), ou indiquez son chemin avec --stockfish. L'évaluation du moteur fait partie de toute collecte.
 ```
@@ -1542,7 +1542,7 @@ Sans `--sans-explorateur`  le script a besoin du jeton Lichess (README, section 
 ```
 
 ```text
-[01:11:54] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:11:54] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:11:54] Lecture du PGN local : ma-partie.pgn
 Jeton absent : ~/.lichess_token introuvable.
 ```
@@ -1556,9 +1556,9 @@ Le jeton est en place, mais le catalogue des ouvertures n'a pas été installé.
 ```
 
 ```text
-[01:11:54] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:11:54] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [01:11:54] Lecture du PGN local : ma-partie.pgn
-Catalogue des ouvertures absent : ~/.local/share/IAnalyze/catalogue.tsv introuvable.
+Catalogue des ouvertures absent : ~/IAnalyze/local/catalogue.tsv introuvable.
 
 Installez-le en une commande :
     ~/IAnalyze/ianalyze.py --installer-catalogue
@@ -1573,7 +1573,7 @@ Le modèle désigné par `--prompt` porte ici une valeur mal écrite.
 ```
 
 ```text
-[01:11:55] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[01:11:55] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 Modèle de prompt ~/modele-fautif.txt, ligne 21 : valeur inconnue {{VERSON}}, valeurs admises : VERSION, DEPOT, ARCHIVE, PSEUDOS, CAMP, NIVEAU, CADENCE, ANNOTATEUR, BASE, SEUIL_IMPRECISION, SEUIL_ERREUR, SEUIL_GAFFE, PROFONDEUR, MULTIPV, PARTIE_PGN, TABLEAU_MOTEUR, ALERTE_RESULTAT, CONSIGNES_JOUEUR, OUVERTURE, DEMI_COUPS, DEMI_COUPS_EVALUES, COUPS_FAIBLES_JOUEUR
 ```
 
@@ -1640,9 +1640,9 @@ Ce que le script lit :
 
 | Fichier | Rôle |
 |---|---|
-| `~/.local/share/IAnalyze/venv` | l'environnement virtuel, où vit python-chess |
-| `~/.local/share/IAnalyze/catalogue.tsv` | le catalogue des ouvertures |
-| `~/.config/IAnalyze/reglages.ini` | vos réglages : pseudos, cadence habituelle, niveau |
+| `local/venv` | l'environnement virtuel, où vit python-chess |
+| `local/catalogue.tsv` | le catalogue des ouvertures |
+| `local/reglages.ini` | vos réglages : pseudos, cadence habituelle, niveau |
 | `~/.lichess_token` | votre jeton Lichess, en mode 600 |
 | `prompt-modele.txt`, `prompt-seul-modele.txt` | les modèles de prompt, à côté du script |
 | `/usr/games/stockfish` | le moteur sous Debian. Sous macOS, celui du PATH |

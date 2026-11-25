@@ -23,8 +23,10 @@ tests), CHANGELOG.md.
 - Serveurs : Debian Trixie, en root, pas de sudo. Stockfish dans
   /usr/games/stockfish.
 - Poste : macOS M1 (Homebrew).
-- Sur les deux : venv dans ~/.local/share/IAnalyze/venv, catalogue dans
-  ~/.local/share/IAnalyze, réglages dans ~/.config/IAnalyze.
+- Sur les deux : tout ce que le script crée pour lui-même vit dans le
+  dossier local/ de l'application, ignoré par git : venv (local/venv),
+  catalogue, réglages. Supprimer le dossier de l'application ne laisse
+  rien, hors le jeton (~/.lichess_token).
 - Le comportement doit rester identique sur les deux.
 - Python : modules hors apt installés dans un venv dédié, jamais dans
   l'environnement système. Signale tout nouveau module requis.

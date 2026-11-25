@@ -96,7 +96,7 @@ Avec `--prompt-seul`, c'est le chemin du prompt qui est écrit sur la sortie sta
 Le journal, les questions et les messages d'erreur vont tous sur la sortie d'erreur. Chaque ligne du journal porte l'heure :
 
 ```text
-[16:41:40] Environnement virtuel : relance via ~/.local/share/IAnalyze/venv/bin/python3
+[16:41:40] Environnement virtuel : relance via ~/IAnalyze/local/venv/bin/python3
 [16:41:40] Lecture du PGN local : ma-partie.pgn
 [16:41:41] Dossier de travail : analyse-ma-partie-20261119-164141
 [16:41:41] Stockfish : évaluation de 49 demi-coups, profondeur 18, multipv 3, threads 8. C'est la phase la plus longue.
@@ -213,7 +213,7 @@ Dans la suite, "sans terminal" désigne ces quatre cas.
 
 ## 6. Réglages
 
-Le fichier de réglages, `~/.config/IAnalyze/reglages.ini` ou celui de `--reglages`, est au format INI. Sa section `[joueur]` porte trois clefs que le script demande, `pseudos`, `cadence` et `niveau`, et une clef facultative, `annotateur`.
+Le fichier de réglages, `local/reglages.ini` dans le dossier de l'application ou celui de `--reglages`, est au format INI. Sa section `[joueur]` porte trois clefs que le script demande, `pseudos`, `cadence` et `niveau`, et une clef facultative, `annotateur`.
 
 ### Clefs et formes admises
 

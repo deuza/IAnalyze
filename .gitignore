@@ -4,3 +4,7 @@ analyse-*
 # Except the annotated PGNs of the examples, which carry this prefix.
 !parties-exemples/analyse-*.pgn
 __pycache__/
+# What the script creates for itself: virtual environment, catalog and
+# settings. Deleting this folder brings the application back to a fresh
+# clone.
+/local/
