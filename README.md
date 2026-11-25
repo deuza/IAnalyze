@@ -584,7 +584,7 @@ It has no `--venv` option. If your environment is elsewhere, run it with the Pyt
 | Reading | file outside UTF-8, illegal move in the game or in a variation, blank line in the body of the game |
 | Main line | different from the original game |
 | Format | line of more than 79 characters, opening or closing brace in a comment, `%`, em dash, suffix notation, tags missing or out of order, end marker |
-| Commented moves | mistake or blunder of Stockfish left without a comment within the agreed scope, position NAG contrary to the evaluation of the engine |
+| Commented moves | mistake or blunder of Stockfish left without a comment within the agreed scope, position NAG contrary to the evaluation of the engine; for information, the quality NAGs of another opinion than the engine |
 | Evaluations | figure or mate quoted that exists nowhere in the data of the engine |
 | Variations | variation written inside a comment, hence not playable, illegal or too long variation |
 | Conversation | FEN invalid or foreign to the game, em dash |

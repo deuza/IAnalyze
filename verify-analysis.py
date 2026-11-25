@@ -147,6 +147,10 @@ NAG_NOIRS_MIEUX = {15, 17, 19, 21}
 #: NAG expected by default for each category of move, from the prompt.
 NAG_NATURE = {"inaccuracy": 6, "mistake": 2, "blunder": 4}
 
+#: Quality NAGs that praise a move, "!" and "!!": put on a mistake or a
+#: blunder of the engine, they give another opinion than its category.
+NAG_ELOGE = {1, 3}
+
 #: A FEN position in a text: six fields, the first one with eight ranks.
 RE_FEN = re.compile(
     r"((?:[pnbrqkPNBRQK1-8]{1,8}/){7}[pnbrqkPNBRQK1-8]{1,8}"
@@ -581,6 +585,12 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
     The prompt limits the comments to the scope agreed with the player:
     with `perimetre`, in moves, a mistake played beyond it is not
     expected, and its absence is not a fault.
+
+    The quality NAGs are compared with the category of the engine, for
+    information: another opinion is a NAG other than the one of the
+    category, "!" or "!!" on a mistake or a blunder, or "?!", "?" or
+    "??" on a move that the engine does not classify, its loss staying
+    under the threshold of an inaccuracy.
     """
     b.titre("4. Commented moves")
     if not court:
@@ -657,13 +667,26 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
                                                    | NAG_NOIRS_MIEUX)),
                                  score))
         attendu = NAG_NATURE.get(e.get("category") or "")
-        if attendu and nags & set(NAG_NATURE.values()):
+        negatifs = nags & set(NAG_NATURE.values())
+        if attendu and negatifs:
             if attendu in nags:
                 accords += 1
             else:
                 ecarts.append("%s: %s for the engine, NAG $%d"
-                              % (lieu, e["category"],
-                                 min(nags & set(NAG_NATURE.values()))))
+                              % (lieu, e["category"], min(negatifs)))
+        elif attendu and nags & NAG_ELOGE:
+            # A mistake or a blunder praised as a good move.
+            ecarts.append("%s: %s for the engine, NAG $%d"
+                          % (lieu, e["category"], min(nags & NAG_ELOGE)))
+        elif negatifs and e.get("cp_loss") is not None:
+            # A move that the engine does not classify, marked dubious,
+            # poor or blunder: on 25 November 2026, an LLM put "?!" on
+            # seven moves that lost less than 50 cp, which the count of
+            # the other opinions did not show. A null move, which the
+            # engine does not evaluate, has no loss and is set aside.
+            # The loss is written as in the summary, "17" and not "17.0".
+            ecarts.append("%s: no category for the engine (%g cp), NAG $%d"
+                          % (lieu, e["cp_loss"], min(negatifs)))
     b.controle(not contraires, "no position NAG contrary to the evaluation of "
                "the engine", contraires)
     b.noter("INFO", "quality NAGs: %d matching the category given by the "

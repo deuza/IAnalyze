@@ -584,7 +584,7 @@ Il n'a pas d'option `--venv`. Si votre environnement est ailleurs, lancez-le ave
 | Lecture | fichier hors UTF-8, coup illégal dans la partie ou dans une variante, ligne vide dans le corps de la partie |
 | Ligne principale | différente de la partie d'origine |
 | Format | ligne de plus de 79 caractères, accolade ouvrante ou fermante dans un commentaire, `%`, tiret cadratin, notation suffixe, balises absentes ou dans le désordre, marqueur de fin |
-| Coups commentés | erreur ou gaffe de Stockfish laissée sans commentaire dans le périmètre convenu, NAG de position contraire à l'évaluation du moteur |
+| Coups commentés | erreur ou gaffe de Stockfish laissée sans commentaire dans le périmètre convenu, NAG de position contraire à l'évaluation du moteur ; pour information, les NAG de qualité d'un autre avis que le moteur |
 | Évaluations | chiffre ou mat cité qui n'existe nulle part dans les données du moteur |
 | Variantes | variante écrite à l'intérieur d'un commentaire, donc non jouable, variante illégale ou trop longue |
 | Conversation | FEN invalide ou étrangère à la partie, tiret cadratin |

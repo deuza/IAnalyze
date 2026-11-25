@@ -304,6 +304,13 @@ and the project applies [Semantic Versioning](https://semver.org/).
   `( 19... Kg8 20. Qh7# )` after 19.Qh5+: illegal there, the
   variation made python-chess stop the main line two plies before
   the mate, and `$7` sat on the check.
+- `verify-analysis.py` counts more quality NAGs as other opinions
+  than the one of the engine, for information, each named with its
+  move and its loss: `$1` or `$3` on a mistake or a blunder, and
+  `$6`, `$2` or `$4` on a move that the engine does not classify,
+  its loss staying under 50 cp. Tried on 25 November 2026, an LLM
+  had put `$6` on seven moves that the engine did not classify, and
+  the report counted no other opinion.
 
 ### Fixed
 

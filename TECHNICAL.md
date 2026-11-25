@@ -726,7 +726,7 @@ Exit code: 0 without `FAIL`, 1 with at least one `FAIL`, 2 if no check could tak
 - **Commented moves**: each mistake and each blunder of Stockfish must be. The total number of commented moves is given for information, the prompt aiming at 15 to 25.
 - **Scope**: the prompt limits the comments to the agreed scope. A mistake played beyond it is not expected. The scope is the first number of your answer to the startup question, read in the instructions of `summary.md`: "the first 20 moves" counts as 20 moves. An answer without a number, or left at its default, counts as the whole game. `--scope N` gives it by hand, when it was agreed in the conversation.
 - **Position NAGs**: `$14`, `$16`, `$18` and `$20` give White better, `$15`, `$17`, `$19` and `$21` Black. Such a NAG is contrary to the engine when the engine gives the other side better by at least half a pawn, or a mate.
-- **Quality NAGs**: `$6` for an inaccuracy, `$2` for a mistake, `$4` for a blunder. Another opinion than the one of the engine is given for information.
+- **Quality NAGs**: `$6` for an inaccuracy, `$2` for a mistake, `$4` for a blunder. Another opinion than the one of the engine is given for information, with the move and its loss: another of these three NAGs, `$1` or `$3` on a mistake or a blunder, or `$6`, `$2` or `$4` on a move that the engine does not classify, its loss staying under 50 cp.
 - **Variations**: 5 plies at most, otherwise `WARNING`. A variation is said to be backed by the engine when its first two moves are those of a line that the engine gives for this ply.
 - **Positions quoted in the conversation**: a FEN must be valid and come from a position of the game, recognized by its first four fields. Two FENs are asked for, otherwise `WARNING`.
 

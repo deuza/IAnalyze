@@ -3122,6 +3122,84 @@ EOF
         sauter "T82: verify-analysis.py missing from the repository"
     fi
 
+    titre "T91: checker, quality NAGs against the engine"
+    if [ -f "$DEPOT/test.pgn" ] && [ -f "$DEPOT/verify-analysis.py" ]; then
+        cp "$DEPOT/test.pgn" test.pgn
+        lancer test.pgn $MOTEUR $RAPIDE
+        # The PGN carries the NAG of its category on each move that the
+        # engine classifies, except for two other opinions: "!" on a
+        # mistake or a blunder, and "?!" on a move that the engine does
+        # not classify. On 25 November 2026, an LLM put "?!" on seven
+        # moves that lost less than 50 cp, and the report counted no
+        # other opinion. The engine data vary from one machine to
+        # another: the expected lines are drawn from them.
+        ARCHIVE="$ARCH" "$PYVENV" - > attendu-t91 2> journal-t91 <<'EOF'
+import io
+import json
+import os
+import zipfile
+
+import chess
+import chess.pgn
+
+with zipfile.ZipFile(os.environ["ARCHIVE"]) as z:
+    nom = [n for n in z.namelist() if n.endswith("game.pgn")][0]
+    racine = nom[:-len("game.pgn")]
+    source = chess.pgn.read_game(io.StringIO(z.read(nom).decode("utf-8")))
+    evals = json.loads(z.read(racine + "stockfish/evaluations.json"))
+NAG = {"inaccuracy": 6, "mistake": 2, "blunder": 4}
+classes = [e for e in evals if e["category"]]
+# Plies 3 and 4, a mate conceded then missed, are blunders for any
+# engine: a mistake or a blunder is always found, ply 1 at times.
+eloge = next(e for e in classes if e["category"] in ("mistake", "blunder"))
+# The null move, which the engine does not evaluate, has no loss.
+sans = next(e for e in evals
+            if not e["category"] and e["cp_loss"] is not None)
+jeu = chess.pgn.Game()
+for b in ("Event", "Site", "Date", "Round", "White", "Black", "Result"):
+    jeu.headers[b] = source.headers[b]
+noeud = jeu
+for e, coup in zip(evals, source.mainline_moves()):
+    noeud = noeud.add_main_variation(coup)
+    if e is eloge:
+        noeud.nags.add(chess.pgn.NAG_GOOD_MOVE)
+    elif e is sans:
+        noeud.nags.add(chess.pgn.NAG_DUBIOUS_MOVE)
+    elif e["category"]:
+        noeud.nags.add(NAG[e["category"]])
+open("t-nags.pgn", "w", encoding="utf-8").write(
+    jeu.accept(chess.pgn.StringExporter(columns=79)) + "\n")
+
+
+def lieu(e):
+    return "%d%s %s" % (e["move_number"],
+                        "." if e["side_to_move"] == "White" else "...",
+                        e["played"]["san"])
+
+
+details = sorted([
+    (eloge["ply"], "%s: %s for the engine, NAG $1"
+     % (lieu(eloge), eloge["category"])),
+    (sans["ply"], "%s: no category for the engine (%g cp), NAG $6"
+     % (lieu(sans), sans["cp_loss"]))])
+print("quality NAGs: %d matching the category given by the engine, "
+      "2 of another opinion" % (len(classes) - 1))
+for _, detail in details:
+    print("- " + detail)
+EOF
+        "$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH" t-nags.pgn \
+            > bilan 2>&1
+        grep -A 2 'quality NAGs' bilan \
+            | sed 's/^ *//; s/^INFO *//' > sortie-t91
+        verifier "T91 praise of an error and NAG without category, other opinions" \
+            cmp -s attendu-t91 sortie-t91
+        joindre sortie-t91
+        joindre journal-t91 5
+        rm -rf "$DEPOT/__pycache__"
+    else
+        sauter "T91: test.pgn or verify-analysis.py missing from the repository"
+    fi
+
     titre "T83: example games of the repository"
     # EXAMPLES.md runs its commands on the files of example-games:
     # each one must stay what the page says of it, accepted or refused
