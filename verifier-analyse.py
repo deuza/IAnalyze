@@ -553,12 +553,14 @@ def perimetre_convenu(synthese_archive: str) -> int | None:
     None for the whole game.
 
     The answer is in the instructions of summary.md, on the line
-    "- Périmètre : ...". It is free text: the first number it carries is
-    taken for the number of moves, "the first 20 moves" giving 20. An
-    answer left at its default, or without a number, means the whole
-    game.
+    "- a. Périmètre : ...", which ianalyze.py writes from the label of
+    its first startup question (QUESTIONS_CONTEXTE): the label carries
+    its letter, and a pattern without it never matched a real summary.
+    It is free text: the first number it carries is taken for the
+    number of moves, "the first 20 moves" giving 20. An answer left at
+    its default, or without a number, means the whole game.
     """
-    m = re.search(r"(?m)^- Périmètre : (.*)$", synthese_archive)
+    m = re.search(r"(?m)^- a\. Périmètre : (.*)$", synthese_archive)
     if m is None or m.group(1).rstrip().endswith("(défaut)"):
         return None
     nombre = re.search(r"\d+", m.group(1))

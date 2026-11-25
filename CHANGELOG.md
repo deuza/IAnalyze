@@ -153,6 +153,12 @@ Icône de la licence CC-0
   `pyvenv.cfg`, such as `/usr` or a home directory. It used to run pip
   on the Python found there, often the one of the system, or to
   scatter a new environment among the files already in place.
+- `verifier-analyse.py` reads the scope agreed at the first startup
+  question, in the instructions of the summary. It looked for a line
+  `- Périmètre : ...`, whereas the summary writes `- a. Périmètre :
+  ...`: without `--scope`, it expected a comment on the mistakes and
+  blunders played beyond the agreed scope. The flaw dates from version
+  4.0.0, and its test checked a line that the script never writes.
 
 ## [4.0.2] - 2026-11-21
 

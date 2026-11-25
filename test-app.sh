@@ -2854,7 +2854,8 @@ EOF
             > bilan 2>&1
         egal "T82 --scope 0 refused" 2 "$?"
         # The scope given to the script is read in the instructions of
-        # the summary: a number there means a number of moves.
+        # the summary: a number there means a number of moves. The line
+        # is the one the script writes, label letter included.
         VERIF="$VERIF" "$PYVENV" - > sortie-t82 2> journal-t82 <<'EOF'
 import importlib.util
 import os
@@ -2864,7 +2865,8 @@ va = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(va)
 for reponse in ("les 20 premiers coups", "12", "la partie complète (défaut)",
                 "jusqu'au milieu de partie", "0"):
-    print(va.perimetre_convenu("## Consignes\n- Périmètre : %s\n" % reponse))
+    print(va.perimetre_convenu("## Consignes d'analyse\n"
+                               "- a. Périmètre : %s\n" % reponse))
 print(va.perimetre_convenu("Aucune consigne."))
 EOF
         printf '20\n12\nNone\nNone\nNone\nNone\n' > attendu-t82
@@ -2873,6 +2875,21 @@ EOF
         joindre sortie-t82
         joindre journal-t82 5
         rm -rf "$DEPOT/__pycache__"
+        # The same from a real collection, answered on a terminal: the
+        # scope given at the startup question bounds the check without
+        # --scope. The line written by the script was never read before.
+        mkdir -p t-82-p
+        SCRIPT="$SCRIPT" python3 t-pty.py "w||les 4 premiers coups|||" \
+            t-legal.pgn $P --settings "$REGL" --output-dir t-82-p \
+            > sortie-pty 2>&1
+        ARCH82P=$(find t-82-p -name 'analysis-*.zip' | head -n 1)
+        "$PYVENV" "$VERIF" "$ARCH82P" t-82-quatre.pgn --prompt-only \
+            > bilan 2>&1
+        verifier "T82 scope of a real collection read without --scope" \
+            contient bilan "périmètre convenu : les 4 premiers coups"
+        egal "T82 real collection, no unexpected error" 0 \
+            "$(grep -c 'Unexpected error' sortie-pty)"
+        rm -rf t-82-p
         # Short mode: neither NAG, nor em dash, nor number of FEN, which the
         # short prompt does not ask for. Without the option, they are reported.
         printf 'Synth\303\250se \342\200\224 sans position.\n' > t-82-conv.txt
