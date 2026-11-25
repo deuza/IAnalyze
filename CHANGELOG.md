@@ -45,6 +45,11 @@ Icône de la licence CC-0
   by an interrupted creation, instead of failing on "No module named
   pip". Only a directory that carries `pyvenv.cfg` can be rebuilt, so
   that a wrong `--venv` never loses its content.
+- `--installer-venv` refuses a `--venv` that is not a virtual
+  environment, an existing directory that is not empty and has no
+  `pyvenv.cfg`, such as `/usr` or a home directory. It used to run pip
+  on the Python found there, often the one of the system, or to
+  scatter a new environment among the files already in place.
 
 ## [4.0.2] - 2026-11-21
 

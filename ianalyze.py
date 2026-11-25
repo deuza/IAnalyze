@@ -227,6 +227,28 @@ def venv_incomplet(venv: str) -> bool:
     return rendu.returncode != 0
 
 
+def pas_un_venv(venv: str) -> bool:
+    """
+    Tells whether --venv names an existing directory that is not a
+    virtual environment: not empty, and without pyvenv.cfg. /usr is one,
+    with its bin/python3, so is a home directory.
+
+    --installer-venv refuses it: pip would run on the Python found
+    there, often the one of the system, and python -m venv would scatter
+    its files among those already in place. A missing or empty directory
+    is not refused, a virtual environment is created in it. A directory
+    that the system refuses to list is not refused either: python -m
+    venv then fails with its own message.
+    """
+    racine = pathlib.Path(os.path.expanduser(venv))
+    if not est_repertoire(racine) or est_fichier(racine / "pyvenv.cfg"):
+        return False
+    try:
+        return any(racine.iterdir())
+    except OSError:
+        return False
+
+
 def installer_venv(venv: str) -> None:
     """
     Creates the virtual environment if missing, then installs python-chess.
@@ -234,10 +256,19 @@ def installer_venv(venv: str) -> None:
     The operation is idempotent: you can safely run it again on an
     environment already in place, it will then simply update the module.
     An environment left incomplete by an interrupted creation is rebuilt
-    from scratch first (see venv_incomplet).
+    from scratch first (see venv_incomplet). A directory that is not a
+    virtual environment is refused before anything runs (see
+    pas_un_venv).
     """
     racine = pathlib.Path(os.path.expanduser(venv))
     interpreteur = python_du_venv(venv)
+
+    if pas_un_venv(venv):
+        raise SystemExit("--venv: %s is not a virtual environment, the "
+                         "directory is not empty and has no pyvenv.cfg: "
+                         "nothing is changed. Give a new or empty "
+                         "directory, or an existing virtual environment."
+                         % racine)
 
     # The exit code of python -m venv is checked below; what it cannot
     # catch is a creation interrupted before it returns, which the next

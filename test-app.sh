@@ -396,6 +396,42 @@ egal "T84 sans pip, sans pyvenv.cfg, complet" "True False False" \
 joindre journal-t84 5
 rm -rf "$DEPOT/__pycache__"
 
+titre "T85 : --venv qui n'est pas un environnement virtuel, refusé"
+# A directory with an interpreter but no pyvenv.cfg, like /usr, and a
+# directory of other files, like a home directory: --installer-venv
+# refuses both before anything runs, pip included, and changes nothing
+# in them. A missing or empty directory and the venv of the tests are
+# not refused. The refusal needs no network.
+rm -rf t85-faux t85-autre t85-vide t85-absent
+mkdir -p t85-faux/bin t85-autre t85-vide
+ln -s "$(command -v python3)" t85-faux/bin/python3
+echo temoin > t85-autre/temoin
+for rep in t85-faux t85-autre; do
+    "$SCRIPT" --installer-venv --venv "$TRAVAIL/$rep" > sortie 2> journal
+    egal "T85 $rep, code de retour" 1 "$?"
+    verifier "T85 $rep, refusé" \
+        contient journal "is not a virtual environment"
+    egal "T85 $rep, rien d'installé" 0 \
+        "$(grep -c 'Installing python-chess' journal)"
+done
+egal "T85 rien d'ajouté aux deux répertoires" "bin temoin" \
+    "$(ls t85-faux) $(ls t85-autre)"
+SCRIPT="$SCRIPT" VENV="$VENV" "$PYVENV" - > sortie-t85 2> journal-t85 <<'EOF'
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
+cp = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cp)
+print(cp.pas_un_venv("t85-faux"), cp.pas_un_venv("t85-autre"),
+      cp.pas_un_venv("t85-vide"), cp.pas_un_venv("t85-absent"),
+      cp.pas_un_venv(os.environ["VENV"]))
+EOF
+egal "T85 faux, autre, vide, absent, complet" \
+    "True True False False False" "$(cat sortie-t85)"
+joindre journal-t85 5
+rm -rf "$DEPOT/__pycache__"
+
 titre "T05 : collecte minimale"
 lancer italienne.pgn $O
 egal "T05 code de retour" 0 "$RC"

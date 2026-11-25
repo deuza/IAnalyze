@@ -152,6 +152,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | T82 | Vérificateur, suite | mats cités, périmètre convenu, contrôles sautés du mode court, dossier parent à une ou plusieurs collectes |
 | T83 | Parties d'exemples | les fichiers de `parties-exemples` restent ce qu'`EXEMPLES.md` en dit : huit parties acceptées, dont les exports de quatre sites et d'un logiciel, quatre refusées avec leur cause, deux PGN annotés contrôlés, aucune adresse ni identifiant de partie réelle |
 | T84 | Environnement virtuel incomplet | un environnement sans pip est reconnu, un répertoire sans `pyvenv.cfg` ne l'est jamais ; avec `--reseau`, `--installer-venv` reconstruit le premier et y installe python-chess |
+| T85 | `--venv` qui n'est pas un environnement virtuel | un répertoire non vide sans `pyvenv.cfg`, avec ou sans interpréteur, est refusé par `--installer-venv` avant tout pip, et rien n'y est ajouté ; un répertoire absent ou vide ne l'est pas |
 | M1 | Collecte, noms | nom de PGN accentué, chemin de sortie avec espace et accent |
 | M2 | Collecte complète | l'italienne analysée en entier, moteur seul, sans processus du moteur laissé derrière |
 

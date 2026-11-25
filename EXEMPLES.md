@@ -533,6 +533,16 @@ Emplacement de l'environnement virtuel, à l'installation comme à l'usage.
 [01:11:39] Environnement virtuel opérationnel : ~/venv/echecs/bin/python3
 ```
 
+Un répertoire qui n'est pas un environnement virtuel, non vide et sans `pyvenv.cfg`, est refusé avant toute installation : pip ne tourne pas sur le Python qu'il contient, et rien n'y est ajouté.
+
+```bash
+./ianalyze.py --installer-venv --venv /usr
+```
+
+```text
+--venv: /usr is not a virtual environment, the directory is not empty and has no pyvenv.cfg: nothing is changed. Give a new or empty directory, or an existing virtual environment.
+```
+
 La même option sert ensuite à chaque collecte, et le journal nomme l'environnement employé :
 
 ```bash

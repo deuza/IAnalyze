@@ -43,6 +43,8 @@ Trois commandes ne collectent rien et s'arrêtent une fois leur travail fait : `
 
 `--installer-venv` contrôle le code de retour de `python -m venv`. Une création interrompue avant ce retour, par Ctrl-C ou une coupure, laisse un environnement sans pip, que le lancement suivant retrouve à moitié fait. Le script le reconnaît : `pyvenv.cfg` et l'interpréteur sont là, mais `python -m pip --version` échoue. Il le reconstruit alors par `python -m venv --clear`, puis installe python-chess. Sans `pyvenv.cfg`, un répertoire n'est jamais pris pour un environnement à reconstruire, et `--clear` ne peut rien y effacer.
 
+Un `--venv` qui n'est pas un environnement virtuel est refusé avant tout le reste : un répertoire existant, non vide et sans `pyvenv.cfg`, comme `/usr` ou un répertoire personnel. pip aurait tourné sur le Python trouvé là, souvent celui du système, et `python -m venv` aurait mêlé ses fichiers à ceux qui y étaient. Un répertoire absent ou vide reçoit l'environnement. Une création interrompue dans les tout premiers instants, avant l'écriture de `pyvenv.cfg`, laisse un répertoire que ce refus écarte aussi : il suffit alors de le supprimer.
+
 Après l'étape 8, un échec laisse le dossier de travail en place, tel quel, pour diagnostic.
 
 ## 2. Fichiers du dépôt
