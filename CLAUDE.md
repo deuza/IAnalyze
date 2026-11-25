@@ -119,9 +119,10 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
   simulés des tests ; 5c, README.md et README.fr.md ; 5d,
   TECHNICAL.md ; 5e, EXAMPLES.md et EXAMPLES.fr.md, sorties
   réelles ; 5f, TESTS.md et TESTS.fr.md ; 5g, TECHNICAL.fr.md ;
-  5h, historique du CHANGELOG, traduit. Le contenu des exemples
-  passe en anglais, sauf french-notation.pgn, dont la notation est
-  le sujet.
+  5h, historique du CHANGELOG, traduit, les noms d'options, de
+  fichiers, de clefs et les messages de chaque version gardés tels
+  qu'ils étaient. Le contenu des exemples passe en anglais, sauf
+  french-notation.pgn, dont la notation est le sujet.
 - Dérogation : la documentation (README, EXAMPLES, TECHNICAL, TESTS)
   est traduite et remise à jour au lot 5, une fois l'interface figée.
   Le CHANGELOG suit chaque lot, en anglais, sous Unreleased. CLAUDE.md
