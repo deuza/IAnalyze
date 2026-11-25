@@ -153,9 +153,9 @@ except ImportError:
 #: following position "Not transmitting history with null moves to UCI
 #: engine": it warns that it gives the engine the position alone, without
 #: the move history. The evaluations do not depend on it, and the null
-#: move is already reported in the log and in the summary: this message,
-#: in English and repeated, is filtered out. The other notices of the
-#: library are still displayed.
+#: move is already reported in the log and in the summary: this repeated
+#: message is filtered out. The other notices of the library are still
+#: displayed.
 logging.getLogger("chess.engine").addFilter(
     lambda avis: "null moves" not in avis.getMessage())
 
@@ -195,41 +195,41 @@ def installer_venv(venv: str) -> None:
     interpreteur = python_du_venv(venv)
 
     if not est_fichier(interpreteur):
-        journal("Création de l'environnement virtuel : %s" % racine)
+        journal("Creating the virtual environment: %s" % racine)
         try:
             racine.parent.mkdir(parents=True, exist_ok=True)
             subprocess.run([sys.executable, "-m", "venv", str(racine)],
                            check=True)
         except OSError as err:
-            raise SystemExit("Impossible de créer %s : %s" % (racine, err)) \
+            raise SystemExit("Cannot create %s: %s" % (racine, err)) \
                 from err
         except subprocess.CalledProcessError as err:
             # The text displayed on Debian is the original one; on macOS
             # there is no python3-venv package to suggest.
             raise SystemExit(
-                "Échec de la création de l'environnement virtuel. %s (%s)"
-                % ("Le Python installé fournit-il le module venv ?"
+                "Failed to create the virtual environment. %s (%s)"
+                % ("Does the installed Python provide the venv module?"
                    if EST_MACOS else
-                   "Le paquet python3-venv est-il installé ?",
+                   "Is the python3-venv package installed?",
                    CMD_PAQUET_VENV)
             ) from err
     else:
-        journal("Environnement virtuel déjà présent : %s" % racine)
+        journal("Virtual environment already present: %s" % racine)
 
-    journal("Installation de python-chess dans l'environnement virtuel.")
+    journal("Installing python-chess in the virtual environment.")
     try:
         subprocess.run([str(interpreteur), "-m", "pip", "install",
                         "--quiet", "--upgrade", "pip"], check=True)
         subprocess.run([str(interpreteur), "-m", "pip", "install",
                         "--quiet", "--upgrade", "chess"], check=True)
     except (subprocess.CalledProcessError, OSError) as err:
-        raise SystemExit("Échec de l'installation de python-chess dans %s : %s"
+        raise SystemExit("Failed to install python-chess in %s: %s"
                          % (racine, err)) from err
 
     if not venv_operationnel(venv):
-        raise SystemExit("L'environnement %s ne fournit toujours pas le "
-                         "module chess après installation." % venv)
-    journal("Environnement virtuel opérationnel : %s" % interpreteur)
+        raise SystemExit("The environment %s still does not provide the chess "
+                         "module after installation." % venv)
+    journal("Virtual environment ready: %s" % interpreteur)
 
 
 def relancer_dans_venv(venv: str, argv: list[str]) -> None:
@@ -245,24 +245,24 @@ def relancer_dans_venv(venv: str, argv: list[str]) -> None:
 
     if os.environ.get(MARQUEUR_RELANCE) == "1":
         raise SystemExit(
-            "L'environnement %s ne fournit pas le module chess.\n"
-            "Réparez-le avec : %s --installer-venv --venv %s"
+            "The environment %s does not provide the chess module.\n"
+            "Repair it with: %s --installer-venv --venv %s"
             % (venv, script, venv))
 
     if est_fichier(interpreteur):
-        journal("Environnement virtuel : relance via %s" % interpreteur)
+        journal("Virtual environment: restarting with %s" % interpreteur)
         os.environ[MARQUEUR_RELANCE] = "1"
         try:
             os.execv(str(interpreteur), [str(interpreteur), script] + argv)
         except OSError as err:
-            raise SystemExit("Relance impossible via %s : %s"
+            raise SystemExit("Cannot restart with %s: %s"
                              % (interpreteur, err)) from err
 
     supplement = "" if venv == VENV_DEFAUT else " --venv %s" % venv
     raise SystemExit(
-        "Le module python-chess est introuvable et l'environnement virtuel "
-        "%s n'existe pas.\n\n"
-        "Créez-le en une commande :\n"
+        "The python-chess module cannot be found and the virtual environment "
+        "%s does not exist.\n\n"
+        "Create it with one command:\n"
         "    %s\n"
         "    %s --installer-venv%s\n"
         % (venv, CMD_PAQUET_VENV, script, supplement))
@@ -524,7 +524,7 @@ STOCKFISH_DEFAUT = ((shutil.which("stockfish")
 
 #: Hint for installing the engine, repeated in the error message.
 AIDE_STOCKFISH = (CMD_PAQUET_STOCKFISH if EST_MACOS
-                  else CMD_PAQUET_STOCKFISH + ", dans /usr/games")
+                  else CMD_PAQUET_STOCKFISH + ", in /usr/games")
 
 #: File holding the personal token, in mode 600, and nothing else.
 JETON_DEFAUT = "~/.lichess_token"
@@ -794,7 +794,7 @@ def lire_fichier_texte(chemin: pathlib.Path,
                        role: str) -> tuple[str, str, list[str]]:
     """
     Reads a text file whatever its encoding, and reports what departs from
-    UTF-8 with an "Attention" line in the log.
+    UTF-8 with a "Warning" line in the log.
 
     Returns the text, the encoding chosen and the remarks, like
     decoder_octets. Only an error accessing the file stops the script.
@@ -802,10 +802,10 @@ def lire_fichier_texte(chemin: pathlib.Path,
     try:
         brut = chemin.read_bytes()
     except OSError as err:
-        raise SystemExit("Lecture impossible (%s) : %s" % (role, err)) from err
+        raise SystemExit("Cannot read (%s): %s" % (role, err)) from err
     texte, encodage, remarques = decoder_octets(brut)
     for remarque in remarques:
-        journal("Attention, %s : %s." % (role, remarque))
+        journal("Warning, %s: %s." % (role, remarque))
     return texte, encodage, remarques
 
 
@@ -910,23 +910,23 @@ def lire_jeton(chemin: str) -> str:
     """
     p = pathlib.Path(os.path.expanduser(chemin))
     if not est_fichier(p):
-        raise SystemExit("Jeton absent : %s introuvable." % p)
+        raise SystemExit("Token missing: %s not found." % p)
 
     try:
         mode = p.stat().st_mode
         brut = p.read_bytes()
     except (OSError, UnicodeDecodeError) as err:
-        raise SystemExit("Jeton illisible dans %s : %s" % (p, err)) from err
+        raise SystemExit("Cannot read the token in %s: %s" % (p, err)) from err
 
     # Same decoding as for the PGN: a file saved by a Windows editor, with a
     # byte order mark or in UTF-16, stays readable. The remarks never quote
     # the content of the file.
     contenu, _encodage, remarques = decoder_octets(brut)
     for remarque in remarques:
-        journal("Attention, jeton (%s) : %s." % (p, remarque))
+        journal("Warning, token (%s): %s." % (p, remarque))
 
     if mode & 0o077:
-        journal("Attention : %s est lisible par d'autres (mode %o)."
+        journal("Warning: %s is readable by others (mode %o)."
                 % (p, mode & 0o777))
 
     jeton = contenu.strip()
@@ -935,15 +935,15 @@ def lire_jeton(chemin: str) -> str:
     # answered 401 without anything pointing to the file.
     if (not jeton or any(c.isspace() for c in jeton)
             or any(c in jeton for c in "=\"'")):
-        raise SystemExit("Le fichier %s doit contenir le jeton seul, sans "
-                         "espace ni affectation de variable." % p)
+        raise SystemExit("The file %s must contain the token alone, without "
+                         "spaces or variable assignment." % p)
     # The token goes into an HTTP header: outside printable ASCII, it would
     # be rejected by http.client with an encoding error that nothing links
     # to the file. The message does not reproduce the token.
     if not jeton.isascii() or not jeton.isprintable():
-        raise SystemExit("Le jeton lu dans %s contient des caractères hors "
-                         "de l'ASCII imprimable : recopiez-le depuis "
-                         "Lichess, sans rien d'autre dans le fichier." % p)
+        raise SystemExit("The token read in %s contains characters outside "
+                         "printable ASCII: copy it again from Lichess, with "
+                         "nothing else in the file." % p)
     return jeton
 
 
@@ -1020,22 +1020,22 @@ def telecharger_pgn(identifiant: str, delai: int) -> str:
         "User-Agent": UA,
         "Accept": "application/x-chess-pgn",
     })
-    journal("Téléchargement du PGN : %s" % url)
+    journal("Downloading the PGN: %s" % url)
     try:
         with urllib.request.urlopen(requete, timeout=delai) as reponse:
             # Same decoding as for a local file: Lichess answers in UTF-8, but
             # nothing must depend on this assumption.
             texte, _encodage, remarques = decoder_octets(reponse.read())
             for remarque in remarques:
-                journal("Attention, PGN téléchargé : %s." % remarque)
+                journal("Warning, downloaded PGN: %s." % remarque)
             return texte
     except urllib.error.HTTPError as err:
-        raise SystemExit("Export PGN : HTTP %d pour la partie %s."
+        raise SystemExit("PGN export: HTTP %d for the game %s."
                          % (err.code, identifiant)) from err
     except (OSError, http.client.HTTPException) as err:
         # URLError is a subclass of OSError: this block covers a failed DNS
         # resolution as well as a timeout or a dropped connection.
-        raise SystemExit("Export PGN injoignable : %s"
+        raise SystemExit("PGN export unreachable: %s"
                          % getattr(err, "reason", err)) from err
 
 
@@ -1085,8 +1085,8 @@ def controler_lexique(texte_pgn: str) -> None:
             fin = texte_pgn.find("}", i)
             if fin < 0:
                 raise SystemExit(
-                    "PGN corrompu : le commentaire ouvert par une accolade "
-                    "à la ligne %d n'est jamais fermé." % ligne)
+                    "Corrupt PGN: the comment opened by a brace on line %d is "
+                    "never closed." % ligne)
             ligne += texte_pgn.count("\n", i, fin)
             i = fin + 1
             debut_de_ligne = False
@@ -1102,8 +1102,8 @@ def controler_lexique(texte_pgn: str) -> None:
         elif c == ")":
             if profondeur == 0:
                 raise SystemExit(
-                    "PGN corrompu : parenthèse fermante sans variante "
-                    "ouverte, ligne %d." % ligne)
+                    "Corrupt PGN: closing parenthesis without an open "
+                    "variation, line %d." % ligne)
             profondeur -= 1
             i += 1
             debut_de_ligne = False
@@ -1112,18 +1112,18 @@ def controler_lexique(texte_pgn: str) -> None:
             if m is None:
                 mot = re.match(r"\S+", texte_pgn[i:i + 40])
                 raise SystemExit(
-                    "PGN corrompu : \"%s\", ligne %d, n'est ni un coup en "
-                    "notation anglaise (K, Q, R, B, N) ni un autre élément "
-                    "de PGN. Une partie notée en français ou en figurines "
-                    "doit être convertie, un texte libre placé entre "
-                    "accolades."
+                    "Corrupt PGN: \"%s\", line %d, is neither a move in "
+                    "English notation (K, Q, R, B, N) nor another PGN "
+                    "element. A game written in French notation or with "
+                    "figurines must be converted, free text placed between "
+                    "braces."
                     % (nettoyer_valeur(mot.group(0) if mot else c)[:20],
                        ligne))
             i = m.end()
             debut_de_ligne = False
     if profondeur:
-        raise SystemExit("PGN corrompu : %d variante(s) ouverte(s) par une "
-                         "parenthèse et jamais fermée(s)." % profondeur)
+        raise SystemExit("Corrupt PGN: %d variation(s) opened by a "
+                         "parenthesis and never closed." % profondeur)
 
 
 def resultat_orphelin(partie: chess.pgn.Game) -> bool:
@@ -1154,16 +1154,16 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
     except (IndexError, ValueError) as err:
         # Safety net: the lexical check rules out the known cases, but no input
         # must end in an unexpected error.
-        raise SystemExit("PGN corrompu : python-chess n'a pas pu le lire "
+        raise SystemExit("Corrupt PGN: python-chess could not read it "
                          "(%s)." % type(err).__name__) from err
     if partie is None:
-        raise SystemExit("PGN illisible ou vide.")
+        raise SystemExit("Unreadable or empty PGN.")
     if partie.errors:
-        raise SystemExit("PGN corrompu, coup illégal ou malformé : %s"
+        raise SystemExit("Corrupt PGN, illegal or malformed move: %s"
                          % "; ".join(nettoyer_valeur(str(e))
                                      for e in partie.errors))
     if not list(partie.mainline_moves()):
-        raise SystemExit("PGN sans aucun coup dans la ligne principale.")
+        raise SystemExit("PGN without a single move in the main line.")
     # IAnalyze analyzes a whole game, from the first move to the last: the
     # explorer, the opening catalog and the instructions of the prompt all
     # assume the initial position. A game resumed from a position, given by
@@ -1171,10 +1171,10 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
     # a prompt that does not fit it.
     if partie.board().fen() != chess.STARTING_FEN:
         raise SystemExit(
-            "La partie ne commence pas à la position initiale, elle part "
-            "d'une balise FEN. IAnalyze analyse une partie entière, du "
-            "premier coup au dernier : pour étudier une position, "
-            "chargez-la dans un échiquier d'analyse.")
+            "The game does not start from the initial position, it starts "
+            "from a FEN tag. IAnalyze analyzes a whole game, from the first "
+            "move to the last: to study a position, load it into an analysis "
+            "board.")
 
     # The values of the tags go into the headers of the summary and into
     # the log: tabs and control characters are removed from them right now,
@@ -1187,8 +1187,8 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
 
     variante = partie.headers.get("Variant", "Standard")
     if variante.lower() not in ("standard", "from position"):
-        raise SystemExit("Variante non prise en charge : %s. Ce script ne "
-                         "traite que les échecs standard." % variante)
+        raise SystemExit("Variant not supported: %s. This script only handles "
+                         "standard chess." % variante)
 
     # A single game per file. Analyzing the first one of a series would make
     # no sense: nothing says it is the one you wanted, and partie.pgn,
@@ -1212,11 +1212,11 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
     except (IndexError, ValueError):
         autres += 1
     if orphelins and not autres:
-        journal("Résultat répété en fin de fichier, après la partie : "
-                "ignoré.")
+        journal("Result repeated at the end of the file, after the game: "
+                "ignored.")
     if autres:
-        raise SystemExit("Le PGN contient %d parties : isolez celle à "
-                         "analyser dans un fichier à part." % (autres + 1))
+        raise SystemExit("The PGN contains %d games: put the one to analyze "
+                         "in a separate file." % (autres + 1))
     return partie
 
 
@@ -1819,30 +1819,30 @@ def purger_reglages(chemin: str) -> None:
     """
     p = chemin_reglages(chemin)
     if not p.exists() and not p.is_symlink():
-        journal("Aucun fichier de réglages à supprimer : %s" % p)
+        journal("No settings file to delete: %s" % p)
         return
     if not (est_fichier(p) or p.is_symlink()):
-        raise SystemExit("--purge-reglages : %s n'est pas un fichier, rien "
-                         "n'est supprimé." % p)
+        raise SystemExit("--purge-reglages: %s is not a file, nothing is "
+                         "deleted." % p)
     try:
         brut = p.read_bytes()
     except OSError as e:
-        raise SystemExit("--purge-reglages : lecture de %s impossible : %s. "
-                         "Rien n'est supprimé." % (p, e)) from e
+        raise SystemExit("--purge-reglages: cannot read %s: %s. Nothing is "
+                         "deleted." % (p, e)) from e
     en_tete = re.compile(rb"^[ \t]*\[%s\][ \t]*\r?$"
                          % re.escape(REGLAGES_SECTION).encode("ascii"),
                          re.MULTILINE)
     if brut.strip() and not en_tete.search(brut):
-        raise SystemExit("--purge-reglages : %s n'est pas un fichier de "
-                         "réglages, il ne porte pas la section [%s]. Rien "
-                         "n'est supprimé." % (p, REGLAGES_SECTION))
+        raise SystemExit("--purge-reglages: %s is not a settings file, it "
+                         "does not carry the [%s] section. Nothing is "
+                         "deleted." % (p, REGLAGES_SECTION))
     try:
         p.unlink()
     except OSError as e:
-        raise SystemExit("--purge-reglages : suppression de %s impossible : "
+        raise SystemExit("--purge-reglages: cannot delete %s: "
                          "%s" % (p, e)) from e
-    journal("Réglages supprimés : %s. Ils seront redemandés à la prochaine "
-            "collecte lancée sur un terminal." % p)
+    journal("Settings deleted: %s. They will be asked again at the next "
+            "collection run in a terminal." % p)
 
 
 def lire_reglages(chemin: str) -> configparser.ConfigParser:
@@ -1859,14 +1859,14 @@ def lire_reglages(chemin: str) -> configparser.ConfigParser:
     reglages = configparser.ConfigParser(interpolation=None)
     p = chemin_reglages(chemin)
     if est_fichier(p):
-        texte = lire_fichier_texte(p, "réglages")[0]
+        texte = lire_fichier_texte(p, "settings")[0]
         try:
             reglages.read_string(texte, source=str(p))
         except configparser.Error as err:
             raise SystemExit(
-                "Réglages illisibles : %s\n"
-                "Corrigez %s, ou supprimez-le : il sera recréé au prochain "
-                "lancement sur un terminal."
+                "Unreadable settings: %s\n"
+                "Fix %s, or delete it: it will be created again at the next "
+                "run in a terminal."
                 % (nettoyer_valeur(str(err)), p)) from err
     if not reglages.has_section(REGLAGES_SECTION):
         reglages.add_section(REGLAGES_SECTION)
@@ -1922,7 +1922,7 @@ def ecrire_reglages(chemin: str, reglages: configparser.ConfigParser) -> bool:
         p.parent.mkdir(parents=True, exist_ok=True)
         ecrire_texte(p, "\n".join(out) + "\n")
     except OSError as err:
-        journal("Attention : réglages non enregistrés dans %s : %s"
+        journal("Warning: settings not saved in %s: %s"
                 % (p, err))
         return False
     return True
@@ -1946,20 +1946,20 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
     # again too: it must not go to the analyst as it is.
     brute = reglages.get(REGLAGES_SECTION, "cadence", fallback=None)
     if brute is not None and analyser_cadence(brute) is None:
-        journal("Réglages : la cadence enregistrée, \"%s\", n'est pas "
-                "lisible, elle est redemandée." % nettoyer_valeur(brute))
+        journal("Settings: the saved time control, \"%s\", cannot be read, it "
+                "is asked again." % nettoyer_valeur(brute))
         manquantes.append("cadence")
     # The same goes for the rating, which must be a number of Elo points.
     brute = reglages.get(REGLAGES_SECTION, "niveau", fallback=None)
     if brute is not None and analyser_niveau(brute) is None:
-        journal("Réglages : le niveau enregistré, \"%s\", n'est pas "
-                "lisible, il est redemandé." % nettoyer_valeur(brute))
+        journal("Settings: the saved rating, \"%s\", cannot be read, it is "
+                "asked again." % nettoyer_valeur(brute))
         manquantes.append("niveau")
     if not manquantes:
         return
 
-    journal("Réglages : %d réponse(s) à donner une seule fois, gardée(s) "
-            "dans %s." % (len(manquantes), chemin_reglages(chemin)))
+    journal("Settings: %d answer(s) to give only once, kept in "
+            "%s." % (len(manquantes), chemin_reglages(chemin)))
     for clef in manquantes:
         if clef == "pseudos":
             if pseudos_cli:
@@ -1983,12 +1983,12 @@ def completer_reglages(chemin: str, reglages: configparser.ConfigParser,
                                       dict(CADENCE_INCONNUE))
             reponse = None if saisie is None else noter_cadence(saisie[0])
         if reponse is None:
-            journal("Réglages non enregistrés : saisie interrompue.")
+            journal("Settings not saved: input interrupted.")
             return
         reglages.set(REGLAGES_SECTION, clef, reponse)
 
     if ecrire_reglages(chemin, reglages):
-        journal("Réglages enregistrés : %s" % chemin_reglages(chemin))
+        journal("Settings saved: %s" % chemin_reglages(chemin))
 
 
 # ===========================================================================
@@ -2049,7 +2049,7 @@ def rendre_modele(texte: str, conditions: dict[str, bool],
     extra blank lines left by a removed passage are tightened.
     """
     def erreur(numero: int, message: str) -> SystemExit:
-        return SystemExit("Modèle de prompt %s, ligne %d : %s"
+        return SystemExit("Prompt template %s, line %d: %s"
                           % (source, numero, message))
 
     sortie: list[str] = []
@@ -2061,16 +2061,16 @@ def rendre_modele(texte: str, conditions: dict[str, bool],
         if mots is None:
             for nom in RE_VALEUR_MODELE.findall(ligne):
                 if nom not in PROMPT_VALEURS:
-                    raise erreur(numero, "valeur inconnue {{%s}}, valeurs "
-                                 "admises : %s"
+                    raise erreur(numero, "unknown value {{%s}}, accepted "
+                                 "values: %s"
                                  % (nom, ", ".join(PROMPT_VALEURS)))
             # Double braces that remain once the recognized markers
             # are removed: a badly written marker, {{ NIVEAU }} or
             # {{CAMP1}}, which would go as it is into the prompt.
             reste = RE_VALEUR_MODELE.sub("", ligne)
             if "{{" in reste or "}}" in reste:
-                raise erreur(numero, "repère mal formé, forme attendue : "
-                             "{{NOM}}, en majuscules et sans espace")
+                raise erreur(numero, "badly formed marker, expected form: "
+                             "{{NAME}}, in capitals and without spaces")
             if all(vrai for _, vrai, _ in pile):
                 sortie.append(RE_VALEUR_MODELE.sub(
                     lambda m: valeurs[m.group(1)], ligne).rstrip())
@@ -2080,27 +2080,27 @@ def rendre_modele(texte: str, conditions: dict[str, bool],
         if mots[0] == "si":
             negation = len(mots) == 3 and mots[1] == "non"
             if len(mots) != (3 if negation else 2):
-                raise erreur(numero, "forme attendue : \"si CONDITION\" ou "
-                             "\"si non CONDITION\"")
+                raise erreur(numero, "expected form: \"si CONDITION\" or \"si "
+                             "non CONDITION\"")
             if mots[-1] not in PROMPT_CONDITIONS:
-                raise erreur(numero, "condition inconnue %s, conditions "
-                             "admises : %s"
+                raise erreur(numero, "unknown condition %s, accepted "
+                             "conditions: %s"
                              % (mots[-1], ", ".join(PROMPT_CONDITIONS)))
             pile.append((numero, conditions[mots[-1]] != negation, False))
         elif mots == ["sinon"]:
             if not pile or pile[-1][2]:
-                raise erreur(numero, "\"sinon\" sans \"si\" ouvert, ou en "
-                             "double")
+                raise erreur(numero, "\"sinon\" without an open \"si\", or "
+                             "repeated")
             pile[-1] = (pile[-1][0], not pile[-1][1], True)
         elif mots == ["fin"]:
             if not pile:
-                raise erreur(numero, "\"fin\" sans \"si\" ouvert")
+                raise erreur(numero, "\"fin\" without an open \"si\"")
             pile.pop()
         else:
-            raise erreur(numero, "directive inconnue \"%s\", directives "
-                         "admises : si, sinon, fin, note" % " ".join(mots))
+            raise erreur(numero, "unknown directive \"%s\", accepted "
+                         "directives: si, sinon, fin, note" % " ".join(mots))
     if pile:
-        raise erreur(pile[-1][0], "ce \"si\" n'est jamais fermé par \"fin\"")
+        raise erreur(pile[-1][0], "this \"si\" is never closed by \"fin\"")
 
     # Blank lines: at most one in a row, none at the start or at the end.
     resserre: list[str] = []
@@ -2127,8 +2127,8 @@ def verifier_modele(texte: str, source: str) -> None:
     # An empty template, or one made only of directives, would give a prompt
     # without a single line, announced as written.
     if not lignes_de_texte(texte):
-        raise SystemExit("Modèle de prompt %s : il ne contient aucune "
-                         "ligne de texte." % source)
+        raise SystemExit("Prompt template %s: it contains no line of "
+                         "text." % source)
 
 
 def decrire_niveau(niveau: int, partie: chess.pgn.Game,
@@ -2217,7 +2217,7 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
     nb_lignes = 0
     for morceau in CATALOGUE_PARTIES:
         url = CATALOGUE_SOURCE.format(partie=morceau)
-        journal("Téléchargement du catalogue : %s" % url)
+        journal("Downloading the catalog: %s" % url)
         requete = urllib.request.Request(url, headers={"User-Agent": UA})
         try:
             with urllib.request.urlopen(requete, timeout=delai) as reponse:
@@ -2225,19 +2225,19 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
                 # file is ignored instead of corrupting the header.
                 texte = reponse.read().decode("utf-8-sig", errors="strict")
         except urllib.error.HTTPError as err:
-            raise SystemExit("Catalogue : HTTP %d pour %s."
+            raise SystemExit("Catalog: HTTP %d for %s."
                              % (err.code, url)) from err
         except (OSError, http.client.HTTPException) as err:
             # URLError is a subclass of OSError, as for the PGN export.
-            raise SystemExit("Catalogue injoignable : %s"
+            raise SystemExit("Catalog unreachable: %s"
                              % getattr(err, "reason", err)) from err
         except UnicodeDecodeError as err:
-            raise SystemExit("Catalogue : %s n'est pas en UTF-8." % url) \
+            raise SystemExit("Catalog: %s is not in UTF-8." % url) \
                 from err
 
         lecteur = csv.DictReader(io.StringIO(texte), delimiter="\t")
         if lecteur.fieldnames != ["eco", "name", "pgn"]:
-            raise SystemExit("Catalogue : en-tête inattendu dans %s : %s"
+            raise SystemExit("Catalog: unexpected header in %s: %s"
                              % (url, lecteur.fieldnames))
 
         lignes_fichier = 0
@@ -2248,7 +2248,7 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
             coups = [j for j in (ligne.get("pgn") or "").split()
                      if not RE_NUMERO_COUP.fullmatch(j)]
             if not eco or not nom or not coups:
-                raise SystemExit("Catalogue : ligne %d de %s incomplète."
+                raise SystemExit("Catalog: line %d of %s is incomplete."
                                  % (numero, url))
 
             plateau = chess.Board()
@@ -2256,8 +2256,8 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
                 try:
                     plateau.push_san(san)
                 except ValueError as err:
-                    raise SystemExit("Catalogue : coup %s illisible ou "
-                                     "illégal, ligne %d de %s : %s"
+                    raise SystemExit("Catalog: move %s unreadable or illegal, "
+                                     "line %d of %s: %s"
                                      % (san, numero, url, err)) from err
                 # Intermediate position: known, without a name, unless another
                 # line has already named it.
@@ -2265,14 +2265,14 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
 
             epd = plateau.epd()
             if positions[epd][1]:
-                raise SystemExit("Catalogue : position nommée deux fois, "
-                                 "%s et %s (ligne %d de %s)."
+                raise SystemExit("Catalog: position named twice, %s and %s "
+                                 "(line %d of %s)."
                                  % (positions[epd][1], nom, numero, url))
             positions[epd] = (eco, nom)
             lignes_fichier += 1
 
         if lignes_fichier == 0:
-            raise SystemExit("Catalogue : %s ne contient aucune ligne." % url)
+            raise SystemExit("Catalog: %s contains no line." % url)
         nb_lignes += lignes_fichier
 
     nommees = sum(1 for _, nom in positions.values() if nom)
@@ -2305,14 +2305,14 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
     except OSError as err:
         if temporaire is not None:
             temporaire.unlink(missing_ok=True)
-        raise SystemExit("Écriture du catalogue impossible dans %s : %s"
+        raise SystemExit("Cannot write the catalog in %s: %s"
                          % (cible.parent, err)) from err
 
     # Full read-back through the normal path: what has just been written
     # must load exactly as it does during a collection.
     catalogue = lire_catalogue(repertoire)
-    journal("Catalogue installé : %s lignes, %s positions nommées, %s "
-            "positions connues, dans %s"
+    journal("Catalog installed: %s lines, %s named positions, %s known "
+            "positions, in %s"
             % (catalogue.meta["lignes"], catalogue.meta["nommees"],
                catalogue.meta["connues"], cible))
 
@@ -2329,8 +2329,8 @@ def lire_catalogue(repertoire: str) -> Catalogue:
     chemin = chemin_catalogue(repertoire)
     if not est_fichier(chemin):
         raise SystemExit(
-            "Catalogue des ouvertures absent : %s introuvable.\n\n"
-            "Installez-le en une commande :\n"
+            "Opening catalog missing: %s not found.\n\n"
+            "Install it with one command:\n"
             "    %s\n" % (chemin, commande_catalogue(repertoire)))
     reparer = "Réinstallez-le avec : %s" % commande_catalogue(repertoire)
 
@@ -2344,24 +2344,29 @@ def lire_catalogue(repertoire: str) -> Catalogue:
             for numero, ligne in enumerate(f, start=3):
                 champs = ligne.rstrip("\n").split("\t")
                 if len(champs) != 3 or not champs[0]:
-                    raise SystemExit("Catalogue corrompu, ligne %d de %s.\n%s"
+                    raise SystemExit("Corrupt catalog, line %d of %s.\n"
+                                     "%s"
                                      % (numero, chemin, reparer))
                 positions[champs[0]] = (champs[1], champs[2])
     except (OSError, UnicodeDecodeError) as err:
-        raise SystemExit("Catalogue illisible (%s) : %s\n%s"
+        raise SystemExit("Unreadable catalog (%s): %s\n"
+                         "%s"
                          % (chemin, err, reparer)) from err
 
     if not premiere.startswith("#"):
-        raise SystemExit("Catalogue sans description, %s.\n%s"
+        raise SystemExit("Catalog without a description, %s.\n"
+                         "%s"
                          % (chemin, reparer))
     meta = dict(champ.partition("=")[::2]
                 for champ in premiere[1:].split("\t"))
     if meta.get("format") != CATALOGUE_FORMAT or entete != "epd\teco\tnom":
-        raise SystemExit("Catalogue de format inconnu, %s.\n%s"
+        raise SystemExit("Catalog of unknown format, %s.\n"
+                         "%s"
                          % (chemin, reparer))
     if meta.get("connues") != str(len(positions)):
-        raise SystemExit("Catalogue tronqué : %s positions annoncées, %d "
-                         "lues dans %s.\n%s"
+        raise SystemExit("Truncated catalog: %s positions announced, %d read "
+                         "in %s.\n"
+                         "%s"
                          % (meta.get("connues"), len(positions), chemin,
                             reparer))
     return Catalogue(positions, meta)
@@ -2479,7 +2484,7 @@ class Explorateur:
                 except (OSError, http.client.HTTPException):
                     corps = ""
                 if err.code == 429 and tentative == 1:
-                    journal("429 reçu, pause de 60 secondes.")
+                    journal("429 received, pausing for 60 seconds.")
                     time.sleep(60)
                     continue
                 return err.code, {"_erreur": expurger(corps, self.jeton)[:500]}
@@ -2591,7 +2596,7 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
             arret = ("coup nul au demi-coup %d : ce n'est pas un coup des "
                      "échecs, l'explorateur ne peut pas suivre la partie au "
                      "delà" % (indice + 1))
-            journal("Explorateur : %s." % arret)
+            journal("Explorer: %s." % arret)
             non_exploitables.append({
                 "demicoup": indice + 1, "numero": numero, "trait": trait,
                 "san": san_joue, "motif": "coup nul, non interrogé",
@@ -2607,7 +2612,7 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
         # the explorer, for its part, does not change.
         uci_admis = (uci_joue, plateau.uci(coup, chess960=True))
 
-        journal("Explorateur : demi-coup %d (%s)" % (indice + 1, san_joue))
+        journal("Explorer: ply %d (%s)" % (indice + 1, san_joue))
         code, donnees = explorateur.interroger(joues_uci)
 
         # Systematic saving of the raw data, even on error: this will save
@@ -2622,7 +2627,7 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
             else:
                 motif = "HTTP %s" % code
             arret = "%s au demi-coup %d" % (motif, indice + 1)
-            journal("Explorateur : %s, arrêt de la collecte." % arret)
+            journal("Explorer: %s, the collection stops." % arret)
             non_exploitables.append({
                 "demicoup": indice + 1, "numero": numero, "trait": trait,
                 "san": san_joue, "motif": motif,
@@ -2636,7 +2641,7 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
         if total == 0:
             arret = ("position inconnue de la base au demi-coup %d, "
                      "échantillon nul" % (indice + 1))
-            journal("Explorateur : %s." % arret)
+            journal("Explorer: %s." % arret)
             non_exploitables.append({
                 "demicoup": indice + 1, "numero": numero, "trait": trait,
                 "san": san_joue, "motif": "position absente de la base",
@@ -2652,7 +2657,7 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
             arret = ("échantillon insuffisant au demi-coup %d : %d parties "
                      "pour un seuil de %d"
                      % (indice + 1, total, seuil_parties))
-            journal("Explorateur : %s." % arret)
+            journal("Explorer: %s." % arret)
             break
 
         # Search for the played move among the moves known to the database.
@@ -2718,7 +2723,7 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
                          % (indice + 1, san_joue, frequence, seuil_frequence,
                             ", hors catalogue" if catalogue is not None
                             else ""))
-                journal("Explorateur : %s." % arret)
+                journal("Explorer: %s." % arret)
                 break
 
     if arret is None:
@@ -2826,11 +2831,11 @@ def reste_estime(ecoule: float, faits: int, total: int) -> str:
         return ""
     reste = ecoule / faits * (total - faits)
     if reste < 60:
-        return ", reste moins d'une minute"
+        return ", less than a minute left"
     minutes = int(reste / 60 + 0.5)
     if minutes < 60:
-        return ", reste environ %d min" % minutes
-    return ", reste environ %d h %02d" % divmod(minutes, 60)
+        return ", about %d min left" % minutes
+    return ", about %d h %02d left" % divmod(minutes, 60)
 
 
 def resoudre_moteur(binaire: str) -> str:
@@ -2851,13 +2856,12 @@ def resoudre_moteur(binaire: str) -> str:
 def verifier_moteur(binaire: str) -> None:
     """Checks that the binary exists before anything has been created."""
     if not est_fichier(pathlib.Path(binaire)):
-        raise SystemExit("Stockfish introuvable : %s. Installez-le (%s), "
-                         "ou indiquez son chemin avec --stockfish. "
-                         "L'évaluation du moteur fait partie de toute "
-                         "collecte."
+        raise SystemExit("Stockfish not found: %s. Install it (%s), or give "
+                         "its path with --stockfish. The engine evaluation is "
+                         "part of every collection."
                          % (binaire, AIDE_STOCKFISH))
     if not os.access(binaire, os.X_OK):
-        raise SystemExit("Stockfish non exécutable : %s" % binaire)
+        raise SystemExit("Stockfish is not executable: %s" % binaire)
 
 
 def lancer_moteur(binaire: str) -> chess.engine.SimpleEngine:
@@ -2871,9 +2875,9 @@ def lancer_moteur(binaire: str) -> chess.engine.SimpleEngine:
     try:
         return chess.engine.SimpleEngine.popen_uci(binaire)
     except (OSError, TimeoutError, chess.engine.EngineError) as err:
-        raise SystemExit("Impossible de lancer le moteur %s : %s"
+        raise SystemExit("Cannot start the engine %s: %s"
                          % (binaire, str(err)
-                            or "pas de réponse UCI dans le délai")) from err
+                            or "no UCI answer within the time limit")) from err
 
 
 def fermer_moteur(moteur: chess.engine.SimpleEngine) -> None:
@@ -2909,14 +2913,14 @@ def verifier_options_moteur(binaire: str, fils: int, hachage: int,
                                         ("--multipv", "MultiPV", multipv)):
             annonce = moteur.options.get(option)
             if annonce is None:
-                raise SystemExit("Le moteur %s ne connaît pas l'option UCI "
-                                 "%s, requise par %s."
+                raise SystemExit("The engine %s does not know the UCI option "
+                                 "%s, required by %s."
                                  % (binaire, option, drapeau))
             mini, maxi = annonce.min, annonce.max
             if ((mini is not None and valeur < mini)
                     or (maxi is not None and valeur > maxi)):
-                raise SystemExit("%s : %d est hors des bornes du moteur %s, "
-                                 "qui admet de %s à %s pour %s."
+                raise SystemExit("%s: %d is out of the bounds of the engine "
+                                 "%s, which accepts %s to %s for %s."
                                  % (drapeau, valeur, binaire, mini, maxi,
                                     option))
     finally:
@@ -2980,8 +2984,8 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
         wdl = "UCI_ShowWDL" in moteur.options
         if wdl:
             moteur.configure({"UCI_ShowWDL": True})
-        journal("Stockfish : évaluation de %d demi-coups, profondeur %d, "
-                "multipv %d, threads %d. C'est la phase la plus longue."
+        journal("Stockfish: evaluation of %d plies, depth %d, multipv %d, "
+                "threads %d. This is the longest phase."
                 % (demicoups, profondeur, multipv, fils))
         debut = time.monotonic()
         for indice, coup in enumerate(coups[:demicoups]):
@@ -2990,7 +2994,7 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
             san_joue = plateau.san(coup)
             fen = plateau.fen()
 
-            journal("Stockfish : demi-coup %d/%d (%s)%s"
+            journal("Stockfish: ply %d/%d (%s)%s"
                     % (indice + 1, demicoups, san_joue,
                        reste_estime(time.monotonic() - debut, indice,
                                     demicoups)))
@@ -3026,8 +3030,8 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
                 if isinstance(info, list):
                     info = info[0]
                 if "score" not in info:
-                    raise SystemExit("Le moteur n'a renvoyé aucune "
-                                     "évaluation pour %s au demi-coup %d."
+                    raise SystemExit("The engine returned no evaluation for "
+                                     "%s at ply %d."
                                      % (san_joue, indice + 1))
                 if not info.get("pv"):
                     info = dict(info, pv=[coup])
@@ -3049,19 +3053,19 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
                 "fen": fen,
             })
             plateau.push(coup)
-        journal("Stockfish : terminé en %d min %02d s."
+        journal("Stockfish: done in %d min %02d s."
                 % divmod(int(time.monotonic() - debut), 60))
     except chess.engine.EngineError as err:
-        raise SystemExit("Le moteur a échoué en cours d'analyse : %s"
+        raise SystemExit("The engine failed during the analysis: %s"
                          % (err or type(err).__name__)) from err
     except concurrent.futures.CancelledError as err:
         # The engine died outside a search, during a setting for
         # example: python-chess then cancels the pending command instead
         # of raising an EngineError. The most common cause is a hash
         # table that the system refuses to allocate.
-        raise SystemExit("Le moteur a échoué en cours d'analyse : il s'est "
-                         "arrêté sans répondre. Si --hachage ou --fils "
-                         "sont élevés, la mémoire a pu manquer.") from err
+        raise SystemExit("The engine failed during the analysis: it stopped "
+                         "without answering. If --hachage or --fils are high, "
+                         "memory may have run out.") from err
     finally:
         # Safe stop in every case: see fermer_moteur.
         fermer_moteur(moteur)
@@ -3733,7 +3737,7 @@ def archiver(dossier: pathlib.Path, garder: bool) -> pathlib.Path:
     """
     archive = chemin_archive(dossier)
     if archive.exists():
-        raise SystemExit("L'archive %s existe déjà, dossier conservé."
+        raise SystemExit("The archive %s already exists, folder kept."
                          % archive)
 
     # Base of the temporary name: shutil.make_archive appends ".zip" to it.
@@ -3742,36 +3746,36 @@ def archiver(dossier: pathlib.Path, garder: bool) -> pathlib.Path:
     base_partielle = dossier.with_name(".%s.partiel" % dossier.name)
     partielle = chemin_archive(base_partielle)
 
-    journal("Création de l'archive : %s" % archive)
+    journal("Creating the archive: %s" % archive)
     try:
         try:
             shutil.make_archive(str(base_partielle), "zip",
                                 root_dir=dossier.parent,
                                 base_dir=dossier.name)
         except (OSError, shutil.Error) as err:
-            raise SystemExit("Échec de la création de l'archive, dossier "
-                             "conservé : %s" % err) from err
+            raise SystemExit("Failed to create the archive, folder kept: "
+                             "%s" % err) from err
 
         try:
             with zipfile.ZipFile(partielle) as z:
                 corrompu = z.testzip()
                 noms = z.namelist()
         except (OSError, zipfile.BadZipFile) as err:
-            raise SystemExit("Archive illisible, dossier conservé : %s"
+            raise SystemExit("Unreadable archive, folder kept: %s"
                              % err) from err
 
         attendu = "%s/synthese.md" % dossier.name
         if corrompu is not None or attendu not in noms:
-            raise SystemExit("Archive incomplète ou corrompue (%s), dossier "
-                             "conservé." % (corrompu or "synthèse absente"))
+            raise SystemExit("Incomplete or corrupt archive (%s), folder "
+                             "kept." % (corrompu or "summary missing"))
 
         # Renaming within the same directory: the archive appears all at
         # once, complete and checked.
         try:
             partielle.replace(archive)
         except OSError as err:
-            raise SystemExit("Archive valide mais impossible à renommer en "
-                             "%s, dossier conservé : %s"
+            raise SystemExit("Valid archive but cannot rename it to %s, "
+                             "folder kept: %s"
                              % (archive, err)) from err
     except BaseException:
         # Any stop before the renaming, Ctrl-C included, removes the
@@ -3782,15 +3786,15 @@ def archiver(dossier: pathlib.Path, garder: bool) -> pathlib.Path:
         raise
 
     if garder:
-        journal("Dossier conservé sur demande : %s" % dossier)
+        journal("Folder kept on request: %s" % dossier)
         return archive
 
     try:
         shutil.rmtree(dossier)
     except OSError as err:
-        raise SystemExit("Archive valide mais suppression du dossier "
-                         "impossible : %s" % err) from err
-    journal("Dossier de travail supprimé.")
+        raise SystemExit("Valid archive but cannot delete the folder: "
+                         "%s" % err) from err
+    journal("Working folder deleted.")
     return archive
 
 
@@ -3799,118 +3803,118 @@ def archiver(dossier: pathlib.Path, garder: bool) -> pathlib.Path:
 # ===========================================================================
 
 EXEMPLES = """\
-exemples d'utilisation
-----------------------
+usage examples
+--------------
 
-  Première installation, une seule fois :
+  First installation, only once:
 
       %s
       %s
       ./ianalyze.py --installer-venv
       ./ianalyze.py --installer-catalogue
 
-  Relancer --installer-catalogue de temps en temps met le catalogue des
-  ouvertures à jour.
+  Running --installer-catalogue again from time to time updates the
+  opening catalog.
 
-  Usage courant, sur un PGN local :
+  Common use, on a local PGN:
 
-      ./ianalyze.py ma-partie.pgn
+      ./ianalyze.py my-game.pgn
 
-  Sur une partie Lichess, par URL ou par identifiant :
+  On a Lichess game, by URL or by identifier:
 
-      ./ianalyze.py https://lichess.org/<identifiant>
-      ./ianalyze.py <identifiant>
+      ./ianalyze.py https://lichess.org/<identifier>
+      ./ianalyze.py <identifier>
 
-  Sans aucune question, par exemple depuis un autre script, ou avec tous vos
-  noms de joueur pour que le camp soit déduit des en-têtes :
+  Without any question, for example from another script, or with all your
+  player names so that your side is deduced from the headers:
 
-      ./ianalyze.py ma-partie.pgn --sans-questions
-      ./ianalyze.py ma-partie.pgn --pseudos MonPseudo,AutrePseudo
+      ./ianalyze.py my-game.pgn --sans-questions
+      ./ianalyze.py my-game.pgn --pseudos MyUsername,OtherUsername
 
-  Descendre aussi loin que la base répond, sans aucun seuil :
+  Going as deep as the database answers, without any threshold:
 
-      ./ianalyze.py ma-partie.pgn --jusqu-a-epuisement
+      ./ianalyze.py my-game.pgn --jusqu-a-epuisement
 
-  La base de tous les joueurs Lichess est interrogée par défaut, avec les
-  filtres de https://lichess.org/opening. La restreindre à certaines
-  cadences et tranches de classement, ou interroger la base maîtres :
+  The database of all Lichess players is queried by default, with the
+  filters of https://lichess.org/opening. Restricting it to some speeds
+  and rating bands, or querying the masters database:
 
-      ./ianalyze.py ma-partie.pgn \\
+      ./ianalyze.py my-game.pgn \\
           --cadences rapid,classical,correspondence --classements 0,1000
-      ./ianalyze.py ma-partie.pgn --base maitres
+      ./ianalyze.py my-game.pgn --base maitres
 
-  Couvrir les dix premiers coups quelle que soit la fréquence des coups
-  joués, ou au contraire s'arrêter dès la première sortie de théorie :
+  Covering the first ten moves whatever the frequency of the moves played,
+  or on the contrary stopping at the first exit from theory:
 
-      ./ianalyze.py ma-partie.pgn --coups-min 10
-      ./ianalyze.py ma-partie.pgn --coups-min 0
+      ./ianalyze.py my-game.pgn --coups-min 10
+      ./ianalyze.py my-game.pgn --coups-min 0
 
-  Moteur seul, sans réseau ni jeton :
+  Engine only, without network or token:
 
-      ./ianalyze.py ma-partie.pgn --sans-explorateur
+      ./ianalyze.py my-game.pgn --sans-explorateur
 
-  Conserver le dossier de travail à côté de l'archive :
+  Keeping the working folder next to the archive:
 
-      ./ianalyze.py ma-partie.pgn --garder-dossier
+      ./ianalyze.py my-game.pgn --garder-dossier
 
-  Pour un LLM qui n'ouvre pas les zip ou n'exécute pas de code : un
-  prompt court qui porte la partie et les évaluations, à coller seul.
-  Aucune archive n'est écrite :
+  For an LLM that does not open zip files or run code: a short prompt
+  that carries the game and the evaluations, to be pasted alone. No
+  archive is written:
 
-      ./ianalyze.py ma-partie.pgn --prompt-seul
+      ./ianalyze.py my-game.pgn --prompt-seul
 
-  Utiliser votre propre modèle de prompt, ou ne pas écrire de prompt :
+  Using your own prompt template, or writing no prompt:
 
-      ./ianalyze.py ma-partie.pgn --prompt ~/mon-modele.txt
-      ./ianalyze.py ma-partie.pgn --sans-prompt
+      ./ianalyze.py my-game.pgn --prompt ~/my-template.txt
+      ./ianalyze.py my-game.pgn --sans-prompt
 
-  Moteur plus profond, ou limité aux quinze premiers coups :
+  Deeper engine, or limited to the first fifteen moves:
 
-      ./ianalyze.py ma-partie.pgn --profondeur 22
-      ./ianalyze.py ma-partie.pgn --coups-stockfish 15
+      ./ianalyze.py my-game.pgn --profondeur 22
+      ./ianalyze.py my-game.pgn --coups-stockfish 15
 
-résultat
---------
+result
+------
 
-  Une archive analyse-<partie>-<horodatage>.zip dans le répertoire de
-  sortie, contenant synthese.md et les données brutes. Le chemin de
-  l'archive est écrit seul sur la sortie standard, tout le reste va sur la
-  sortie d'erreur. En cas d'échec, le dossier de travail est conservé tel
-  quel pour diagnostic.
+  An archive analyse-<game>-<timestamp>.zip in the output directory,
+  containing synthese.md and the raw data. The path of the archive is
+  written alone on standard output, everything else goes to standard
+  error. On failure, the working folder is kept as it is for diagnosis.
 
-  À côté de l'archive, le prompt d'analyse de la partie, sous le nom
-  analyse-<partie>-<horodatage>.prompt.txt : collez-le dans la
-  conversation, l'archive en pièce jointe. Il est tiré du modèle
-  prompt-modele.txt, rangé à côté du script, que vous pouvez modifier.
+  Next to the archive, the analysis prompt of the game, under the name
+  analyse-<game>-<timestamp>.prompt.txt: paste it into the conversation,
+  with the archive as an attachment. It is drawn from the template
+  prompt-modele.txt, kept next to the script, which you can edit.
 
-prérequis
----------
+prerequisites
+-------------
 
   %s
   %s
 
-  python-chess n'est pas empaqueté par Debian. L'option --installer-venv
-  crée un environnement virtuel dédié et y installe le module. Par défaut :
+  python-chess is not packaged by Debian. The --installer-venv option
+  creates a dedicated virtual environment and installs the module in it.
+  By default:
   %s
-  Le script s'y relance ensuite tout seul, vous pouvez continuer à
-  l'appeler avec le python du système.
+  The script then restarts in it by itself, you can keep calling it with
+  the system's python.
 
-  Le catalogue des ouvertures nommées de Lichess (domaine public, CC0)
-  est gardé en local dans %s,
-  installé et mis à jour par --installer-catalogue. Il n'est pas requis
-  avec --sans-explorateur.
+  The catalog of the named openings of Lichess (public domain, CC0) is
+  kept locally in %s,
+  installed and updated by --installer-catalogue. It is not required
+  with --sans-explorateur.
 
-  Le jeton personnel Lichess est lu dans %s, en mode 600,
-  ce fichier ne contenant que le jeton. Il n'apparaît jamais dans la
-  sortie, ni dans les fichiers produits, ni dans la ligne de commande.
+  The personal Lichess token is read from %s, in mode 600,
+  this file containing only the token. It never appears in the output,
+  nor in the files produced, nor in the command line.
 
-  Votre pseudo, votre cadence habituelle et votre niveau sont demandés
-  une seule fois, au premier lancement sur un terminal, puis gardés dans
-  %s, que vous pouvez modifier à la main.
+  Your username, your usual time control and your rating are asked only
+  once, on the first run in a terminal, then kept in
+  %s, which you can edit by hand.
 
-  Aucune autre dépendance : le HTTP passe par urllib de la bibliothèque
-  standard, l'archive par zipfile. Le paquet stockfish est obligatoire,
-  le moteur est piloté en UCI.
+  No other dependency: HTTP goes through urllib from the standard
+  library, the archive through zipfile. The stockfish package is
+  mandatory, the engine is driven over UCI.
 """ % (CMD_PAQUET_VENV, CMD_PAQUET_STOCKFISH,
        CMD_PAQUET_VENV, CMD_PAQUET_STOCKFISH,
        VENV_DEFAUT, CATALOGUE_DEFAUT, JETON_DEFAUT, REGLAGES_DEFAUT)
@@ -3937,12 +3941,12 @@ def valider_liste(p: argparse.ArgumentParser, option: str, valeur: str,
             continue
         canonique = canoniques.get(element.lower())
         if canonique is None:
-            p.error('%s : valeur inconnue "%s", valeurs admises : %s'
+            p.error("%s: unknown value \"%s\", accepted values: %s"
                     % (option, element, ", ".join(admises)))
         if canonique not in retenues:
             retenues.append(canonique)
     if not retenues:
-        p.error("%s : liste vide" % option)
+        p.error("%s: empty list" % option)
     retenues.sort(key=admises.index)
     return ",".join(retenues)
 
@@ -3954,159 +3958,150 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
         # The line breaks are written here: with this formatter, argparse
         # does not wrap the description, which fitted on a line of 250
         # columns.
-        description="Collecte le matériel d'analyse d'une partie d'échecs : "
-                    "PGN, statistiques\n"
-                    "de l'explorateur Lichess (base de tous les joueurs, "
-                    "ou base maîtres avec\n"
-                    "--base maitres) pour déterminer la sortie de théorie, "
-                    "et évaluations\n"
-                    "Stockfish de la partie. Ne produit aucune analyse.",
+        description="Gathers the material for the analysis of a chess game: "
+                    "PGN, statistics\n"
+                    "of the Lichess explorer (database of all players, or "
+                    "masters database\n"
+                    "with --base maitres) to find the exit from theory, and "
+                    "Stockfish\n"
+                    "evaluations of the game. Produces no analysis.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=EXEMPLES)
 
     p.add_argument("source", nargs="?",
-                   help="fichier PGN local, URL Lichess, ou identifiant de "
-                        "partie à huit ou douze caractères")
+                   help="local PGN file, Lichess URL, or game identifier of "
+                        "eight or twelve characters")
 
-    g = p.add_argument_group("environnement virtuel")
+    g = p.add_argument_group("virtual environment")
     g.add_argument("--installer-venv", action="store_true",
-                   help="crée l'environnement virtuel s'il manque, y "
-                        "installe python-chess, puis quitte")
-    g.add_argument("--venv", default=VENV_DEFAUT, metavar="CHEMIN",
-                   help="emplacement de l'environnement virtuel "
-                        "(défaut : %(default)s)")
+                   help="creates the virtual environment if it is missing, "
+                        "installs python-chess in it, then exits")
+    g.add_argument("--venv", default=VENV_DEFAUT, metavar="PATH",
+                   help="location of the virtual environment (default: "
+                        "%(default)s)")
 
-    g = p.add_argument_group("questions de démarrage")
+    g = p.add_argument_group("startup questions")
     g.add_argument("--sans-questions", action="store_true",
-                   help="ne pose aucune question, ni camp ni contexte ; "
-                        "implicite hors terminal interactif")
-    g.add_argument("--pseudos", default=None, metavar="LISTE",
-                   help="vos noms de joueur, séparés par des virgules, "
-                        "cherchés sans tenir compte de la casse dans White "
-                        "et Black pour déduire votre camp "
-                        "(défaut : ceux de vos réglages)")
-    g.add_argument("--reglages", default=REGLAGES_DEFAUT, metavar="FICHIER",
-                   help="fichier de réglages, où sont gardés votre pseudo, "
-                        "votre cadence habituelle et votre niveau, demandés "
-                        "une seule fois sur un terminal "
-                        "(défaut : %(default)s)")
+                   help="asks no question, neither side nor context; implied "
+                        "outside an interactive terminal")
+    g.add_argument("--pseudos", default=None, metavar="LIST",
+                   help="your player names, comma-separated, looked up "
+                        "ignoring case in White and Black to deduce your side "
+                        "(default: those of your settings)")
+    g.add_argument("--reglages", default=REGLAGES_DEFAUT, metavar="FILE",
+                   help="settings file, where your username, your usual time "
+                        "control and your rating are kept, asked only once in "
+                        "a terminal (default: %(default)s)")
     g.add_argument("--purge-reglages", action="store_true",
-                   help="supprime le fichier de réglages, celui de "
-                        "--reglages s'il est donné, puis quitte ; vos "
-                        "réponses seront redemandées à la prochaine "
-                        "collecte")
+                   help="deletes the settings file, the one of --reglages if "
+                        "given, then exits; your answers will be asked again "
+                        "at the next collection")
 
-    g = p.add_argument_group("catalogue des ouvertures")
+    g = p.add_argument_group("opening catalog")
     g.add_argument("--installer-catalogue", action="store_true",
-                   help="télécharge ou met à jour le catalogue des ouvertures "
-                        "nommées de Lichess, le valide, puis quitte")
-    g.add_argument("--catalogue", default=CATALOGUE_DEFAUT, metavar="REP",
-                   help="répertoire du catalogue local "
-                        "(défaut : %(default)s)")
+                   help="downloads or updates the catalog of the named "
+                        "openings of Lichess, validates it, then exits")
+    g.add_argument("--catalogue", default=CATALOGUE_DEFAUT, metavar="DIR",
+                   help="directory of the local catalog (default: "
+                        "%(default)s)")
 
-    g = p.add_argument_group("sortie")
-    g.add_argument("--sortie", default=".", metavar="REP",
-                   help="répertoire où écrire l'archive "
-                        "(défaut : %(default)s)")
+    g = p.add_argument_group("output")
+    g.add_argument("--sortie", default=".", metavar="DIR",
+                   help="directory where the archive is written (default: "
+                        "%(default)s)")
     g.add_argument("--garder-dossier", action="store_true",
-                   help="ne supprime pas le dossier de travail après "
-                        "création de l'archive, ou du prompt avec "
-                        "--prompt-seul")
-    g.add_argument("--prompt", metavar="FICHIER",
-                   help="modèle du prompt d'analyse, écrit à côté de "
-                        "l'archive sous le nom <archive>%s (défaut : %s à "
-                        "côté du script)" % (PROMPT_SUFFIXE, PROMPT_MODELE))
+                   help="does not delete the working folder after the archive "
+                        "is created, or the prompt with --prompt-seul")
+    g.add_argument("--prompt", metavar="FILE",
+                   help="template of the analysis prompt, written next to the "
+                        "archive under the name <archive>%s (default: %s next "
+                        "to the script)" % (PROMPT_SUFFIXE, PROMPT_MODELE))
     g.add_argument("--sans-prompt", action="store_true",
-                   help="n'écrit pas le prompt d'analyse")
+                   help="does not write the analysis prompt")
     g.add_argument("--prompt-seul", action="store_true",
-                   help="écrit un prompt court qui porte la partie et les "
-                        "évaluations de Stockfish, à coller seul dans la "
-                        "conversation, sans pièce jointe : pour un LLM qui "
-                        "n'ouvre pas les zip ou n'exécute pas de code. Son "
-                        "modèle est %s. Aucune archive n'est écrite, et le "
-                        "dossier de travail est supprimé, sauf avec "
+                   help="writes a short prompt that carries the game and the "
+                        "Stockfish evaluations, to be pasted alone into the "
+                        "conversation, without an attachment: for an LLM that "
+                        "does not open zip files or run code. Its template is "
+                        "%s. No archive is written, and the working folder is "
+                        "deleted, except with "
                         "--garder-dossier" % PROMPT_SEUL_MODELE)
 
-    g = p.add_argument_group("explorateur")
+    g = p.add_argument_group("explorer")
     g.add_argument("--base", choices=sorted(BASES_EXPLORATEUR),
                    default="lichess",
-                   help="base interrogée : lichess, les parties classées de "
-                        "tous les joueurs du site, celle de "
-                        "https://lichess.org/opening, ou maitres "
-                        "(défaut : %(default)s)")
-    g.add_argument("--cadences", metavar="LISTE",
-                   help="avec --base lichess, cadences retenues, séparées "
-                        "par des virgules, parmi : %s (défaut : %s)"
+                   help="database queried: lichess, the rated games of all "
+                        "the players of the site, the one of "
+                        "https://lichess.org/opening, or maitres (default: "
+                        "%(default)s)")
+    g.add_argument("--cadences", metavar="LIST",
+                   help="with --base lichess, speeds kept, comma-separated, "
+                        "among: %s (default: %s)"
                         % (", ".join(CADENCES_LICHESS), CADENCES_DEFAUT))
-    g.add_argument("--classements", metavar="LISTE",
-                   help="avec --base lichess, tranches de classement "
-                        "retenues, séparées par des virgules, parmi : %s ; "
-                        "0 couvre 0 à 999, 2500 tout ce qui dépasse "
-                        "(défaut : %s)"
+    g.add_argument("--classements", metavar="LIST",
+                   help="with --base lichess, rating bands kept, "
+                        "comma-separated, among: %s; 0 covers 0 to 999, 2500 "
+                        "everything above (default: %s)"
                         % (", ".join(CLASSEMENTS_LICHESS),
                            CLASSEMENTS_DEFAUT))
-    g.add_argument("--jeton-fichier", default=JETON_DEFAUT, metavar="FICHIER",
-                   help="fichier contenant le jeton personnel "
-                        "(défaut : %(default)s)")
+    g.add_argument("--jeton-fichier", default=JETON_DEFAUT, metavar="FILE",
+                   help="file containing the personal token (default: "
+                        "%(default)s)")
     g.add_argument("--seuil-parties", type=int, default=50, metavar="N",
-                   help="arrêt sous N parties pour la position "
-                        "(défaut : %(default)s)")
+                   help="stop below N games for the position (default: "
+                        "%(default)s)")
     g.add_argument("--seuil-frequence", type=float, default=10.0, metavar="P",
-                   help="arrêt dès que le coup joué tombe sous P pour cent "
-                        "de fréquence et sort du catalogue des ouvertures, "
-                        "0 pour désactiver ce critère "
-                        "(défaut : %(default)s)")
+                   help="stop as soon as the played move falls below P "
+                        "percent of frequency and leaves the opening catalog, "
+                        "0 to disable this criterion (default: %(default)s)")
     g.add_argument("--jusqu-a-epuisement", action="store_true",
-                   help="ignore les deux seuils et interroge la base tant "
-                        "qu'elle répond, l'arrêt n'ayant alors lieu que sur "
-                        "une erreur HTTP, sur une position absente de la "
-                        "base, sur un coup nul, au plafond "
-                        "--max-demicoups ou à la fin de la partie")
+                   help="ignores both thresholds and queries the database as "
+                        "long as it answers, the stop then only happening on "
+                        "an HTTP error, on a position missing from the "
+                        "database, on a null move, at the --max-demicoups cap "
+                        "or at the end of the game")
     g.add_argument("--coups-min", type=int, default=6, metavar="N",
-                   help="aucun arrêt sur la fréquence avant la fin du coup "
-                        "N, le seuil de parties restant actif ; la table "
-                        "couvre ainsi le début de partie même après une "
-                        "sortie précoce, 0 pour s'arrêter dès la première "
-                        "sortie (défaut : %(default)s)")
+                   help="no stop on frequency before the end of move N, the "
+                        "game threshold staying active; the table thus covers "
+                        "the start of the game even after an early exit from "
+                        "theory, 0 to stop at the first exit (default: "
+                        "%(default)s)")
     g.add_argument("--max-demicoups", type=int, default=60, metavar="N",
-                   help="plafond de demi-coups interrogés, garde-fou "
-                        "toujours actif (défaut : %(default)s)")
+                   help="cap on the plies queried, a safeguard always active "
+                        "(default: %(default)s)")
     g.add_argument("--pause", type=float, default=2.0, metavar="S",
-                   help="pause entre deux requêtes, en secondes, minimum 2 "
-                        "imposé par l'API (défaut : %(default)s)")
+                   help="pause between two requests, in seconds, minimum 2 "
+                        "required by the API (default: %(default)s)")
     g.add_argument("--sans-explorateur", action="store_true",
-                   help="saute entièrement la collecte explorateur")
+                   help="skips the explorer collection entirely")
 
-    g = p.add_argument_group("moteur")
+    g = p.add_argument_group("engine")
     g.add_argument("--coups-stockfish", type=int, default=0, metavar="N",
-                   help="limite l'analyse moteur aux N premiers coups "
-                        "entiers, soit 2N demi-coups ; 0 analyse toute la "
-                        "partie (défaut : %(default)s)")
+                   help="limits the engine analysis to the first N full "
+                        "moves, that is 2N plies; 0 analyzes the whole game "
+                        "(default: %(default)s)")
     g.add_argument("--profondeur", type=int, default=18, metavar="D",
-                   help="profondeur de recherche, de 1 à 60 "
-                        "(défaut : %(default)s)")
+                   help="search depth, from 1 to 60 (default: %(default)s)")
     g.add_argument("--multipv", type=int, default=3, metavar="K",
-                   help="nombre de variantes demandées par position "
-                        "(défaut : %(default)s)")
+                   help="number of variations requested per position "
+                        "(default: %(default)s)")
     g.add_argument("--fils", type=int, default=os.cpu_count() or 1,
                    metavar="N",
-                   help="threads Stockfish (défaut : nombre de processeurs)")
-    g.add_argument("--hachage", type=int, default=256, metavar="MO",
-                   help="table de hachage en mégaoctets "
-                        "(défaut : %(default)s)")
-    g.add_argument("--stockfish", default=STOCKFISH_DEFAUT, metavar="CHEMIN",
-                   help="binaire du moteur (défaut : %(default)s)")
+                   help="Stockfish threads (default: number of processors)")
+    g.add_argument("--hachage", type=int, default=256, metavar="MB",
+                   help="hash table in megabytes (default: %(default)s)")
+    g.add_argument("--stockfish", default=STOCKFISH_DEFAUT, metavar="PATH",
+                   help="engine binary (default: %(default)s)")
     g.add_argument("--longueur-pv", type=int, default=5, metavar="N",
-                   help="demi-coups de variante principale reproduits dans "
-                        "la synthèse, 0 pour la variante entière "
-                        "(défaut : %(default)s)")
+                   help="plies of the principal variation reproduced in the "
+                        "summary, 0 for the whole variation (default: "
+                        "%(default)s)")
 
     p.add_argument("--delai", type=int, default=30, metavar="S",
-                   help="délai réseau maximal, en secondes "
-                        "(défaut : %(default)s)")
+                   help="maximum network delay, in seconds (default: "
+                        "%(default)s)")
     p.add_argument("--debug", action="store_true",
-                   help="laisse remonter la trace complète des erreurs "
-                        "inattendues")
+                   help="lets the full traceback of unexpected errors come up")
 
     options = p.parse_args(argv)
 
@@ -4115,59 +4110,59 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                                    or options.source):
         # The purge is done alone: combined, it was ignored without a
         # word in favor of the other action.
-        p.error("--purge-reglages s'emploie seule, sans partie ni autre "
+        p.error("--purge-reglages is used alone, without a game or another "
                 "action")
     if options.prompt is not None and not options.prompt.strip():
         # Case of an empty variable in a script: --prompt "$MODELE".
-        p.error("--prompt : chemin vide")
+        p.error("--prompt: empty path")
     if (options.installer_venv or options.installer_catalogue
             or options.purge_reglages):
         return options
     if not options.source:
-        p.error("il faut un fichier PGN, une URL ou un identifiant de partie")
+        p.error("a PGN file, a URL or a game identifier is required")
     if options.prompt and options.sans_prompt:
-        p.error("--prompt et --sans-prompt s'excluent")
+        p.error("--prompt and --sans-prompt are mutually exclusive")
     if options.prompt_seul and options.sans_prompt:
-        p.error("--prompt-seul et --sans-prompt s'excluent")
+        p.error("--prompt-seul and --sans-prompt are mutually exclusive")
     # nan and inf are valid floats for argparse, but nan escapes any
     # comparison and time.sleep() rejects both: they are ruled out
     # here, before any folder is created.
     for nom in ("pause", "seuil_frequence"):
         if not math.isfinite(getattr(options, nom)):
-            p.error("--%s doit être un nombre fini"
+            p.error("--%s must be a finite number"
                     % nom.replace("_", "-"))
     if options.pause < 2.0:
-        p.error("--pause ne doit pas descendre sous 2 secondes")
+        p.error("--pause must not go below 2 seconds")
     for nom in ("seuil_parties", "max_demicoups", "profondeur", "multipv",
                 "fils", "hachage", "delai"):
         if getattr(options, nom) < 1:
-            p.error("--%s doit valoir au moins 1" % nom.replace("_", "-"))
+            p.error("--%s must be at least 1" % nom.replace("_", "-"))
     # Paths: the shell only expands the tilde if it starts the word,
     # not in the form --sortie=~/analyses.
     options.sortie = os.path.expanduser(options.sortie)
     options.stockfish = resoudre_moteur(options.stockfish)
     if options.profondeur > PROFONDEUR_MAX:
-        p.error("--profondeur ne doit pas dépasser %d" % PROFONDEUR_MAX)
+        p.error("--profondeur must not exceed %d" % PROFONDEUR_MAX)
     if options.coups_stockfish < 0:
-        p.error("--coups-stockfish doit valoir 0 ou plus")
+        p.error("--coups-stockfish must be 0 or more")
     if options.coups_min < 0:
-        p.error("--coups-min doit valoir 0 ou plus")
+        p.error("--coups-min must be 0 or more")
     # Without --pseudos, the value stays None: the usernames will then
     # come from the settings. The option, when given, must carry one.
     if options.pseudos is not None:
         options.pseudos = decouper_pseudos(options.pseudos)
         if not options.pseudos:
-            p.error("--pseudos : liste vide")
+            p.error("--pseudos: empty list")
     if options.seuil_frequence < 0 or options.seuil_frequence > 100:
-        p.error("--seuil-frequence doit être compris entre 0 et 100")
+        p.error("--seuil-frequence must be between 0 and 100")
     if options.longueur_pv < 0:
-        p.error("--longueur-pv doit valoir 0 ou plus")
+        p.error("--longueur-pv must be 0 or more")
     if options.base == "maitres":
         # Same principle as for the engine options: a filter that the masters
         # database does not know would be silently ignored, so it is refused.
         for nom in ("cadences", "classements"):
             if getattr(options, nom) is not None:
-                p.error("--%s n'a d'effet qu'avec --base lichess" % nom)
+                p.error("--%s only has an effect with --base lichess" % nom)
     else:
         # The default values are only set here, and only for the Lichess
         # database: collecte.json thus records the filters actually
@@ -4224,7 +4219,7 @@ def main(argv: list[str]) -> int:
     if not options.sans_prompt:
         fichier_modele = chemin_modele(options.prompt, options.prompt_seul)
         if est_fichier(fichier_modele):
-            modele_prompt = lire_texte(fichier_modele, "modèle de prompt")
+            modele_prompt = lire_texte(fichier_modele, "prompt template")
             verifier_modele(modele_prompt, str(fichier_modele))
             # A prompt to be pasted alone must carry the game: a personal
             # template that does not place it is refused before the collection.
@@ -4234,17 +4229,17 @@ def main(argv: list[str]) -> int:
                     PROMPT_DONNEES in ligne
                     for ligne in lignes_de_texte(modele_prompt)):
                 raise SystemExit(
-                    "--prompt-seul : le modèle %s ne contient pas %s, le "
-                    "prompt ne porterait pas la partie. Partez de %s."
+                    "--prompt-seul: the template %s does not contain %s, the "
+                    "prompt would not carry the game. Start from %s."
                     % (fichier_modele, PROMPT_DONNEES, PROMPT_SEUL_MODELE))
         elif options.prompt or options.prompt_seul:
             # --prompt-seul asks for a prompt: without a template, it is better
             # to stop here than after the collection.
-            raise SystemExit("Modèle de prompt introuvable : %s"
+            raise SystemExit("Prompt template not found: %s"
                              % fichier_modele)
         else:
-            journal("Attention : modèle de prompt introuvable (%s), aucun "
-                    "prompt ne sera écrit. Voir --prompt et --sans-prompt."
+            journal("Warning: prompt template not found (%s), no prompt will "
+                    "be written. See --prompt and --sans-prompt."
                     % fichier_modele)
 
     # -- Fetching the PGN ---------------------------------------------------
@@ -4254,7 +4249,7 @@ def main(argv: list[str]) -> int:
     remarques_pgn: list[str] = []
     chemin_local = pathlib.Path(os.path.expanduser(options.source))
     if est_fichier(chemin_local):
-        journal("Lecture du PGN local : %s" % chemin_local)
+        journal("Reading the local PGN: %s" % chemin_local)
         texte_pgn, encodage_pgn, remarques_pgn = lire_fichier_texte(
             chemin_local, "PGN")
         if encodage_pgn == "latin-1":
@@ -4265,16 +4260,16 @@ def main(argv: list[str]) -> int:
             # than silently damaging the names, the script
             # stops.
             raise SystemExit(
-                "Encodage du PGN non reconnu : ni UTF-8, ni UTF-16, ni "
-                "cp1252. Convertissez le fichier en UTF-8, par exemple "
-                "avec iconv, puis relancez.")
+                "PGN encoding not recognized: neither UTF-8, nor UTF-16, nor "
+                "cp1252. Convert the file to UTF-8, for example with iconv, "
+                "then run again.")
         etiquette = etiquette_sure(chemin_local.stem)
         if etiquette != chemin_local.stem:
-            journal("Nom du dossier assaini : %s" % etiquette)
+            journal("Folder name sanitized: %s" % etiquette)
     elif options.source.strip() and est_repertoire(chemin_local):
         # A directory whose name has eight letters would otherwise pass for
         # an identifier, and a request would go to Lichess.
-        raise SystemExit("%s est un répertoire, pas un fichier PGN."
+        raise SystemExit("%s is a directory, not a PGN file."
                          % chemin_local)
     else:
         identifiant = extraire_id(options.source)
@@ -4284,20 +4279,20 @@ def main(argv: list[str]) -> int:
             if (not options.source.strip().lower().startswith(
                     ("http://", "https://"))
                     and any(c in options.source for c in "./~")):
-                raise SystemExit("Fichier PGN introuvable : %s"
+                raise SystemExit("PGN file not found: %s"
                                  % chemin_local)
             if options.source.strip().lower().startswith(
                     ("http://", "https://")):
                 # Message specific to URLs: stating the expected form is better
                 # than a general refusal.
-                raise SystemExit("URL non reconnue comme une partie Lichess "
-                                 ": %s\nForme attendue : "
-                                 "https://lichess.org/<identifiant>, "
-                                 "l'identifiant faisant 8 ou 12 caractères "
-                                 "alphanumériques."
+                raise SystemExit("URL not recognized as a Lichess game: %s\n"
+                                 "Expected form: "
+                                 "https://lichess.org/<identifier>, the "
+                                 "identifier being 8 or 12 alphanumeric "
+                                 "characters."
                                  % nettoyer_valeur(options.source))
-            raise SystemExit("Source incomprise : ni fichier existant, ni "
-                             "URL ou identifiant Lichess valide.")
+            raise SystemExit("Source not understood: neither an existing "
+                             "file, nor a valid Lichess URL or identifier.")
         texte_pgn = telecharger_pgn(identifiant, options.delai)
         etiquette = identifiant
 
@@ -4314,7 +4309,7 @@ def main(argv: list[str]) -> int:
         # Catalog loaded before any writing: missing or damaged, we stop
         # here, giving the command to run.
         catalogue = lire_catalogue(options.catalogue)
-        journal("Catalogue des ouvertures : %s positions connues, du %s"
+        journal("Opening catalog: %s known positions, from %s"
                 % (catalogue.meta.get("connues"), catalogue.meta.get("date")))
     # The engine has been mandatory since version 4.0.0: it is checked
     # before any writing and before the slightest request.
@@ -4340,15 +4335,15 @@ def main(argv: list[str]) -> int:
     if options.pseudos is None:
         options.pseudos = decouper_pseudos(reglage(reglages, "pseudos"))
     if interactif:
-        journal("Questions de démarrage, Entrée retient la valeur proposée.")
+        journal("Startup questions, Enter keeps the suggested value.")
         camp = completer_entetes(partie, options.pseudos)
         contexte = recueillir_contexte(
             partie, camp, analyser_cadence(reglage(reglages, "cadence")))
         consignes = contexte
     else:
-        journal("Questions de démarrage sautées : %s."
+        journal("Startup questions skipped: %s."
                 % ("option --sans-questions" if options.sans_questions
-                   else "terminal non interactif"))
+                   else "non-interactive terminal"))
 
     # -- Creation of the working folder -------------------------------------
     # The name is timestamped to the second; two runs within the same
@@ -4371,11 +4366,11 @@ def main(argv: list[str]) -> int:
         except FileExistsError:
             pass
         except OSError as err:
-            raise SystemExit("Impossible de créer le dossier de travail %s : "
+            raise SystemExit("Cannot create the working folder %s: "
                              "%s" % (dossier, err)) from err
         suffixe += 1
         if suffixe > 100:
-            raise SystemExit("Trop de dossiers homonymes dans %s."
+            raise SystemExit("Too many folders with the same name in %s."
                              % base.parent)
         dossier = base.with_name("%s-%d" % (base.name, suffixe))
     annexes: list[str] = []
@@ -4401,9 +4396,9 @@ def main(argv: list[str]) -> int:
             annexes.append("- `contexte.md` : les réponses aux questions de "
                            "démarrage, reprises en tête de cette synthèse.")
     except OSError as err:
-        raise SystemExit("Écriture impossible dans %s : %s"
+        raise SystemExit("Cannot write in %s: %s"
                          % (dossier, err)) from err
-    journal("Dossier de travail : %s" % dossier)
+    journal("Working folder: %s" % dossier)
 
     # -- Explorer -----------------------------------------------------------
     # Database and filters are set even without a collection, so that the
@@ -4422,7 +4417,7 @@ def main(argv: list[str]) -> int:
         }
     resume_explorateur = None
     if JETON_COURANT is not None:
-        journal("Explorateur : base %s, %s" % (base["libelle"], base["url"]))
+        journal("Explorer: database %s, %s" % (base["libelle"], base["url"]))
         client = Explorateur(JETON_COURANT, options.pause, options.delai,
                              base["url"], filtres)
         resume_explorateur = collecter_explorateur(
@@ -4460,7 +4455,7 @@ def main(argv: list[str]) -> int:
                     resume_stockfish, options.longueur_pv,
                     base["libelle"], filtres, annexes,
                     bool(camp and camp["modifiees"]))
-    journal("Synthèse écrite : %s" % synthese)
+    journal("Summary written: %s" % synthese)
 
     # The prompt may include the PGN: it is read back here, before the
     # archiving that deletes the working folder.
@@ -4566,27 +4561,26 @@ def main(argv: list[str]) -> int:
                 # The marker exists in the template, but under a condition that
                 # is false for this game: say so rather than announce a
                 # complete prompt.
-                journal("Attention : le prompt %s ne porte pas la partie, "
-                        "le modèle la place sous une condition qui ne "
-                        "s'applique pas ici. Il ne peut pas être collé "
-                        "seul." % prompt)
+                journal("Warning: the prompt %s does not carry the game, the "
+                        "template places it under a condition that does not "
+                        "apply here. It cannot be pasted alone." % prompt)
             elif options.prompt_seul:
-                journal("Prompt d'analyse écrit : %s, à coller seul dans "
-                        "la conversation : il porte la partie et les "
-                        "évaluations, aucune pièce jointe n'est "
-                        "nécessaire." % prompt)
+                journal("Analysis prompt written: %s, to be pasted alone into "
+                        "the conversation: it carries the game and the "
+                        "evaluations, no attachment is needed." % prompt)
             else:
-                journal("Prompt d'analyse écrit : %s, à coller dans la "
-                        "conversation, l'archive en pièce jointe." % prompt)
+                journal("Analysis prompt written: %s, to be pasted into the "
+                        "conversation, with the archive as an "
+                        "attachment." % prompt)
         except OSError as err:
             if options.prompt_seul:
                 # The prompt was the only product expected: its failure is that
                 # of the command. The working folder stays.
-                raise SystemExit("Prompt non écrit (%s), dossier de travail "
-                                 "conservé : %s" % (prompt, err)) from err
+                raise SystemExit("Prompt not written (%s), working folder "
+                                 "kept: %s" % (prompt, err)) from err
             # The archive is made: a prompt that cannot be written must
             # not make the collection fail.
-            journal("Attention : prompt non écrit (%s) : %s" % (prompt, err))
+            journal("Warning: prompt not written (%s): %s" % (prompt, err))
 
     if options.prompt_seul:
         # The prompt is written: the working folder has no more use,
@@ -4594,15 +4588,15 @@ def main(argv: list[str]) -> int:
         # to verifier-analyse.py.
         prompt = archive.with_name(dossier.name + PROMPT_SUFFIXE)
         if options.garder_dossier:
-            journal("Dossier conservé sur demande : %s" % dossier)
+            journal("Folder kept on request: %s" % dossier)
         else:
             try:
                 shutil.rmtree(dossier)
             except OSError as err:
-                raise SystemExit("Prompt écrit mais suppression du dossier "
-                                 "impossible : %s" % err) from err
-            journal("Dossier de travail supprimé, aucune archive n'est "
-                    "écrite avec --prompt-seul.")
+                raise SystemExit("Prompt written but cannot delete the "
+                                 "folder: %s" % err) from err
+            journal("Working folder deleted, no archive is written with "
+                    "--prompt-seul.")
         # The path written alone on standard output is that of the prompt.
         annoncer_archive(prompt)
         return 0
@@ -4617,7 +4611,8 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main(sys.argv[1:]))
     except KeyboardInterrupt:
-        sys.stderr.write("\nInterrompu.\n")
+        sys.stderr.write("\n"
+                         "Interrupted.\n")
         raise SystemExit(130) from None
     except SystemExit as fin:
         # A stop message is displayed here rather than by the interpreter,
@@ -4634,8 +4629,8 @@ if __name__ == "__main__":
         if DEBUG:
             sys.stderr.write(expurger(traceback.format_exc(), JETON_COURANT))
         else:
-            sys.stderr.write("Erreur inattendue (%s) : %s\n"
-                             "Relancez avec --debug pour la trace complète.\n"
+            sys.stderr.write("Unexpected error (%s): %s\n"
+                             "Run again with --debug for the full traceback.\n"
                              % (type(err).__name__,
                                 expurger(str(err), JETON_COURANT)))
         raise SystemExit(1) from None

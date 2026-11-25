@@ -66,15 +66,21 @@ tests), CHANGELOG.md.
 - Pas de migration : l'ancien reglages.ini et l'ancien catalogue.tsv
   sont ignorés, sans message.
 - Traduction faite directement, sans DeepL.
-- Six lots, un patch chacun. Lot 0 : CLAUDE.md.
+- Sept lots, un patch chacun. Lot 0 : CLAUDE.md.
 - Lot 1 : commentaires et docstrings, sans changer le code : l'AST, une
   fois les docstrings retirées, est identique avant et après.
-- Lot 2 : messages (journal, erreurs, questions, aide) et vérifications
-  des tests.
-- Lot 3 : interface, soit options, réponses au terminal, réglages,
-  catalogue, variables d'environnement, options de test-app.sh.
+- Lot 2 : messages d'ianalyze.py sur la sortie d'erreur (journal,
+  avertissements, erreurs, aide) et vérifications des tests. Seules les
+  chaînes changent, avec les mêmes marqueurs %. Une chaîne qui part
+  aussi dans l'archive attend le lot 4.
+- Lot 2b : messages de test-app.sh (titres, libellés des vérifications,
+  rapport, erreurs).
+- Lot 3 : interface, soit options, questions et réponses au terminal,
+  réglages, catalogue, variables d'environnement, options de
+  test-app.sh. Les questions vont avec leurs réponses : elles portent
+  les touches à taper.
 - Lot 4 : archive et LLM, soit noms et contenu des fichiers (JSON,
-  synthèse, contexte), modèles de prompt, vérificateur.
+  synthèse, contexte), modèles de prompt, vérificateur en entier.
 - Lot 5 : renommage des fichiers du dépôt et documentation.
 - Dérogation : la documentation (README, EXEMPLES, TECHNIQUE, TESTS)
   est traduite et remise à jour au lot 5, une fois l'interface figée.
@@ -108,7 +114,8 @@ tests), CHANGELOG.md.
   travail = working folder ; synthèse = summary ; consignes =
   instructions ; journal = log ; bilan = report ; palmarès = ranking ;
   modèle = template ; périmètre = scope ; gain, nulle, perte = win,
-  draw, loss (W/D/L).
+  draw, loss (W/D/L) ; avertissement "Attention" = "Warning" ; aide =
+  help.
 - Correspondance à capital : capital, incrément, plafond, réserve =
   clock, increment, maximum, bank, termes des ICCF Rules 2026 (§2.4 et
   annexe 3), vérifiés au lot 1.

@@ -19,6 +19,12 @@ Icône de la licence CC-0
   The code is unchanged: the Python syntax trees, docstrings set aside,
   and the shell code, comments set aside, are identical to those of
   version 4.0.2.
+- The messages that `ianalyze.py` writes on standard error are in
+  English: progress log, warnings, errors, and the command line help
+  with its option descriptions, group titles, placeholders and
+  examples. A warning now starts with "Warning" instead of
+  "Attention". The options keep their names for now, and the messages
+  quote them as they are.
 
 ## [4.0.2] - 2026-11-21
 
