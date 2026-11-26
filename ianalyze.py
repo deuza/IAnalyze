@@ -400,7 +400,7 @@ DEPUIS_LICHESS = "2017-01"
 #: These are the five files that the explorer server also loads to name
 #: the positions.
 CATALOGUE_SOURCE = ("https://raw.githubusercontent.com/lichess-org/"
-                    "chess-openings/master/{partie}.tsv")
+                    "chess-openings/master/{part}.tsv")
 CATALOGUE_PARTIES = ("a", "b", "c", "d", "e")
 
 #: Default directory of the local catalog, and name of its index.
@@ -2442,7 +2442,7 @@ def installer_catalogue(repertoire: str, delai: int) -> None:
     positions: dict[str, tuple[str, str]] = {}
     nb_lignes = 0
     for morceau in CATALOGUE_PARTIES:
-        url = CATALOGUE_SOURCE.format(partie=morceau)
+        url = CATALOGUE_SOURCE.format(part=morceau)
         journal("Downloading the catalog: %s" % url)
         requete = urllib.request.Request(url, headers={"User-Agent": UA})
         try:

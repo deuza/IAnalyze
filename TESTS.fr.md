@@ -174,7 +174,7 @@ Ces tests emploient votre jeton et le vrai explorateur. N1 et N2 sont deux colle
 | Test | Sujet | Ce qui est vérifié |
 |---|---|---|
 | T09 | Catalogue installé | les cinq fichiers sont téléchargés, le message d'installation est écrit |
-| T10 | Catalogue, format | l'index commence par son en-tête, format 2, et aucun fichier temporaire ne reste |
+| T10 | Catalogue, format | l'index commence par son en-tête, format 2, dont la source nomme les cinq fichiers en anglais, et aucun fichier temporaire ne reste |
 | T11 | Réinstallation | une seconde installation donne un catalogue identique, sa ligne datée mise à part |
 | T12 | Catalogue absent | il est signalé, avec la commande d'installation |
 | T13 | Catalogue tronqué | il est signalé plutôt que lu à moitié |

@@ -3510,6 +3510,10 @@ if [ ! -f "$CAT/catalog.tsv" ]; then
 fi
 head -n 1 "$CAT/catalog.tsv" | tr '\t' ' ' > ligne
 verifier "T10 first line: format 2" contient ligne "#format=2 date="
+# The header goes as it is into collection.json, catalog_used: the
+# source of the five files is written there in English.
+verifier "T10 first line: source of the five files, in English" \
+    contient ligne "chess-openings/master/{part}.tsv"
 joindre ligne
 egal "T10 no leftover temporary file" 0 \
     "$(find "$CAT" -name '.catalog-*' | wc -l)"

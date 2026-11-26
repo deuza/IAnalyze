@@ -368,6 +368,11 @@ and the project applies [Semantic Versioning](https://semver.org/).
   starts", "the first move" for a scope of one move, and "ply" for a
   single ply. The forms in "(s)", such as "3 move(s) commented",
   stay as they are.
+- The header of the opening catalog, and `collection.json` after it,
+  give the source of the five files as `.../{part}.tsv`, instead of
+  `{partie}`, a French word left in the archive. A catalog installed
+  before keeps its former header until `--install-catalog` is run
+  again.
 - Both prompts are wrapped at 71 columns, as rendered, whatever the
   conditions of the template. A sentence cut by a condition left short
   lines, such as "variation, scope and goal), then" in the recap of the

@@ -172,7 +172,7 @@ These tests use your token and the real explorer. N1 and N2 are two full collect
 | Test | Subject | What is checked |
 |---|---|---|
 | T09 | Catalog installed | the five files are downloaded, the installation message is written |
-| T10 | Catalog, format | the index starts with its header, format 2, and no temporary file is left |
+| T10 | Catalog, format | the index starts with its header, format 2, whose source names the five files in English, and no temporary file is left |
 | T11 | Reinstallation | a second installation gives an identical catalog, its dated line aside |
 | T12 | Catalog missing | it is reported, with the installation command |
 | T13 | Catalog truncated | it is reported rather than half read |
