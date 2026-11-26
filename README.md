@@ -417,7 +417,7 @@ Two routes lead to an analysis, and it is the first choice on both:
 **With a free account, take `--prompt-only` and Claude. Choose the model `Sonnet 5.5` with the effort `Max`.**\
 This is the combination that gave the best result without paying anything.
 
-These trials were run with version 4.0, whose prompts were in French. The English prompts of version 5.0.0 have not been through them again.
+The first two series of trials were run with version 4.0, whose prompts were in French. The English prompts of version 5.0.0 went through a trial of their own, then a third series, on November 25 and 26, 2026, which point the same way.
 
 ### With the zip and the prompt
 
@@ -453,29 +453,29 @@ What you should know about this mode:
 - The prompt weighs about 4 KB for `game-lichess-org.pgn`, 39 plies, and 11 KB for `commented-game.pgn`, 49 plies: each weak move adds its best move and its continuation
 - It carries neither the summary nor the `.json` files: the LLM only has the game, the table of the engine and, with the explorer, a sentence on the opening
 - No archive is written, the prompt is the only file produced
-- The five answers tried returned the whole game, every move commented, without a single invented evaluation
+- The nine answers tried, over two series, returned the whole game, every move commented, without a single invented evaluation
 
 To check the returned PGN with `verify-analysis.py --prompt-only` (section 8), add `--keep-folder` to the collection: the checker needs the evaluations that were used for the prompt.
 
 ### Trust the figures, check the stories
 
-This is what the two series of trials have in common.
+This is what the three series of trials have in common.
 
 **The figures hold.** No LLM invented an evaluation, with the zip as with the short prompt.\
 What comes from the table of the engine is copied faithfully: the losses, the best moves, their continuations.
 
 **The stories are fragile.**\
-What the LLM deduces from the position on its own can be wrong: a sacrifice that is not one, a hanging piece that nobody points out, a mate in one that is a mate in two.
+What the LLM deduces from the position on its own can be wrong: a sacrifice that is not one, a check that is not one, a hanging piece that nobody points out, a mate in one that is a mate in two, a piece down taken for level material.
 
 When a comment surprises you, set up the pieces and look.\
 The script `verify-analysis.py` checks the form of the PGN and the figures quoted, it does not judge what is told.
 
 ### Trials run
 
-Two series, a single trial per LLM and per plan, one game per series.
+Three series and a trial on its own, a single trial per LLM, per plan and per route, one game each time.
 
 **This is not a benchmark.**\
-A single trial says nothing about the consistency of a model. But the two series point the same way, and the advice of this section rests on nothing else than what was seen.
+A single trial says nothing about the consistency of a model. But the series point the same way, and the advice of this section rests on nothing else than what was seen.
 
 #### November 20, 2026, with the zip and the prompt
 
@@ -529,6 +529,44 @@ What this series shows:
 - **The same trap caught three LLMs out of four.** A bishop takes a pawn on h7 with check, defended by its queen: the king cannot take it back. ChatGPT, Gemini and Copilot speak of a sacrifice. Claude writes, in the trial of the free account, "ici il n'y a aucun sacrifice, le pion tombe gratuitement": there is no sacrifice here, the pawn falls for free. The trials were run in French.
 - **Asking for three errors makes one up.** The player had made only two. ChatGPT, Gemini and Copilot presented a third one, Claude answered both times that there were only two. Both prompts now give the real number of weak moves of the player (see [TECHNICAL.md](TECHNICAL.md), section 12).
 - **The checker would have seen almost nothing.** In `--prompt-only` mode, it checks the tags, the main line and the figures quoted. The continuations written in the text, the HTML tags and the false stories go through: rereading them is up to you.
+
+#### November 25, 2026, with the zip and the English prompt
+
+A single trial, the first of the English prompts of version 5.0.0, before their release.\
+A correspondence game of 39 plies, won by the player, sent with its zip to GPT-6 (OpenAI), on the free plan.
+
+- It announced case B, python-chess could not be installed, and wrote its PGN by hand. The figures of its answer are all right.
+- `verify-analysis.py` ends on 2 failures: a variation placed after the move that it should replace, `( 19... Kg8 20. Qh7# )` after 19.Qh5+, is illegal there, and python-chess stops reading the main line at ply 37 out of 39. Without this variation, the PGN passes with no failure.
+- Its three costliest errors were those of the opponent, and `$7`, forced move, sat on the check instead of the reply.
+- It put `$6` on seven moves that the engine does not classify.
+
+These four points led to the last changes of version 5.0.0: the prompts say where a variation starts, where `$7` goes and whose errors to give, and the checker lists such NAGs as other opinions.
+
+#### November 26, 2026, the two routes, with the English prompts
+
+A correspondence game of 54 plies, lost by the player, mated on move 27, and the English prompts of version 5.0.0, before their release.\
+The usage limits of the free plans did not allow both routes: ChatGPT, Gemini and Copilot only received the short prompt, and Claude, on the subscription, both.
+
+The game was collected once per route, two hours apart. The evaluations of Stockfish vary from one run to another: the table of the short prompt marks 12 mistakes and blunders, 7 of them by the player, and the archive 11.
+
+| LLM | Plan, route | Report of `verify-analysis.py` | On the board |
+|---|---|---|---|
+| Claude Sonnet 5.5 (Anthropic), effort Max | subscription, zip | no failure, no warning: the 11 mistakes and blunders commented on, 17 playable variations, the 59 evaluations quoted all found | no error found |
+| Claude Sonnet 5.5 (Anthropic), effort Max | subscription, `--prompt-only` | no failure: code block, tags intact, the 54 plies commented on, 19 playable variations, the 91 evaluations quoted all found | no error found |
+| Gemini (Google), version not noted | free, `--prompt-only` | no failure: code block, tags intact, the 54 plies commented on, 18 playable variations, the 56 evaluations quoted all found | the colors of the bishops confused twice, a fianchetto prepared with no bishop left, the queenside said developed with the c1 bishop still at home |
+| ChatGPT (OpenAI), version not noted | free, `--prompt-only` | 1 failure: the 19 variations are written inside the comments, none is playable. Twelve suffixes `?` or `??` added to the moves | a piece down announced as level material, a check that is not one, a recapture said to be forced while the other rook could take |
+| Copilot (Microsoft), version not noted | free, `--prompt-only` | 1 failure: the Site tag returned as an HTML link. No code block, 18 playable variations | a piece down announced twice as level material, three moves said to be forced while others were legal |
+
+The errors of the last column were checked one by one on the position, with python-chess. **The list is not exhaustive.**
+
+What this series shows:
+
+- **The English prompts do the job.** The 206 evaluations quoted in the five answers are all found in the data of the engine, and each answer comments on every mistake and blunder of its table.
+- **The errors of the player, and only theirs.** The five reviews give three errors of the player, none of the opponent. With the zip, Claude even set aside the two costliest by the figures, 21.Qb1 and 22.Kh2, played in a position already lost, and said why.
+- **Where a variation starts is understood.** The 91 variations of the five answers, those of ChatGPT included, are legal and drawn from the lines of the engine, and none repeats the moves played.
+- **The free plans keep their faults of November 21.** ChatGPT still writes the variations inside the comments and adds suffixes to the moves, Copilot still gives no code block and turns the Site tag into a link. Gemini passes the checker, not the check on the board.
+- **Claude checks itself.** With the short prompt, it says it replayed its variations with python-chess and checked its explanations with Stockfish, which the prompt does not ask for. It comments on each move there, in 2178 words; with the zip, on 18 moves, as the full prompt asks, in 1062 words.
+- **The checker does not judge the stories.** Gemini passes it with no failure, and four errors on the board.
 
 ## 8. Checking the returned PGN
 

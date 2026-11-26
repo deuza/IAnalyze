@@ -320,6 +320,11 @@ and the project applies [Semantic Versioning](https://semver.org/).
   mypy took for a path everywhere: six of its errors go away. The
   behavior does not change, the syntax tree being the same, the name
   aside.
+- README and README.fr.md, section 7: the trials of the English
+  prompts, run on 25 and 26 November 2026 on four LLMs, with the zip
+  and with `--prompt-only`. Claude, on the subscription, is the only
+  one without an error found on the board, on both routes, and the
+  advice of the section stays the same.
 
 ### Fixed
 

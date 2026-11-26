@@ -417,7 +417,7 @@ Deux routes mènent à une analyse, et il est le premier choix sur les deux :
 **Avec un compte gratuit, prenez `--prompt-only` et Claude. Choisissez le modèle `Sonnet 5.5` avec l'effort `Max`.**\
 C'est la combinaison qui a donné le meilleur résultat sans rien payer.
 
-Ces essais ont été menés avec la version 4.0, dont les prompts étaient en français. Les prompts anglais de la version 5.0.0 ne les ont pas encore repassés.
+Les deux premières séries d'essais ont été menées avec la version 4.0, dont les prompts étaient en français. Les prompts anglais de la version 5.0.0 sont passés par un essai isolé, puis par une troisième série, les 25 et 26 novembre 2026, qui vont dans le même sens.
 
 ### Avec le zip et le prompt
 
@@ -453,29 +453,29 @@ Ce qu'il faut savoir de ce mode :
 - Le prompt pèse environ 4 Ko pour `game-lichess-org.pgn`, 39 demi-coups, et 11 Ko pour `commented-game.pgn`, 49 demi-coups : chaque coup faible y ajoute son meilleur coup et sa suite
 - Il ne porte ni la synthèse ni les fichiers `.json` : le LLM n'a que la partie, le tableau du moteur et, avec l'explorateur, une phrase sur l'ouverture
 - Aucune archive n'est écrite, le prompt est le seul fichier produit
-- Les cinq réponses essayées ont rendu la partie entière, tous les coups commentés, sans une évaluation inventée
+- Les neuf réponses essayées, sur deux séries, ont rendu la partie entière, tous les coups commentés, sans une évaluation inventée
 
 Pour contrôler le PGN rendu avec `verify-analysis.py --prompt-only` (section 8), ajoutez `--keep-folder` à la collecte : le vérificateur a besoin des évaluations qui ont servi au prompt.
 
 ### Fiez-vous aux chiffres, vérifiez les récits
 
-C'est ce que les deux séries d'essais ont en commun.
+C'est ce que les trois séries d'essais ont en commun.
 
 **Les chiffres tiennent.** Aucun LLM n'a inventé une évaluation, avec le zip comme avec le prompt court.\
 Ce qui vient du tableau du moteur est recopié fidèlement : les écarts, les meilleurs coups, leurs suites.
 
 **Les récits sont fragiles.**\
-Ce que le LLM déduit seul de la position peut être faux : un sacrifice qui n'en est pas un, une pièce en prise que personne ne signale, un mat en un qui est un mat en deux.
+Ce que le LLM déduit seul de la position peut être faux : un sacrifice qui n'en est pas un, un échec qui n'en est pas un, une pièce en prise que personne ne signale, un mat en un qui est un mat en deux, une pièce de moins prise pour l'égalité matérielle.
 
 Quand un commentaire vous surprend, posez les pièces et regardez.\
 Le script `verify-analysis.py` contrôle la forme du PGN et les chiffres cités, il ne juge pas ce qui est raconté.
 
 ### Essais menés
 
-Deux séries, un seul essai par LLM et par offre, une partie par série.
+Trois séries et un essai isolé, un seul essai par LLM, par offre et par route, une partie à chaque fois.
 
 **Ce n'est pas un banc d'essai.**\
-Un essai ne dit rien de la régularité d'un modèle. Mais les deux séries vont dans le même sens, et le conseil de cette section ne s'appuie sur rien d'autre que ce qui a été vu.
+Un essai ne dit rien de la régularité d'un modèle. Mais les séries vont dans le même sens, et le conseil de cette section ne s'appuie sur rien d'autre que ce qui a été vu.
 
 #### Le 20 novembre 2026, avec le zip et le prompt
 
@@ -529,6 +529,44 @@ Ce que cette série montre :
 - **Le même piège a pris trois LLM sur quatre.** Un fou prend un pion en h7 avec échec, défendu par sa dame : le roi ne peut pas le reprendre. ChatGPT, Gemini et Copilot parlent de sacrifice. Claude écrit, dans l'essai du compte gratuit, "ici il n'y a aucun sacrifice, le pion tombe gratuitement".
 - **Demander trois erreurs en fait inventer une.** Le joueur n'en avait commis que deux. ChatGPT, Gemini et Copilot en ont présenté une troisième, Claude a répondu les deux fois qu'il n'y en avait que deux. Les deux prompts donnent désormais le nombre réel de coups faibles du joueur (voir [TECHNICAL.fr.md](TECHNICAL.fr.md), section 12).
 - **Le vérificateur n'aurait presque rien vu.** En mode `--prompt-only`, il contrôle les balises, la ligne principale et les chiffres cités. Les suites écrites dans le texte, les balises HTML et les récits faux passent : c'est à vous de les relire.
+
+#### Le 25 novembre 2026, avec le zip et le prompt anglais
+
+Un essai isolé, le premier des prompts anglais de la version 5.0.0, avant leur publication.\
+Une partie par correspondance de 39 demi-coups, gagnée par le joueur, envoyée avec son zip à GPT-6 (OpenAI), sur l'offre gratuite.
+
+- Il a annoncé le cas B, python-chess n'ayant pas pu être installé, et a écrit son PGN à la main. Les chiffres de sa réponse sont tous justes.
+- `verify-analysis.py` finit sur 2 échecs : une variante placée après le coup qu'elle devait remplacer, `( 19... Kg8 20. Qh7# )` après 19.Qh5+, y est illégale, et python-chess arrête la lecture de la ligne principale au demi-coup 37 sur 39. Sans cette variante, le PGN passe sans un échec.
+- Ses trois erreurs les plus coûteuses étaient celles de l'adversaire, et `$7`, coup forcé, était posé sur l'échec au lieu de la réponse.
+- Il a mis `$6` sur sept coups que le moteur ne classe pas.
+
+Ces quatre points ont amené les derniers changements de la version 5.0.0 : les prompts disent où commence une variante, où va `$7` et de qui donner les erreurs, et le vérificateur range ces NAG parmi les autres avis.
+
+#### Le 26 novembre 2026, les deux routes, avec les prompts anglais
+
+Une partie par correspondance de 54 demi-coups, perdue par le joueur, mat au 27e coup, et les prompts anglais de la version 5.0.0, avant leur publication.\
+Les limites d'usage des offres gratuites ne permettaient pas les deux routes : ChatGPT, Gemini et Copilot n'ont reçu que le prompt court, et Claude, sur l'abonnement, les deux.
+
+La partie a été collectée une fois par route, à deux heures d'intervalle. Les évaluations de Stockfish varient d'une exécution à l'autre : le tableau du prompt court marque 12 erreurs et gaffes, dont 7 du joueur, et l'archive 11.
+
+| LLM | Offre, route | Bilan de `verify-analysis.py` | Sur l'échiquier |
+|---|---|---|---|
+| Claude Sonnet 5.5 (Anthropic), effort Max | abonnement, zip | aucun échec, aucun avertissement : les 11 erreurs et gaffes commentées, 17 variantes jouables, les 59 évaluations citées toutes retrouvées | aucune erreur trouvée |
+| Claude Sonnet 5.5 (Anthropic), effort Max | abonnement, `--prompt-only` | aucun échec : bloc de code, balises intactes, les 54 demi-coups commentés, 19 variantes jouables, les 91 évaluations citées toutes retrouvées | aucune erreur trouvée |
+| Gemini (Google), version non relevée | gratuite, `--prompt-only` | aucun échec : bloc de code, balises intactes, les 54 demi-coups commentés, 18 variantes jouables, les 56 évaluations citées toutes retrouvées | la couleur des fous confondue deux fois, un fianchetto préparé sans plus aucun fou, l'aile dame dite développée avec le fou de c1 encore chez lui |
+| ChatGPT (OpenAI), version non relevée | gratuite, `--prompt-only` | 1 échec : les 19 variantes sont écrites dans les commentaires, aucune n'est jouable. Douze suffixes `?` ou `??` ajoutés aux coups | une pièce de moins annoncée comme égalité matérielle, un échec qui n'en est pas un, une reprise dite forcée alors que l'autre tour pouvait prendre |
+| Copilot (Microsoft), version non relevée | gratuite, `--prompt-only` | 1 échec : la balise Site rendue sous la forme d'un lien HTML. Pas de bloc de code, 18 variantes jouables | une pièce de moins annoncée deux fois comme égalité matérielle, trois coups dits forcés alors que d'autres étaient légaux |
+
+Les erreurs de la dernière colonne ont été vérifiées une à une sur la position, avec python-chess. **La liste n'est pas exhaustive.**
+
+Ce que cette série montre :
+
+- **Les prompts anglais font le travail.** Les 206 évaluations citées dans les cinq réponses se retrouvent toutes dans les données du moteur, et chaque réponse commente toutes les erreurs et gaffes de son tableau.
+- **Les erreurs du joueur, et les siennes seulement.** Les cinq bilans donnent trois erreurs du joueur, aucune de l'adversaire. Avec le zip, Claude a même écarté les deux plus coûteuses selon les chiffres, 21.Qb1 et 22.Kh2, jouées dans une position déjà perdue, et a dit pourquoi.
+- **Le point de départ d'une variante est compris.** Les 91 variantes des cinq réponses, celles de ChatGPT comprises, sont légales et tirées des lignes du moteur, et aucune ne recopie les coups joués.
+- **Les offres gratuites gardent leurs défauts du 21 novembre.** ChatGPT écrit toujours les variantes dans les commentaires et ajoute des suffixes aux coups, Copilot ne rend toujours pas de bloc de code et change la balise Site en lien. Gemini passe le vérificateur, pas la vérification sur l'échiquier.
+- **Claude se vérifie lui-même.** Avec le prompt court, il dit avoir rejoué ses variantes avec python-chess et contrôlé ses explications avec Stockfish, ce que le prompt ne demande pas. Il y commente chaque coup, en 2178 mots ; avec le zip, 18 coups, comme le demande le prompt complet, en 1062 mots.
+- **Le vérificateur ne juge pas les récits.** Gemini le passe sans un échec, avec quatre erreurs sur l'échiquier.
 
 ## 8. Vérifier le PGN rendu
 
