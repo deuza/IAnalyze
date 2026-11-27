@@ -47,7 +47,7 @@ Trois commandes ne collectent rien et s'arrêtent une fois leur travail fait : `
 
 `--install-venv` contrôle le code de retour de `python -m venv`. Une création interrompue avant ce retour, par Ctrl-C ou une coupure, laisse un environnement sans pip, que le lancement suivant retrouve à moitié fait. Le script le reconnaît : `pyvenv.cfg` et l'interpréteur sont là, mais `python -m pip --version` échoue. Il le reconstruit alors par `python -m venv --clear`, puis installe python-chess. Sans `pyvenv.cfg`, un répertoire n'est jamais pris pour un environnement à reconstruire, et `--clear` ne peut rien y effacer.
 
-Un `--venv` qui n'est pas un environnement virtuel est refusé avant tout le reste : un répertoire existant, non vide et sans `pyvenv.cfg`, comme `/usr` ou un répertoire personnel. pip aurait tourné sur le Python trouvé là, souvent celui du système, et `python -m venv` aurait mêlé ses fichiers à ceux qui y étaient. Un répertoire absent ou vide reçoit l'environnement. Une création interrompue dans les tout premiers instants, avant l'écriture de `pyvenv.cfg`, laisse un répertoire que ce refus écarte aussi : il suffit alors de le supprimer.
+Un `--venv` qui n'est pas un environnement virtuel est refusé avant tout le reste : un chemin qui existe sans être un répertoire, un fichier ordinaire par exemple, sur lequel `python -m venv` échouait avec un message qui évoquait un paquet manquant ; un répertoire existant, non vide et sans `pyvenv.cfg`, comme `/usr` ou un répertoire personnel. pip aurait tourné sur le Python trouvé là, souvent celui du système, et `python -m venv` aurait mêlé ses fichiers à ceux qui y étaient. Un répertoire absent ou vide reçoit l'environnement. Une création interrompue dans les tout premiers instants, avant l'écriture de `pyvenv.cfg`, laisse un répertoire que ce refus écarte aussi : il suffit alors de le supprimer.
 
 Après l'étape 8, un échec laisse le dossier de travail en place, tel quel, pour diagnostic.
 
@@ -138,7 +138,7 @@ SOURCE désigne la partie de trois façons : un fichier PGN, l'adresse d'une par
 
 L'identifiant est la suite de 8 caractères qui suit `lichess.org/` dans l'adresse de la partie. Les formes `/<id>/black`, `/embed/game/<id>`, `/embed/<id>` et `/game/export/<id>` sont acceptées.
 
-Un autre hôte, ou une autre page du site (étude, analyse, exercices), est refusé sans rien envoyer à Lichess.
+Un autre hôte, ou une autre page du site (étude, analyse, exercices), est refusé sans rien envoyer à Lichess. Certaines rubriques du site ont un nom de huit lettres, la forme d'un identifiant : `analysis`, `training`, `timeline` ou `bookmark` par exemple. Elles sont refusées elles aussi, d'après une liste que les routes du site ont complétée en novembre 2026.
 
 **Un identifiant** fait exactement 8 ou 12 caractères alphanumériques.
 
@@ -361,9 +361,11 @@ Le script attend `--pause` secondes entre deux requêtes, 2 au minimum, et rien 
 
 Sur un HTTP 429, le script attend 60 secondes et retente une seule fois. Au second refus, il cesse d'interroger : mieux vaut s'arrêter que se faire bannir.
 
-Toute autre réponse inexploitable arrête l'interrogation à ce demi-coup : une erreur HTTP, un délai dépassé (`--timeout`), une réponse qui n'est pas du JSON, une redirection. La collecte, elle, continue : la table de l'explorateur s'arrête là, et Stockfish évalue toute la partie.
+Toute autre réponse inexploitable arrête l'interrogation à ce demi-coup : une erreur HTTP, un délai dépassé (`--timeout`), une réponse qui n'est pas du JSON, une redirection, une réponse sans liste de coups. La collecte, elle, continue : la table de l'explorateur s'arrête là, et Stockfish évalue toute la partie. Une réponse sans liste de coups passait pour une sortie de théorie, son coup joué à 0.0 %.
 
 Sans jeton, la base `lichess` répond 401. Le script demande un jeton pour les deux bases, et s'arrête avant toute requête si le fichier manque.
+
+Un jeton refusé, HTTP 401 à n'importe quel demi-coup, arrête toute l'exécution, avec le code de retour 1, avant le moteur : aucune autre réponse ne peut venir, et Stockfish tournait des minutes pour une collecte privée de sa section 2. Le message conseille de remplacer le jeton ou de relancer avec `--no-explorer`. La réponse reste dans `explorer/`, et le dossier de travail est gardé.
 
 ### Critères d'arrêt
 
@@ -371,7 +373,7 @@ Pour chaque demi-coup, la position AVANT le coup est interrogée, ce qui donne l
 
 L'interrogation s'arrête, dans cet ordre de test :
 
-1. sur une erreur HTTP ou une position absente de la base.
+1. sur une erreur HTTP, une réponse inexploitable ou une position absente de la base.
 2. sur un échantillon inférieur à `--min-games`.
 3. sur une sortie de théorie, hors de la fenêtre `--min-moves`.
 4. au plafond `--max-plies`, ou à la fin de la partie.
@@ -454,9 +456,10 @@ Sources : [options UCI de Stockfish](https://official-stockfish.github.io/docs/s
 - **Un mat se compte après le coup**, comme toute évaluation du tableau. Le moteur, lui, compte avant le coup, celui-ci compris : le script retire donc un coup au camp qui mate quand c'est lui qui vient de jouer. `#+0` ou `#-0` : le coup de la ligne donne mat.
 - **L'écart** est ce que le coup joué perd par rapport au premier choix du moteur, en centipions, du point de vue du joueur au trait.
 - **La nature** suit l'écart : `inaccuracy`, l'imprécision, à partir de 50, `mistake`, l'erreur, à partir de 100, `blunder`, la gaffe, à partir de 300.
-- **Un écart négatif** n'est pas une faute. Le coup joué, évalué à part quand il n'est pas dans les premiers choix, sort alors un peu au-dessus du premier : les deux se valent.
+- **Un écart négatif** n'est pas une faute. Le coup joué, évalué à part quand il n'est pas dans les premiers choix, sort alors un peu au-dessus du premier : les deux se valent. Au-delà de 10000, la recherche du coup joué a trouvé un mat que celle des meilleurs coups n'a pas vu : l'écart porte "mate", au lieu de quelque -99000 centipions.
 - **Les mats** ne se chiffrent pas en centipions. Entre deux mats de même sens, mater en deux coups au lieu d'un par exemple, l'écart vaut 0. Un coup qui manque un mat ou en concède un porte l'écart "mate" et la nature "blunder".
-- **W/D/L** donne les chances de gain, de nulle et de perte des Blancs. Ce sont celles du modèle de Stockfish, établi sur des parties du moteur contre lui-même : une tendance, et non une probabilité entre joueurs humains.
+- **W/D/L** donne les chances de gain, de nulle et de perte des Blancs. Ce sont celles du modèle de Stockfish, établi sur des parties du moteur contre lui-même : une tendance, et non une probabilité entre joueurs humains. Le moteur les donne pour mille ; le script les écrit en pourcentages entiers dont la somme vaut 100, par les plus forts restes : chaque part est arrondie par défaut, puis les points manquants vont aux plus forts restes. Arrondies une à une, 15, 970 et 15 pour mille donnaient 2/97/2. Les parts sont calculées pour les Blancs, puis échangées pour les Noirs, dont la vue reste le miroir de celle des Blancs.
+- **Les variantes** s'écrivent en notation numérotée, celle du PGN : une variante qui commence par un coup noir se lit `8... Bg4`, avec une espace après les points. python-chess écrivait `8...Bg4`.
 - **Un coup nul**, `--`, n'est pas évalué : ce n'est pas un coup des échecs, le moteur ne peut pas le juger. Sa ligne garde les meilleurs coups de la position.
 
 ### `stockfish/evaluations.json`
@@ -552,7 +555,7 @@ Sections de `summary.md`, sous leur titre anglais :
 
 Trois cas particuliers :
 
-- l'écart porte "mate" quand le coup joué manque un mat ou en concède un : il ne se chiffre pas en centipions
+- l'écart porte "mate" quand le coup joué manque un mat, en concède un, ou en trouve un que la recherche des meilleurs coups n'a pas vu : il ne se chiffre pas en centipions
 - sous le tableau, une ligne "Result and final evaluation contradict each other" apparaît quand le camp déclaré vainqueur est nettement moins bien après le dernier coup, d'au moins 300 cp : la partie ne s'est pas décidée sur l'échiquier, et l'analyste doit le dire au lieu de raconter une victoire méritée
 - un coup nul, "--" dans le PGN, n'est pas évalué : sa ligne garde les trois meilleurs coups de la position, ses autres colonnes portent "-"
 
@@ -582,6 +585,8 @@ Le fichier `game.pgn` est donc toujours de l'UTF-8 propre : si le fichier fourni
 Un texte latin-1 se décode aussi sans erreur en cp1252, les deux ne différant que sur les octets 0x80 à 0x9F : c'est cp1252 qui est annoncé.
 
 Un PGN qui n'est ni en UTF-8, ni en UTF-16, ni en cp1252 est refusé, avec le conseil de le convertir. Le script le reconnaît à l'un des cinq octets que cp1252 ne définit pas.
+
+Un PGN en UTF-16 ou en UTF-32 dont les octets ne forment pas tous des caractères est refusé aussi : dans ces encodages, un caractère tient sur deux ou quatre octets, et un seul octet perdu, par un transfert coupé par exemple, décale tout le texte qui suit. Le refus nomme l'encodage. Il reprochait auparavant à un U+FFFD de ne pas être un coup, ou à une accolade de n'être jamais fermée, la cause restant dans la ligne "Warning" de l'encodage. En UTF-8, un octet invalide n'abîme qu'un caractère : l'UTF-8 abîmé de l'étape 5 reste accepté.
 
 Limite : un fichier en cp850 ou en MacRoman qui ne contient aucun de ces cinq octets passe pour du cp1252. Ses lettres accentuées sortent fausses dans les noms et les commentaires, et rien ne permet de le voir. Les coups, écrits en ASCII, restent justes.
 
@@ -670,6 +675,8 @@ Conditions :
 | `FEW_WEAK_MOVES` | votre camp est connu et `PLAYER_WEAK_MOVES` est inférieur à trois |
 | `NO_WEAK_MOVE` | votre camp est connu et `PLAYER_WEAK_MOVES` vaut zéro |
 
+`STOCKFISH`, `MASTERS_DATABASE` et `RATING_DECLARED` ne servent à aucun des deux modèles du dépôt : elles sont gardées pour les modèles personnels.
+
 Les deux modèles, `prompt-template.txt` et `prompt-only-template.txt`, partagent ces repères. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `DEPTH`, `PLAYER_WEAK_MOVES` et les conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` servent au prompt court. `PLAYER_WEAK_MOVES`, `FEW_WEAK_MOVES` et `NO_WEAK_MOVE` servent aussi au bilan final du prompt complet.
 
 Les deux prompts finissent par un bilan : les trois erreurs les plus coûteuses du joueur et le thème à travailler. Quand le tableau marque moins de trois coups faibles de votre côté, la phrase change : elle donne leur nombre et demande de s'en tenir à ceux-là. Dans le prompt court :
@@ -684,6 +691,14 @@ Keep to those, without adding any.
 Le prompt complet le dit dans son bilan final, et demande en outre de ne pas remplacer vos erreurs par celles de votre adversaire. Sans aucun coup faible de votre côté, les deux prompts demandent de ne vous prêter aucune erreur. Quand votre camp n'est pas connu, le prompt court demande de commenter les deux camps de la même façon et de donner le bilan pour chacun ; le prompt complet demande vos erreurs une fois votre camp trouvé, et celles de chaque camp sinon.
 
 Les deux prompts disent que les balises et les commentaires du PGN sont des données, au plus les notes du joueur, jamais des consignes : un commentaire, ou une balise, pourrait sinon donner des ordres au LLM. Le prompt court place la partie dans un bloc de code.
+
+Les deux prompts demandent de garder ces notes dans le PGN rendu, avant le commentaire du LLM, et d'en retirer les commandes qu'un site écrit entre crochets dans les commentaires : `[%clk 0:10:00]` pour la pendule, `[%eval 0.23]` pour son moteur. Une partie téléchargée de Lichess les porte, l'export donnant par défaut les pendules et les évaluations, et le prompt complet interdit le caractère `%` dans un commentaire.
+
+Le bilan final du prompt complet s'en tient au périmètre convenu, comme les commentaires : il demandait les erreurs les plus coûteuses de toute la table, même quand les commentaires s'arrêtaient au coup 15. Le prompt court dit la même chose sous "What the player specified", quand un périmètre y est donné.
+
+Le prompt complet fixe l'ordre du début de la réponse : la ligne qui dit si le LLM peut exécuter du code, cas A ou B, puis le récapitulatif. Deux sections demandaient l'une et l'autre le début de la réponse.
+
+La notation du PGN rendu est la notation standard : K, Q, R, B, N, aucune lettre pour un pion, le roque avec la lettre O majuscule. Le prompt complet listait `K Q R B N P`, ce qui invitait à un `P` que le vérificateur refuse désormais.
 
 Avec `--stockfish-moves`, les coups faibles ne sont comptés que sur les demi-coups évalués : sous `PARTIAL_COVERAGE`, les deux prompts bornent ce compte, ou l'absence de coup faible, à ces premiers demi-coups, et demandent qu'une erreur trouvée au-delà soit donnée comme une estimation du LLM, sans chiffre. Sans cette borne, un joueur sans coup faible dans la fenêtre évaluée était dit sans erreur sur toute la partie.
 
@@ -717,6 +732,8 @@ Si l'un d'eux manque, ou si l'archive ne se lit pas, aucun contrôle n'a lieu et
 
 Comme `ianalyze.py`, il se relance dans l'environnement virtuel quand python-chess manque, mais seulement à son emplacement par défaut : il n'a pas d'option `--venv`.
 
+Du PGN rendu, python-chess ne lit que la première partie : une seconde dans le fichier est signalée comme un échec, rien d'elle n'étant contrôlé. Un résultat répété seul à la fin n'est pas une partie, comme pour `ianalyze.py`. Les lignes vides du corps sont retirées pour les contrôles qui suivent, mais seulement dans le corps de la première partie : la ligne vide qui ouvre les balises d'une autre partie reste, alors que son retrait fondait les deux parties en une.
+
 ### Repères du bilan
 
 | Repère | Compte comme | Exemple |
@@ -735,10 +752,12 @@ Code de retour : 0 sans `FAIL`, 1 avec au moins un `FAIL`, 2 si aucun contrôle 
 - **Lignes** : 79 caractères au plus.
 - **Résumé** : un commentaire avant le premier coup. Son absence est un échec.
 - **Signes interdits dans un commentaire** : accolade, signe pour cent, tiret cadratin. Un point-virgule vaut `WARNING`.
+- **Hors des commentaires** : seulement des coups en notation standard, des numéros de coup, des NAG, les parenthèses des variantes et le résultat. Tout autre mot est un échec, nommé avec sa ligne : un texte libre, que python-chess saute sans rien dire, un coup écrit `Pg2xf3`, qu'il lit `g2xf3`, un coup écrit avec un tiret entre ses cases. La règle est plus stricte que celle d'`ianalyze.py`, qui lit les PGN de tous les sites. Le roque écrit avec des zéros, `0-0`, que python-chess lit `O-O`, est un échec à part, hors `--prompt-only`. Les mots d'un commentaire coupé trop tôt par une accolade fermante restent comptés dans ce seul défaut.
+- **Ligne vide** : dans le corps de la partie, c'est un échec. Dans un commentaire, python-chess poursuit sa lecture jusqu'à l'accolade fermante : le bilan le dit, le prompt interdisant la ligne tout de même.
 - **Balises** : les sept obligatoires en tête et dans l'ordre, leurs valeurs reprises de la partie d'origine. Les autres par ordre alphabétique, Annotator renseignée et PlyCount exact, sinon `WARNING`.
 - **Coups commentés** : chaque erreur et chaque gaffe de Stockfish doit l'être. L'une d'elles commentée sans NAG compte comme `WARNING`, hors `--prompt-only`. Le nombre total de coups commentés est donné pour information, le prompt en visant 15 à 25.
 - **Périmètre** : le prompt limite les commentaires au périmètre convenu. Une erreur jouée au-delà n'est pas attendue. Le périmètre est le premier nombre de votre réponse à la question de démarrage, lue dans les consignes de `summary.md` : "the first 20 moves" vaut 20 coups. Une réponse sans nombre, ou laissée par défaut, vaut la partie complète. `--scope N` le donne à la main, quand il a été convenu dans la conversation.
-- **NAG de position** : `$14`, `$16`, `$18` et `$20` donnent les Blancs mieux, `$15`, `$17`, `$19` et `$21` les Noirs. Un tel NAG est contraire au moteur quand celui-ci donne l'autre camp mieux d'au moins un demi-pion, ou un mat.
+- **NAG de position** : `$14`, `$16`, `$18` et `$20` donnent les Blancs mieux, `$15`, `$17`, `$19` et `$21` les Noirs. Un tel NAG est contraire au moteur quand celui-ci donne l'autre camp mieux d'au moins un demi-pion, ou un mat. `$10`, position égale, n'est pas comparé : posé sur une position gagnée, il passe.
 - **NAG de qualité** : `$6` pour une imprécision, `$2` pour une erreur, `$4` pour une gaffe. Un autre avis que celui du moteur est donné pour information, avec le coup et sa perte : un autre de ces trois NAG, `$1` ou `$3` sur une erreur ou une gaffe, ou `$6`, `$2` ou `$4` sur un coup que le moteur ne classe pas, sa perte restant sous 50 cp.
 - **Variantes** : 5 demi-coups au plus, sinon `WARNING`. Une variante est dite appuyée sur le moteur quand ses deux premiers coups sont ceux d'une ligne que le moteur donne pour ce demi-coup.
 - **Positions citées dans la conversation** : une FEN doit être valide et venir d'une position de la partie, reconnue à ses quatre premiers champs une fois écrite comme l'écrit python-chess : la case en passant, que la norme écrit après toute poussée de deux cases, ne compte que si la prise peut être jouée. Deux FEN sont demandées, sinon `WARNING`.
@@ -747,12 +766,14 @@ Code de retour : 0 sans `FAIL`, 1 avec au moins un `FAIL`, 2 si aucun contrôle 
 
 Une évaluation se reconnaît à son signe : `+0.35`, `-1,20`, `+ 0.35`, le signe moins typographique, ou `#-3` pour un mat. Un nombre sans signe n'en est pas une, sauf pour un mat : `#2` est lu comme `#+2`, la forme du dossier.
 
-Elle doit exister dans `evaluations.json`, pour le coup joué ou pour l'un des meilleurs coups, telle quelle ou arrondie à une décimale : `+0.35` peut être cité `+0.4` ou `+0.3`. Un `#7` sans signe qui ne s'y trouve pas n'est qu'un `WARNING` : ce peut être un rang, "mistake #7", aussi bien qu'un mat.
+Elle doit exister dans `evaluations.json`, pour le coup joué ou pour l'un des meilleurs coups, telle quelle ou arrondie à une décimale : `+0.35` peut être cité `+0.4` ou `+0.3`. Une troisième décimale nulle n'ajoute rien : `+0.350` se lit `+0.35` ; toute autre troisième décimale est une précision que le moteur n'a pas donnée. Un `#7` sans signe qui ne s'y trouve pas n'est qu'un `WARNING` : ce peut être un rang, "mistake #7", aussi bien qu'un mat.
+
+Un écart que le LLM a calculé entre deux évaluations, `+1.77`, n'existe nulle part dans les données : il est signalé comme inventé, au même titre qu'un chiffre forgé.
 
 Le bilan cite le PGN et le texte rendus par le LLM : leurs caractères de contrôle y sont montrés en `?`, jamais joués par le terminal. Un caractère que la sortie ne sait pas représenter devient `?` lui aussi, et le bilan va jusqu'au bout.
 
 ### Avec `--prompt-only`
 
-Le prompt court demande moins que le prompt complet. Les contrôles qu'il ne demande pas sont sautés : longueur des lignes, résumé, NAG, signe pour cent, point-virgule, tiret cadratin, notation suffixe, ordre alphabétique des autres balises, balises Annotator et PlyCount, longueur des variantes. Avec `--summary`, le tiret cadratin de la conversation et le nombre de FEN ne sont pas contrôlés non plus : une FEN citée doit seulement être valide et venir de la partie.
+Le prompt court demande moins que le prompt complet. Les contrôles qu'il ne demande pas sont sautés : longueur des lignes, résumé, NAG, signe pour cent, point-virgule, tiret cadratin, notation suffixe, roque écrit avec des zéros, ordre alphabétique des autres balises, balises Annotator et PlyCount, longueur des variantes. Le prompt court demande de recopier les coups tels quels : une partie exportée avec `0-0` reste fidèle avec eux. Les mots hors des accolades, eux, sont contrôlés : le prompt court demande les commentaires entre accolades. Avec `--summary`, le tiret cadratin de la conversation et le nombre de FEN ne sont pas contrôlés non plus : une FEN citée doit seulement être valide et venir de la partie.
 
 Les balises sont contrôlées autrement. Le prompt complet veut les sept balises obligatoires du standard PGN, dans leur ordre. Le prompt court demande seulement de recopier celles de la partie : parmi les sept, seules celles que porte la partie d'origine sont attendues, dans l'ordre où elle les écrit.

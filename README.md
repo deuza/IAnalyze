@@ -39,7 +39,7 @@ An additional tool, `verify-analysis.py`, checks the PGN that the LLM returned t
 Platforms: Debian and macOS (Homebrew).\
 Python 3.10 or more recent, and python-chess, which the script installs by itself in a dedicated virtual environment.
 
-The documentation fits in four files, each one also in French, under the same name ending in `.fr.md`:
+The script, its messages, the archive and the prompt are in English since version 5.0.0, and the analysis is asked for in English. The documentation fits in four files, each one also in French, under the same name ending in `.fr.md`:
 
 - this README, to install IAnalyze and analyze a game
 - [EXAMPLES.md](EXAMPLES.md), the quick reference: every command, every option, and what the terminal shows
@@ -73,7 +73,7 @@ The whole chain takes three steps:
 
 1. `./ianalyze.py my-game.pgn`
 
-   The script collects, computes, and writes two files: `analysis-<game>-<date>.zip` and `analysis-<game>-<date>.prompt.txt`.
+   The script collects, computes, and writes two files: `analysis-<label>-<YYYYMMDD-HHMMSS>.zip` and `analysis-<label>-<YYYYMMDD-HHMMSS>.prompt.txt`, the label being the name of the PGN (section 5).
 
 2. In a new conversation with an LLM, you paste the content of the prompt and you attach the archive.
 
@@ -172,7 +172,7 @@ The `local/` folder only keeps what the script can rebuild by itself, the virtua
 | `--catalog` | `local/`, in the folder of the application |
 | settings | `settings.ini`, at the root of the folder of the application, like any other settings file named by `--settings` |
 | token | `~/.lichess_token` |
-| `--stockfish`, Debian | `/usr/games/stockfish` |
+| `--stockfish`, Debian | the binary found in the PATH, otherwise `/usr/games/stockfish` |
 | `--stockfish`, macOS | the binary found in the PATH, otherwise `/opt/homebrew/bin/stockfish` |
 
 Up to version 4.0.2, the virtual environment and the catalog were kept in `~/.local/share/IAnalyze`, the settings in `~/.config/IAnalyze`.
@@ -206,7 +206,8 @@ In this order, the token is never in a file that others can read.\
 The script never displays it, writes it in none of the files it produces, and does not receive it on the command line.\
 It warns you if the file can be read by anyone other than you.
 
-Without a token, run the script with `--no-explorer`.
+Without a token, run the script with `--no-explorer`.\
+If Lichess refuses the token, wrong, expired or revoked, the script stops at the first request, before the engine: create a new one, or run again with `--no-explorer`.
 
 ### Personal settings
 
@@ -229,7 +230,7 @@ It is passed on to the analyst, who adapts the explanations to it. Without it, t
 
 **The time control** is written `15+10` for real time, minutes per player then increment in seconds, and `14 days` for correspondence with a fixed delay.
 
-**Another player** of the same machine keeps their settings in a file of their own, named by `--settings`: `--settings player2.ini`. The option takes a file name ending in `.ini`, kept in the folder of the application next to `settings.ini`, never a path. In a terminal, a name whose file does not exist yet is created only after confirmation, so that a typo does not start a new file.
+**Another player** of the same machine keeps their settings in a file of their own, named by `--settings`: `--settings player2.ini`. The option takes a file name ending in `.ini` and not starting with a dot, kept in the folder of the application next to `settings.ini`, never a path. In a terminal, a name whose file does not exist yet is created only after confirmation, so that a typo does not start a new file.
 
 **For a single run** that leaves your settings aside, the game of a friend for example, `--no-settings` neither reads nor writes any settings file.
 
@@ -477,7 +478,7 @@ Three series and a trial on its own, a single trial per LLM, per plan and per ro
 **This is not a benchmark.**\
 A single trial says nothing about the consistency of a model. But the series point the same way, and the advice of this section rests on nothing else than what was seen.
 
-#### November 20, 2026, with the zip and the prompt
+#### 20 November 2026, with the zip and the prompt
 
 A game of 49 plies, the same zip and the same prompt for all, the one of version 4.0.0, before the instructions and the option `--prompt-seul`, now `--prompt-only`, that these trials led to add.
 
@@ -495,11 +496,11 @@ What this series shows:
 - **The substance can be good under a faulty form.** The 25 variations written by hand by GPT-6 were all legal and drawn from the lines of the engine.
 - **The game was recorded as won in a lost position.** Two LLMs out of four told the story of a deserved win, hence the line added to the summary (see [TECHNICAL.md](TECHNICAL.md), section 10).
 
-The free plan of Claude also announces file creation and code execution, on other models than the one of this trial, according to [its pricing page](https://claude.com/pricing), read on November 20, 2026 and again on November 25, 2026.
+The free plan of Claude also announces file creation and code execution, on other models than the one of this trial, according to [its pricing page](https://claude.com/pricing), read on 20 November 2026 and again on 25 November 2026.
 
 It has not been tried with the zip file.
 
-#### November 21, 2026, with `--prompt-seul`, now `--prompt-only`
+#### 21 November 2026, with `--prompt-seul`, now `--prompt-only`
 
 A game of 39 plies, won by the player, and the same short prompt pasted alone into five conversations. It is `example-games/game-lichess-org.pgn`.\
 The table of the engine marks ten weak moves in it, two of them by the player.
@@ -530,7 +531,7 @@ What this series shows:
 - **Asking for three errors makes one up.** The player had made only two. ChatGPT, Gemini and Copilot presented a third one, Claude answered both times that there were only two. Both prompts now give the real number of weak moves of the player (see [TECHNICAL.md](TECHNICAL.md), section 12).
 - **The checker would have seen almost nothing.** In `--prompt-only` mode, it checks the tags, the main line and the figures quoted. The continuations written in the text, the HTML tags and the false stories go through: rereading them is up to you.
 
-#### November 25, 2026, with the zip and the English prompt
+#### 25 November 2026, with the zip and the English prompt
 
 A single trial, the first of the English prompts of version 5.0.0, before their release.\
 A correspondence game of 39 plies, won by the player, sent with its zip to GPT-6 (OpenAI), on the free plan.
@@ -542,7 +543,7 @@ A correspondence game of 39 plies, won by the player, sent with its zip to GPT-6
 
 These four points led to the last changes of version 5.0.0: the prompts say where a variation starts, where `$7` goes and whose errors to give, and the checker lists such NAGs as other opinions.
 
-#### November 26, 2026, the two routes, with the English prompts
+#### 26 November 2026, the two routes, with the English prompts
 
 A correspondence game of 54 plies, lost by the player, mated on move 27, and the English prompts of version 5.0.0, before their release.\
 The usage limits of the free plans did not allow both routes: ChatGPT, Gemini and Copilot only received the short prompt, and Claude, on the subscription, both.
@@ -601,7 +602,7 @@ For a PGN obtained with the short prompt of `--prompt-only`, add the same option
 ./verify-analysis.py analysis-my-game-20261125-142017 llm-annotated.pgn --prompt-only
 ```
 
-The short prompt asks for less than the full prompt. With this option, the checks that it does not ask for are skipped: lines of 79 characters, overview before the first move, NAGs, `%`, semicolon, em dash, suffix notation, alphabetical order of the other tags, Annotator and PlyCount tags, length of the variations, number of FEN. What remains: the reading, the main line, the braces, the tags copied, the end marker, the mistakes and blunders commented on, the evaluations quoted and the variations.
+The short prompt asks for less than the full prompt. With this option, the checks that it does not ask for are skipped: lines of 79 characters, overview before the first move, NAGs, `%`, semicolon, em dash, suffix notation, castling written with zeros, alphabetical order of the other tags, Annotator and PlyCount tags, length of the variations, number of FEN. What remains: the reading, a single game in the file, the main line, the braces, the words outside the braces, the tags copied, the end marker, the mistakes and blunders commented on, the evaluations quoted and the variations.
 
 If you agreed on a scope with the LLM, the first 20 moves for example, the script reads it in your answer to the startup question and expects no comment beyond it.\
 When the scope was set in the conversation, give it:
@@ -619,9 +620,9 @@ It has no `--venv` option. If your environment is elsewhere, run it with the Pyt
 
 | Check | Flaws found |
 |---|---|
-| Reading | file outside UTF-8, illegal move in the game or in a variation, blank line in the body of the game |
+| Reading | file outside UTF-8, illegal move in the game or in a variation, blank line in the body of the game, second game in the file |
 | Main line | different from the original game |
-| Format | line of more than 79 characters, opening or closing brace in a comment, `%`, em dash, suffix notation, tags missing or out of order, end marker |
+| Format | line of more than 79 characters, opening or closing brace in a comment, word outside the braces, move written with a `P`, castling written with zeros, `%`, em dash, suffix notation, tags missing or out of order, end marker |
 | Commented moves | mistake or blunder of Stockfish left without a comment within the agreed scope, position NAG contrary to the evaluation of the engine; for information, the quality NAGs of another opinion than the engine |
 | Evaluations | figure or mate quoted that exists nowhere in the data of the engine; a `#7` without a sign, which may be a rank, is only a warning |
 | Variations | variation written inside a comment, hence not playable, illegal or too long variation |
@@ -629,7 +630,8 @@ It has no `--venv` option. If your environment is elsewhere, run it with the Pyt
 
 Two of these flaws come from real PGNs of LLMs and deserve an explanation:
 
-- **The blank line in the body of the game.** python-chess sees the end of the game there and does not read what follows. The script finds it wherever it is, even if it only hides a variation or the end marker, then goes on with its checks on the file once the line is removed.
+- **The blank line in the body of the game.** python-chess sees the end of the game there and does not read what follows. The script finds it wherever it is, even if it only hides a variation or the end marker, then goes on with its checks on the file once the line is removed. Inside a comment, python-chess reads on up to the closing brace: the report says so, and still counts the line as a fault, the prompt forbidding it and another reader stopping there.
+- **The words outside the braces.** python-chess skips them without a word: free text written between two moves is lost, and a move written `Pg2xf3`, or a castling written `0-0`, is read all the same, which hides the flaw. The script names each of these words, line by line.
 - **The variation written between braces.** It is only text, SCID does not replay it. The script replays it itself to say whether it is legal and whether it comes from a line of the engine.
 
 ### Reading the report
@@ -649,11 +651,14 @@ With the code 2, no check took place.
 It does not judge the quality of the commentary. A wrong but well-formed explanation goes through: an LLM can put a queen on the wrong square in a sentence without any check seeing it.\
 This reading stays yours.
 
-Three limits to know:
+Limits to know:
 
-- An evaluation rounded to one decimal is accepted: "+0.35" quoted as "+0.4" or "+0.3" does not count as invented
+- An evaluation rounded to one decimal is accepted: "+0.35" quoted as "+0.4" or "+0.3" does not count as invented, nor "+0.350", whose third decimal is a zero
 - A number written without a sign, "7.77", is not taken for an evaluation: the script would confuse it with a duration or a rating. An invented figure written this way thus goes through
 - The script finds a figure that exists nowhere, not a real figure given to the wrong move
+- A difference computed by the LLM, "+1.77" between two evaluations, exists nowhere either: it is reported as invented
+- Only the position NAGs that give a side better, `$14` to `$21`, are compared with the engine: `$10`, an equal position, put on a won position, goes through
+- The scope read in your answer is its first number: "moves 15 to 30" counts as the first 15 moves. Give `--scope` when it does not fit
 
 ## 9. Sources and links
 
@@ -673,7 +678,7 @@ What it relies on:
 Where the time controls come from:
 
 - Categories of real time: [Speed.scala](https://raw.githubusercontent.com/lichess-org/scalachess/master/core/src/main/scala/Speed.scala), in [scalachess](https://github.com/lichess-org/scalachess), the rules library of Lichess
-- Correspondence, ICCF: [ICCF Rules, in force since January 1, 2026](https://webfiles.iccf.com/rules/2026/2026%20ICCF%20Rules%2C%20260311.pdf), section 2.4 (PDF)
+- Correspondence, ICCF: [ICCF Rules, in force since 1 January 2026](https://webfiles.iccf.com/rules/2026/2026%20ICCF%20Rules%2C%20260311.pdf), section 2.4 (PDF)
 - Correspondence, clock: [rules of chess-mail.com](https://www.chess-mail.com/index.php?page=reg)
 
 Conventions of the repository:

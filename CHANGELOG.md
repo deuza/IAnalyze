@@ -31,6 +31,27 @@ and the project applies [Semantic Versioning](https://semver.org/).
   `example-games/null-move-in-check.pgn`, for the two new error
   messages of `EXAMPLES.md`.
 
+- `verify-analysis.py` checks the words of the PGN returned outside the
+  comments: free text, a move written with a `P`, a hyphen between two
+  squares, and, for the full prompt, castling written with zeros are
+  failures named with their line. python-chess skipped them, or read
+  them, without a word. The tail of a comment cut too early by a
+  closing brace stays counted in that single flaw.
+- `verify-analysis.py` reports a second game in the file returned:
+  only the first one is read and checked.
+- `test-app.sh`, T93 to T98: W/D/L and the variations of Black; the
+  catalog installed and checked without the network, from local
+  sources; the thresholds of the explorer, the retry after a 429, the
+  pauses, `--timeout` and a token refused, on a simulated explorer and
+  local servers; the errors of the PGN, of the arguments, of the engine
+  and of the archive, `--pv-length` included; Ctrl-C during the engine
+  phase; an unexpected error with and without `--debug`, on a copy with
+  an injected fault. New cases in T37, T49, T51, T54, T65, T70, T73,
+  T74, T82, T83, T85 and T90, and the conversation and the PGN of the
+  short prompt of `EXAMPLES.md` go through T83.
+- The link references of this file, for `[Unreleased]` and the three
+  tagged versions.
+
 ### Changed
 
 - The comments and docstrings of `ianalyze.py`, `verify-analysis.py`
@@ -134,8 +155,9 @@ and the project applies [Semantic Versioning](https://semver.org/).
   `named`, `known`), which `collection.json` repeats. The former
   `catalogue.tsv` is ignored: run `--install-catalog` once.
 - The names in the archive are in English. The archive, its working
-  folder and the prompt are `analysis-<game>-<date>.zip`,
-  `analysis-<game>-<date>/` and `analysis-<game>-<date>.prompt.txt`,
+  folder and the prompt are `analysis-<label>-<YYYYMMDD-HHMMSS>.zip`,
+  `analysis-<label>-<YYYYMMDD-HHMMSS>/` and
+  `analysis-<label>-<YYYYMMDD-HHMMSS>.prompt.txt`,
   and the archive holds `game.pgn`, `game-original.pgn`, `summary.md`,
   `context.md`, `collection.json`, `explorer/NNN-<uci>.json` and
   `stockfish/evaluations.json`.
@@ -350,6 +372,58 @@ and the project applies [Semantic Versioning](https://semver.org/).
   archiving and of T76, the name of the model and the evaluations
   quoted by T73 were still in French.
 
+- A token refused by the explorer, HTTP 401, stops the run with the
+  exit code 1, before the engine, and advises to replace it or to run
+  again with `--no-explorer`. The collection went on, and Stockfish ran
+  for minutes for an archive without its section 2. The answer stays in
+  `explorer/`, the working folder with it.
+- The default engine is looked for in the PATH under Debian too, then
+  in `/usr/games`: an engine built by hand is found as under macOS. The
+  PATH of root does not hold `/usr/games`.
+- W/D/L is written in whole percentages adding up to 100, by the
+  largest remainders, computed for White and swapped for Black. Rounded
+  one by one, 15, 970 and 15 per thousand gave 2/97/2.
+- A variation that starts with a Black move is written `8... Bg4`, as
+  in the PGN and in the examples of the prompt, no longer `8...Bg4`.
+- Full prompt: the line on case A or B comes first, then the recap,
+  both being asked for the start of the answer; the notation no longer
+  lists `P`; the notes of the player are kept in the PGN returned, the
+  commands `[%clk]` and `[%eval]` that a site writes in the comments
+  left out, `%` being forbidden there; the final summary keeps to the
+  agreed scope, like the comments; the loss `mate` also covers a mate
+  found by the move played. The summary says the same of `mate`.
+- Short prompt: the comments already in the game are kept, without the
+  commands of a site, and a scope given by the player bounds the
+  comments and the review.
+- The refusal of `--settings` says that the name must not start with a
+  dot.
+- `test-app.sh`: the runs on a pseudo-terminal, T45 and T79 included,
+  go through a driver with a deadline of 300 seconds, which reads the
+  whole output and returns the exit code of the script; T58 checks the
+  end of the run before an absence; the collision of names of T74 runs
+  on a frozen clock; T23 holds across midnight; the engine processes of
+  M2 are found by `ps`, a name beyond the 15 characters kept by Linux
+  included; the guards of the token compare the token as the script
+  reads it, through a pipe, a byte order mark or a carriage return no
+  longer hiding it; the refusals run with a missing `--token-file`, T85
+  with a dummy interpreter and T81 with a venv that cannot be created;
+  the report is written by a literal replacement of the paths; a
+  relative `VENV`, `STOCKFISH` or `TOKEN` is taken from the
+  repository; a path with a blank, and a missing `unzip`, `python3` or
+  `ps`, stop the suite at the start; no `__pycache__` is written.
+- `ianalyze.py` passes mypy without an error, without a change of
+  behavior: a separate variable for the bytes of the label, two types
+  narrowed, the information of the engine typed as such.
+- Documentation: the dates written in one form, "25 November 2026";
+  the names of the archive, of the folder and of the prompt written
+  `analysis-<label>-<YYYYMMDD-HHMMSS>` everywhere; `EXAMPLES.md` calls
+  `../verify-analysis.py` from `example-games`, says that the count of
+  the variations of the engine varies from one collection to another,
+  and gives the new messages with their real output; `TECHNICAL.md`
+  names the conditions that no template of the repository uses; the
+  checker documents its limits. The versions without a tag lose their
+  brackets.
+
 ### Removed
 
 - The French names of the options, without aliases, and the former
@@ -467,6 +541,27 @@ and the project applies [Semantic Versioning](https://semver.org/).
 - TESTS.md and TESTS.fr.md describe T03, T14 and T81 as they are, and
   T12, T26 and T55 now check what their rows said. A check of T83 used
   the alternation of GNU grep, which another grep may take literally.
+
+- `--install-venv` on a regular file is refused with its own message:
+  `python -m venv` failed on it, and the message asked whether
+  `python3-venv` was installed.
+- A PGN in UTF-16 or UTF-32 cut or damaged is refused with its cause:
+  the check of the notation blamed a U+FFFD for not being a move, or a
+  brace for never being closed, the cause staying in the remark on the
+  encoding.
+- A negative loss beyond 10000, a mate found by the move played that
+  the search of the best moves did not see, reads `mate` instead of
+  some -99000 centipawns.
+- `https://lichess.org/timeline`, and the sections `bookmark`,
+  `password` and `markdown`, of eight letters like an identifier, were
+  requested from Lichess as games.
+- An answer of the explorer whose `moves` key is missing or is not a
+  list is an unusable answer: it passed for an exit from theory at
+  0.0 %.
+- `verify-analysis.py`: a blank line inside a comment is no longer
+  said to stop python-chess, which reads on up to the closing brace;
+  a third decimal at zero, `+1.910`, is accepted; removing the blank
+  lines of the body no longer merges a second game into the first.
 
 ## [4.0.2] - 2026-11-21
 
@@ -746,7 +841,7 @@ published.
   kept in the archive, in case a server sent back the header that it
   received.
 
-## [3.5.8] - 2026-11-18
+## 3.5.8 - 2026-11-18
 
 ### Changed
 
@@ -755,7 +850,7 @@ published.
   quotes: two comments, and the help of `--consignes`, which now shows
   `sous le titre "Consignes d'analyse"`.
 
-## [3.5.7] - 2026-11-18
+## 3.5.7 - 2026-11-18
 
 ### Added
 
@@ -784,7 +879,7 @@ published.
   preliminary checks, before any request and before the creation of the
   working folder.
 
-## [3.5.6] - 2026-11-18
+## 3.5.6 - 2026-11-18
 
 ### Added
 
@@ -809,7 +904,7 @@ published.
   sections `analysis`, `training`, `practice` and `streamer` no longer
   pass for identifiers.
 
-## [3.5.5] - 2026-11-18
+## 3.5.5 - 2026-11-18
 
 ### Added
 
@@ -833,7 +928,7 @@ published.
   of the archive is now written into a neighboring file
   `.<name>.partiel`, renamed once complete.
 
-## [3.5.4] - 2026-11-18
+## 3.5.4 - 2026-11-18
 
 ### Added
 
@@ -857,7 +952,7 @@ published.
   of the position, but its columns Éval, G/N/P, Écart and Nature now
   carry `-`. The rest of the game is analyzed as before.
 
-## [3.5.3] - 2026-11-18
+## 3.5.3 - 2026-11-18
 
 ### Added
 
@@ -880,7 +975,7 @@ published.
   un mat". `stockfish/evaluations.json` keeps the raw value in
   `ecart_cp`.
 
-## [3.5.2] - 2026-11-18
+## 3.5.2 - 2026-11-18
 
 ### Added
 
@@ -905,7 +1000,7 @@ published.
   neutralized the frequency criterion. These values are refused at the
   reading of the options, code 2.
 
-## [3.5.1] - 2026-11-18
+## 3.5.1 - 2026-11-18
 
 ### Added
 
@@ -925,7 +1020,7 @@ published.
   archive was not shown and the working folder stayed in place. The
   check of the archives of the same name suffered from the same flaw.
 
-## [3.5.0] - 2026-11-18
+## 3.5.0 - 2026-11-18
 
 ### Added
 
@@ -1000,7 +1095,7 @@ published.
 - An answer to the startup questions typed in latin-1 stopped the
   script on a `UnicodeEncodeError`, working folder left in place.
 
-## [3.4.1] - 2026-11-17
+## 3.4.1 - 2026-11-17
 
 ### Added
 
@@ -1020,7 +1115,7 @@ published.
   and triggered a false exit from theory, hence a premature stop of the
   querying. Both notations are now accepted.
 
-## [3.4.0] - 2026-11-17
+## 3.4.0 - 2026-11-17
 
 ### Added
 
@@ -1046,7 +1141,7 @@ published.
 Under Debian, the defaults, the messages and the output of `--help`
 are unchanged.
 
-## [3.3.0] - 2026-10-09
+## 3.3.0 - 2026-10-09
 
 History rebuilt from the conversations of 8 and 9 October 2026. The
 numbering of the intermediate steps was not kept: their changes are
@@ -1106,3 +1201,8 @@ Not documented. The script already collected the PGN, local or
 downloaded from Lichess, the statistics of the masters database of the
 explorer and, on request with `--avec-stockfish`, the evaluations of
 the engine, all in a zip archive with `synthese.md`.
+
+[Unreleased]: https://github.com/deuza/IAnalyze/compare/v4.0.2...dev
+[4.0.2]: https://github.com/deuza/IAnalyze/compare/v4.0.1...v4.0.2
+[4.0.1]: https://github.com/deuza/IAnalyze/compare/v4.0.0...v4.0.1
+[4.0.0]: https://github.com/deuza/IAnalyze/releases/tag/v4.0.0

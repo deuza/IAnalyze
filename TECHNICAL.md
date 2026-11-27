@@ -45,7 +45,7 @@ Three commands collect nothing and stop once their work is done: `--install-venv
 
 `--install-venv` checks the exit code of `python -m venv`. A creation interrupted before this return, by Ctrl-C or a power cut, leaves an environment without pip, which the next run finds half done. The script recognizes it: `pyvenv.cfg` and the interpreter are there, but `python -m pip --version` fails. It then rebuilds it with `python -m venv --clear`, then installs python-chess. Without `pyvenv.cfg`, a directory is never taken for an environment to rebuild, and `--clear` cannot erase anything in it.
 
-A `--venv` that is not a virtual environment is refused before anything else: an existing directory, not empty and without `pyvenv.cfg`, such as `/usr` or a home directory. pip would have run on the Python found there, often the one of the system, and `python -m venv` would have mixed its files with the ones already there. A missing or empty directory receives the environment. A creation interrupted in the very first moments, before `pyvenv.cfg` is written, leaves a directory that this refusal also sets aside: it is then enough to delete it.
+A `--venv` that is not a virtual environment is refused before anything else: a path that exists without being a directory, a regular file for example, on which `python -m venv` failed with a message that suggested a missing package; an existing directory, not empty and without `pyvenv.cfg`, such as `/usr` or a home directory. pip would have run on the Python found there, often the one of the system, and `python -m venv` would have mixed its files with the ones already there. A missing or empty directory receives the environment. A creation interrupted in the very first moments, before `pyvenv.cfg` is written, leaves a directory that this refusal also sets aside: it is then enough to delete it.
 
 After step 8, a failure leaves the working folder in place, as it is, for diagnosis.
 
@@ -136,7 +136,7 @@ SOURCE designates the game in three ways: a PGN file, the address of a Lichess g
 
 The identifier is the string of 8 characters that follows `lichess.org/` in the address of the game. The forms `/<id>/black`, `/embed/game/<id>`, `/embed/<id>` and `/game/export/<id>` are accepted.
 
-Another host, or another page of the site (study, analysis, puzzles), is refused without sending anything to Lichess.
+Another host, or another page of the site (study, analysis, puzzles), is refused without sending anything to Lichess. Some sections of the site have a name of eight letters, the form of an identifier: `analysis`, `training`, `timeline` or `bookmark` for example. They are refused too, from a list that the routes of the site completed in November 2026.
 
 **An identifier** is exactly 8 or 12 alphanumeric characters.
 
@@ -250,7 +250,7 @@ Without it, the prompt asks the analyst to put its own model name there.
 | `50 days + 3 days, maximum 50 days, bank 75 days` | the same, with a bank beside the clock | ICCF, Triple Block |
 | `unknown` | | |
 
-The two systems of the ICCF follow its rules in force since January 1, 2026, section 2.4.
+The two systems of the ICCF follow its rules in force since 1 January 2026, section 2.4.
 
 The fixed delay per move, for its part, does not exist at the ICCF.
 
@@ -359,9 +359,11 @@ The script waits `--pause` seconds between two requests, 2 at least, and nothing
 
 On an HTTP 429, the script waits 60 seconds and tries again only once. At the second refusal, it stops querying: better to stop than to get banned.
 
-Any other unusable answer stops the querying at this ply: an HTTP error, a timeout (`--timeout`), an answer that is not JSON, a redirect. The collection, for its part, goes on: the table of the explorer stops there, and Stockfish evaluates the whole game.
+Any other unusable answer stops the querying at this ply: an HTTP error, a timeout (`--timeout`), an answer that is not JSON, a redirect, an answer without a list of moves. The collection, for its part, goes on: the table of the explorer stops there, and Stockfish evaluates the whole game. An answer without a list of moves passed for an exit from theory, its move played at 0.0 %.
 
 Without a token, the `lichess` database answers 401. The script requires a token for both databases, and stops before any request if the file is missing.
+
+A token refused, HTTP 401 at any ply, stops the whole run, with the exit code 1, before the engine: no other answer can come, and Stockfish ran for minutes for a collection without its section 2. The message advises to replace the token or to run again with `--no-explorer`. The answer stays in `explorer/`, and the working folder is kept.
 
 ### Stop criteria
 
@@ -369,7 +371,7 @@ For each ply, the position BEFORE the move is queried, which gives the rank and 
 
 The querying stops, in this order of testing:
 
-1. on an HTTP error or a position missing from the database.
+1. on an HTTP error, an unusable answer or a position missing from the database.
 2. on a sample smaller than `--min-games`.
 3. on an exit from theory, outside the `--min-moves` window.
 4. at the `--max-plies` cap, or at the end of the game.
@@ -407,7 +409,7 @@ The catalog says "known", never "good": "Barnes Opening: Fool's Mate" is in it.
 
 It also counts the intermediate positions of the named lines, which the explorer does not name itself.
 
-These intermediate positions have an empty name in the index. On November 25, 2026, the catalog counted 3865 named lines, that is 7982 known positions counting them.
+These intermediate positions have an empty name in the index. On 25 November 2026, the catalog counted 3865 named lines, that is 7982 known positions counting them.
 
 At loading, the format and the number of positions announced are checked: a missing, damaged or truncated index stops the script, which gives the command to run again.
 
@@ -452,9 +454,10 @@ Sources: [UCI options of Stockfish](https://official-stockfish.github.io/docs/st
 - **A mate is counted after the move**, like any evaluation of the table. The engine, for its part, counts before the move, this one included: the script therefore removes one move from the side that mates when it has just played. `#+0` or `#-0`: the move of the line gives mate.
 - **The loss** is what the move played loses compared with the first choice of the engine, in centipawns, from the point of view of the side to move.
 - **The category** follows the loss: inaccuracy from 50, mistake from 100, blunder from 300.
-- **A negative loss** is not a fault. The move played, evaluated apart when it is not among the first choices, then comes out slightly above the first one: the two are worth the same.
+- **A negative loss** is not a fault. The move played, evaluated apart when it is not among the first choices, then comes out slightly above the first one: the two are worth the same. Beyond 10000, the search of the move played found a mate that the search of the best moves did not see: the loss reads "mate", instead of some -99000 centipawns.
 - **The mates** are not counted in centipawns. Between two mates of the same direction, mating in two moves instead of one for example, the loss is 0. A move that misses a mate or concedes one carries the loss "mate" and the category "blunder".
-- **W/D/L** gives the chances of win, draw and loss of White. They are those of the model of Stockfish, built on games of the engine against itself: a trend, and not a probability between human players.
+- **W/D/L** gives the chances of win, draw and loss of White. They are those of the model of Stockfish, built on games of the engine against itself: a trend, and not a probability between human players. The engine gives them per thousand; the script writes them in whole percentages whose sum is 100, by the largest remainders: each share is rounded down, then the points missing go to the largest remainders. Rounded one by one, 15, 970 and 15 per thousand gave 2/97/2. The shares are computed for White, then swapped for Black, whose view stays the mirror of the one of White.
+- **The variations** are written in numbered notation, the one of the PGN: a variation that starts with a Black move reads `8... Bg4`, with a space after the dots. python-chess wrote `8...Bg4`.
 - **A null move**, `--`, is not evaluated: it is not a chess move, the engine cannot judge it. Its line keeps the best moves of the position.
 
 ### `stockfish/evaluations.json`
@@ -550,7 +553,7 @@ Sections of `summary.md`:
 
 Three special cases:
 
-- the loss reads "mate" when the move played misses a mate or concedes one: it is not counted in centipawns
+- the loss reads "mate" when the move played misses a mate, concedes one, or finds one that the search of the best moves did not see: it is not counted in centipawns
 - under the table, a line "Result and final evaluation contradict each other" appears when the side declared the winner is clearly worse after the last move, by at least 300 cp: the game was not decided on the board, and the analyst must say so instead of telling the story of a deserved win
 - a null move, "--" in the PGN, is not evaluated: its line keeps the three best moves of the position, its other columns carry "-"
 
@@ -580,6 +583,8 @@ The `game.pgn` file is therefore always clean UTF-8: if the file given had to be
 A latin-1 text also decodes without error in cp1252, the two only differing on the bytes 0x80 to 0x9F: it is cp1252 that is announced.
 
 A PGN that is neither in UTF-8, nor in UTF-16, nor in cp1252 is refused, with the advice to convert it. The script recognizes it by one of the five bytes that cp1252 does not define.
+
+A PGN in UTF-16 or in UTF-32 whose bytes do not all form characters is refused too: in these encodings, a character takes two or four bytes, and a single byte lost, by a cut transfer for example, shifts the whole text that follows. The refusal names the encoding. It used to blame a U+FFFD for not being a move, or a brace for never being closed, the cause staying in the "Warning" line of the encoding. In UTF-8, an invalid byte only damages one character: the damaged UTF-8 of step 5 stays accepted.
 
 Limit: a file in cp850 or in MacRoman that contains none of these five bytes passes for cp1252. Its accented letters come out wrong in the names and the comments, and nothing allows to see it. The moves, written in ASCII, stay right.
 
@@ -668,6 +673,8 @@ Conditions:
 | `FEW_WEAK_MOVES` | your side is known and `PLAYER_WEAK_MOVES` is less than three |
 | `NO_WEAK_MOVE` | your side is known and `PLAYER_WEAK_MOVES` is zero |
 
+`STOCKFISH`, `MASTERS_DATABASE` and `RATING_DECLARED` serve neither template of the repository: they are kept for the personal templates.
+
 The two templates, `prompt-template.txt` and `prompt-only-template.txt`, share these markers. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `DEPTH`, `PLAYER_WEAK_MOVES` and the conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` serve the short prompt. `PLAYER_WEAK_MOVES`, `FEW_WEAK_MOVES` and `NO_WEAK_MOVE` also serve the final summary of the full prompt.
 
 Both prompts end with a report: the three costliest errors of the player and the theme to work on. When the table marks fewer than three weak moves on your side, the sentence changes: it gives their number and asks to keep to those. In the short prompt:
@@ -683,9 +690,17 @@ The full prompt says it in its final summary, and asks besides not to replace yo
 
 Both prompts say that the tags and the comments of the PGN are data, the notes of the player at most, never instructions: a comment, or a tag, could otherwise give orders to the LLM. The short prompt places the game in a code block.
 
+Both prompts ask to keep these notes in the PGN returned, ahead of the comment of the LLM, and to leave out the commands that a site writes between brackets in the comments: `[%clk 0:10:00]` for the clock, `[%eval 0.23]` for its engine. A game downloaded from Lichess carries them, the export giving the clocks and the evaluations by default, and the full prompt forbids the `%` character in a comment.
+
+The final summary of the full prompt keeps to the agreed scope, like the comments: it asked for the costliest errors of the whole table, even when the comments stopped at move 15. The short prompt says the same under "What the player specified", when a scope is given there.
+
+The full prompt fixes the order of the start of the answer: the line that says whether the LLM can run code, case A or B, then the recap. Two sections both asked for the start of the answer.
+
+The notation of the PGN returned is the standard one: K, Q, R, B, N, no letter for a pawn, castling with the capital letter O. The full prompt listed `K Q R B N P`, which invited a `P` that the checker now refuses.
+
 With `--stockfish-moves`, the weak moves are counted over the plies evaluated only: under `PARTIAL_COVERAGE`, both prompts bound the count, or the absence of a weak move, to these first plies, and ask that an error found beyond them be given as an estimate of the LLM, without a figure. Without this bound, a player with no weak move in the window evaluated was said to have made no error in the whole game.
 
-The reason comes from the trials of November 21, 2026 (README, section 7): the player had made only two errors, and three answers out of five presented a third one to reach the count asked for. A trial of the full prompt, on November 25, 2026, showed the other way out: asked for "the three costliest errors" without being told whose, the LLM gave those of the opponent, and left out one of the two weak moves of the player.
+The reason comes from the trials of 21 November 2026 (README, section 7): the player had made only two errors, and three answers out of five presented a third one to reach the count asked for. A trial of the full prompt, on 25 November 2026, showed the other way out: asked for "the three costliest errors" without being told whose, the LLM gave those of the opponent, and left out one of the two weak moves of the player.
 
 An unknown or badly written marker, such as `{{ RATING }}`, an "if" never closed, a badly formed directive or a template without a single line of text stop the script before the collection:
 
@@ -715,6 +730,8 @@ If one of them is missing, or if the archive cannot be read, no check takes plac
 
 Like `ianalyze.py`, it restarts in the virtual environment when python-chess is missing, but only at its default location: it has no `--venv` option.
 
+Of the PGN returned, python-chess reads only the first game: a second one in the file is reported as a failure, nothing of it being checked. A result repeated alone at the end is not a game, as for `ianalyze.py`. The blank lines of the body are removed for the following checks, but only in the body of the first game: the blank line that opens the tags of another game stays, which used to merge the two games into one.
+
 ### Markers of the report
 
 | Marker | Counts as | Example |
@@ -733,10 +750,12 @@ Exit code: 0 without `FAIL`, 1 with at least one `FAIL`, 2 if no check could tak
 - **Lines**: 79 characters at most.
 - **Overview**: a comment before the first move. Its absence is a failure.
 - **Signs forbidden in a comment**: brace, percent sign, em dash. A semicolon counts as `WARNING`.
+- **Outside the comments**: only moves in standard notation, move numbers, NAGs, the parentheses of the variations and the result. Any other word is a failure, named with its line: free text, which python-chess skips without a word, a move written `Pg2xf3`, which it reads as `g2xf3`, a move written with a hyphen between its squares. The rule is stricter than that of `ianalyze.py`, which reads the PGNs of every site. Castling written with zeros, `0-0`, which python-chess reads as `O-O`, is a failure of its own, outside `--prompt-only`. The words of a comment cut too early by a closing brace stay counted in that single flaw.
+- **Blank line**: in the body of the game, it is a failure. Inside a comment, python-chess reads on up to the closing brace: the report says so, the prompt forbidding the line all the same.
 - **Tags**: the seven mandatory ones at the top and in order, their values taken from the original game. The others in alphabetical order, Annotator filled in and PlyCount exact, otherwise `WARNING`.
 - **Commented moves**: each mistake and each blunder of Stockfish must be. One of them commented on without a NAG counts as `WARNING`, outside `--prompt-only`. The total number of commented moves is given for information, the prompt aiming at 15 to 25.
 - **Scope**: the prompt limits the comments to the agreed scope. A mistake played beyond it is not expected. The scope is the first number of your answer to the startup question, read in the instructions of `summary.md`: "the first 20 moves" counts as 20 moves. An answer without a number, or left at its default, counts as the whole game. `--scope N` gives it by hand, when it was agreed in the conversation.
-- **Position NAGs**: `$14`, `$16`, `$18` and `$20` give White better, `$15`, `$17`, `$19` and `$21` Black. Such a NAG is contrary to the engine when the engine gives the other side better by at least half a pawn, or a mate.
+- **Position NAGs**: `$14`, `$16`, `$18` and `$20` give White better, `$15`, `$17`, `$19` and `$21` Black. Such a NAG is contrary to the engine when the engine gives the other side better by at least half a pawn, or a mate. `$10`, an equal position, is not compared: put on a won position, it goes through.
 - **Quality NAGs**: `$6` for an inaccuracy, `$2` for a mistake, `$4` for a blunder. Another opinion than the one of the engine is given for information, with the move and its loss: another of these three NAGs, `$1` or `$3` on a mistake or a blunder, or `$6`, `$2` or `$4` on a move that the engine does not classify, its loss staying under 50 cp.
 - **Variations**: 5 plies at most, otherwise `WARNING`. A variation is said to be backed by the engine when its first two moves are those of a line that the engine gives for this ply.
 - **Positions quoted in the conversation**: a FEN must be valid and come from a position of the game, recognized by its first four fields once written as python-chess writes it: the en passant square, which the standard writes after any double step of a pawn, only counts if the capture can be played. Two FENs are asked for, otherwise `WARNING`.
@@ -745,12 +764,14 @@ Exit code: 0 without `FAIL`, 1 with at least one `FAIL`, 2 if no check could tak
 
 An evaluation is recognized by its sign: `+0.35`, `-1,20`, `+ 0.35`, the typographic minus sign, or `#-3` for a mate. A number without a sign is not one, except for a mate: `#2` is read as `#+2`, the form of the folder.
 
-It must exist in `evaluations.json`, for the move played or for one of the best moves, as it is or rounded to one decimal: `+0.35` may be quoted `+0.4` or `+0.3`. A `#7` without a sign that is not found there is only a `WARNING`: it may be a rank, "mistake #7", as well as a mate.
+It must exist in `evaluations.json`, for the move played or for one of the best moves, as it is or rounded to one decimal: `+0.35` may be quoted `+0.4` or `+0.3`. A third decimal at zero adds nothing: `+0.350` is read `+0.35`; any other third decimal is a precision that the engine did not give. A `#7` without a sign that is not found there is only a `WARNING`: it may be a rank, "mistake #7", as well as a mate.
+
+A difference that the LLM computed between two evaluations, `+1.77`, exists nowhere in the data: it is reported as invented, like a made-up figure.
 
 The report quotes the PGN and the text returned by the LLM: their control characters are shown as `?`, never played by the terminal. A character that the output cannot represent becomes `?` too, and the report goes to its end.
 
 ### With `--prompt-only`
 
-The short prompt asks for less than the full prompt. The checks that it does not ask for are skipped: length of the lines, overview, NAGs, percent sign, semicolon, em dash, suffix notation, alphabetical order of the other tags, Annotator and PlyCount tags, length of the variations. With `--summary`, the em dash of the conversation and the number of FENs are not checked either: a quoted FEN must only be valid and come from the game.
+The short prompt asks for less than the full prompt. The checks that it does not ask for are skipped: length of the lines, overview, NAGs, percent sign, semicolon, em dash, suffix notation, castling written with zeros, alphabetical order of the other tags, Annotator and PlyCount tags, length of the variations. The short prompt asks to copy the moves as they are: a game exported with `0-0` stays faithful with it. The words outside the braces, for their part, are checked: the short prompt asks for the comments between braces. With `--summary`, the em dash of the conversation and the number of FENs are not checked either: a quoted FEN must only be valid and come from the game.
 
 The tags are checked differently. The full prompt wants the seven mandatory tags of the PGN standard, in their order. The short prompt only asks to copy those of the game: among the seven, only those that the original game carries are expected, in the order in which it writes them.

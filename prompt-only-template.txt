@@ -33,6 +33,12 @@ Return the whole game in a single code block, in PGN format, your
 comments between braces after the moves:
 
 - copy the tags and the moves without changing a single one;
+#! note The comments of the game were neither kept nor dropped by any
+#! note rule, and the [%clk] and [%eval] of a Lichess export, written by
+#! note default, are noise there.
+- keep the comments already in the game, notes of the player, ahead of
+  yours, but leave out the commands that a site adds between brackets,
+  [%clk 0:10:00] or [%eval 0.23];
 - comment on both sides: the idea of the move, the tactics, the
   strategy and the evaluation of the position;
 - comment on all the moves marked mistake or blunder in the table,
@@ -101,6 +107,8 @@ of the play.
 
 What the player specified:
 {{PLAYER_INSTRUCTIONS}}
+A scope given there bounds your comments and your review; the code
+block still holds the whole game.
 #! end
 #! if OPENING_KNOWN
 

@@ -146,6 +146,31 @@ RE_VARIANTE_TEXTE = re.compile(r"\(\s*(\d+)\s*(\.{1,3})\s*([^()]*)\)")
 RE_SAN = re.compile(
     r"(O-O(?:-O)?|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?)[+#]?[!?]*$")
 
+#: What the body of the PGN returned may hold outside the comments: a
+#: result, a move number, a NAG, a move in standard notation or an
+#: annotation symbol, the null move "--" of the original game included.
+#: Stricter than the check of ianalyze.py, which reads the PGNs of every
+#: site: castling with the letter O only, no P before a pawn move, no
+#: hyphen between two squares, a promotion with "=". The suffixes,
+#: "Qxa8?", have their own check. The result comes first, then
+#: castling, before the move number, which also starts with a digit.
+RE_JETON_RENDU = re.compile(
+    r"(?:1-0|0-1|1/2-1/2|\*)(?![\w/-])"
+    r"|(?:O-O-O|O-O|--|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?)"
+    r"[+#]?[!?]{0,2}(?![\w=-])"
+    r"|\d+\.*"
+    r"|\$\d+"
+    r"|[!?]{1,2}")
+
+#: A word of the body, up to a space, a brace, a parenthesis or a
+#: semicolon.
+RE_MOT_RENDU = re.compile(r"[^\s{}();]+")
+
+#: Castling written with the digit zero, which python-chess reads
+#: without a word. It is looked for before RE_JETON_RENDU, which would
+#: take its first zero for a move number.
+RE_ROQUE_ZERO = re.compile(r"0-0(?:-0)?[+#]?[!?]{0,2}(?![\w=-])")
+
 #: Position evaluation NAGs, according to the side they give as better.
 NAG_BLANCS_MIEUX = {14, 16, 18, 20}
 NAG_NOIRS_MIEUX = {15, 17, 19, 21}
@@ -276,18 +301,34 @@ def retirer_lignes_vides(texte: str) -> tuple[str, list[int]]:
 
     Returns the text thus repaired and the numbers of the lines removed.
     The blank lines at the end of the file do not count.
+
+    The body of the first game ends where the tags of another game
+    start: a bracket in the first column after a blank line, outside a
+    comment. That blank line separates two games, it is kept, and so is
+    what follows it: removing it merged the second game into the first,
+    whose moves then became illegal.
     """
     lignes = texte.split("\n")
     debut = 0
     while debut < len(lignes) and (lignes[debut].startswith("[")
                                    or not lignes[debut].strip()):
         debut += 1
-    fin = len(lignes)
+    dedans = lignes_en_commentaire(texte)
+    limite = len(lignes)
+    for k in range(debut + 1, len(lignes)):
+        if (lignes[k].startswith("[") and not lignes[k - 1].strip()
+                and k + 1 not in dedans):
+            limite = k
+            break
+    fin = limite
     while fin > debut and not lignes[fin - 1].strip():
         fin -= 1
     retirees = [n + 1 for n in range(debut, fin) if not lignes[n].strip()]
     corps = [x for x in lignes[debut:fin] if x.strip()]
-    return "\n".join(lignes[:debut] + corps) + "\n", retirees
+    repare = "\n".join(lignes[:debut] + corps) + "\n"
+    if limite < len(lignes):
+        repare += "\n" + "\n".join(lignes[limite:])
+    return repare, retirees
 
 
 def lire_partie(texte: str) -> chess.pgn.Game | None:
@@ -303,6 +344,39 @@ def lire_partie(texte: str) -> chess.pgn.Game | None:
         return chess.pgn.read_game(io.StringIO(texte))
     except (IndexError, ValueError):
         return None
+
+
+def resultat_seul(partie: chess.pgn.Game) -> bool:
+    """
+    True for a "game" that python-chess derives from a lone result: no
+    move, no comment, no variation, no tag filled in except Result. Some
+    sites write the result again after a blank line: this is not a
+    game, the rule of ianalyze.py.
+    """
+    if partie.variations or partie.comment.strip():
+        return False
+    return all(valeur in ("?", "????.??.??", "")
+               for cle, valeur in partie.headers.items() if cle != "Result")
+
+
+def parties_en_plus(texte: str) -> int:
+    """
+    Number of games that follow the first one in the text, a result
+    repeated alone not counting. A reading error stops the count where
+    it happens.
+    """
+    flux = io.StringIO(texte)
+    autres = 0
+    try:
+        chess.pgn.read_game(flux)
+        while True:
+            suivante = chess.pgn.read_game(flux)
+            if suivante is None:
+                return autres
+            if not resultat_seul(suivante):
+                autres += 1
+    except (IndexError, ValueError):
+        return autres
 
 
 def san_ou_uci(noeud: chess.pgn.ChildNode) -> str:
@@ -358,6 +432,13 @@ def controler_lecture(b: Bilan, brut: bytes) -> tuple[str, chess.pgn.Game]:
             constat += (": python-chess stops reading there and only sees %d "
                         "of the %d %s"
                         % (lus, total, accorder(total, "ply", "plies")))
+        elif set(retirees) <= lignes_en_commentaire(texte):
+            # python-chess reads a comment up to its closing brace, blank
+            # lines included: the game is read whole. The fault stays, the
+            # prompt forbidding it: another reader may stop there.
+            constat += (": inside a comment, python-chess reads on, but "
+                        "another PGN reader may take it for the end of the "
+                        "game")
         else:
             constat += (": python-chess stops reading there, what follows is "
                         "not read")
@@ -366,6 +447,13 @@ def controler_lecture(b: Bilan, brut: bytes) -> tuple[str, chess.pgn.Game]:
             b.noter("INFO", "the following checks are made on the file once "
                     "these lines are removed")
             texte, partie = repare, relue
+    # A second game in the file: python-chess reads only the first one,
+    # and nothing of the others would be checked. Looked for once the
+    # blank lines are removed, which would otherwise cut the game in two.
+    autres = parties_en_plus(texte)
+    b.controle(not autres, "a single game in the file",
+               ["%d more %s after the first one, which alone is checked"
+                % (autres, accorder(autres, "game", "games"))])
     # python-chess does not stop reading on an illegal move: it records
     # it in errors and gives up on the variation at that point.
     erreurs = [str(e).split(" while parsing")[0] for e in partie.errors]
@@ -455,6 +543,105 @@ def accolades_orphelines(texte: str) -> list[str]:
     return trouvees
 
 
+def mots_hors_commentaires(texte: str) -> tuple[list[str], list[str]]:
+    """
+    Castlings written with zeros, and words of the body that are neither
+    a PGN element nor in a comment, each list grouped by line.
+
+    python-chess skips without an error what it does not recognize:
+    free text written outside the braces is lost for the reader, a move
+    written "Pg2xf3" is read as g2xf3 and castling written "0-0" as
+    O-O, which hides the flaw. Skipped like python-chess does: the tag
+    lines and the escape lines in the first column, the comments between
+    braces and those of a semicolon, up to the end of the line. An
+    unclosed brace ends the search: the rest of the file is a comment
+    for python-chess, and the reading of the game reports it.
+
+    A closing brace written in a comment ends it too early: the end of
+    the comment falls outside the braces, up to the closing brace left
+    over. These words belong to the flaw of the brace, which has its own
+    check: they are not reported a second time.
+    """
+    zeros: dict[int, list[str]] = {}
+    etrangers: list[tuple[int, str]] = []
+    # Foreign words met since the end of the last comment: they are the
+    # tail of that comment if a closing brace left over follows them.
+    depuis = 0
+    i, n = 0, len(texte)
+    ligne = 1
+    while i < n:
+        c = texte[i]
+        colonne_un = i == 0 or texte[i - 1] == "\n"
+        if c == "\n":
+            ligne += 1
+            i += 1
+        elif c.isspace() or c in "()":
+            i += 1
+        elif c == "{":
+            fin = texte.find("}", i)
+            if fin < 0:
+                break
+            ligne += texte.count("\n", i, fin)
+            i = fin + 1
+            depuis = len(etrangers)
+        elif c == "}":
+            # Closing brace left over, which accolades_orphelines reports.
+            del etrangers[depuis:]
+            i += 1
+        elif c == ";" or (c in "[%" and colonne_un):
+            fin = texte.find("\n", i)
+            i = n if fin < 0 else fin
+        else:
+            m = RE_ROQUE_ZERO.match(texte, i)
+            if m:
+                zeros.setdefault(ligne, []).append(m.group(0))
+                i = m.end()
+                continue
+            m = RE_JETON_RENDU.match(texte, i)
+            if m:
+                i = m.end()
+                continue
+            m = RE_MOT_RENDU.match(texte, i)
+            if m is None:
+                i += 1
+                continue
+            etrangers.append((ligne, m.group(0)))
+            i = m.end()
+
+    def regrouper(trouves: dict[int, list[str]]) -> list[str]:
+        return ["line %d: %s" % (k, " ".join(v)[:60])
+                for k, v in sorted(trouves.items())]
+
+    par_ligne: dict[int, list[str]] = {}
+    for k, mot in etrangers:
+        par_ligne.setdefault(k, []).append(mot)
+    return regrouper(zeros), regrouper(par_ligne)
+
+
+def lignes_en_commentaire(texte: str) -> set[int]:
+    """
+    Numbers of the lines that start inside a comment between braces.
+
+    python-chess reads a comment up to its closing brace, blank lines
+    included: a blank line there does not end the game for it.
+    """
+    dedans: set[int] = set()
+    ouvert = False
+    for n, ligne in enumerate(texte.split("\n"), 1):
+        if ouvert:
+            dedans.add(n)
+        elif ligne.startswith("["):
+            continue
+        for c in ligne:
+            if ouvert:
+                ouvert = c != "}"
+            elif c == "{":
+                ouvert = True
+            elif c == ";":
+                break
+    return dedans
+
+
 def balises_du_texte(texte: str) -> list[str]:
     """
     Names of the tags in the order in which the file writes them.
@@ -502,6 +689,16 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
     accolades += accolades_orphelines(texte)
     b.controle(not accolades, "no brace in a comment",
                accolades)
+    # Outside the comments, nothing but the game: python-chess skips the
+    # rest without a word, and reads "Pg2xf3" or "0-0" all the same.
+    # Castling with zeros is only a fault for the full prompt, which
+    # forbids it: the short one asks to copy the moves as they are.
+    zeros, etrangers = mots_hors_commentaires(texte)
+    b.controle(not etrangers, "outside the braces, only moves in standard "
+               "notation, move numbers, NAGs and the result", etrangers)
+    if not court:
+        b.controle(not zeros, "castling written with the letter O, never "
+                   "the digit zero", zeros)
     corps = "\n".join(x for x in lignes if not x.startswith("["))
     hors_commentaires = re.sub(r"\{[^}]*\}", " ", corps)
     if not court:
@@ -745,6 +942,10 @@ def controler_chiffres(b: Bilan, textes: list[tuple[str, str]],
             # stuck to the number, decimal point.
             lu = re.sub(r"[ \u00a0]", "", brut.replace(",", "."))
             lu = lu.replace("\u2212", "-").replace("\u2013", "-")
+            # A third decimal at zero adds nothing: "+1.910" is the "+1.91"
+            # of the folder. Any other third decimal is a precision that
+            # the engine did not give.
+            lu = re.sub(r"^([+-]\d+\.\d\d)0$", r"\1", lu)
             # A mate quoted without a sign is White's: "#2" means
             # "#+2", the form of the folder.
             sans_signe = re.match(r"#\d", lu) is not None

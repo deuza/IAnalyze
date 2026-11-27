@@ -75,7 +75,7 @@ It writes a zip archive and the prompt that goes with it, to be given to an LLM.
 
 ### Where the outputs come from
 
-They are real outputs of version 5.0.0, taken on 25 November 2026 under Linux, with Python 3.13 and Stockfish 16.\
+They are real outputs of version 5.0.0, taken on 25 and 27 November 2026 under Linux, with Python 3.13 and Stockfish 16.\
 Those of the explorer come from collections of the same day: its statistics change every month, yours will differ.
 
 The evaluations of the engine vary a little too, from one machine to another and from one run to another.\
@@ -85,7 +85,7 @@ So that they can be replayed without a Lichess token and without typing anything
 
 All the files quoted on this page are in the `example-games` directory of the repository.
 
-To replay an example as it is, go to this directory and call the script one level up: `../ianalyze.py` instead of `./ianalyze.py`.
+To replay an example as it is, go to this directory and call the scripts one level up: `../ianalyze.py` instead of `./ianalyze.py`, and `../verify-analysis.py` instead of `./verify-analysis.py`.
 
 ```bash
 cd example-games
@@ -222,7 +222,7 @@ By its address, or by its identifier, the 8 characters that follow `lichess.org/
 ```
 
 The PGN is downloaded, then the collection goes on as for a file.\
-The archive carries the identifier of the game: `analysis-<identifier>-<date>.zip`.
+The archive carries the identifier of the game: `analysis-<identifier>-<YYYYMMDD-HHMMSS>.zip`.
 
 ### With the explorer
 
@@ -322,6 +322,7 @@ Check of an analysis returned by an LLM
 
 === 1. Reading the PGN ===
   OK        file in UTF-8
+  OK        a single game in the file
   OK        no illegal move, variations included (0 reading error(s))
 
 === 2. Main line ===
@@ -330,6 +331,8 @@ Check of an analysis returned by an LLM
 === 3. Format ===
   OK        no line of more than 79 characters
   OK        no brace in a comment
+  OK        outside the braces, only moves in standard notation, move numbers, NAGs and the result
+  OK        castling written with the letter O, never the digit zero
   OK        no % character in a comment
   OK        no em dash
   OK        no semicolon in a comment
@@ -362,6 +365,8 @@ Check of an analysis returned by an LLM
   failures : 0
   warnings : 0
 ```
+
+The last line of section 6 varies with the collection: on several threads, Stockfish does not always give the same lines, and on another archive of the same game the variation may be counted as the LLM's own. With `--threads 1`, two collections give the same lines (TECHNICAL, section 9).
 
 A faulty PGN, for its part, sees each of its defects named.\
 This one carries a blank line between two moves, a percent sign, a made-up figure and a variation written in a comment:
@@ -542,6 +547,16 @@ A directory that is not a virtual environment, not empty and without `pyvenv.cfg
 --venv: /usr is not a virtual environment, the directory is not empty and has no pyvenv.cfg: nothing is changed. Give a new or empty directory, or an existing virtual environment.
 ```
 
+A path that exists without being a directory, a file given by mistake, is refused too, with its own message:
+
+```bash
+./ianalyze.py --install-venv --venv ~/chess-venv
+```
+
+```text
+--venv: ~/chess-venv exists and is not a directory: nothing is changed. Give a new or empty directory, or an existing virtual environment.
+```
+
 The same option then serves at each collection, and the log names the environment used:
 
 ```bash
@@ -599,7 +614,7 @@ grep "side in this game" analysis-my-game-20261125-153415.prompt.txt
 *Default: `settings.ini`*
 
 Name of the settings file to use instead of yours: usernames, usual time control and rating (README, section 2).\
-It is a file name ending in `.ini`, without a folder: every settings file is kept at the root of the application folder, next to `settings.ini`.
+It is a file name ending in `.ini`, without a folder and not starting with a dot: every settings file is kept at the root of the application folder, next to `settings.ini`.
 
 If the file does not exist yet, the script asks for a confirmation, then asks its three questions in the terminal, and creates it.\
 This is the way to keep several profiles on one account, one per player for instance.
@@ -687,7 +702,7 @@ A path is refused, even inside the application folder, with the exit code 2:
 ```text
 usage: ianalyze.py [-h] [--install-venv] [--venv PATH] [--no-questions]
 ...
-ianalyze.py: error: --settings: ~/IAnalyze/settings.ini is not a settings name. Give a file name ending in .ini, without a folder: every settings file is kept in ~/IAnalyze. To run without settings, use --no-settings.
+ianalyze.py: error: --settings: ~/IAnalyze/settings.ini is not a settings name. Give a file name ending in .ini, without a folder and not starting with a dot: every settings file is kept in ~/IAnalyze. To run without settings, use --no-settings.
 ```
 
 #### `--no-settings`
@@ -856,7 +871,7 @@ analysis-my-game-20261125-153424.zip
 
 #### `--keep-folder`
 
-During the collection, the script puts its files in a working folder, `analysis-<game>-<date>`.\
+During the collection, the script puts its files in a working folder, `analysis-<label>-<YYYYMMDD-HHMMSS>`.\
 It then compresses it into a zip, then deletes it.
 
 With this option, the folder stays next to the archive.\
@@ -1318,7 +1333,7 @@ These three settings, MultiPV, Threads and Hash for Stockfish, are explained in 
 
 #### `--stockfish PATH`
 
-*Default: `/usr/games/stockfish` under Debian, the binary found in the PATH under macOS*
+*Default: the binary found in the PATH, otherwise `/usr/games/stockfish` under Debian and `/opt/homebrew/bin/stockfish` under macOS*
 
 Binary of the engine.
 
@@ -1472,6 +1487,7 @@ Check of an analysis returned by an LLM
 
 === 1. Reading the PGN ===
   OK        file in UTF-8
+  OK        a single game in the file
   OK        no illegal move, variations included (0 reading error(s))
 
 === 2. Main line ===
@@ -1479,6 +1495,7 @@ Check of an analysis returned by an LLM
 
 === 3. Format ===
   OK        no brace in a comment
+  OK        outside the braces, only moves in standard notation, move numbers, NAGs and the result
   OK        the mandatory tags of the original game, in the same order
   OK        values of the seven tags taken from the original game
   OK        end marker "*" identical to the Result tag "*"
@@ -1635,6 +1652,31 @@ A null move, `--`, passes the turn. Played in check, it leaves the king attacked
 Corrupt PGN: null move "--" played in check, at move 2, by Black. Passing leaves the king attacked: the positions that follow are illegal, and the engine cannot evaluate them.
 ```
 
+### PGN in UTF-16, cut short
+
+A file in UTF-16 that lost a byte, by a cut transfer for example, is refused with its cause: in this encoding, one byte lost shifts the whole text that follows.\
+Here the last byte is removed on purpose:
+
+```bash
+iconv -f UTF-8 -t UTF-16 my-game.pgn > my-game-utf16.pgn
+```
+
+```bash
+dd if=my-game-utf16.pgn of=my-game-cut.pgn bs=1 count=$(($(wc -c < my-game-utf16.pgn) - 1))
+```
+
+```bash
+./ianalyze.py my-game-cut.pgn --no-explorer --no-questions
+```
+
+```text
+[08:21:33] Virtual environment: restarting with ~/IAnalyze/local/venv/bin/python3
+[08:21:33] Reading the local PGN: my-game-cut.pgn
+[08:21:33] Warning, PGN: byte order mark (BOM) detected, encoding used: utf-16-le.
+[08:21:33] Warning, PGN: invalid utf-16-le sequences replaced by U+FFFD.
+Corrupt PGN: the file is in utf-16-le, but some of its bytes form no character: it is truncated or damaged, and in this encoding a single byte lost shifts the whole text that follows. Export it again from its source, then run again.
+```
+
 ### Unknown option
 
 Here a former French name, no longer accepted since version 5.0.0. The exit code is 2.
@@ -1702,6 +1744,28 @@ Without `--no-explorer`, the script needs the Lichess token (README, section 2).
 [15:40:29] Reading the local PGN: my-game.pgn
 Token missing: ~/.lichess_token not found.
 ```
+
+### Token refused
+
+The token is in place, but Lichess refuses it: wrong, expired or revoked.\
+The run stops at the first request, before the engine:
+
+```bash
+./ianalyze.py my-game.pgn --no-questions
+```
+
+```text
+[08:22:10] Virtual environment: restarting with ~/IAnalyze/local/venv/bin/python3
+[08:22:10] Reading the local PGN: my-game.pgn
+[08:22:10] Opening catalog: 7982 known positions, from 2026-11-25T15:28:44+00:00
+[08:22:10] Startup questions skipped: option --no-questions.
+[08:22:10] Working folder: analysis-my-game-20261127-082210
+[08:22:10] Explorer: database Lichess (all players), https://explorer.lichess.org/lichess
+[08:22:10] Explorer: ply 1 (e4)
+Explorer: the token is refused (HTTP 401), it is wrong, expired or revoked. Replace it in its file (see --token-file), or run again with --no-explorer. Working folder kept: analysis-my-game-20261127-082210
+```
+
+The working folder keeps the answer of Lichess, in `explorer/001-e2e4.json`: delete it once read.
 
 ### Catalog missing
 
@@ -1799,15 +1863,15 @@ What the script reads:
 | `settings.ini` | your settings: usernames, usual time control, rating |
 | `~/.lichess_token` | your Lichess token, in mode 600 |
 | `prompt-template.txt`, `prompt-only-template.txt` | the prompt templates, next to the script |
-| `/usr/games/stockfish` | the engine under Debian. Under macOS, the one of the PATH |
+| `/usr/games/stockfish` | the engine under Debian, when the PATH does not hold it, the one of root for example. Otherwise, the one of the PATH |
 
 What it writes, in the current directory or in the one of `--output-dir`:
 
 | File | Role |
 |---|---|
-| `analysis-<game>-<date>.zip` | the archive, to be attached to the conversation |
-| `analysis-<game>-<date>.prompt.txt` | the prompt, to be pasted into the conversation |
-| `analysis-<game>-<date>/` | the working folder, kept only with `--keep-folder` or after a failure |
+| `analysis-<label>-<YYYYMMDD-HHMMSS>.zip` | the archive, to be attached to the conversation |
+| `analysis-<label>-<YYYYMMDD-HHMMSS>.prompt.txt` | the prompt, to be pasted into the conversation |
+| `analysis-<label>-<YYYYMMDD-HHMMSS>/` | the working folder, kept only with `--keep-folder` or after a failure |
 
 The content of the archive is described in the README, section 5.
 

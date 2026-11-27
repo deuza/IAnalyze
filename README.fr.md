@@ -73,7 +73,7 @@ La chaîne complète tient en trois temps :
 
 1. `./ianalyze.py my-game.pgn`
 
-   Le script collecte, calcule, et écrit deux fichiers : `analysis-<game>-<date>.zip` et `analysis-<game>-<date>.prompt.txt`.
+   Le script collecte, calcule, et écrit deux fichiers : `analysis-<label>-<YYYYMMDD-HHMMSS>.zip` et `analysis-<label>-<YYYYMMDD-HHMMSS>.prompt.txt`, l'étiquette `<label>` étant le nom du PGN (section 5).
 
 2. Dans une conversation neuve avec un LLM, vous collez le contenu du prompt et vous joignez l'archive.
 
@@ -172,7 +172,7 @@ Le dossier `local/` ne garde que ce que le script sait refaire seul, l'environne
 | `--catalog` | `local/`, dans le dossier de l'application |
 | réglages | `settings.ini`, à la racine du dossier de l'application, comme tout autre fichier de réglages nommé par `--settings` |
 | jeton | `~/.lichess_token` |
-| `--stockfish`, Debian | `/usr/games/stockfish` |
+| `--stockfish`, Debian | le binaire trouvé dans le PATH, sinon `/usr/games/stockfish` |
 | `--stockfish`, macOS | le binaire trouvé dans le PATH, sinon `/opt/homebrew/bin/stockfish` |
 
 Jusqu'à la version 4.0.2, l'environnement virtuel et le catalogue étaient rangés dans `~/.local/share/IAnalyze`, les réglages dans `~/.config/IAnalyze`.
@@ -206,7 +206,8 @@ Dans cet ordre, le jeton n'est à aucun moment dans un fichier lisible par d'aut
 Le script ne l'affiche jamais, ne l'écrit dans aucun des fichiers qu'il produit, et ne le reçoit pas en ligne de commande.\
 Il vous prévient si le fichier est lisible par d'autres que vous.
 
-Sans jeton, lancez le script avec `--no-explorer`.
+Sans jeton, lancez le script avec `--no-explorer`.\
+Si Lichess refuse le jeton, faux, expiré ou révoqué, le script s'arrête à la première requête, avant le moteur : créez-en un nouveau, ou relancez avec `--no-explorer`.
 
 ### Réglages personnels
 
@@ -229,7 +230,7 @@ Il est transmis à l'analyste, qui y adapte ses explications. Sans lui, c'est l'
 
 **La cadence** s'écrit `15+10` pour le temps réel, minutes par joueur puis incrément en secondes, et `14 days` pour la correspondance à délai fixe.
 
-**Un autre joueur** de la même machine garde ses réglages dans un fichier à lui, nommé par `--settings` : `--settings player2.ini`. L'option prend un nom de fichier en `.ini`, rangé dans le dossier de l'application à côté de `settings.ini`, jamais un chemin. Dans un terminal, un nom dont le fichier n'existe pas encore n'est créé qu'après confirmation : une faute de frappe ne lance pas un nouveau fichier.
+**Un autre joueur** de la même machine garde ses réglages dans un fichier à lui, nommé par `--settings` : `--settings player2.ini`. L'option prend un nom de fichier en `.ini`, qui ne commence pas par un point, rangé dans le dossier de l'application à côté de `settings.ini`, jamais un chemin. Dans un terminal, un nom dont le fichier n'existe pas encore n'est créé qu'après confirmation : une faute de frappe ne lance pas un nouveau fichier.
 
 **Pour un seul lancement** qui laisse vos réglages de côté, la partie d'un ami par exemple, `--no-settings` ne lit ni n'écrit aucun fichier de réglages.
 
@@ -526,7 +527,7 @@ Ce que cette série montre :
 
 - **Le prompt court fait le travail.** Sans pièce jointe et sans exécution de code, les cinq réponses sont lisibles et leurs chiffres sont justes. C'est mieux que ce que la chaîne complète avait donné la veille chez les trois autres LLM.
 - **Claude est devant sur les deux offres.** Ses deux PGN sont conformes, et ses explications sont celles qui résistent le mieux à la vérification : aucune erreur trouvée d'un côté, une seule de l'autre. Le compte gratuit fait presque jeu égal avec l'abonnement, en deux fois plus long : 1968 mots de commentaires contre 943.
-- **Le même piège a pris trois LLM sur quatre.** Un fou prend un pion en h7 avec échec, défendu par sa dame : le roi ne peut pas le reprendre. ChatGPT, Gemini et Copilot parlent de sacrifice. Claude écrit, dans l'essai du compte gratuit, "ici il n'y a aucun sacrifice, le pion tombe gratuitement".
+- **Le même piège a pris trois LLM sur quatre.** Un fou prend un pion en h7 avec échec, défendu par sa dame : le roi ne peut pas le reprendre. ChatGPT, Gemini et Copilot parlent de sacrifice. Claude écrit, dans l'essai du compte gratuit, "ici il n'y a aucun sacrifice, le pion tombe gratuitement". Les essais ont été menés en français.
 - **Demander trois erreurs en fait inventer une.** Le joueur n'en avait commis que deux. ChatGPT, Gemini et Copilot en ont présenté une troisième, Claude a répondu les deux fois qu'il n'y en avait que deux. Les deux prompts donnent désormais le nombre réel de coups faibles du joueur (voir [TECHNICAL.fr.md](TECHNICAL.fr.md), section 12).
 - **Le vérificateur n'aurait presque rien vu.** En mode `--prompt-only`, il contrôle les balises, la ligne principale et les chiffres cités. Les suites écrites dans le texte, les balises HTML et les récits faux passent : c'est à vous de les relire.
 
@@ -601,7 +602,7 @@ Pour un PGN obtenu avec le prompt court de `--prompt-only`, ajoutez la même opt
 ./verify-analysis.py analysis-my-game-20261125-142017 llm-annotated.pgn --prompt-only
 ```
 
-Le prompt court demande moins que le prompt complet. Avec cette option, les contrôles qu'il ne demande pas sont sautés : lignes de 79 caractères, résumé avant le premier coup, NAG, `%`, point-virgule, tiret cadratin, notation suffixe, ordre alphabétique des autres balises, balises Annotator et PlyCount, longueur des variantes, nombre de FEN. Restent la lecture, la ligne principale, les accolades, les balises recopiées, le marqueur de fin, les erreurs et gaffes commentées, les évaluations citées et les variantes.
+Le prompt court demande moins que le prompt complet. Avec cette option, les contrôles qu'il ne demande pas sont sautés : lignes de 79 caractères, résumé avant le premier coup, NAG, `%`, point-virgule, tiret cadratin, notation suffixe, roque écrit avec des zéros, ordre alphabétique des autres balises, balises Annotator et PlyCount, longueur des variantes, nombre de FEN. Restent la lecture, une seule partie dans le fichier, la ligne principale, les accolades, les mots hors des accolades, les balises recopiées, le marqueur de fin, les erreurs et gaffes commentées, les évaluations citées et les variantes.
 
 Si vous avez convenu avec le LLM d'un périmètre, les 20 premiers coups par exemple, le script le lit dans votre réponse à la question de démarrage et n'attend aucun commentaire au-delà.\
 Quand le périmètre a été fixé dans la conversation, donnez-le :
@@ -619,9 +620,9 @@ Il n'a pas d'option `--venv`. Si votre environnement est ailleurs, lancez-le ave
 
 | Contrôle | Défauts relevés |
 |---|---|
-| Lecture | fichier hors UTF-8, coup illégal dans la partie ou dans une variante, ligne vide dans le corps de la partie |
+| Lecture | fichier hors UTF-8, coup illégal dans la partie ou dans une variante, ligne vide dans le corps de la partie, seconde partie dans le fichier |
 | Ligne principale | différente de la partie d'origine |
-| Format | ligne de plus de 79 caractères, accolade ouvrante ou fermante dans un commentaire, `%`, tiret cadratin, notation suffixe, balises absentes ou dans le désordre, marqueur de fin |
+| Format | ligne de plus de 79 caractères, accolade ouvrante ou fermante dans un commentaire, mot hors des accolades, coup écrit avec un `P`, roque écrit avec des zéros, `%`, tiret cadratin, notation suffixe, balises absentes ou dans le désordre, marqueur de fin |
 | Coups commentés | erreur ou gaffe de Stockfish laissée sans commentaire dans le périmètre convenu, NAG de position contraire à l'évaluation du moteur ; pour information, les NAG de qualité d'un autre avis que le moteur |
 | Évaluations | chiffre ou mat cité qui n'existe nulle part dans les données du moteur ; un `#7` sans signe, qui peut être un rang, n'est qu'un avertissement |
 | Variantes | variante écrite à l'intérieur d'un commentaire, donc non jouable, variante illégale ou trop longue |
@@ -629,7 +630,8 @@ Il n'a pas d'option `--venv`. Si votre environnement est ailleurs, lancez-le ave
 
 Deux de ces défauts viennent de vrais PGN de LLM et méritent une explication :
 
-- **La ligne vide dans le corps de la partie.** python-chess y voit la fin de la partie et n'en lit pas la suite. Le script la relève où qu'elle soit, même si elle ne cache qu'une variante ou le marqueur de fin, puis poursuit ses contrôles sur le fichier une fois la ligne retirée.
+- **La ligne vide dans le corps de la partie.** python-chess y voit la fin de la partie et n'en lit pas la suite. Le script la relève où qu'elle soit, même si elle ne cache qu'une variante ou le marqueur de fin, puis poursuit ses contrôles sur le fichier une fois la ligne retirée. Dans un commentaire, python-chess lit jusqu'à l'accolade fermante : le bilan le dit, et compte la ligne comme une faute tout de même, le prompt l'interdisant et un autre lecteur s'y arrêtant.
+- **Les mots hors des accolades.** python-chess les saute sans rien dire : un texte libre écrit entre deux coups est perdu, et un coup écrit `Pg2xf3`, ou un roque écrit `0-0`, est lu quand même, ce qui cache la faute. Le script nomme chacun de ces mots, ligne par ligne.
 - **La variante écrite entre accolades.** Ce n'est que du texte, SCID ne la rejoue pas. Le script la rejoue lui-même pour dire si elle est légale et si elle vient d'une ligne du moteur.
 
 ### Lire le rapport
@@ -649,11 +651,14 @@ Avec le code 2, aucun contrôle n'a eu lieu.
 Il ne juge pas la qualité du commentaire. Une explication fausse mais bien formée passe : un LLM peut placer une dame sur la mauvaise case dans une phrase sans qu'aucun contrôle ne le voie.\
 Cette lecture reste la vôtre.
 
-Trois limites à connaître :
+Limites à connaître :
 
-- Une évaluation arrondie à une décimale est acceptée : "+0.35" cité "+0.4" ou "+0.3" ne compte pas comme inventé
+- Une évaluation arrondie à une décimale est acceptée : "+0.35" cité "+0.4" ou "+0.3" ne compte pas comme inventé, ni "+0.350", dont la troisième décimale est un zéro
 - Un nombre écrit sans signe, "7.77", n'est pas pris pour une évaluation : le script le confondrait avec une durée ou un classement. Un chiffre inventé écrit ainsi passe donc
 - Le script repère un chiffre qui n'existe nulle part, pas un vrai chiffre attribué au mauvais coup
+- Un écart calculé par le LLM, "+1.77" entre deux évaluations, n'existe nulle part non plus : il est signalé comme inventé
+- Seuls les NAG de position qui donnent un camp mieux, `$14` à `$21`, sont comparés au moteur : `$10`, position égale, posé sur une position gagnée, passe
+- Le périmètre lu dans votre réponse est son premier nombre : "les coups 15 à 30" compte pour les 15 premiers coups. Donnez `--scope` quand il ne convient pas
 
 ## 9. Sources et liens
 

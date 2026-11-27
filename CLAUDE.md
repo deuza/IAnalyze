@@ -41,10 +41,16 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
 - On travaille sur la branche dev. Ni push ni merge sans demande.
 - Ne commite ni ne pousse rien. Chaque lot est livré en patch (git diff,
   appliqué par "git apply --index"), avec un brouillon du message de
-  commit : en français, un sujet par commit, sans ligne Co-Authored-By.
+  commit : en français, sans ligne Co-Authored-By. Un sujet par commit
+  par défaut ; l'utilisateur préfère un lot unique quand les sujets
+  sont nombreux et liés, pour ne pas noyer l'historique : le CHANGELOG
+  en garde le détail, et le message les regroupe par thème.
   L'utilisateur applique, commite à son nom et pousse. Avant le lot
   suivant, vérifie qu'origin/dev contient exactement le patch, puis
   recale-toi dessus.
+- CLAUDE.md est le fichier de Claude : il le tient à jour lui-même, à
+  chaque lot qui change ce qu'il décrit, sans attendre qu'on le lui
+  demande.
 - CHANGELOG.md : <https://keepachangelog.com/en/1.1.0/> (section
   Unreleased pendant le travail).
 - Versions : <https://semver.org/>. La version figure dans le script et

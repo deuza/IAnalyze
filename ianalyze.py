@@ -265,10 +265,21 @@ def installer_venv(venv: str) -> None:
     An environment left incomplete by an interrupted creation is rebuilt
     from scratch first (see venv_incomplet). A directory that is not a
     virtual environment is refused before anything runs (see
-    pas_un_venv).
+    pas_un_venv), and so is a path that exists without being a
+    directory.
     """
     racine = pathlib.Path(os.path.expanduser(venv))
     interpreteur = python_du_venv(venv)
+
+    # A path that exists without being a directory, a regular file for
+    # example, cannot receive an environment: python -m venv failed on it,
+    # and the message asked whether python3-venv was installed. A broken
+    # symbolic link is refused the same way, python -m venv failing on it
+    # too.
+    if os.path.lexists(racine) and not est_repertoire(racine):
+        raise SystemExit("--venv: %s exists and is not a directory: nothing "
+                         "is changed. Give a new or empty directory, or an "
+                         "existing virtual environment." % racine)
 
     if pas_un_venv(venv):
         raise SystemExit("--venv: %s is not a virtual environment, the "
@@ -626,12 +637,15 @@ VALEUR_PIECES = {"n": 3, "b": 3, "r": 5, "q": 9}
 #: Public PGN export, requires no authentication.
 EXPORT_URL = "https://lichess.org/game/export/{id}"
 
-#: Location of the Stockfish binary on Debian: it is not in the PATH. On
-#: macOS, Homebrew puts it in the PATH: we look for it there, falling
-#: back on the Homebrew location for Apple Silicon if it cannot be found.
-STOCKFISH_DEFAUT = ((shutil.which("stockfish")
-                     or "/opt/homebrew/bin/stockfish") if EST_MACOS
-                    else "/usr/games/stockfish")
+#: Default engine: the binary found in the PATH, on Debian as on macOS,
+#: so that an engine built by hand, in /usr/local/bin for example, is
+#: found the same way on both. Failing that, the location of the
+#: package: /usr/games on Debian, which the PATH of root does not hold
+#: (/etc/profile of the base-files package gives /usr/games to the
+#: other accounts only), and that of Homebrew for Apple Silicon on macOS.
+STOCKFISH_DEFAUT = (shutil.which("stockfish")
+                    or ("/opt/homebrew/bin/stockfish" if EST_MACOS
+                        else "/usr/games/stockfish"))
 
 #: Hint for installing the engine, repeated in the error message.
 AIDE_STOCKFISH = (CMD_PAQUET_STOCKFISH if EST_MACOS
@@ -795,6 +809,12 @@ ECHANTILLON_UTF16 = 4096
 #: for a text to still be held as damaged UTF-8.
 UTF8_TOLERANCE = 4
 
+#: Remark of decoder_octets when a UTF-16 or UTF-32 text holds bytes
+#: that form no character, %s being the codec. The reading of the PGN
+#: looks for it: in these encodings, a single byte lost shifts the whole
+#: text that follows.
+REMARQUE_SEQUENCES = "invalid %s sequences replaced by U+FFFD"
+
 
 def utf16_sans_bom(brut: bytes) -> str | None:
     """
@@ -897,8 +917,7 @@ def decoder_octets(brut: bytes) -> tuple[str, str, list[str]]:
                 texte = brut.decode(large)
             except UnicodeDecodeError:
                 texte = brut.decode(large, errors="replace")
-                remarques.append("invalid %s sequences replaced by "
-                                 "U+FFFD" % large)
+                remarques.append(REMARQUE_SEQUENCES % large)
 
     if texte is None:
         try:
@@ -1031,10 +1050,10 @@ def etiquette_sure(nom: str) -> str:
     archive, once the timestamp was added, could no longer carry.
     """
     sure = RE_NOM_RISQUE.sub("_", re.sub(r"\s+", "-", nom.strip()))
-    sure = sure.encode("utf-8", errors="surrogateescape")[:ETIQUETTE_MAX]
+    octets = sure.encode("utf-8", errors="surrogateescape")[:ETIQUETTE_MAX]
     # A cut in the middle of a character leaves orphan bytes: they are
     # dropped at decoding.
-    sure = sure.decode("utf-8", errors="ignore").strip("-.")
+    sure = octets.decode("utf-8", errors="ignore").strip("-.")
     return sure or "game"
 
 
@@ -1107,13 +1126,17 @@ HOTES_LICHESS = ("lichess.org", "www.lichess.org")
 
 #: Sections of the site whose name has eight letters: they look like a
 #: game identifier without being one. https://lichess.org/analysis was
-#: taken for the game "analysis" and requested from Lichess.
+#: taken for the game "analysis" and requested from Lichess. The last
+#: four come from the routes of the site (conf/routes of the lila
+#: repository, read in November 2026), which list no other first segment
+#: of eight or twelve letters.
 RUBRIQUES_LICHESS = ("analysis", "training", "practice", "streamer",
                      "features", "insights", "learning", "username",
                      "patron", "calendar", "storm", "racer", "coach",
                      "broadcast", "tournament", "simul", "swiss", "team",
                      "forum", "player", "games", "editor", "variant",
-                     "paste", "contact", "mobile", "about", "account")
+                     "paste", "contact", "mobile", "about", "account",
+                     "timeline", "bookmark", "password", "markdown")
 
 #: Path prefixes accepted before the identifier, besides the direct form
 #: /<identifier>: the embedded game and the PGN export.
@@ -2069,14 +2092,15 @@ def verifier_nom_reglages(nom: str) -> str | None:
     nothing behind, and no path, such as /dev/null or that of the file of
     another program, can be written over by mistake. So --settings takes
     a file name ending in .ini, which chemin_reglages puts at the root of
-    the folder; a path, even inside the folder, is refused.
+    the folder; a path, even inside the folder, is refused, and so is a
+    name that starts with a dot, which would hide the file.
     """
     if RE_NOM_REGLAGES.fullmatch(nom):
         return None
     return ("--settings: %s is not a settings name. Give a file name ending "
-            "in .ini, without a folder: every settings file is kept in %s. "
-            "To run without settings, use --no-settings."
-            % (nom, DOSSIER_APPLICATION))
+            "in .ini, without a folder and not starting with a dot: every "
+            "settings file is kept in %s. To run without settings, use "
+            "--no-settings." % (nom, DOSSIER_APPLICATION))
 
 
 def confirmer_nouveaux_reglages(nom: str) -> None:
@@ -2881,7 +2905,9 @@ def score_blancs(bloc: dict | None) -> float | None:
     White's score on a move, as a percentage, a draw counting as half.
     """
     n = total_parties(bloc)
-    if n == 0:
+    # A missing block counts no game: the second test only tells it to
+    # the type checker.
+    if n == 0 or bloc is None:
         return None
     return 100.0 * (entier(bloc.get("white"))
                     + 0.5 * entier(bloc.get("draws"))) / n
@@ -2902,8 +2928,9 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
 
     Three stop criteria, in this order of testing:
 
-      - an unusable answer, or an empty sample, which means that the
-        position is unknown to the database;
+      - an unusable answer, an answer without a list of moves included,
+        or an empty sample, which means that the position is unknown to
+        the database;
       - a position sample below `seuil_parties`;
       - leaving theory: a played move whose frequency falls below
         `seuil_frequence` and that leads to a position missing from the
@@ -2926,6 +2953,9 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
     for this ply, whatever the mode: it is not a chess move, the database
     can neither count it nor follow the game beyond it. It is not held as
     leaving theory.
+
+    A token refused, HTTP 401, stops the whole run with SystemExit: no
+    other answer can come, and the engine would run for nothing.
     """
     brut = dossier / "explorer"
     brut.mkdir(parents=True, exist_ok=True)
@@ -2987,6 +3017,25 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
         ecrire_texte(fichier,
                      json.dumps(donnees, ensure_ascii=False, indent=1))
 
+        # A refused token: the explorer will answer nothing more, and
+        # Stockfish then ran for minutes for a collection without its
+        # opening statistics. Everything stops here, before the engine;
+        # the answer stays in explorer/, the working folder with it.
+        if code == 401:
+            raise SystemExit(
+                "Explorer: the token is refused (HTTP 401), it is wrong, "
+                "expired or revoked. Replace it in its file (see "
+                "--token-file), or run again with --no-explorer. Working "
+                "folder kept: %s" % dossier)
+
+        # An answer whose "moves" key is missing or is not a list cannot
+        # tell whether the played move is known: it is unusable. It came
+        # out with 0 games for the played move, and passed for an exit
+        # from theory at 0.0 %.
+        if code == 200 and not isinstance(donnees.get("moves"), list):
+            code, donnees = 0, {"_error": "the \"moves\" key is missing or "
+                                          "is not a list"}
+
         if code != 200:
             if code == 0:
                 motif = "unusable answer: %s" % donnees.get("_error")
@@ -3031,8 +3080,9 @@ def collecter_explorateur(partie: chess.pgn.Game, dossier: pathlib.Path,
 
         # Search for the played move among the moves known to the database.
         # Entries of an unexpected type are ignored rather than fatal.
-        # The same goes for a "moves" key that would not be a list:
-        # an integer cannot be iterated, and the loop then raised TypeError.
+        # A "moves" key that would not be a list is refused above as an
+        # unusable answer; the test below stays as a safety net: an
+        # integer cannot be iterated, and the loop then raised TypeError.
         coups_base = donnees.get("moves")
         if not isinstance(coups_base, list):
             coups_base = []
@@ -3129,14 +3179,17 @@ def formater_score(score: chess.engine.PovScore,
     after its move, the opponent still has all of theirs to play.
     """
     blanc = score.white()
-    if blanc.is_mate():
-        coups = blanc.mate()
+    # mate() gives None for a score in centipawns, as is_mate() tests it;
+    # score() is then that number, mate_score only serving the type
+    # checker, for which it could be None.
+    coups = blanc.mate()
+    if coups is not None:
         if trait is not None and (coups > 0) == (trait == chess.WHITE):
             coups += -1 if coups > 0 else 1
             if coups == 0:
                 return "#+0" if trait == chess.WHITE else "#-0"
         return "#%+d" % coups
-    return "%+.2f" % (blanc.score() / 100.0)
+    return "%+.2f" % (blanc.score(mate_score=100000) / 100.0)
 
 
 def valeur_pour_trait(score: chess.engine.PovScore, trait: bool) -> float:
@@ -3165,7 +3218,7 @@ def ecart_au_meilleur(meilleur: float, joue: float) -> float:
     return meilleur - joue
 
 
-def wdl_blancs(info: dict) -> dict | None:
+def wdl_blancs(info: chess.engine.InfoDict) -> dict | None:
     """White's chances of winning, drawing and losing, per thousand."""
     wdl = info.get("wdl")
     if wdl is None:
@@ -3296,7 +3349,27 @@ def verifier_options_moteur(binaire: str, fils: int, hachage: int,
         fermer_moteur(moteur)
 
 
-def decrire_variante(plateau: chess.Board, info: dict, trait: bool) -> dict:
+#: Start of a variation that python-chess writes for a Black move,
+#: "8...Bg4", without a space after the dots.
+RE_DEBUT_NOIR = re.compile(r"^(\d+)\.\.\.(?=\S)")
+
+
+def variante_san(plateau: chess.Board, coups: list[chess.Move]) -> str:
+    """
+    Numbered algebraic notation of a variation, from the position.
+
+    python-chess writes a variation that starts with a Black move
+    "8...Bg4", while its export of the PGN and the examples of the prompt
+    write "8... Bg4": the space is added, so that the tables written for
+    the LLM follow the notation asked of it. The dots only appear at the
+    start of a variation. A variation that cannot be replayed raises
+    ValueError, as with variation_san.
+    """
+    return RE_DEBUT_NOIR.sub(r"\1... ", plateau.variation_san(coups))
+
+
+def decrire_variante(plateau: chess.Board, info: chess.engine.InfoDict,
+                     trait: bool) -> dict:
     """
     Formats a line returned by the engine: first move, score, numeric
     value for the side to move, depth reached and full principal
@@ -3304,7 +3377,7 @@ def decrire_variante(plateau: chess.Board, info: dict, trait: bool) -> dict:
     """
     pv = list(info.get("pv") or [])
     try:
-        pv_san = plateau.variation_san(pv)
+        pv_san = variante_san(plateau, pv)
     except ValueError:
         # Variation that python-chess refuses to replay: we keep the raw UCI
         # rather than lose the information.
@@ -3403,7 +3476,10 @@ def collecter_stockfish(partie: chess.pgn.Game, dossier: pathlib.Path,
                                      "%s at ply %d."
                                      % (san_joue, indice + 1))
                 if not info.get("pv"):
-                    info = dict(info, pv=[coup])
+                    # A copy, as dict(info, pv=...) made: it keeps the
+                    # type of the engine information.
+                    info = info.copy()
+                    info["pv"] = [coup]
                 eval_joue = decrire_variante(plateau, info, trait)
 
             ecart = None
@@ -3518,23 +3594,60 @@ def _ecart(ecart: float | None) -> str:
     misses a mate or concedes one: the cell carries "mate" instead of a
     number of centipawns that would make no sense, the Eval and 1st
     columns giving both scores.
+
+    The same goes below -SEUIL_ECART_MAT: the played move, evaluated by a
+    search of its own, then finds a mate that the search of the best
+    moves did not see, and the loss, negative, would have been written
+    as some -99000 centipawns.
     """
     if ecart is None:
         return "-"
-    if ecart >= SEUIL_ECART_MAT:
+    if abs(ecart) >= SEUIL_ECART_MAT:
         return "mate"
     return "%.0f" % ecart
 
 
+def pourcentages_entiers(valeurs: tuple[int, ...]) -> list[int] | None:
+    """
+    Whole percentages whose sum is exactly 100, by the largest remainder
+    method: each share is rounded down, then the points missing go to
+    the largest remainders, the first value winning a tie.
+
+    Rounding each share on its own gave 101 or 99: 15, 970 and 15 per
+    thousand gave 2/97/2, Python rounding 1.5 to 2, and 5, 990 and 5 gave
+    0/99/0, 0.5 going to 0. Returns None if the values add up to nothing.
+    """
+    total = sum(valeurs)
+    if total <= 0:
+        return None
+    parts = [v * 100 // total for v in valeurs]
+    restes = [v * 100 % total for v in valeurs]
+    # sorted is stable: between two equal remainders, the first value
+    # comes first.
+    ordre = sorted(range(len(valeurs)), key=lambda k: -restes[k])
+    for k in ordre[:100 - sum(parts)]:
+        parts[k] += 1
+    return parts
+
+
 def _gnp(wdl: dict | None, pour_noirs: bool = False) -> str:
-    """Win, draw and loss as a rounded percentage, for White or for Black."""
+    """
+    Win, draw and loss as whole percentages adding up to 100, for White or
+    for Black.
+
+    The percentages are computed for White, then swapped for Black: the
+    view of Black stays the mirror of that of White, ties included.
+    """
     if not wdl:
         return "-"
-    gain, nulle, perte = wdl["win"], wdl["draw"], wdl["loss"]
+    parts = pourcentages_entiers((entier(wdl["win"]), entier(wdl["draw"]),
+                                  entier(wdl["loss"])))
+    if parts is None:
+        return "-"
+    gain, nulle, perte = parts
     if pour_noirs:
         gain, perte = perte, gain
-    return "%d/%d/%d" % (round(gain / 10), round(nulle / 10),
-                         round(perte / 10))
+    return "%d/%d/%d" % (gain, nulle, perte)
 
 
 def materiel_hors_pions(plateau: chess.Board) -> int:
@@ -3599,7 +3712,7 @@ def tronquer_variante(plateau: chess.Board, pv_uci: list[str],
         except ValueError:
             break
     try:
-        return plateau.variation_san(coups)
+        return variante_san(plateau, coups)
     except ValueError:
         return " ".join(pv_uci)
 
@@ -3908,14 +4021,15 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
       "move. Like any evaluation of this table, the count reads after "
       "the move of the line: `#+0` or `#-0`, this move gives mate.")
     a("CP loss `mate`: one of the two scores compared is a mate, whether "
-      "the move played misses a mate or concedes one; the loss is not "
-      "counted in centipawns, compare the Eval and 1st columns.")
+      "the move played misses a mate, concedes one, or finds one that the "
+      "search of the best moves did not see; the loss is not counted in "
+      "centipawns, compare the Eval and 1st columns.")
     if stockfish.get("wdl"):
         a("W/D/L: White's chances of a win, a draw and a loss after the "
-          "move played, as a rounded percentage, according to the model "
-          "of Stockfish. This model reflects the play of the engine: read "
-          "it as a trend, not as the real probability between two human "
-          "players.")
+          "move played, in whole percentages adding up to 100, according "
+          "to the model of Stockfish. This model reflects the play of the "
+          "engine: read it as a trend, not as the real probability between "
+          "two human players.")
     a("")
     a("| # | Move | Side | Played | Eval | W/D/L | CP loss | Category "
       "| 1st | 2nd | 3rd |")
@@ -4746,6 +4860,18 @@ def main(argv: list[str]) -> int:
                 "PGN encoding not recognized: neither UTF-8, nor UTF-16, nor "
                 "cp1252. Convert the file to UTF-8, for example with iconv, "
                 "then run again.")
+        if REMARQUE_SEQUENCES % encodage_pgn in remarques_pgn:
+            # In UTF-16 or UTF-32, a character takes two or four bytes: a
+            # single byte lost, by a cut transfer for example, shifts the
+            # whole text that follows. The lexical check then blamed a
+            # U+FFFD for not being a move, or a brace for never being
+            # closed, the cause staying in the remark on the encoding.
+            raise SystemExit(
+                "Corrupt PGN: the file is in %s, but some of its bytes form "
+                "no character: it is truncated or damaged, and in this "
+                "encoding a single byte lost shifts the whole text that "
+                "follows. Export it again from its source, then run again."
+                % encodage_pgn)
         etiquette = etiquette_sure(chemin_local.stem)
         if etiquette != chemin_local.stem:
             journal("Folder name sanitized: %s" % etiquette)
