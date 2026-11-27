@@ -7,6 +7,25 @@ and the project applies [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- The test suite moves to `tests/`: `tests/test-app.sh`, its test game
+  `tests/test.pgn`, the PGNs that the script refuses in `tests/refused`
+  and the annotated PGNs written for `EXAMPLES.md` in `tests/llm`.
+  `example-games` keeps only the games that can be analyzed. The
+  program, its options and its files do not move.
+- `test-app.sh` finds the repository from its own path: it runs from
+  `tests/` as from the root of the repository, or from anywhere else. It
+  writes its report in `tests/`, takes a relative `VENV`, `STOCKFISH` or
+  `TOKEN` from the directory it is started from, as any command does,
+  and its messages give the command as it was typed. Its header no
+  longer gives durations, which `TESTS.md` gives.
+- T83 also collects `example-games/player-notes.pgn`.
+- `EXAMPLES.md` and `EXAMPLES.fr.md` say where to replay each example:
+  from `example-games` for the games and the checker, from
+  `tests/refused` for the refused PGNs. The outputs of the page are
+  unchanged.
+
 ## [5.0.0] - 2026-11-27
 
 ### Added

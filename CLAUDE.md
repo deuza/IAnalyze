@@ -11,8 +11,11 @@ où l'analyse est faite. Le script ne produit lui-même aucune analyse.
 Fichiers : ianalyze.py, prompt-template.txt (modèle du prompt),
 prompt-only-template.txt (modèle du prompt court de --prompt-only),
 verify-analysis.py (contrôle du PGN rendu par le LLM),
-test.pgn (partie d'essai), test-app.sh (suite de tests),
-example-games/ (fichiers des exemples d'EXAMPLES.md),
+tests/ (test-app.sh, la suite de tests, qui trouve le dépôt d'après
+son propre chemin et écrit son rapport dans tests/ ; test.pgn, sa
+partie d'essai ; refused/ et llm/, les PGN refusés et les PGN annotés
+qu'EXAMPLES cite et que T83 contrôle), example-games/ (les parties
+analysables des exemples d'EXAMPLES.md),
 README.md (installation et usage courant), README.fr.md (sa version
 française), EXAMPLES.md (commandes, options et sorties, sur le plan
 d'une page de manuel), EXAMPLES.fr.md (sa version française),

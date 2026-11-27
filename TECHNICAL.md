@@ -56,9 +56,10 @@ After step 8, a failure leaves the working folder in place, as it is, for diagno
 | `ianalyze.py` | the collection, in a single file. It only needs python-chess and Stockfish |
 | `verify-analysis.py` | the check of the PGN returned by an LLM (section 13) |
 | `prompt-template.txt`, `prompt-only-template.txt` | the two prompt templates (section 12) |
-| `test-app.sh` | the test suite, for Linux and macOS, described in [TESTS.md](TESTS.md) |
-| `test.pgn` | a test game that gathers the tricky cases of a PGN, described in [TESTS.md](TESTS.md) |
-| `example-games/` | the files quoted in [EXAMPLES.md](EXAMPLES.md): games, refused PGNs, annotated PGNs |
+| `tests/test-app.sh` | the test suite, for Linux and macOS, described in [TESTS.md](TESTS.md) |
+| `tests/test.pgn` | a test game that gathers the tricky cases of a PGN, described in [TESTS.md](TESTS.md) |
+| `tests/refused/`, `tests/llm/` | the PGNs that the script refuses and the annotated PGNs written for [EXAMPLES.md](EXAMPLES.md), which the tests also read |
+| `example-games/` | the games quoted in [EXAMPLES.md](EXAMPLES.md), ready to be analyzed |
 | `README.md`, `README.fr.md`, `EXAMPLES.md`, `EXAMPLES.fr.md`, `TECHNICAL.md`, `TECHNICAL.fr.md`, `TESTS.md`, `TESTS.fr.md`, `CHANGELOG.md` | the documentation, each document with its French version, and the history of the versions |
 | `LICENSE` | the license, CC0 |
 

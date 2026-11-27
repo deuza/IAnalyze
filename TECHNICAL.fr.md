@@ -58,9 +58,10 @@ Après l'étape 8, un échec laisse le dossier de travail en place, tel quel, po
 | `ianalyze.py` | la collecte, en un seul fichier. Il ne demande que python-chess et Stockfish |
 | `verify-analysis.py` | le contrôle du PGN rendu par un LLM (section 13) |
 | `prompt-template.txt`, `prompt-only-template.txt` | les deux modèles de prompt (section 12) |
-| `test-app.sh` | la suite de tests, pour Linux et macOS, décrite dans [TESTS.fr.md](TESTS.fr.md) |
-| `test.pgn` | une partie d'essai qui réunit les cas tordus d'un PGN, décrite dans [TESTS.fr.md](TESTS.fr.md) |
-| `example-games/` | les fichiers cités dans [EXAMPLES.fr.md](EXAMPLES.fr.md) : parties, PGN refusés, PGN annotés |
+| `tests/test-app.sh` | la suite de tests, pour Linux et macOS, décrite dans [TESTS.fr.md](TESTS.fr.md) |
+| `tests/test.pgn` | une partie d'essai qui réunit les cas tordus d'un PGN, décrite dans [TESTS.fr.md](TESTS.fr.md) |
+| `tests/refused/`, `tests/llm/` | les PGN que le script refuse et les PGN annotés écrits pour [EXAMPLES.fr.md](EXAMPLES.fr.md), que les tests lisent aussi |
+| `example-games/` | les parties citées dans [EXAMPLES.fr.md](EXAMPLES.fr.md), prêtes à être analysées |
 | `README.md`, `README.fr.md`, `EXAMPLES.md`, `EXAMPLES.fr.md`, `TECHNICAL.md`, `TECHNICAL.fr.md`, `TESTS.md`, `TESTS.fr.md`, `CHANGELOG.md` | la documentation, chaque document avec sa version française, et l'historique des versions |
 | `LICENSE` | la licence, CC0 |
 

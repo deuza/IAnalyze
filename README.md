@@ -103,8 +103,8 @@ The files of the repository:
 | [`TECHNICAL.fr.md`](TECHNICAL.fr.md) | the French version of TECHNICAL.md |
 | [`TESTS.fr.md`](TESTS.fr.md) | the French version of TESTS.md |
 | [`LICENSE`](LICENSE) | the license of the code (see Licenses) |
-| `test-app.sh`, `test.pgn` | the test suite and its test game, described in [TESTS.md](TESTS.md) |
-| `example-games/` | the games and files of the examples of [EXAMPLES.md](EXAMPLES.md), among them a real anonymized game for a first try |
+| `tests/` | the test suite, `test-app.sh`, its test game, `test.pgn`, and the files of its checks, described in [TESTS.md](TESTS.md) |
+| `example-games/` | the games of the examples of [EXAMPLES.md](EXAMPLES.md), among them a real anonymized game for a first try |
 
 ## 2. Requirements and installation
 

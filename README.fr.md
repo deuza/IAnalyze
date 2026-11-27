@@ -103,8 +103,8 @@ Les fichiers du dépôt :
 | [`TECHNICAL.fr.md`](TECHNICAL.fr.md) | la documentation technique, en français |
 | [`TESTS.fr.md`](TESTS.fr.md) | les tests, en français |
 | [`LICENSE`](LICENSE) | la licence du code (voir Licences) |
-| `test-app.sh`, `test.pgn` | la suite de tests et sa partie d'essai, décrites dans [TESTS.fr.md](TESTS.fr.md) |
-| `example-games/` | les parties et les fichiers des exemples d'[EXAMPLES.fr.md](EXAMPLES.fr.md), dont une vraie partie anonymisée pour un premier essai |
+| `tests/` | la suite de tests, `test-app.sh`, sa partie d'essai, `test.pgn`, et les fichiers de ses contrôles, décrits dans [TESTS.fr.md](TESTS.fr.md) |
+| `example-games/` | les parties des exemples d'[EXAMPLES.fr.md](EXAMPLES.fr.md), dont une vraie partie anonymisée pour un premier essai |
 
 ## 2. Prérequis et installation
 

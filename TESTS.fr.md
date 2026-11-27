@@ -2,7 +2,7 @@
 
 English version: [TESTS.md](TESTS.md)
 
-Tous les tests sont joués par un seul script, `test-app.sh`, sous Debian comme sous macOS.
+Tous les tests sont joués par un seul script, `tests/test-app.sh`, sous Debian comme sous macOS.
 
 Ce document dit comment le lancer, puis ce que vérifie chaque test. Le détail, commande par commande, est dans le script, qui fait foi.
 
@@ -28,30 +28,32 @@ Le script de tests écrit ses titres, ses contrôles et son rapport en anglais, 
 Depuis le dépôt, après l'installation décrite dans le README :
 
 ```bash
-./test-app.sh
+./tests/test-app.sh
 ```
 
 ```bash
-./test-app.sh --network
+./tests/test-app.sh --network
 ```
 
 ```bash
-./test-app.sh --network <identifier or address of a Lichess game>
+./tests/test-app.sh --network <identifier or address of a Lichess game>
 ```
+
+Le script trouve le dépôt d'après son propre chemin : il se lance aussi bien depuis `tests/`, en `./test-app.sh`, que de n'importe où.
 
 | Commande | Ce qu'elle joue | Durée |
 |---|---|---|
-| `./test-app.sh` | les tests hors réseau, sans jeton | environ 5 minutes dans le conteneur du tableau ci-dessous, les trois cinquièmes de son passage avec `--network` |
-| `./test-app.sh --network` | les mêmes, puis ceux qui demandent le réseau et votre jeton Lichess, sauf T24 | de 7 minutes sur un Apple M1 à 25 sur un Raspberry Pi 4 : voir le tableau ci-dessous |
-| `./test-app.sh --network GAME` | de même, avec T24 : le téléchargement de la partie que vous désignez | quelques secondes de plus |
+| `./tests/test-app.sh` | les tests hors réseau, sans jeton | environ 5 minutes dans le conteneur du tableau ci-dessous, les trois cinquièmes de son passage avec `--network` |
+| `./tests/test-app.sh --network` | les mêmes, puis ceux qui demandent le réseau et votre jeton Lichess, sauf T24 | de 7 minutes sur un Apple M1 à 25 sur un Raspberry Pi 4 : voir le tableau ci-dessous |
+| `./tests/test-app.sh --network GAME` | de même, avec T24 : le téléchargement de la partie que vous désignez | quelques secondes de plus |
 
 **La partie de T24 est à vous de la choisir.** Le dépôt ne désigne aucune partie réelle : T24 télécharge celle que vous donnez après `--network`, par son identifiant ou par son adresse. N'importe quelle partie de Lichess convient, la vôtre ou une autre. Sans elle, T24 est compté parmi les tests sautés, "skipped" dans le bilan, et le script rappelle au départ la commande à lancer. L'identifiant donné n'est pas écrit dans le rapport.
 
 Le script se termine par un bilan :
 
 ```text
-Passed: 767, failed: 0, skipped: 0
-Report: /path/of/the/repository/test-report-Linux-20261125-154836.txt
+Passed: 768, failed: 0, skipped: 0
+Report: /path/of/the/repository/tests/test-report-Linux-20261125-154836.txt
 ```
 
 Le rapport reprend l'environnement (système, Python, python-chess, Stockfish), le résultat de chaque contrôle et les extraits utiles au diagnostic. Vous pouvez le transmettre tel quel.
@@ -72,7 +74,7 @@ La durée est celle de tout le passage avec `--network`, du départ écrit dans 
 ## 2. Ce que les tests ne touchent pas
 
 - **Vos réglages et votre catalogue** : les tests désignent les leurs, dans un répertoire temporaire supprimé à la fin.
-- **Le dépôt** : rien n'y est écrit, sauf le rapport. Pas même le `__pycache__` de Python : les tests tournent avec `PYTHONDONTWRITEBYTECODE=1`.
+- **Le dépôt** : rien n'y est écrit, sauf le rapport, dans `tests/`. Pas même le `__pycache__` de Python : les tests tournent avec `PYTHONDONTWRITEBYTECODE=1`.
 - **Votre jeton** : il n'est ni affiché, ni copié, ni passé dans une ligne de commande. Le script vérifie au contraire qu'il n'apparaît ni dans les archives qu'il contrôle ni dans le rapport, en le cherchant tel qu'`ianalyze.py` le lit : une marque d'ordre, un retour chariot ou l'UTF-16 du fichier ne le cachent pas.
 
 Avec `--network`, comptez environ 70 requêtes à l'explorateur de Lichess, espacées de 2 secondes, 10 fichiers du catalogue et, si vous donnez une partie, 2 exports de cette partie. PyPI est aussi sollicité une fois, pour python-chess, afin de reconstruire un environnement virtuel (T84).
@@ -96,10 +98,10 @@ Les tests qui ne portent pas sur le moteur le règlent au plus court, `--depth 1
 | `TOKEN` | fichier du jeton | `~/.lichess_token` |
 | `KEEP` | `1` conserve le répertoire temporaire | supprimé |
 
-Un chemin relatif donné à `VENV`, `STOCKFISH` ou `TOKEN` se prend depuis le dépôt : les tests tournent dans un répertoire à eux.
+Un chemin relatif donné à `VENV`, `STOCKFISH` ou `TOKEN` se prend depuis le répertoire d'où vous lancez la suite, comme pour toute commande : les tests tournent dans un répertoire à eux.
 
 ```bash
-KEEP=1 ./test-app.sh
+KEEP=1 ./tests/test-app.sh
 ```
 
 ## 5. Tests hors réseau
@@ -158,7 +160,7 @@ Les lancements sur pseudo-terminal passent par un pilote qui les arrête au bout
 | T67 | Script sans modèle | le script copié seul fait sa collecte sans prompt, et le dit |
 | T68 | Niveau | le niveau en points Elo est vérifié et repris dans le prompt |
 | T69 | Purge des réglages | fichier supprimé, fichier absent admis, répertoire et fichier étranger refusés, fichier de réglages abîmé ou vide supprimé quand même |
-| T70 | Partie d'essai | `test.pgn` est lu en entier : commentaires, variantes, prise en passant, promotion, roques, coup nul ; W/D/L sur chaque ligne évaluée, de somme 100 ; une variante qui commence par un coup noir écrite `1... e5` |
+| T70 | Partie d'essai | `tests/test.pgn` est lu en entier : commentaires, variantes, prise en passant, promotion, roques, coup nul ; W/D/L sur chaque ligne évaluée, de somme 100 ; une variante qui commence par un coup noir écrite `1... e5` |
 | T71 | Options retirées | `--sans-stockfish`, `--avec-stockfish` et `--consignes` sont inconnues |
 | T72 | Résultat contraire | une partie notée gagnée dans une position perdue est signalée dans la synthèse et le prompt |
 | T73 | Vérificateur | un PGN conforme passe, un PGN fautif voit chaque défaut relevé, PGN absent, archive illisible |
@@ -171,7 +173,7 @@ Les lancements sur pseudo-terminal passent par un pilote qui les arrête au bout
 | T80 | Nom long | un nom de PGN long, en caractères de plusieurs octets, donne une étiquette bornée et valide |
 | T81 | Cas combinés | la purge s'emploie seule, un chemin vide donné à `--prompt` est refusé, un jeton mal écrit est refusé sans être affiché, chaque cas nommé par sa nature et non par son contenu |
 | T82 | Vérificateur, suite | mats cités, un `#7` sans signe seulement un avertissement, une FEN avec sa case en passant venue de la partie, caractères de contrôle du PGN montrés en `?`, un accent sous une sortie ASCII, périmètre convenu, contrôles sautés du mode court, dossier parent à une ou plusieurs collectes ; une troisième décimale nulle ; des mots hors des accolades, un coup écrit avec un `P` et un roque en zéros, ce dernier hors mode court ; une ligne vide dans un commentaire, que python-chess lit jusqu'au bout ; une seconde partie dans le fichier ; une ligne de 90 caractères, un point-virgule, des balises dans le désordre, un PlyCount faux et une variante de sept demi-coups ; un coup illégal de la ligne principale ; une FEN étrangère à la partie ; un fichier PGN ou `--summary` absent ; les notes que portait la partie d'origine, mises de côté avant les contrôles, gardées avec un commentaire, l'une coupée après un trait d'union, ou seules ; une partie en notation libre recopiée telle quelle, acceptée en mode court seulement ; une ligne qui commence par un crochet parmi les coups, seule ou après une ligne vide ; une seconde partie comptée pour un seul échec |
-| T83 | Parties d'exemples | les fichiers de `example-games` restent ce qu'`EXAMPLES.fr.md` en dit : huit parties acceptées, dont les exports de quatre sites et d'un logiciel, sept refusées avec leur cause, trois PGN annotés contrôlés, l'unique variante des deux premiers comptée au singulier et les cinq défauts du troisième nommés, puis la conversation, avec son PGN ou sans aucun, et le PGN du prompt court sur le dossier gardé ; aucune adresse ni identifiant de partie réelle |
+| T83 | Parties d'exemples | les fichiers de `example-games`, `tests/refused` et `tests/llm` restent ce qu'`EXAMPLES.fr.md` en dit : neuf parties acceptées, dont les exports de quatre sites et d'un logiciel, sept refusées avec leur cause, trois PGN annotés contrôlés, l'unique variante des deux premiers comptée au singulier et les cinq défauts du troisième nommés, puis la conversation, avec son PGN ou sans aucun, et le PGN du prompt court sur le dossier gardé ; aucune adresse ni identifiant de partie réelle |
 | T84 | Environnement virtuel incomplet | un environnement sans pip est reconnu, un répertoire sans `pyvenv.cfg` ne l'est jamais ; avec `--network`, `--install-venv` reconstruit le premier et y installe python-chess |
 | T85 | `--venv` qui n'est pas un environnement virtuel | un répertoire non vide sans `pyvenv.cfg`, avec ou sans interpréteur, est refusé par `--install-venv` avant tout pip, et rien n'y est ajouté, son interpréteur, factice, ne tournant jamais ; un fichier ordinaire est refusé avec son propre message et laissé intact ; un répertoire absent ou vide n'est pas refusé |
 | T86 | `--no-settings` | le fichier de réglages n'est ni lu ni écrit, ce que disent le journal et `collection.json` : camp déduit de `--usernames` ou inconnu, niveau tiré de la balise Elo de ce camp, fichier intact ; sur un terminal, aucune question de réglages, le camp est demandé, aucun fichier créé ; refusée avec `--settings` et avec `--purge-settings` ; un pseudo est trouvé comme nom entier ou comme mots, jamais comme sous-chaîne |
@@ -222,7 +224,7 @@ Les chiffres de l'explorateur changent chaque mois : ces tests vérifient des fo
 
 ## 7. La partie d'essai
 
-`test.pgn` réunit dans une seule partie légale ce qui a déjà fait trébucher un lecteur de PGN :
+`tests/test.pgn` réunit dans une seule partie légale ce qui a déjà fait trébucher un lecteur de PGN :
 
 - balises accentuées
 - commentaire d'avant le premier coup, commentaire de fin de ligne introduit par un point-virgule
@@ -233,7 +235,7 @@ Les chiffres de l'explorateur changent chaque mois : ces tests vérifient des fo
 La partie n'a aucun intérêt échiquéen. Elle sert aussi à un essai complet, à la main :
 
 ```bash
-./ianalyze.py test.pgn --no-questions
+./ianalyze.py tests/test.pgn --no-questions
 ```
 
 ## 8. Le seul test à jouer à la main

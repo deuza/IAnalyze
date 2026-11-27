@@ -83,9 +83,9 @@ So that they can be replayed without a Lichess token and without typing anything
 
 ### The games of the examples
 
-All the files quoted on this page are in the `example-games` directory of the repository.
+The files quoted on this page are in three directories of the repository: `example-games` holds the games, `tests/refused` the PGNs that the script refuses, and `tests/llm` the answers of LLMs written for the examples.
 
-To replay an example as it is, go to this directory and call the scripts one level up: `../ianalyze.py` instead of `./ianalyze.py`, and `../verify-analysis.py` instead of `./verify-analysis.py`.
+To replay an example as it is, go to the directory of its file and call the scripts from there: `../ianalyze.py` instead of `./ianalyze.py` from `example-games`, `../../ianalyze.py` from `tests/refused`. The checker reads an archive made in `example-games` and a PGN of `tests/llm`: run `../verify-analysis.py` from `example-games`, with `../tests/llm/` before the name of the PGN and of the conversation of `--summary`.
 
 ```bash
 cd example-games
@@ -103,9 +103,9 @@ cd example-games
 | `commented-game.pgn` | another real game from Lichess, 25 moves, anonymized, exported with the analysis of the site: comments, variations and clocks |
 | `player-notes.pgn` | the same game, without the analysis of the site, its clocks kept, with three notes of the player: the one of the trials of 27 November 2026 (README, section 7) |
 | `game-chess-com.pgn`, `game-chess-mail.pgn`, `game-ajedrezmail.pgn`, `game-lucas-chess.pgn` | four real games, anonymized, as these sites and this program export them |
-| `french-notation.pgn`, `two-games.pgn`, `position.pgn`, `unclosed-brace.pgn`, `tag-with-moves.pgn`, `bracket-among-moves.pgn`, `null-move-in-check.pgn` | seven files that the script refuses, for the error messages |
-| `llm-annotated.pgn`, `llm-faulty.pgn`, `llm-faulty-words.pgn`, `llm-short.pgn` | four annotated PGNs written for the examples, in place of those an LLM would return |
-| `llm-conversation.txt` | the text of a conversation, for the `--summary` option of the checker |
+| `tests/refused/`: `french-notation.pgn`, `two-games.pgn`, `position.pgn`, `unclosed-brace.pgn`, `tag-with-moves.pgn`, `bracket-among-moves.pgn`, `null-move-in-check.pgn` | seven files that the script refuses, for the error messages |
+| `tests/llm/`: `llm-annotated.pgn`, `llm-faulty.pgn`, `llm-faulty-words.pgn`, `llm-short.pgn` | four annotated PGNs written for the examples, in place of those an LLM would return |
+| `tests/llm/llm-conversation.txt` | the text of a conversation, for the `--summary` option of the checker |
 
 Your own games can be kept wherever you like: the script takes the path of the PGN you give it, and writes the archive in the current directory, or in the one of `--output-dir`.
 

@@ -85,9 +85,9 @@ Pour être rejoués sans jeton Lichess et sans rien saisir, la plupart des exemp
 
 ### Les parties des exemples
 
-Tous les fichiers cités dans cette page sont dans le répertoire `example-games` du dépôt.
+Les fichiers cités dans cette page sont dans trois répertoires du dépôt : `example-games` tient les parties, `tests/refused` les PGN que le script refuse, et `tests/llm` les réponses de LLM écrites pour les exemples.
 
-Pour rejouer un exemple tel quel, placez-vous dans ce répertoire et appelez les scripts un niveau plus haut : `../ianalyze.py` à la place de `./ianalyze.py`, et `../verify-analysis.py` à la place de `./verify-analysis.py`.
+Pour rejouer un exemple tel quel, placez-vous dans le répertoire de son fichier et appelez les scripts depuis là : `../ianalyze.py` à la place de `./ianalyze.py` depuis `example-games`, `../../ianalyze.py` depuis `tests/refused`. Le vérificateur lit une archive faite dans `example-games` et un PGN de `tests/llm` : lancez `../verify-analysis.py` depuis `example-games`, avec `../tests/llm/` devant le nom du PGN et celui de la conversation de `--summary`.
 
 ```bash
 cd example-games
@@ -105,9 +105,9 @@ cd example-games
 | `commented-game.pgn` | une autre vraie partie de Lichess, 25 coups, anonymisée, exportée avec l'analyse du site : commentaires, variantes et horloges |
 | `player-notes.pgn` | la même partie, sans l'analyse du site, ses horloges gardées, avec trois notes du joueur : celle des essais du 27 novembre 2026 (README, section 7) |
 | `game-chess-com.pgn`, `game-chess-mail.pgn`, `game-ajedrezmail.pgn`, `game-lucas-chess.pgn` | quatre vraies parties, anonymisées, telles que ces sites et ce logiciel les exportent |
-| `french-notation.pgn`, `two-games.pgn`, `position.pgn`, `unclosed-brace.pgn`, `tag-with-moves.pgn`, `bracket-among-moves.pgn`, `null-move-in-check.pgn` | sept fichiers que le script refuse, pour les messages d'erreur |
-| `llm-annotated.pgn`, `llm-faulty.pgn`, `llm-faulty-words.pgn`, `llm-short.pgn` | quatre PGN annotés écrits pour l'exemple, à la place de ceux qu'un LLM rendrait |
-| `llm-conversation.txt` | le texte d'une conversation, pour l'option `--summary` du vérificateur |
+| `tests/refused/` : `french-notation.pgn`, `two-games.pgn`, `position.pgn`, `unclosed-brace.pgn`, `tag-with-moves.pgn`, `bracket-among-moves.pgn`, `null-move-in-check.pgn` | sept fichiers que le script refuse, pour les messages d'erreur |
+| `tests/llm/` : `llm-annotated.pgn`, `llm-faulty.pgn`, `llm-faulty-words.pgn`, `llm-short.pgn` | quatre PGN annotés écrits pour l'exemple, à la place de ceux qu'un LLM rendrait |
+| `tests/llm/llm-conversation.txt` | le texte d'une conversation, pour l'option `--summary` du vérificateur |
 
 Ces fichiers sont en anglais, sauf `french-notation.pgn`, dont la notation française est justement le sujet.
 
