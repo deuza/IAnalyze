@@ -34,7 +34,7 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
   local/ garde les réglages.
 - Le comportement doit rester identique sur les deux.
 - Machines d'essai de la suite, pour la 5.0.0 : Debian 13 sur PC et
-  sur Raspberry Pi (aarch64), macOS 27.3 sur M1, et le conteneur
+  sur Raspberry Pi 4 (aarch64), macOS 27.3 sur M1, et le conteneur
   Ubuntu de Claude. TESTS.md en tient le tableau, sans nom de machine
   ni chemin personnel.
 - Python : modules hors apt installés dans un venv dédié, jamais dans
@@ -218,7 +218,8 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
 - Points d'attention : au terminal, "b" voulait dire Blancs, il veut
   dire Black ([w/b]) depuis le lot 3b, signalé dans le CHANGELOG ;
   verify-analysis.py ne lira plus les archives 4.x ; le prompt traduit
-  ne se valide qu'avec un vrai LLM, par l'utilisateur.
+  ne se valide qu'avec un vrai LLM, par l'utilisateur : fait le
+  27 novembre 2026, sur les prompts publiés (README, section 7).
 - Glossaire, à compléter au fil des lots : partie = game ; coup = move ;
   demi-coup = ply ; trait = side to move ; Blancs, Noirs = White,
   Black ; camp = side ; cadence = time control ; correspondance =
@@ -308,6 +309,26 @@ factice, et le vrai jeton n'entre jamais dans le bac à sable.
   pas de cette convention.
 - Documents en anglais, sauf leurs versions françaises (.fr.md), au
   vouvoiement. Nos échanges restent en français, au tutoiement.
+
+## Essais des LLM
+
+- Une série : une partie, collectée une fois par route, le zip puis
+  --prompt-only avec --keep-folder. L'utilisateur envoie les réponses,
+  nommées d'après le LLM, et les dossiers de travail. Une réponse
+  ajoutée plus tard reprend le prompt déjà écrit, sans nouvelle
+  collecte : les évaluations changent d'une collecte à l'autre.
+- Chaque PGN passe au vérificateur contre le dossier de sa route, avec
+  --summary pour le texte qui l'entoure. Une réponse dont la copie a
+  perdu ses sauts de ligne est revérifiée une fois remise en forme, et
+  la doc le dit.
+- Les récits se contrôlent sur l'échiquier, un agent par réponse, puis
+  chaque erreur citée dans la doc est revérifiée avec python-chess. Ne
+  comptent que les faits : prises, échecs, attaques, défenses,
+  matériel, cases, pendules, chiffres de la base ; jamais les
+  opinions, ni les mots comme "ouverte" pour "demi-ouverte".
+- README, section 7, dans les deux langues : une sous-section par
+  série, son tableau, ce qu'elle montre ; la partie dans
+  example-games, avec sa ligne dans EXAMPLES.
 
 ## Façon de travailler
 

@@ -39,8 +39,8 @@ From the repository, after the installation described in the README:
 
 | Command | What it runs | Duration |
 |---|---|---|
-| `./test-app.sh` | the offline tests, without a token | about 3 minutes on a recent Mac, 6 on a Raspberry Pi |
-| `./test-app.sh --network` | the same, then those that need the network and your Lichess token, except T24 | about 3 more minutes |
+| `./test-app.sh` | the offline tests, without a token | about 5 minutes in the container of the table below, three fifths of its run with `--network` |
+| `./test-app.sh --network` | the same, then those that need the network and your Lichess token, except T24 | from 7 minutes on an Apple M1 to 25 on a Raspberry Pi 4: see the table below |
 | `./test-app.sh --network GAME` | likewise, with T24: the download of the game you name | a few more seconds |
 
 **The game of T24 is yours to choose.** The repository names no real game: T24 downloads the one you give after `--network`, by its identifier or by its address. Any Lichess game will do, yours or another one. Without it, T24 is counted as skipped, and the script reminds you of the command to run when it starts. The identifier given is not written in the report.
@@ -58,14 +58,14 @@ The number of checks depends on the version and on the mode chosen. Under macOS,
 
 **Machines tested.** For version 5.0.0, the whole suite, `--network` included, was run on these machines on 27 November 2026, without a failure:
 
-| System | Processor | Python | python-chess | Stockfish | Passed | Skipped |
-|---|---|---|---|---|---|---|
-| Debian 13 (trixie) | x86_64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 |
-| Debian 13 (trixie), on a Raspberry Pi | aarch64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 |
-| macOS 27.3, with Homebrew | arm64, Apple M1 | 3.15.2 | 1.11.2 | 19 | 853 | 1 (T44) |
-| Ubuntu 24.04.5 LTS, in a container | x86_64 | 3.13.18 | 1.11.2 | 16 | 855 | 0 |
+| System | Processor | Python | python-chess | Stockfish | Passed | Skipped | Duration |
+|---|---|---|---|---|---|---|---|
+| Debian 13 (trixie) | x86_64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 | 15 min |
+| Debian 13 (trixie), on a Raspberry Pi 4 Model B | aarch64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 | 25 min |
+| macOS 27.3, with Homebrew | arm64, Apple M1 | 3.15.2 | 1.11.2 | 19 | 853 | 1 (T44) | 7 min |
+| Ubuntu 24.04.5 LTS, in a container | x86_64 | 3.13.18 | 1.11.2 | 16 | 855 | 0 | 8 min |
 
-The shell was dash under Linux, the `/bin/sh` of the system under macOS. In the container, the offline tests also passed under posh.
+The duration is that of the whole run with `--network`, from the start written in the report to the time of the file. The shell was dash under Linux, the `/bin/sh` of the system under macOS. In the container, the offline tests also passed under posh.
 
 ## 2. What the tests do not touch
 

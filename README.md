@@ -36,7 +36,7 @@ With a free account, or for another LLM, the `--prompt-only` option writes a sho
 
 An additional tool, `verify-analysis.py`, checks the PGN that the LLM returned to you: see section 8.
 
-Platforms: Debian and macOS (Homebrew). [TESTS.md](TESTS.md#1-running-the-tests) lists the machines on which the whole test suite passed, a Raspberry Pi and an Apple M1 among them.\
+Platforms: Debian and macOS (Homebrew). [TESTS.md](TESTS.md#1-running-the-tests) lists the machines on which the whole test suite passed, a Raspberry Pi 4 and an Apple M1 among them.\
 Python 3.10 or more recent, and python-chess, which the script installs by itself in a dedicated virtual environment.
 
 The script, its messages, the archive and the prompt are in English since version 5.0.0, and the analysis is asked for in English. The documentation fits in four files, each one also in French, under the same name ending in `.fr.md`:
@@ -405,7 +405,7 @@ The prompt provides for both cases:
 
 ## 7. Choosing an LLM
 
-**Go for Claude**: this is the advice of this repository, and it comes from the trials described below.
+**Go for Claude**: this is the advice of this repository, and it comes from the trials described below. The other LLMs were only tried on their free plans: see [Trials run](#trials-run).
 
 With the zip, Claude is the only one that returned a PGN usable as it is.\
 With the short prompt, with a subscription as with a free account, it returned the cleanest PGNs, and its explanations are the ones that best stood the check on the board.
@@ -419,9 +419,10 @@ Two routes lead to an analysis, and it is the first choice on both:
 | `--prompt-only` | a single pasted text, without an attachment | a plain conversation | the annotated PGN in a code block |
 
 **With a free account, take `--prompt-only` and Claude. Choose the model `Sonnet 5.5` with the effort `Max`.**\
-This is the combination that gave the best result without paying anything.
+This is the combination that gave the best result without paying anything.\
+The zip also goes through on a free plan, if you can wait for the quota to come back: see [the series of 27 November 2026](#27-november-2026-the-two-routes-with-the-prompts-as-released).
 
-The first two series of trials were run with version 4.0, whose prompts were in French. The English prompts of version 5.0.0 went through a trial of their own, then a third series, on 25 and 26 November 2026, which point the same way.
+The first two series of trials were run with version 4.0, whose prompts were in French. The English prompts of version 5.0.0 went through a trial of their own, then a third series, on 25 and 26 November 2026, and a fourth with the prompts as released, on 27 November 2026, which point the same way.
 
 ### With the zip and the prompt
 
@@ -457,13 +458,13 @@ What you should know about this mode:
 - The prompt weighs about 4 KB for `game-lichess-org.pgn`, 39 plies, and 11 KB for `commented-game.pgn`, 49 plies: each weak move adds its best move and its continuation
 - It carries neither the summary nor the `.json` files: the LLM only has the game, the table of the engine and, with the explorer, a sentence on the opening
 - No archive is written, the prompt is the only file produced
-- The nine answers tried, over two series, returned the whole game, every move commented, without a single invented evaluation
+- The fourteen answers tried, over three series, quote no evaluation that the table does not hold. Thirteen returned the whole game, every move commented; on 27 November 2026, Gemini changed a move and commented on 39 plies out of 49
 
 To check the returned PGN with `verify-analysis.py --prompt-only` (section 8), add `--keep-folder` to the collection: the checker needs the evaluations that were used for the prompt.
 
 ### Trust the figures, check the stories
 
-This is what the three series of trials have in common.
+This is what the four series of trials have in common.
 
 **The figures hold.** No LLM invented an evaluation, with the zip as with the short prompt.\
 What comes from the table of the engine is copied faithfully: the losses, the best moves, their continuations.
@@ -476,10 +477,13 @@ The script `verify-analysis.py` checks the form of the PGN and the figures quote
 
 ### Trials run
 
-Three series and a trial on its own, a single trial per LLM, per plan and per route, one game each time.
+Four series and a trial on its own, a single trial per LLM, per plan and per route, one game each time.
 
 **This is not a benchmark.**\
 A single trial says nothing about the consistency of a model. But the series point the same way, and the advice of this section rests on nothing else than what was seen.
+
+**The other LLMs were only tried on their free plans.**\
+ChatGPT, Gemini and Copilot were never tried on a paid plan. Their paid models may well be more precise, as Claude was on its subscription on 21 and 27 November 2026, but these trials cannot say so.
 
 #### 20 November 2026, with the zip and the prompt
 
@@ -501,7 +505,7 @@ What this series shows:
 
 The free plan of Claude also announces file creation and code execution, on other models than the one of this trial, according to [its pricing page](https://claude.com/pricing), read on 20 November 2026 and again on 25 November 2026.
 
-It has not been tried with the zip file.
+It was tried with the zip file on 27 November 2026, below.
 
 #### 21 November 2026, with `--prompt-seul`, now `--prompt-only`
 
@@ -547,7 +551,7 @@ A correspondence game of 39 plies, won by the player, sent with its zip to GPT-6
 These four points led to the last changes of version 5.0.0: the prompts say where a variation starts, where `$7` goes and whose errors to give, and the checker lists such NAGs as other opinions.
 
 The prompts changed once more on 27 November 2026, after these trials: the notes of the player are kept, the commands of a site left out, the game of the short prompt stands in a code block, and the review keeps to the agreed scope.\
-These last instructions have not been tried on an LLM yet.
+These last instructions went through the series of 27 November 2026, below.
 
 #### 26 November 2026, the two routes, with the English prompts
 
@@ -574,6 +578,36 @@ What this series shows:
 - **The free plans keep their faults of 21 November.** ChatGPT still writes the variations inside the comments and adds suffixes to the moves, Copilot still gives no code block and turns the Site tag into a link. Gemini passes the checker, not the check on the board.
 - **Claude checks itself.** With the short prompt, it says it replayed its variations with python-chess and checked its explanations with Stockfish, which the prompt does not ask for. It comments on each move there, in 2178 words; with the zip, on 18 moves, as the full prompt asks, in 1062 words.
 - **The checker does not judge the stories.** Gemini passes it with no failure, and four errors on the board.
+
+#### 27 November 2026, the two routes, with the prompts as released
+
+The game is [`example-games/player-notes.pgn`](example-games/player-notes.pgn), 49 plies, scored 1-0 in a position lost for the player: `commented-game.pgn` without the analysis of Lichess, its clocks kept, and three notes of the player added.\
+They test the last instructions: one quotes a percentage, "I was 80% sure", one calls 9.Nb5 the best move of the game, a blunder for the engine, and one is in French, "Ici je pensais gagner une pièce", here I thought I was winning a piece.
+
+The game was collected once per route: the table of the zip marks 22 mistakes and blunders, that of the short prompt 23.\
+The zip went to Claude on both plans, the short prompt to all five.
+
+| LLM | Plan, route | Report of `verify-analysis.py` | Notes and clocks | On the board |
+|---|---|---|---|---|
+| Claude Sonnet 5.5 (Anthropic), effort Max | subscription, zip | no failure, no warning: the 22 mistakes and blunders commented on, 23 playable variations, the 62 evaluations quoted all found | the three notes kept, the percentage written "80 percent", the clocks left out; at 9.Nb5, "Stockfish disagrees" | one error, in the final summary: 9.axb4 called "a free bishop", while the a6 knight defends it |
+| Claude Sonnet 5.5 (Anthropic), effort High | free, zip | no failure, no warning: the 22 mistakes and blunders commented on, 23 playable variations, the 33 evaluations quoted all found. The quota ran out before the final summary | the three notes kept, the percentage written "80 percent", the clocks left out; the note of 9.Nb5 refuted on the board, the French note quoted, then translated | 9.axb4 "a clean piece", while it wins a bishop for a pawn; after 11.Ne4, "a piece down for the rest of the game", while material is level again after 23...Bxb8 |
+| Claude Sonnet 5.5 (Anthropic), effort Max | subscription, `--prompt-only` | no failure: the 49 plies commented on, 31 playable variations, the 113 evaluations quoted all found | the three notes kept as written, the clocks left out; "Stockfish disagrees with your note" at 9.Nb5 and 11.Ne4 | no error found |
+| Claude Sonnet 5.5 (Anthropic), effort Max | free, `--prompt-only` | no failure: the 49 plies commented on, 31 playable variations, the 54 evaluations quoted all found | the three notes kept as written, the clocks left out; at 9.Nb5, "the table has a different view" | 3.g4 "before a single piece is developed", while Nf3 is out; 4.Nfd2 "leaves your h-pawn loose", while Rh1 defends it; the bishop of 8...Bb4 "free", twice |
+| ChatGPT (OpenAI), version not noted | free, `--prompt-only` | no failure: the 49 plies commented on, 28 playable variations | none of the three notes kept as written: two paraphrased, the one of 9.Nb5 dropped; the clocks left out | 12...e3 "a passed pawn", while the e2 pawn stands in front of it; 13.O-O "connecting your rooks", with Bc1 and Qd1 between them; 16...gxf4 "opening the f-file", while it opens the g-file; 23.Nxb8 "a rook won", while it wins the exchange; level material called an advantage for Black |
+| Gemini (Google), version not noted | free, `--prompt-only` | 1 failure: 22...Qd7 changed into 22...Qe7. 39 plies commented on, the 20 variations written inside the comments | none of the three notes kept, the clocks left out | 8...Bb4 "a pin", while no piece is pinned; 24...Nxg2 "recaptures", after a move that took nothing; level material at the end called a large advantage for Black |
+| Copilot (Microsoft), version not noted | free, `--prompt-only` | 5 failures: the copy of its answer holds the whole PGN on one line, tags included. Put back on separate lines: no failure, the 49 plies commented on, 15 playable variations | the three notes kept, with their clocks | 4.Nfd2 "attacks the bishop", which nothing attacks; 12...e3 "a passed pawn"; 21.Nxa7 attacking the rooks, which nothing attacks |
+
+The errors of the last column were checked one by one on the position, with python-chess. **The list is not exhaustive.**
+
+What this series shows:
+
+- **The notes of the player get through Claude and Copilot.** Claude keeps them in its four answers, ahead of its own comment, and contradicts the note of 9.Nb5, three times in the name of the engine, once on the board. With the zip, it writes the percentage in words and translates the French note after quoting it. Copilot keeps them too, ChatGPT paraphrases two and drops the third, Gemini keeps none. The checker counts them, "0 kept out of 3" for ChatGPT, without a failure.
+- **The clocks are left out, except by Copilot**, which keeps the three that stood with the notes.
+- **A move changed, for the first time in these trials.** Gemini returns 22...Qe7 instead of 22...Qd7. The game stays legal to the end: only the checker sees it.
+- **The zip goes through on a free plan.** Claude returned a complete PGN, with its overview, its 22 mistakes and blunders commented on and its 23 variations. The quota of tokens ran out before the final summary: it is full again after about six hours, according to the author, so a player in no hurry can get the whole analysis without paying.
+- **Claude is ahead again.** Its four answers hold their figures, and with the zip on the subscription its clocks, database figures, material and FEN are all right. With the short prompt on the subscription, no error is found on the board. The other three call the bishop of 8...Bb4 free at some point, while the a6 knight defends it: taking it costs a pawn.
+- **ChatGPT changed its form, not its stories.** For the first time, its variations stand outside the comments, all playable, and the checker finds no failure. Its stories keep their errors, two of them shared: the e3 pawn called passed, with Copilot, and level material called an advantage for Black, with Gemini.
+- **The checker does not judge the stories.** ChatGPT passes it with no failure, and five errors on the board in the table.
 
 ## 8. Checking the returned PGN
 

@@ -103,6 +103,7 @@ cd example-games
 | `polish-opening.pgn` | une ouverture qui sort tôt de la théorie, pour les options de l'explorateur |
 | `game-lichess-org.pgn` | une vraie partie de 20 coups, anonymisée, telle que Lichess l'exporte : c'est celle des essais du 21 novembre 2026 (README, section 7) |
 | `commented-game.pgn` | une autre vraie partie de Lichess, 25 coups, anonymisée, exportée avec l'analyse du site : commentaires, variantes et horloges |
+| `player-notes.pgn` | la même partie, sans l'analyse du site, ses horloges gardées, avec trois notes du joueur : celle des essais du 27 novembre 2026 (README, section 7) |
 | `game-chess-com.pgn`, `game-chess-mail.pgn`, `game-ajedrezmail.pgn`, `game-lucas-chess.pgn` | quatre vraies parties, anonymisées, telles que ces sites et ce logiciel les exportent |
 | `french-notation.pgn`, `two-games.pgn`, `position.pgn`, `unclosed-brace.pgn`, `tag-with-moves.pgn`, `bracket-among-moves.pgn`, `null-move-in-check.pgn` | sept fichiers que le script refuse, pour les messages d'erreur |
 | `llm-annotated.pgn`, `llm-faulty.pgn`, `llm-faulty-words.pgn`, `llm-short.pgn` | quatre PGN annotés écrits pour l'exemple, à la place de ceux qu'un LLM rendrait |

@@ -27,9 +27,10 @@ and the project applies [Semantic Versioning](https://semver.org/).
 - `TECHNICAL.fr.md`, the French version of `TECHNICAL.md`, kept up to
   date with it.
 - `TESTS.md` and `TESTS.fr.md` list the machines on which the whole
-  suite passed for this version: Debian 13 on x86_64 and on a
-  Raspberry Pi, macOS 27.3 on an Apple M1, Ubuntu 24.04 in a
-  container. The README points to them.
+  suite passed for this version, with the duration of each run: Debian
+  13 on x86_64 and on a Raspberry Pi 4, macOS 27.3 on an Apple M1,
+  Ubuntu 24.04 in a container. The durations of the commands come from
+  these runs, and the README points to the table.
 - README, section Licenses: the icon of the CC0 license, linked to the
   page of the license, and a link to `LICENSE` in the sentence on the
   license of the repository.
@@ -38,6 +39,10 @@ and the project applies [Semantic Versioning](https://semver.org/).
   `example-games/null-move-in-check.pgn`, for the new error messages of
   `EXAMPLES.md`, and `example-games/llm-faulty-words.pgn`, for the new
   checks of `verify-analysis.py`.
+- `example-games/player-notes.pgn`, the game of the trials of
+  27 November 2026: `commented-game.pgn` without the analysis of
+  Lichess, its clocks kept, with three notes of the player, one quoting
+  a percentage, one that the engine contradicts, one in French.
 - `verify-analysis.py` checks the words of the PGN returned outside the
   comments: free text, a line that starts with a bracket among the
   moves, a move written with a `P`, a hyphen between two squares, and,
@@ -374,11 +379,14 @@ and the project applies [Semantic Versioning](https://semver.org/).
   mypy took for a path everywhere: six of its errors go away. The
   behavior does not change, the syntax tree being the same, the name
   aside.
-- README and README.fr.md, section 7: the trials of the English
-  prompts, run on 25 and 26 November 2026 on four LLMs, with the zip
-  and with `--prompt-only`. Claude, on the subscription, is the only
-  one without an error found on the board, on both routes, and the
-  advice of the section stays the same.
+- README and README.fr.md, section 7: the trials of the English prompts,
+  run on 25, 26 and 27 November 2026 on four LLMs, with the zip and with
+  `--prompt-only`. The last series, with the prompts as released, puts
+  notes of the player in the game and tries the zip on the free plan of
+  Claude. Claude stays ahead on both plans, and the advice of the
+  section stays the same, the zip on a free plan added to it. The
+  section says that ChatGPT, Gemini and Copilot were only tried on their
+  free plans, and that their paid models may do better.
 - A username is found in the White and Black tags as the whole name or
   as a run of its words, no longer as a mere substring: "Max" no longer
   matches "Maxime", nor "deuza" "DeuZa42". Looked up as a substring, a
