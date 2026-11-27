@@ -69,14 +69,14 @@ The number of checks depends on the version and on the mode chosen. Under macOS,
 
 The shell was dash under Linux, the `/bin/sh` of the system under macOS. In the container, the offline tests also passed under posh.
 
-**Last runs.** The last runs of the suite that passed, on the content of this commit, in the container of the table above, under dash:
+**Last runs.** The last runs of the suite that passed, in the container of the table above, under dash, on the code, the prompt templates and the test files of this commit:
 
 | Run | Passed on (UTC) | Passed | Failed | Skipped |
 |---|---|---|---|---|
 | offline | 27 November 2026, 20:14 | 768 | 0 | 0 |
 | `--network`, with T24 | 27 November 2026, 20:22 | 856 | 0 | 0 |
 
-The time is that of the end of the run, the time of the file of the report. This table follows each change of the repository, the table of the machines each version.
+The time is that of the end of the run, the time of the file of the report. This table follows each change of the code, of the templates or of the tests: a change of the documentation alone does not run the suite again. The table of the machines follows each version.
 
 ## 2. What the tests do not touch
 

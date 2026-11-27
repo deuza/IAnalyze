@@ -972,7 +972,7 @@ Two traps were met for real:
 
 ### Checks before a commit
 
-On the scripts: `python3 -m py_compile`, `flake8`, `ruff check`, `mypy`, `bandit`, `codespell` and `vulture`. On the suite: `shellcheck`, `checkbashisms`, and `sh -n`, `dash -n`, `bash -n`, `posh -n`. Then the suite itself, offline under `sh` and under `posh`, and with `--network`. The date and the time of the last runs that passed, offline and with `--network`, go into [TESTS.md](TESTS.md#1-running-the-tests), section 1.
+On the scripts: `python3 -m py_compile`, `flake8`, `ruff check`, `mypy`, `bandit`, `codespell` and `vulture`. On the suite: `shellcheck`, `checkbashisms`, and `sh -n`, `dash -n`, `bash -n`, `posh -n`. Then, when the code, the prompt templates or the tests change, the suite itself, offline under `sh` and under `posh`, and with `--network`: the date and the time of the last runs that passed go into [TESTS.md](TESTS.md#1-running-the-tests), section 1. A change of the documentation alone does not need it.
 
 Some remarks are known and accepted:
 

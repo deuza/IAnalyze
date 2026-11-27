@@ -22,7 +22,8 @@ and the project applies [Semantic Versioning](https://semver.org/).
   sources and links, taken from section 9 of the README.
 - `docs/TESTS.md` and `docs/TESTS.fr.md`, section 1, the last runs of
   the suite that passed, offline and with `--network`: their date and
-  time, in UTC, and their counts, updated with each change.
+  time, in UTC, and their counts, updated with each change of the code,
+  of the prompt templates or of the tests.
 
 ### Changed
 
@@ -63,6 +64,12 @@ and the project applies [Semantic Versioning](https://semver.org/).
 - The durations of the runs of the suite, in `docs/TESTS.md` and
   `docs/TESTS.fr.md`: they depend on the machine and on the network.
   The table of the last runs gives their date and their result.
+
+### Fixed
+
+- The README, in both languages, says again that the question of the
+  first run, like `settings.ini`, takes several usernames, separated by
+  commas.
 
 ## [5.0.0] - 2026-11-27
 

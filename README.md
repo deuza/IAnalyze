@@ -185,7 +185,7 @@ The error message names what is refused. The forms of address accepted and the d
 Before the collection, the script asks you a few questions.\
 *Enter keeps the suggested value.*
 
-- **On the very first run only**: your username, your usual time control and your rating, kept in the settings file.
+- **On the very first run only**: your username (or several, separated by commas), your usual time control and your rating, kept in the settings file.
 - **Your side**, if it cannot be deduced from the White or Black tags thanks to your usernames.
 
   The empty tags are then filled in, and the PGN given is kept as `game-original.pgn`.
@@ -224,7 +224,7 @@ rating = 1300
 
 You can edit this file by hand, or delete it with `--purge-settings`: your answers will then be asked again.
 
-**The usernames** are looked up in the White and Black tags of the game, ignoring case, to deduce your side: each one as the whole name or as a run of its words, never as a part of a word.\
+**The usernames**, one or several separated by commas, are looked up in the White and Black tags of the game, ignoring case, to deduce your side: each one as the whole name or as a run of its words, never as a part of a word.\
 `Max` is found in `Max Power`, not in `Maxime` nor in `Max_Power`: write each of your usernames whole.
 
 **The rating** is a number of approximate Elo points, from 100 to 3500, or "unknown".

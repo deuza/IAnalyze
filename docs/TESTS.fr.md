@@ -71,14 +71,14 @@ Le nombre de contrôles dépend de la version et du mode choisi. Sous macOS, un 
 
 Le shell était dash sous Linux, le `/bin/sh` du système sous macOS. Dans le conteneur, les tests hors réseau sont aussi passés sous posh.
 
-**Derniers passages.** Les derniers passages réussis de la suite, sur le contenu de ce commit, dans le conteneur du tableau ci-dessus, sous dash :
+**Derniers passages.** Les derniers passages réussis de la suite, dans le conteneur du tableau ci-dessus, sous dash, sur le code, les modèles de prompt et les fichiers de tests de ce commit :
 
 | Passage | Réussi le (UTC) | Réussis | Échecs | Sautés |
 |---|---|---|---|---|
 | hors réseau | 27 novembre 2026, 20 h 14 | 768 | 0 | 0 |
 | `--network`, avec T24 | 27 novembre 2026, 20 h 22 | 856 | 0 | 0 |
 
-L'heure est celle de la fin du passage, l'heure du fichier du rapport. Ce tableau suit chaque changement du dépôt, le tableau des machines chaque version.
+L'heure est celle de la fin du passage, l'heure du fichier du rapport. Ce tableau suit chaque changement du code, des modèles ou des tests : un changement de la seule documentation ne relance pas la suite. Le tableau des machines suit chaque version.
 
 ## 2. Ce que les tests ne touchent pas
 

@@ -288,16 +288,20 @@ mypy, bandit, codespell, vulture. Dis lesquels manquent et ne prétends
 jamais avoir vérifié ce que tu n'as pas lancé. Idem pour ce qui n'a pas
 pu être testé (par exemple un vrai jeton Lichess).
 
-La suite se lance à chaque lot, sur un clone où le patch est appliqué :
-hors réseau, puis avec --network, l'une après l'autre. Avec --network,
-TOKEN désigne le fichier factice et le proxy injecte le vrai jeton
-(voir Sécurité) ; T24 prend une partie publique de Lichess, dont
+La suite se lance à chaque lot qui touche à ce qu'elle teste : le code
+(ianalyze.py, verify-analysis.py), les modèles de prompt, tests/ ou
+example-games/. Sur un clone où le patch est appliqué : hors réseau,
+puis avec --network, l'une après l'autre. Avec --network, TOKEN
+désigne le fichier factice et le proxy injecte le vrai jeton (voir
+Sécurité) ; T24 prend une partie publique de Lichess, dont
 l'identifiant ne s'écrit nulle part dans le dépôt. Une fois les deux
 passages réussis, le tableau "Last runs" de docs/TESTS.md, section 1,
 et celui de docs/TESTS.fr.md en reçoivent, dans le même lot, la date et
 l'heure de fin en UTC, l'heure du fichier du rapport, et les comptes.
-Aucune durée, ni là ni ailleurs : elle dépend de la machine et du
-réseau.
+Un lot de documentation seule (README, EXAMPLES, docs/, CHANGELOG,
+CLAUDE.md) ne relance pas la suite et laisse le tableau tel quel : ses
+contrôles de forme suffisent (liens, ancres, paires, mdl). Aucune
+durée, ni là ni ailleurs : elle dépend de la machine et du réseau.
 
 Pièges de la suite, vus en vrai :
 

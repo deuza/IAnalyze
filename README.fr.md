@@ -185,7 +185,7 @@ Le message d'erreur nomme ce qui est refusé. Les formes d'adresse acceptées et
 Avant la collecte, le script vous pose quelques questions, en anglais.\
 *Entrée retient la valeur proposée.*
 
-- **Au tout premier lancement seulement** : votre pseudo, votre cadence habituelle et votre niveau, rangés dans le fichier de réglages.
+- **Au tout premier lancement seulement** : votre pseudo (ou plusieurs, séparés par des virgules), votre cadence habituelle et votre niveau, rangés dans le fichier de réglages.
 - **Votre camp**, s'il ne se déduit pas des balises White ou Black grâce à vos pseudos.
 
   Les balises vides sont alors complétées, et le PGN fourni est conservé sous `game-original.pgn`.
@@ -224,7 +224,7 @@ rating = 1300
 
 Vous pouvez modifier ce fichier à la main, ou le supprimer avec `--purge-settings` : vos réponses seront alors redemandées.
 
-**Les pseudos** sont cherchés dans les balises White et Black de la partie, sans tenir compte de la casse, pour déduire votre camp : chacun comme le nom entier ou comme une suite de ses mots, jamais comme un morceau de mot.\
+**Les pseudos**, un ou plusieurs séparés par des virgules, sont cherchés dans les balises White et Black de la partie, sans tenir compte de la casse, pour déduire votre camp : chacun comme le nom entier ou comme une suite de ses mots, jamais comme un morceau de mot.\
 `Max` est trouvé dans `Max Power`, pas dans `Maxime` ni dans `Max_Power` : écrivez chacun de vos pseudos en entier.
 
 **Le niveau** est un nombre de points Elo approximatifs, de 100 à 3500, ou "unknown".
