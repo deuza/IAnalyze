@@ -596,6 +596,16 @@ and the project applies [Semantic Versioning](https://semver.org/).
   said to stop python-chess, which reads on up to the closing brace;
   a third decimal at zero, `+1.910`, is accepted; removing the blank
   lines of the body no longer merges a second game into the first.
+- `test-app.sh`, T90: the confirmation asked again after an unexpected
+  answer is counted by its occurrences, no longer by the lines that
+  carry it. On a slow machine, a Raspberry Pi, the driver typed the
+  answer after a second of silence, before the question showed: both
+  questions shared one line, and the check failed.
+- `test-app.sh`, T44: under macOS, where the check of the name that is
+  not UTF-8 is skipped, the message of `cp` is attached with its bytes
+  outside printable ASCII written `?`. It quoted the name in latin-1:
+  the report was no longer valid UTF-8, and the `sed` of macOS refused
+  to read it under a UTF-8 locale.
 
 ## [4.0.2] - 2026-11-21
 

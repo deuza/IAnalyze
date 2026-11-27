@@ -269,6 +269,17 @@ mypy, bandit, codespell, vulture. Dis lesquels manquent et ne prétends
 jamais avoir vérifié ce que tu n'as pas lancé. Idem pour ce qui n'a pas
 pu être testé (par exemple un vrai jeton Lichess).
 
+Pièges de la suite, vus en vrai :
+
+- Une seule suite à la fois par machine : M2 compte les moteurs de
+  toute la machine, et voit ceux d'une autre suite.
+- Le pilote du pseudo-terminal répond après une seconde de silence :
+  sur une machine lente, un Raspberry Pi, la réponse peut précéder la
+  question. Une question finit sans saut de ligne : un contrôle en
+  compte les occurrences, jamais les lignes.
+- Le conteneur de Claude est une Ubuntu, pas une Debian : un résultat
+  qui en dépend se dit tel quel.
+
 ## Sécurité
 
 Le jeton Lichess est dans ~/.lichess_token (mode 600). Ne le lis pas

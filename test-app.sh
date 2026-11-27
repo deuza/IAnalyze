@@ -724,7 +724,12 @@ if cp italienne.pgn "$NOM_LATIN" 2> journal-cp; then
     joindre journal
 else
     sauter "T44 non-UTF-8 name: creation refused by the file system"
-    joindre journal-cp
+    # The message of cp quotes the name as it is, in latin-1: attached
+    # as such, its bytes left the report in invalid UTF-8, which the sed
+    # of macOS refuses to read under a UTF-8 locale. Every byte outside
+    # printable ASCII becomes "?".
+    LC_ALL=C sed 's/[^ -~]/?/g' journal-cp > journal-cp-ascii
+    joindre journal-cp-ascii
 fi
 
 titre "M1: accented name, output path with space and accent"
@@ -2509,8 +2514,14 @@ joindre journal 3
 rm -rf analysis-italienne-*
 piloter "$SCRIPT" "x|n" italienne.pgn $P \
     --settings t-nouveau.ini
+# The question ends without a line break: the one that follows it is
+# the echo of the answer. On a slow machine, a Raspberry Pi for
+# example, the driver types the answer after a second of silence,
+# before the question shows: both questions then share one line, and
+# grep -c, which counts lines, gave 1. The occurrences are counted.
 egal "T90 new name, confirmation asked, again after x" 2 \
-    "$(grep -c 'Settings: t-nouveau.ini does not exist yet in' sortie-pty)"
+    "$(awk '{ n += gsub(/Settings: t-nouveau\.ini does not exist yet/, "&") }
+        END { print n + 0 }' sortie-pty)"
 verifier "T90 new name refused, nothing done" \
     contient sortie-pty "Nothing done: check the name given to --settings"
 verifier "T90 new name refused, no file created" test ! -e t-nouveau.ini
