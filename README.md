@@ -9,118 +9,124 @@
 
 # IAnalyze
 
-IAnalyze prépare l'analyse d'une partie d'échecs par un LLM *(désigné comme l'analyste dans la suite de ce document)*.
+Version française : [README.fr.md](README.fr.md)
 
-Celui-ci y ajoute les évaluations de Stockfish : une ligne par demi-coup, et derrière chaque coup faible le meilleur coup et sa suite.   
-Son script, `ianalyze.py`, rassemble le PGN, les statistiques de l'explorateur Lichess, le catalogue des ouvertures et les évaluations de Stockfish, puis écrit deux fichiers : une archive zip et le prompt qui va avec.
+IAnalyze prepares the analysis of a chess game by an LLM *(called the analyst in the rest of this document)*.
 
-L'idée vient du programme [Lucas Chess](https://lucaschess.pythonanywhere.com/), dont le prompt d'analyse tient en quelques lignes suivies de la partie.
+It adds the Stockfish evaluations to it: one line per ply, and behind each weak move the best move and its continuation.\
+Its script, `ianalyze.py`, gathers the PGN, the statistics of the Lichess explorer, the catalog of openings and the Stockfish evaluations, then writes two files: a zip archive and the prompt that goes with it.
 
-*Le script ne produit aucune analyse : il donne à l'analyste des chiffres sûrs, et le prompt lui impose de s'y tenir.*
+The idea comes from the program [Lucas Chess](https://lucaschess.pythonanywhere.com/), whose analysis prompt fits in a few lines followed by the game.
+
+*The script produces no analysis: it gives the analyst reliable figures, and the prompt makes it stick to them.*
 
 ```bash
-./ianalyze.py ma-partie.pgn
+./ianalyze.py my-game.pgn
 ```
 
 ```text
-analyse-ma-partie-20261119-164140.zip
-analyse-ma-partie-20261119-164140.prompt.txt
+analysis-my-game-20261125-142017.zip
+analysis-my-game-20261125-142017.prompt.txt
 ```
 
-Vous collez le contenu du fichier prompt.txt dans une conversation neuve avec Claude, vous joignez le fichier zip et vous recevez un PGN annoté et une synthèse.
+You paste the content of the prompt.txt file into a new conversation with Claude, you attach the zip file, and you get back an annotated PGN and a summary.
 
-**IAnalyze est fait pour Claude :**   
-Avec un compte gratuit, ou pour un autre LLM, l'option `--prompt-seul` écrit un prompt court qui porte la partie et les évaluations de Stockfish, à coller seul, sans pièce jointe : voir la section 7.
+**IAnalyze is made for Claude:**\
+With a free account, or for another LLM, the `--prompt-only` option writes a short prompt that carries the game and the Stockfish evaluations, to be pasted alone, without an attachment: see section 7.
 
-Un outil supplémentaire, `verifier-analyse.py`, contrôle le PGN que le LLM vous a rendu : voir la section 8.
+An additional tool, `verify-analysis.py`, checks the PGN that the LLM returned to you: see section 8.
 
-Plateformes : Debian et macOS (Homebrew).   
-Python 3.10 ou plus récent et python-chess, que le script installe lui-même dans un environnement virtuel dédié.
+Platforms: Debian and macOS (Homebrew). [TESTS.md](TESTS.md#1-running-the-tests) lists the machines on which the whole test suite passed, a Raspberry Pi 4 and an Apple M1 among them.\
+Python 3.10 or more recent, and python-chess, which the script installs by itself in a dedicated virtual environment.
 
-La documentation tient en quatre fichiers :
+The script, its messages, the archive and the prompt are in English since version 5.0.0, and the analysis is asked for in English. The documentation fits in four files, each one also in French, under the same name ending in `.fr.md`:
 
-- ce README, pour installer IAnalyze et analyser une partie
-- [EXEMPLES.md](EXEMPLES.md), l'aide-mémoire : toutes les commandes, toutes les options, et ce que le terminal affiche
-- [TECHNIQUE.md](TECHNIQUE.md), pour le fonctionnement du script, son emploi depuis un autre programme, et le détail des fichiers produits
-- [TESTS.md](TESTS.md), pour lancer les tests et savoir ce que chacun vérifie
+- this README, to install IAnalyze and analyze a game
+- [EXAMPLES.md](EXAMPLES.md), the quick reference: every command, every option, and what the terminal shows
+- [TECHNICAL.md](TECHNICAL.md), for how the script works, its use from another program, and the detail of the files produced
+- [TESTS.md](TESTS.md), to run the tests and know what each one checks
 
-## Sommaire
+## Contents
 
-- [1. Présentation](#1-présentation)
-- [2. Prérequis et installation](#2-prérequis-et-installation)
-- [3. Utilisation](#3-utilisation)
-- [4. Options courantes](#4-options-courantes)
-- [5. Résultat](#5-résultat)
-- [6. Prompt d'analyse](#6-prompt-danalyse)
-- [7. Choisir un LLM](#7-choisir-un-llm)
-- [8. Vérifier le PGN rendu](#8-vérifier-le-pgn-rendu)
-- [9. Sources et liens](#9-sources-et-liens)
-- [Licences](#licences)
+- [1. Overview](#1-overview)
+- [2. Requirements and installation](#2-requirements-and-installation)
+- [3. Usage](#3-usage)
+- [4. Common options](#4-common-options)
+- [5. Result](#5-result)
+- [6. Analysis prompt](#6-analysis-prompt)
+- [7. Choosing an LLM](#7-choosing-an-llm)
+- [8. Checking the returned PGN](#8-checking-the-returned-pgn)
+- [9. Sources and links](#9-sources-and-links)
+- [Licenses](#licenses)
 
 ---
 
-## 1. Présentation
+## 1. Overview
 
-Le script rassemble et met en forme :
+The script gathers and formats:
 
-- **le PGN** de la partie, lu depuis un fichier local ou téléchargé depuis Lichess
-- **les statistiques de l'explorateur Lichess**, position par position, pour situer la sortie de théorie
-- **l'évaluation Stockfish** de chaque coup, calculée sur votre machine
+- **the PGN** of the game, read from a local file or downloaded from Lichess
+- **the statistics of the Lichess explorer**, position by position, to locate the exit from theory
+- **the Stockfish evaluation** of each move, computed on your machine
 
-La chaîne complète tient en trois temps :
+The whole chain takes three steps:
 
-1. `./ianalyze.py ma-partie.pgn`
+1. `./ianalyze.py my-game.pgn`
 
-   Le script collecte, calcule, et écrit deux fichiers : `analyse-<partie>-<date>.zip` et `analyse-<partie>-<date>.prompt.txt`.
+   The script collects, computes, and writes two files: `analysis-<label>-<YYYYMMDD-HHMMSS>.zip` and `analysis-<label>-<YYYYMMDD-HHMMSS>.prompt.txt`, the label being the name of the PGN (section 5).
 
-2. Dans une conversation neuve avec un LLM, vous collez le contenu du prompt et vous joignez l'archive.
+2. In a new conversation with an LLM, you paste the content of the prompt and you attach the archive.
 
-   Si le LLM n'ouvre pas les zip, décompressez l'archive et envoyez-lui tous ses fichiers (voir section 6).
+   If the LLM does not open zip files, unzip the archive and send it all its files (see section 6).
 
-3. Le LLM rend un PGN annoté et une synthèse.
+3. The LLM returns an annotated PGN and a summary.
 
-   Il explique, il ne calcule pas : les évaluations viennent de Stockfish, la théorie vient de l'explorateur et du catalogue.
+   It explains, it does not compute: the evaluations come from Stockfish, the theory comes from the explorer and the catalog.
 
-Le prompt est tiré du modèle `prompt-modele.txt`, rangé à côté du script.   
-Il décrit toujours la synthèse que cette version du script vient d'écrire : les deux ne peuvent pas diverger.
+The prompt is drawn from the template `prompt-template.txt`, kept next to the script.\
+It always describes the summary that this version of the script has just written: the two cannot diverge.
 
-Les fichiers du dépôt :
+The files of the repository:
 
-| Fichier | Rôle |
+| File | Role |
 |---|---|
-| `ianalyze.py` | le script, en un seul fichier |
-| `prompt-modele.txt` | le modèle dont est tiré le prompt de chaque partie (section 6) |
-| `prompt-seul-modele.txt` | le modèle du prompt court de `--prompt-seul` (section 7) |
-| `verifier-analyse.py` | l'outil supplémentaire qui contrôle le PGN rendu par le LLM (section 8) |
-| [`EXEMPLES.md`](EXEMPLES.md) | l'aide-mémoire : commandes, options et sorties |
-| [`TECHNIQUE.md`](TECHNIQUE.md) | la documentation technique |
-| [`TESTS.md`](TESTS.md) | les tests : comment les lancer, ce que chacun vérifie |
-| [`CHANGELOG.md`](CHANGELOG.md) | l'historique des versions |
-| [`LICENSE`](LICENSE) | la licence du code (voir Licences) |
-| `test-app.sh`, `test.pgn` | la suite de tests et sa partie d'essai, décrites dans [TESTS.md](TESTS.md) |
-| `parties-exemples/` | les parties et les fichiers des exemples d'[EXEMPLES.md](EXEMPLES.md), dont une vraie partie anonymisée pour un premier essai |
+| `ianalyze.py` | the script, in a single file |
+| `prompt-template.txt` | the template from which the prompt of each game is drawn (section 6) |
+| `prompt-only-template.txt` | the template of the short prompt of `--prompt-only` (section 7) |
+| `verify-analysis.py` | the additional tool that checks the PGN returned by the LLM (section 8) |
+| [`EXAMPLES.md`](EXAMPLES.md) | the quick reference: commands, options and outputs |
+| [`TECHNICAL.md`](TECHNICAL.md) | the technical documentation |
+| [`TESTS.md`](TESTS.md) | the tests: how to run them, what each one checks |
+| [`CHANGELOG.md`](CHANGELOG.md) | the history of the versions |
+| [`README.fr.md`](README.fr.md) | the French version of this README |
+| [`EXAMPLES.fr.md`](EXAMPLES.fr.md) | the French version of EXAMPLES.md |
+| [`TECHNICAL.fr.md`](TECHNICAL.fr.md) | the French version of TECHNICAL.md |
+| [`TESTS.fr.md`](TESTS.fr.md) | the French version of TESTS.md |
+| [`LICENSE`](LICENSE) | the license of the code (see Licenses) |
+| `test-app.sh`, `test.pgn` | the test suite and its test game, described in [TESTS.md](TESTS.md) |
+| `example-games/` | the games and files of the examples of [EXAMPLES.md](EXAMPLES.md), among them a real anonymized game for a first try |
 
-## 2. Prérequis et installation
+## 2. Requirements and installation
 
-Tout s'installe dans votre répertoire personnel, sous Debian comme sous macOS.
+Everything is installed in your home directory, on Debian as on macOS.
 
-Seule l'installation des paquets de Debian nécessitent les droits root.
+Only the installation of the Debian packages requires root rights.
 
-**1. Les paquets**
+**1. The packages**
 
-Sous Debian, en root :
+On Debian, as root:
 
 ```bash
 apt install git python3-venv stockfish
 ```
 
-Sous macOS, avec Homebrew, dont le Python fournit déjà le module venv :
+On macOS, with Homebrew, whose Python already provides the venv module:
 
 ```bash
 brew install git python stockfish
 ```
 
-**2. Le dépôt**, sous le compte du joueur :
+**2. The repository**, under the account of the player:
 
 ```bash
 git clone https://github.com/deuza/IAnalyze.git
@@ -130,49 +136,57 @@ git clone https://github.com/deuza/IAnalyze.git
 cd IAnalyze
 ```
 
-**3. L'environnement virtuel et le catalogue**, sous le même compte :
+**3. The virtual environment and the catalog**, under the same account:
 
 ```bash
-./ianalyze.py --installer-venv
+./ianalyze.py --install-venv
 ```
 
 ```bash
-./ianalyze.py --installer-catalogue
+./ianalyze.py --install-catalog
 ```
 
-Chaque joueur de la machine refait les étapes 2 et 3 sous son propre compte : rien n'est partagé, rien n'est à copier.
+Each player of the machine repeats steps 2 and 3 under their own account: nothing is shared, nothing needs to be copied.
 
-### Ce que font ces deux commandes
+### What these two commands do
 
-**`--installer-venv`** crée un environnement virtuel dédié et y installe python-chess, que Debian n'empaquette pas.   
-Le script s'y relance ensuite tout seul : vous continuez à l'appeler avec le Python du système.
+**`--install-venv`** creates a dedicated virtual environment and installs python-chess in it, which Debian does not package.\
+The script then restarts in it by itself: you keep calling it with the system's Python.
 
-**`--installer-catalogue`** télécharge le catalogue des ouvertures nommées de Lichess, gardé en local.   
-Relancez-la de temps en temps pour le mettre à jour.
+**`--install-catalog`** downloads the catalog of the named openings of Lichess, kept locally.\
+Run it again from time to time to update it.
 
-**Stockfish est obligatoire** : son évaluation fait partie de toute collecte.
+**Stockfish is mandatory**: its evaluation is part of every collection.
 
-### Emplacements par défaut
+### Default locations
 
-Les mêmes sur les deux plateformes, sauf pour le moteur :
+The same on both platforms, except for the engine.
 
-| | Emplacement |
+Everything the script creates for itself stays in the folder of the application: deleting this folder leaves nothing behind, except your token.
+
+The `local/` folder only keeps what the script can rebuild by itself, the virtual environment and the catalog: emptying it brings the application back to a fresh state without touching your settings.
+
+| | Location |
 |---|---|
-| `--venv` | `~/.local/share/IAnalyze/venv` |
-| `--catalogue` | `~/.local/share/IAnalyze` |
-| réglages | `~/.config/IAnalyze/reglages.ini` |
-| jeton | `~/.lichess_token` |
-| `--stockfish`, Debian | `/usr/games/stockfish` |
-| `--stockfish`, macOS | le binaire trouvé dans le PATH, sinon `/opt/homebrew/bin/stockfish` |
+| `--venv` | `local/venv`, in the folder of the application |
+| `--catalog` | `local/`, in the folder of the application |
+| settings | `settings.ini`, at the root of the folder of the application, like any other settings file named by `--settings` |
+| token | `~/.lichess_token` |
+| `--stockfish`, Debian | the binary found in the PATH, otherwise `/usr/games/stockfish` |
+| `--stockfish`, macOS | the binary found in the PATH, otherwise `/opt/homebrew/bin/stockfish` |
 
-### Jeton Lichess
+Up to version 4.0.2, the virtual environment and the catalog were kept in `~/.local/share/IAnalyze`, the settings in `~/.config/IAnalyze`.
 
-L'explorateur de Lichess demande un jeton d'accès personnel.
+The script no longer reads them there: run `--install-venv` and `--install-catalog` again, then delete these two directories. Your settings are asked again on the first run in a terminal.
 
-Une fois connecté à Lichess, créez-le sur <https://lichess.org/account/oauth/token>, sans cocher aucun droit.   
-Le script le lit dans `~/.lichess_token`, un fichier qui ne contient que le jeton et que vous seul pouvez lire.
+### Lichess token
 
-Créez le fichier vide, fermez-en l'accès, puis collez-y le jeton :
+The Lichess explorer requires a personal access token.
+
+Once logged in to Lichess, create it on <https://lichess.org/account/oauth/token>, without ticking any permission.\
+The script reads it from `~/.lichess_token`, a file that contains only the token and that only you can read.
+
+Create the empty file, close its access, then paste the token into it:
 
 ```bash
 touch ~/.lichess_token
@@ -185,450 +199,542 @@ chmod 600 ~/.lichess_token
 ```bash
 vi ~/.lichess_token
 ```
-*Utilisez `nano` si vous ne connaissez pas `vi` ou l'éditeur de votre choix* 
 
-Dans cet ordre, le jeton n'est à aucun moment dans un fichier lisible par d'autres.   
-Le script ne l'affiche jamais, ne l'écrit dans aucun des fichiers qu'il produit et ne le reçoit pas en ligne de commande.   
-Il vous prévient si le fichier est lisible par d'autres que vous.
+*Use `nano` if you do not know `vi`, or the editor of your choice.*
 
-Sans jeton, lancez le script avec `--sans-explorateur`.
+In this order, the token is never in a file that others can read.\
+The script never displays it, writes it in none of the files it produces, and does not receive it on the command line.\
+It warns you if the file can be read by anyone other than you.
 
-### Réglages personnels
+Without a token, run the script with `--no-explorer`.\
+If Lichess refuses the token, wrong, expired or revoked, the script stops at the first request, before the engine: create a new one, or run again with `--no-explorer`.
 
-Votre pseudo, votre cadence habituelle et votre niveau sont gardés dans `~/.config/IAnalyze/reglages.ini`.
+### Personal settings
 
-Le script les demande une seule fois, au premier lancement dans un terminal.
+Your username, your usual time control and your rating are kept in `settings.ini`, at the root of the folder of the application.
+
+The script asks for them only once, on the first run in a terminal.
 
 ```ini
-[joueur]
-pseudos = MonPseudo, AutrePseudo
-cadence = 15+10
-niveau = 1300
+[player]
+usernames = MyUsername, OtherUsername
+time_control = 15+10
+rating = 1300
 ```
 
-Vous pouvez modifier ce fichier à la main, ou le supprimer avec `--purge-reglages` : vos réponses seront alors redemandées.
+You can edit this file by hand, or delete it with `--purge-settings`: your answers will then be asked again.
 
-**Le niveau** est un nombre de points Elo approximatifs, de 100 à 3500, ou "inconnu".
+**The usernames** are looked up in the White and Black tags of the game, ignoring case, to deduce your side: each one as the whole name or as a run of its words, never as a part of a word.\
+`Max` is found in `Max Power`, not in `Maxime` nor in `Max_Power`: write each of your usernames whole.
 
-Il est transmis à l'analyste, qui y adapte ses explications. Sans lui, c'est l'Elo de votre balise dans la partie qui sert.
+**The rating** is a number of approximate Elo points, from 100 to 3500, or "unknown".
 
-**La cadence** s'écrit `15+10` pour le temps réel, minutes par joueur puis incrément en secondes, et `14 jours` pour la correspondance à délai fixe.
+It is passed on to the analyst, who adapts the explanations to it. Without it, the Elo of your tag in the game is used.
 
-Les autres formes de correspondance, la clef facultative `annotateur` et la façon dont le script réécrit ce fichier sont décrites dans [TECHNIQUE.md](TECHNIQUE.md), section 6.
+**The time control** is written `15+10` for real time, minutes per player then increment in seconds, and `14 days` for correspondence with a fixed delay.
 
-## 3. Utilisation
+**Another player** of the same machine keeps their settings in a file of their own, named by `--settings`: `--settings player2.ini`. The option takes a file name ending in `.ini` and not starting with a dot, kept in the folder of the application next to `settings.ini`, never a path. In a terminal, a name whose file does not exist yet is created only after confirmation, so that a typo does not start a new file.
+
+**For a single run** that leaves your settings aside, the game of a friend for example, `--no-settings` neither reads nor writes any settings file.
+
+The other forms of correspondence, the optional key `annotator` and the way the script rewrites this file are described in [TECHNICAL.md](TECHNICAL.md), section 6.
+
+## 3. Usage
 
 ```bash
 ./ianalyze.py SOURCE [options]
 ```
 
-SOURCE accepte trois formes :
+SOURCE accepts three forms:
 
 ```bash
-./ianalyze.py ma-partie.pgn                 # PGN local
-./ianalyze.py https://lichess.org/<identifiant>  # URL Lichess
-./ianalyze.py <identifiant>                      # identifiant
+./ianalyze.py my-game.pgn                        # local PGN
+./ianalyze.py https://lichess.org/<identifier>   # Lichess URL
+./ianalyze.py <identifier>                       # identifier
 ```
 
-L'identifiant est la suite de 8 caractères qui suit `lichess.org/` dans l'adresse de la partie.
+The identifier is the string of 8 characters that follows `lichess.org/` in the address of the game, or 12 in the address of the game seen from one side.
 
-**Le PGN doit contenir une seule partie, entière, en échecs standard, notée en anglais** : K, Q, R, B, N.
+**The PGN must contain a single game, whole, in standard chess, written in English notation**: K, Q, R, B, N.
 
-**Lichess est la source de référence d'IAnalyze** : le script y télécharge une partie par son adresse ou son identifiant, et c'est son explorateur qui fournit les statistiques d'ouverture.
+**Lichess is the reference source of IAnalyze**: the script downloads a game from it by its address or its identifier, and its explorer provides the opening statistics.
 
-Les exports de ces sites et logiciels ont été essayés, et passent tels quels :
+The exports of these sites and programs have been tried, and go through as they are:
 
-| Source | Particularité de son export |
+| Source | Particularity of its export |
 |---|---|
-| Lichess | aucune. Avec l'analyse du site, ses commentaires, ses variantes et ses horloges sont lus eux aussi |
-| Chess.com | aucune |
-| chess-mail.com | notation longue (`Ng1f3`), résultat écrit deux fois en fin de fichier : le second est ignoré, et le journal le dit |
-| ajedrezmail.org | un coup par ligne |
-| Lucas Chess | durées et horloges en commentaires |
+| Lichess | none. With the analysis of the site, its comments, its variations and its clocks are read too |
+| Chess.com | none |
+| chess-mail.com | long notation (`Ng1f3`), result written twice at the end of the file: the second one is ignored, and the log says so |
+| ajedrezmail.org | one move per line |
+| Lucas Chess | durations and clocks in comments |
 
-Une partie de chacun est dans le répertoire `parties-exemples`, anonymisée. Lichess en a deux : `partie-lichess-org.pgn`, l'export simple, et `partie-commentee.pgn`, l'export avec l'analyse du site.
+A game from each one is in the `example-games` directory, anonymized. Lichess has two: `game-lichess-org.pgn`, the plain export, and `commented-game.pgn`, the export with the analysis of the site.
 
-Le script refuse plutôt que d'analyser de travers :
+The script refuses rather than analyze wrongly:
 
-- un fichier qui réunit plusieurs parties : isolez celle à analyser dans un fichier à part
-- une partie qui ne part pas de la position initiale, c'est-à-dire qui porte une balise FEN : pour étudier une position, chargez-la dans un échiquier d'analyse
-- une partie notée en français (R, D, T, F, C) ou en figurines : sans ce refus, "Cf3" serait lu "f3", un coup de pion, et l'analyse porterait sur une autre partie que la vôtre
-- un PGN abîmé : accolade ou parenthèse jamais fermée, texte libre hors des accolades
+- a file that gathers several games: isolate the one to analyze in a separate file
+- a game that does not start from the initial position, that is, one that carries a FEN tag: to study a position, load it into an analysis board
+- a game written in French notation (R, D, T, F, C) or in figurines: without this refusal, "Cf3" would be read "f3", a pawn move, and the analysis would be about another game than yours
+- a damaged PGN: brace or parenthesis never closed, free text outside the braces
 
-Le message d'erreur nomme ce qui est refusé. Les formes d'adresse acceptées et le détail de ces contrôles sont dans [TECHNIQUE.md](TECHNIQUE.md), section 4.
+The error message names what is refused. The forms of address accepted and the detail of these checks are in [TECHNICAL.md](TECHNICAL.md), section 4.
 
-### Les questions du script
+### The questions of the script
 
-Avant la collecte, le script vous pose quelques questions.   
-*Entrée retient la valeur proposée.*
+Before the collection, the script asks you a few questions.\
+*Enter keeps the suggested value.*
 
-- **Au tout premier lancement seulement** : votre pseudo, votre cadence habituelle et votre niveau, rangés dans le fichier de réglages.
-- **Votre camp**, s'il ne se déduit pas des balises White ou Black grâce à vos pseudos.
+- **On the very first run only**: your username, your usual time control and your rating, kept in the settings file.
+- **Your side**, if it cannot be deduced from the White or Black tags thanks to your usernames.
 
-Les balises vides sont alors complétées, et le PGN fourni est conservé sous `partie-origine.pgn`.
+  The empty tags are then filled in, and the PGN given is kept as `game-original.pgn`.
 
-- **La cadence de la partie**, si la balise TimeControl ne la donne pas : temps réel, correspondance ou inconnue.
+- **The time control of the game**, if the TimeControl tag does not give it: real time, correspondence or unknown.
 
-Entrée retient votre cadence habituelle. Seuls des nombres entiers sont acceptés, une autre réponse fait reposer la question.
+  Enter keeps your usual time control. Only whole numbers are accepted, another answer makes the question come again.
 
-- **Quatre questions de contexte** : périmètre, objectif, contexte particulier, commentaires à inclure dans le PGN final.
+- **Four context questions**: scope, goal, particular context, comments to include in the final PGN.
 
-Le script rédige lui-même la cadence transmise à l'analyste, toujours de la même façon :
+The script writes the time control passed on to the analyst by itself, always in the same way:
 
 ```text
-rapide, 15 minutes + 10 secondes par coup
-correspondance, 14 jours par coup
-correspondance, capital de 5 jours + 36 heures par coup, plafonné à 20 jours
+rapid, 15 minutes + 10 seconds per move
+correspondence, 14 days per move
+correspondence, clock of 5 days + 36 hours per move, maximum of 20 days
 ```
 
-Une réponse fait 255 caractères au plus.   
-Un nom de joueur ou un pseudo ne peut contenir ni guillemet, ni barre oblique inversée, ni crochet, ni accolade : il part dans une balise du PGN, que ces signes rendraient illisible. 
+An answer is 255 characters at most.\
+A player name or a username can contain neither a quote, nor a backslash, nor a square bracket, nor a brace: it goes into a tag of the PGN, which these signs would make unreadable.
 
-Une réponse refusée est redemandée.
+A refused answer is asked again.
 
-Pour lancer une collecte sans répondre à rien, ajoutez `--sans-questions`.   
-Le prompt dit alors au LLM que vos réponses n'ont pas été recueillies, et c'est lui qui vous les demande avant d'analyser.
+To run a collection without answering anything, add `--no-questions`.\
+The prompt then tells the LLM that your answers were not collected, and it asks you for them itself before analyzing.
 
-Le script ne pose pas non plus ses questions quand il n'est pas lancé à la main dans un terminal, depuis un autre programme par exemple : voir [TECHNIQUE.md](TECHNIQUE.md), section 5.
+The script does not ask its questions either when it is not run by hand in a terminal, from another program for example: see [TECHNICAL.md](TECHNICAL.md), section 5.
 
-## 4. Options courantes
+## 4. Common options
 
-Quelques options suffisent à la plupart des usages :
+A few options are enough for most uses:
 
-| Option | Effet |
+| Option | Effect |
 |---|---|
-| `--sans-explorateur` | pas de statistiques d'ouverture : ni jeton ni catalogue ne sont demandés |
-| `--sans-questions` | aucune question : le LLM vous les posera lui-même |
-| `--prompt-seul` | un prompt court à coller seul, sans archive, pour un compte gratuit ou un LLM qui n'ouvre pas les zip (section 7) |
-| `--garder-dossier` | garde le dossier décompressé à côté de l'archive |
-| `--sortie REP` | écrit les fichiers dans le répertoire REP |
-| `--base maitres` | interroge la base des maîtres au lieu de celle de tous les joueurs de Lichess |
-| `--profondeur D` | profondeur de calcul de Stockfish, 18 par défaut : plus elle est grande, plus le calcul est long |
-| `--coups-stockfish N` | limite le moteur aux N premiers coups |
-| `--pseudos LISTE` | vos pseudos, pour cette seule collecte |
-| `--reglages FICHIER` | un autre fichier de réglages, créé s'il n'existe pas : un profil par joueur |
+| `--no-explorer` | no opening statistics: neither token nor catalog is needed |
+| `--no-questions` | no question: the LLM will ask them itself |
+| `--prompt-only` | a short prompt to be pasted alone, without an archive, for a free account or an LLM that does not open zip files (section 7) |
+| `--keep-folder` | keeps the unzipped folder next to the archive |
+| `--output-dir DIR` | writes the files into the directory DIR |
+| `--database masters` | queries the masters database instead of the one of all the Lichess players |
+| `--depth D` | search depth of Stockfish, 18 by default: the greater it is, the longer the computation |
+| `--stockfish-moves N` | limits the engine to the first N moves |
+| `--usernames LIST` | your usernames, for this collection only |
+| `--settings NAME` | another settings file, by its name, in the folder of the application: one profile per player |
+| `--no-settings` | neither reads nor writes any settings file, for this run only |
 
 ```bash
-./ianalyze.py ma-partie.pgn --sans-explorateur --sortie ~/analyses
+./ianalyze.py my-game.pgn --no-explorer --output-dir ~/analyses
 ```
 
-Toutes les options sont dans [EXEMPLES.md](EXEMPLES.md), chacune avec sa commande et ce que le terminal affiche.   
-- `./ianalyze.py --help` en donne le résumé.
+All the options are in [EXAMPLES.md](EXAMPLES.md), each one with its command and what the terminal shows.\
+`./ianalyze.py --help` gives a summary of them.
 
-## 5. Résultat
+## 5. Result
 
-Archive : `analyse-<étiquette>-<AAAAMMJJ-HHMMSS>.zip`, l'étiquette étant le nom du PGN sans extension ou l'identifiant Lichess.   
-Un dossier ou une archive homonyme fait ajouter un suffixe -2, -3...
+Archive: `analysis-<label>-<YYYYMMDD-HHMMSS>.zip`, the label being the name of the PGN without extension, or the Lichess identifier.\
+A folder or an archive of the same name adds a suffix -2, -3...
 
-En cas d'échec, le dossier de travail est conservé tel quel pour diagnostic.
+On failure, the working folder is kept as it is for diagnosis.
 
-L'étiquette est assainie (voir [TECHNIQUE.md](TECHNIQUE.md), section 11) : le journal l'annonce alors par "Nom du dossier assaini : ..."
+The label is sanitized (see [TECHNICAL.md](TECHNICAL.md), section 11): the log then announces it with "Folder name sanitized: ..."
 
-Contenu :
+Content:
 
-| Fichier | Contenu |
+| File | Content |
 |---|---|
-| `synthese.md` | la synthèse, que l'analyste lit en premier |
-| `partie.pgn` | le PGN, en-têtes complétés s'il y a lieu |
-| `partie-origine.pgn` | le PGN fourni, si des en-têtes manquaient |
-| `contexte.md` | les réponses aux questions de démarrage |
-| `explorateur/NNN-<uci>.json` | une réponse brute par demi-coup interrogé |
-| `stockfish/evaluations.json` | les évaluations complètes du moteur, variantes entières |
-| `collecte.json` | paramètres exacts de la collecte, sans le jeton. `pgn_encodage` et `pgn_remarques` disent comment le PGN a été décodé, `prompt_ecrit` nomme le prompt |
+| `summary.md` | the summary, which the analyst reads first |
+| `game.pgn` | the PGN, headers filled in if need be |
+| `game-original.pgn` | the PGN given, if headers were missing |
+| `context.md` | the answers to the startup questions |
+| `explorer/NNN-<uci>.json` | one raw answer per ply queried |
+| `stockfish/evaluations.json` | the complete evaluations of the engine, whole variations |
+| `collection.json` | exact parameters of the collection, without the token. `pgn_encoding` and `pgn_remarks` say how the PGN was decoded, `prompt_written` names the prompt |
 
-À côté de l'archive, et non dedans :
+Next to the archive, and not inside it:
 
 ```text
-analyse-<étiquette>-<AAAAMMJJ-HHMMSS>.prompt.txt
-le prompt d'analyse de cette partie, à coller dans la conversation.
-
-Son chemin est donné par le journal, la sortie standard ne porte que celui de l'archive.
+analysis-<label>-<YYYYMMDD-HHMMSS>.prompt.txt
 ```
 
-Avec `--prompt-seul`, il n'y a pas d'archive : la sortie standard porte le chemin du prompt.
+It is the analysis prompt of this game, to be pasted into the conversation.\
+The log gives its path; standard output only carries the path of the archive.
 
-Le contenu de chacun de ces fichiers est détaillé dans [TECHNIQUE.md](TECHNIQUE.md), section 10.
+With `--prompt-only`, there is no archive: standard output carries the path of the prompt.
 
-## 6. Prompt d'analyse
+The content of each of these files is detailed in [TECHNICAL.md](TECHNICAL.md), section 10.
 
-Les données ne suffisent pas : il faut dire à l'analyste ce qu'il doit en faire.   
-Ce texte vit dans le modèle `prompt-modele.txt`, que vous pouvez modifier librement, sans toucher au script.
+## 6. Analysis prompt
 
-À chaque collecte, le script en tire le prompt de la partie : il remplit les valeurs et ne garde que les passages qui s'appliquent.
+The data is not enough: the analyst must be told what to do with it.\
+This text lives in the template `prompt-template.txt`, which you can edit freely, without touching the script.
 
-Pour écrire votre propre modèle, la liste des repères, des valeurs et des conditions est dans [TECHNIQUE.md](TECHNIQUE.md), section 12.
+At each collection, the script draws the prompt of the game from it: it fills in the values and keeps only the passages that apply.
 
-Le prompt suit ce que la collecte a réellement fait. Sans explorateur, il ne demande ni fréquence ni coup majoritaire.   
-Avec `--coups-stockfish`, il dit jusqu'où le moteur a évalué. Avec `--multipv 1`, il n'annonce pas trois coups par position.
+To write your own template, the list of the markers, the values and the conditions is in [TECHNICAL.md](TECHNICAL.md), section 12.
 
-Le prompt se colle comme un message, dans une conversation neuve, l'archive en pièce jointe.   
-Il vaut pour une partie : c'est le coller à chaque conversation qui garantit qu'il correspond à l'archive.
+The prompt follows what the collection really did. Without the explorer, it asks for neither frequency nor most played move.\
+With `--stockfish-moves`, it says how far the engine evaluated. With `--multipv 1`, it does not announce three moves per position.
 
-Tous les LLM n'ouvrent pas un zip, et tous n'exécutent pas de code.
+The prompt is pasted as a message, in a new conversation, with the archive as an attachment.\
+It is valid for one game: pasting it in each conversation is what guarantees that it matches the archive.
 
-Le prompt prévoit les deux cas :
+Not every LLM opens a zip file, and not every LLM runs code.
 
-- **Le LLM n'accepte pas l'archive** : décompressez-la et envoyez-lui **tous** ses fichiers, joints ou collés.
+The prompt provides for both cases:
 
-  `--garder-dossier` laisse le dossier décompressé à côté de l'archive.
+- **The LLM does not accept the archive**: unzip it and send it **all** its files, attached or pasted.
 
-Le prompt demande à l'analyste de se servir de tous les fichiers, pas de la seule synthèse : les `.json` portent les variantes entières du moteur et tous les coups connus de l'explorateur, que `synthese.md` résume.
+  `--keep-folder` leaves the unzipped folder next to the archive.
 
-S'il n'en reçoit qu'une partie, il doit dire lesquels manquent et vous proposer de les envoyer.
+  The prompt asks the analyst to use all the files, not only the summary: the `.json` files carry the whole variations of the engine and all the moves known to the explorer, which `summary.md` summarizes.
 
-- **Le LLM exécute du code** : il construit le PGN avec python-chess et en prouve la légalité.
-- **Le LLM n'exécute pas de code** : il écrit le PGN lui-même, le dit, et vous laisse ouvrir le fichier pour confirmer.
+  If it receives only some of them, it must say which ones are missing and ask you to send them.
 
-## 7. Choisir un LLM
+- **The LLM runs code**: it builds the PGN with python-chess and proves its legality.
+- **The LLM does not run code**: it writes the PGN itself, says so, and lets you open the file to confirm.
 
-**Optez pour Claude** : C'est le conseil de ce dépôt, et il vient des essais décrits plus bas.
+## 7. Choosing an LLM
 
-Avec le zip, Claude est le seul qui ait rendu un PGN utilisable tel quel.   
-Avec le prompt court, avec un abonnement comme avec un compte gratuit, c'est lui qui a rendu les PGN les plus propres et ses explications sont celles qui ont le mieux tenu à la vérification sur l'échiquier.
+**Go for Claude**: this is the advice of this repository, and it comes from the trials described below. The other LLMs were only tried on their free plans: see [Trials run](#trials-run).
 
-IAnalyze a été mis au point avec lui par l'auteur qui l'utilise pour analyser ses parties.   
-Deux routes mènent à une analyse, et il est le premier choix sur les deux :
+With the zip, Claude is the only one that returned a PGN usable as it is.\
+With the short prompt, with a subscription as with a free account, it returned the cleanest PGNs, and its explanations are the ones that best stood the check on the board.
 
-| Route | Ce que vous envoyez | Ce qu'il faut au LLM | Ce que vous recevez |
+IAnalyze was developed with it by the author, who uses it to analyze their games.\
+Two routes lead to an analysis, and it is the first choice on both:
+
+| Route | What you send | What the LLM needs | What you get back |
 |---|---|---|---|
-| Le zip et le prompt | l'archive en pièce jointe, le prompt collé | ouvrir un zip, exécuter du code, rendre un fichier | un fichier PGN construit avec python-chess, appuyé sur toutes les données |
-| `--prompt-seul` | un seul texte collé, sans pièce jointe | une simple conversation | le PGN annoté dans un bloc de code |
+| The zip and the prompt | the archive as an attachment, the prompt pasted | to open a zip file, run code, return a file | a PGN file built with python-chess, based on all the data |
+| `--prompt-only` | a single pasted text, without an attachment | a plain conversation | the annotated PGN in a code block |
 
-**Avec un compte gratuit, prenez `--prompt-seul` et Claude. Choisisez le modèle `Sonnet 5.5` avec l'effort `Max`**   
-C'est la combinaison qui a donné le meilleur résultat sans rien payer.
+**With a free account, take `--prompt-only` and Claude. Choose the model `Sonnet 5.5` with the effort `Max`.**\
+This is the combination that gave the best result without paying anything.\
+The zip also goes through on a free plan, if you can wait for the quota to come back: see [the series of 27 November 2026](#27-november-2026-the-two-routes-with-the-prompts-as-released).
 
-### Avec le zip et le prompt
+The first two series of trials were run with version 4.0, whose prompts were in French. The English prompts of version 5.0.0 went through a trial of their own, then a third series, on 25 and 26 November 2026, and a fourth with the prompts as released, on 27 November 2026, which point the same way.
 
-C'est la chaîne complète : vous joignez le zip, vous collez le prompt, le LLM rend un fichier PGN.   
-Il dispose alors de toutes les données : la synthèse, les trois meilleurs coups du moteur à chaque position, les statistiques de l'explorateur.
+### With the zip and the prompt
 
-Cette chaîne demande un LLM qui sait :
+This is the whole chain: you attach the zip, you paste the prompt, the LLM returns a PGN file.\
+It then has all the data: the summary, the three best moves of the engine at each position, the statistics of the explorer.
 
-- Ouvrir une archive zip
-- Exécuter du code et y installer python-chess, pour construire le PGN et en prouver la légalité
-- Rendre un fichier à télécharger
+This chain requires an LLM that can:
 
-Dans les essais, seul Claude l'a menée au bout correctement.
+- Open a zip archive
+- Run code and install python-chess there, to build the PGN and prove its legality
+- Return a file to download
 
-Deux conseils si vous l'essayez avec un autre LLM :
+In the trials, only Claude carried it through correctly.
 
-- Certains refusent un fichier `.pgn` en pièce jointe : renommez-le en `.txt`, ou passez à `--prompt-seul`.
-- Si le LLM annonce un fichier que vous ne trouvez pas, demandez-lui le PGN dans un bloc de code.
+Two tips if you try it with another LLM:
 
-### Avec `--prompt-seul`
+- Some refuse a `.pgn` file as an attachment: rename it to `.txt`, or switch to `--prompt-only`.
+- If the LLM announces a file that you cannot find, ask it for the PGN in a code block.
 
-Pour un compte gratuit, ou pour un LLM qui n'ouvre pas les zip, refuse certaines pièces jointes ou n'exécute pas de code, le script écrit un prompt court :
+### With `--prompt-only`
+
+For a free account, or for an LLM that does not open zip files, refuses some attachments or does not run code, the script writes a short prompt:
 
 ```bash
-./ianalyze.py ma-partie.pgn --prompt-seul
+./ianalyze.py my-game.pgn --prompt-only
 ```
 
-Vous collez ce seul texte dans la conversation, sans rien joindre.   
-Le LLM rend le PGN annoté dans un bloc de code, que vous enregistrez vous-même dans un fichier `.pgn`.
+You paste this single text into the conversation, without attaching anything.\
+The LLM returns the annotated PGN in a code block, which you save into a `.pgn` file yourself.
 
-Ce qu'il faut savoir de ce mode :
+What you should know about this mode:
 
-- Le prompt pèse environ 5 Ko pour une partie de 25 coups
-- Il ne porte ni la synthèse ni les fichiers `.json` : le LLM n'a que la partie, le tableau du moteur et, avec l'explorateur, une phrase sur l'ouverture
-- Aucune archive n'est écrite, le prompt est le seul fichier produit
-- Les cinq réponses essayées ont rendu la partie entière, tous les coups commentés, sans une évaluation inventée
+- The prompt weighs about 4 KB for `game-lichess-org.pgn`, 39 plies, and 11 KB for `commented-game.pgn`, 49 plies: each weak move adds its best move and its continuation
+- It carries neither the summary nor the `.json` files: the LLM only has the game, the table of the engine and, with the explorer, a sentence on the opening
+- No archive is written, the prompt is the only file produced
+- The fourteen answers tried, over three series, quote no evaluation that the table does not hold. Thirteen returned the whole game, every move commented; on 27 November 2026, Gemini changed a move and commented on 39 plies out of 49
 
-Pour contrôler le PGN rendu avec `verifier-analyse.py --prompt-seul` (section 8), ajoutez `--garder-dossier` à la collecte : le vérificateur a besoin des évaluations qui ont servi au prompt.
+To check the returned PGN with `verify-analysis.py --prompt-only` (section 8), add `--keep-folder` to the collection: the checker needs the evaluations that were used for the prompt.
 
-### Fiez-vous aux chiffres, vérifiez les récits
+### Trust the figures, check the stories
 
-C'est ce que les deux séries d'essais ont en commun.   
-**Les chiffres tiennent.** Aucun LLM n'a inventé une évaluation, avec le zip comme avec le prompt court.   
-Ce qui vient du tableau du moteur est recopié fidèlement : les écarts, les meilleurs coups, leurs suites.
+This is what the four series of trials have in common.
 
-**Les récits sont fragiles.**   
-Ce que le LLM déduit seul de la position peut être faux : un sacrifice qui n'en est pas un, une pièce en prise que personne ne signale, un mat en un qui est un mat en deux.
+**The figures hold.** No LLM invented an evaluation, with the zip as with the short prompt.\
+What comes from the table of the engine is copied faithfully: the losses, the best moves, their continuations.
 
-Quand un commentaire vous surprend, posez les pièces et regardez.   
-Le script `verifier-analyse.py` contrôle la forme du PGN et les chiffres cités, il ne juge pas ce qui est raconté.
+**The stories are fragile.**\
+What the LLM deduces from the position on its own can be wrong: a sacrifice that is not one, a check that is not one, a hanging piece that nobody points out, a mate in one that is a mate in two, a piece down taken for level material.
 
-### Essais menés
+When a comment surprises you, set up the pieces and look.\
+The script `verify-analysis.py` checks the form of the PGN and the figures quoted, it does not judge what is told.
 
-Deux séries, un seul essai par LLM et par offre, une partie par série.
+### Trials run
 
-**Ce n'est pas un banc d'essai.**   
-Un essai ne dit rien de la régularité d'un modèle. Mais les deux séries vont dans le même sens, et le conseil de cette section ne s'appuie sur rien d'autre que ce qui a été vu.
+Four series and a trial on its own, a single trial per LLM, per plan and per route, one game each time.
 
-#### Le 20 novembre 2026, avec le zip et le prompt
+**This is not a benchmark.**\
+A single trial says nothing about the consistency of a model. But the series point the same way, and the advice of this section rests on nothing else than what was seen.
 
-Une partie de 49 demi-coups, le même zip et le même prompt pour tous, celui de la version 4.0.0 avant les consignes et l'option `--prompt-seul` que ces essais ont fait ajouter.
+**The other LLMs were only tried on their free plans.**\
+ChatGPT, Gemini and Copilot were never tried on a paid plan. Their paid models may well be more precise, as Claude was on its subscription on 21 and 27 November 2026, but these trials cannot say so.
 
-| LLM, tel qu'il se nomme lui-même | Offre | PGN rendu | Bilan de `verifier-analyse.py` |
+#### 20 November 2026, with the zip and the prompt
+
+A game of 49 plies, the same zip and the same prompt for all, the one of version 4.0.0, before the instructions and the option `--prompt-seul`, now `--prompt-only`, that these trials led to add.
+
+| LLM, as it names itself | Plan | PGN returned | Report of `verify-analysis.py` |
 |---|---|---|---|
-| Claude Opus 5.5 (Anthropic) | abonnement | oui, construit avec python-chess | aucun échec : 24 erreurs et gaffes commentées sur 24, 27 variantes jouables |
-| GPT-6 (OpenAI) | gratuite | oui, écrit à la main, python-chess n'ayant pas pu être installé | 3 échecs : une ligne vide arrête la lecture, les 25 variantes sont dans les commentaires, un NAG contredit le moteur |
-| M365 Copilot (Microsoft) | gratuite | oui, la partie sans aucun commentaire | 3 échecs : il dit n'avoir trouvé que trois fichiers dans l'archive, et ne commente rien |
-| Gemini (Google), version non relevée | gratuite | non | il annonce un fichier qui n'existe pas, puis perd le fil de la conversation |
+| Claude Opus 5.5 (Anthropic) | subscription | yes, built with python-chess | no failure: 24 mistakes and blunders commented on out of 24, 27 playable variations |
+| GPT-6 (OpenAI) | free | yes, written by hand, python-chess could not be installed | 3 failures: a blank line stops the reading, the 25 variations are inside the comments, a NAG contradicts the engine |
+| M365 Copilot (Microsoft) | free | yes, the game without any comment | 3 failures: it says it found only three files in the archive, and comments on nothing |
+| Gemini (Google), version not noted | free | no | it announces a file that does not exist, then loses the thread of the conversation |
 
-Ce que cette série montre :
+What this series shows:
 
-- **Les données tiennent partout.** Aucun des quatre n'a inventé une évaluation, et tous donnent les trois mêmes erreurs principales, avec les bons écarts.
-- **C'est la fabrication du PGN qui les sépare.** Seul le LLM qui a construit son fichier avec python-chess a rendu un PGN utilisable tel quel.
-- **Le fond peut être bon sous une forme fautive.** Les 25 variantes écrites à la main par GPT-6 étaient toutes légales et tirées des lignes du moteur.
-- **La partie était notée gagnée dans une position perdue.** Deux LLM sur quatre ont raconté une victoire méritée, d'où la ligne ajoutée à la synthèse (voir [TECHNIQUE.md](TECHNIQUE.md), section 10).
+- **The data holds everywhere.** None of the four invented an evaluation, and all give the same three main errors, with the right losses.
+- **Building the PGN is what separates them.** Only the LLM that built its file with python-chess returned a PGN usable as it is.
+- **The substance can be good under a faulty form.** The 25 variations written by hand by GPT-6 were all legal and drawn from the lines of the engine.
+- **The game was recorded as won in a lost position.** Two LLMs out of four told the story of a deserved win, hence the line added to the summary (see [TECHNICAL.md](TECHNICAL.md), section 10).
 
-L'offre gratuite de Claude annonce elle aussi la création de fichiers et l'exécution de code, sur d'autres modèles que celui de cet essai, d'après [sa page de tarifs](https://claude.com/pricing) lue le 20 novembre 2026. 
+The free plan of Claude also announces file creation and code execution, on other models than the one of this trial, according to [its pricing page](https://claude.com/pricing), read on 20 November 2026 and again on 25 November 2026.
 
-Elle n'a pas été testée avec le fichier .zip 
+It was tried with the zip file on 27 November 2026, below.
 
-#### Le 21 novembre 2026, avec `--prompt-seul`
+#### 21 November 2026, with `--prompt-seul`, now `--prompt-only`
 
-Une partie de 39 demi-coups, gagnée par le joueur, et le même prompt court collé seul dans cinq conversations. C'est `parties-exemples/partie-lichess-org.pgn`.   
-Le tableau du moteur y marque dix coups faibles, dont deux du joueur.
+A game of 39 plies, won by the player, and the same short prompt pasted alone into five conversations. It is `example-games/game-lichess-org.pgn`.\
+The table of the engine marks ten weak moves in it, two of them by the player.
 
-Les cinq réponses ont en commun l'essentiel :
+The five answers share the essentials:
 
-- La ligne principale est recopiée sans un coup changé
-- Les 39 demi-coups sont commentés, toutes les erreurs et gaffes du tableau comprises
-- 126 évaluations sont citées dans les PGN, toutes tirées du tableau
+- The main line is copied without a single move changed
+- The 39 plies are commented on, all the mistakes and blunders of the table included
+- 126 evaluations are quoted in the PGNs, all taken from the table
 
-Ce qui les sépare :
+What separates them:
 
-| LLM | Offre | Forme du PGN | Sur l'échiquier |
+| LLM | Plan | Form of the PGN | On the board |
 |---|---|---|---|
-| Claude Sonnet 5.5 (Anthropic) | abonnement | conforme : bloc de code, balises intactes, 10 suites jouables sur 10 | aucune erreur trouvée |
-| Claude Sonnet 5.5 (Anthropic), effort Max | gratuite | conforme, de même | une erreur : une case de fuite annoncée au roi alors qu'elle est battue |
-| ChatGPT (OpenAI), version non relevée | gratuite | les suites sont écrites dans les commentaires, aucune n'est jouable. Dix suffixes `?!` ou `??` ajoutés aux coups, cinq balises HTML dans les commentaires | un sacrifice qui n'en est pas un, le mauvais cavalier nommé sur une prise, un mat en un annoncé pour un mat en deux |
-| Gemini (Google), version non relevée | gratuite | 7 suites jouables sur 10. Il parle du joueur à la troisième personne, puis écrit deux fois "erreur de ma part" à sa place | le même faux sacrifice, la couleur des fous inversée sur trois coups, une colonne annoncée ouverte qui ne l'est pas |
-| Copilot (Microsoft), version non relevée | gratuite | pas de bloc de code : la balise Site est rendue sous la forme d'un lien HTML. 10 suites jouables sur 10 | le même faux sacrifice, et un cavalier laissé en prise que rien ne signale |
+| Claude Sonnet 5.5 (Anthropic) | subscription | compliant: code block, tags intact, 10 playable continuations out of 10 | no error found |
+| Claude Sonnet 5.5 (Anthropic), effort Max | free | compliant, likewise | one error: an escape square announced for the king while it is attacked |
+| ChatGPT (OpenAI), version not noted | free | the continuations are written inside the comments, none is playable. Ten suffixes `?!` or `??` added to the moves, five HTML tags in the comments | a sacrifice that is not one, the wrong knight named on a capture, a mate in one announced for a mate in two |
+| Gemini (Google), version not noted | free | 7 playable continuations out of 10. It speaks of the player in the third person, then writes twice "erreur de ma part", my mistake, in their place | the same false sacrifice, the color of the bishops swapped on three moves, a file announced as open that is not |
+| Copilot (Microsoft), version not noted | free | no code block: the Site tag is returned as an HTML link. 10 playable continuations out of 10 | the same false sacrifice, and a hanging knight that nothing points out |
 
-Les erreurs de la dernière colonne ont été vérifiées une à une sur la position, avec python-chess. **La liste n'est pas exhaustive.**
+The errors of the last column were checked one by one on the position, with python-chess. **The list is not exhaustive.**
 
-Ce que cette série montre :
+What this series shows:
 
-- **Le prompt court fait le travail.** Sans pièce jointe et sans exécution de code, les cinq réponses sont lisibles et leurs chiffres sont justes. C'est mieux que ce que la chaîne complète avait donné la veille chez les trois autres LLM.
-- **Claude est devant sur les deux offres.** Ses deux PGN sont conformes, et ses explications sont celles qui résistent le mieux à la vérification : aucune erreur trouvée d'un côté, une seule de l'autre. Le compte gratuit fait presque jeu égal avec l'abonnement, en deux fois plus long : 1968 mots de commentaires contre 943.
-- **Le même piège a pris trois LLM sur quatre.** Un fou prend un pion en h7 avec échec, défendu par sa dame : le roi ne peut pas le reprendre. ChatGPT, Gemini et Copilot parlent de sacrifice. Claude écrit, dans l'essai du compte gratuit, "ici il n'y a aucun sacrifice, le pion tombe gratuitement".
-- **Demander trois erreurs en fait inventer une.** Le joueur n'en avait commis que deux. ChatGPT, Gemini et Copilot en ont présenté une troisième, Claude a répondu les deux fois qu'il n'y en avait que deux. Le prompt court donne depuis le nombre réel de coups faibles du joueur (voir [TECHNIQUE.md](TECHNIQUE.md), section 12).
-- **Le vérificateur n'aurait presque rien vu.** En mode `--prompt-seul`, il contrôle les balises, la ligne principale et les chiffres cités. Les suites écrites dans le texte, les balises HTML et les récits faux passent : c'est à vous de les relire.
+- **The short prompt does the job.** Without an attachment and without code execution, the five answers are readable and their figures are right. This is better than what the whole chain had given the day before with the three other LLMs.
+- **Claude is ahead on both plans.** Its two PGNs are compliant, and its explanations are the ones that best resist the check: no error found on one side, a single one on the other. The free account almost matches the subscription, twice as long: 1968 words of comments against 943.
+- **The same trap caught three LLMs out of four.** A bishop takes a pawn on h7 with check, defended by its queen: the king cannot take it back. ChatGPT, Gemini and Copilot speak of a sacrifice. Claude writes, in the trial of the free account, "ici il n'y a aucun sacrifice, le pion tombe gratuitement": there is no sacrifice here, the pawn falls for free. The trials were run in French.
+- **Asking for three errors makes one up.** The player had made only two. ChatGPT, Gemini and Copilot presented a third one, Claude answered both times that there were only two. Both prompts now give the real number of weak moves of the player (see [TECHNICAL.md](TECHNICAL.md), section 12).
+- **The checker would have seen almost nothing.** In `--prompt-only` mode, it checks the tags, the main line and the figures quoted. The continuations written in the text, the HTML tags and the false stories go through: rereading them is up to you.
 
-## 8. Vérifier le PGN rendu
+#### 25 November 2026, with the zip and the English prompt
 
-`verifier-analyse.py` est un outil supplémentaire, indépendant de la collecte : il contrôle ce que le LLM vous a rendu.
+A single trial, the first of the English prompts of version 5.0.0, before their release.\
+A correspondence game of 39 plies, won by the player, sent with its zip to GPT-6 (OpenAI), on the free plan.
 
-Un LLM peut rendre un PGN qui a l'air juste et ne l'est pas : un coup illégal dans une variante, un chiffre arrangé, une gaffe passée sous silence.   
-`verifier-analyse.py` compare le PGN rendu à l'archive que le LLM a reçue, et sort le même bilan pour chaque LLM essayé.
+- It announced case B, python-chess could not be installed, and wrote its PGN by hand. The figures of its answer are all right.
+- `verify-analysis.py` ends on 2 failures: a variation placed after the move that it should replace, `( 19... Kg8 20. Qh7# )` after 19.Qh5+, is illegal there, and python-chess stops reading the main line at ply 37 out of 39. Without this variation, the PGN passes with no failure.
+- Its three costliest errors were those of the opponent, and `$7`, forced move, sat on the check instead of the reply.
+- It put `$6` on seven moves that the engine does not classify.
+
+These four points led to the last changes of version 5.0.0: the prompts say where a variation starts, where `$7` goes and whose errors to give, and the checker lists such NAGs as other opinions.
+
+The prompts changed once more on 27 November 2026, after these trials: the notes of the player are kept, the commands of a site left out, the game of the short prompt stands in a code block, and the review keeps to the agreed scope.\
+These last instructions went through the series of 27 November 2026, below.
+
+#### 26 November 2026, the two routes, with the English prompts
+
+A correspondence game of 54 plies, lost by the player, mated on move 27, and the English prompts of version 5.0.0, before their release.\
+The usage limits of the free plans did not allow both routes: ChatGPT, Gemini and Copilot only received the short prompt, and Claude, on the subscription, both.
+
+The game was collected once per route, two hours apart. The evaluations of Stockfish vary from one run to another: the table of the short prompt marks 12 mistakes and blunders, 7 of them by the player, and the archive 11.
+
+| LLM | Plan, route | Report of `verify-analysis.py` | On the board |
+|---|---|---|---|
+| Claude Sonnet 5.5 (Anthropic), effort Max | subscription, zip | no failure, no warning: the 11 mistakes and blunders commented on, 17 playable variations, the 59 evaluations quoted all found | no error found |
+| Claude Sonnet 5.5 (Anthropic), effort Max | subscription, `--prompt-only` | no failure: code block, tags intact, the 54 plies commented on, 19 playable variations, the 91 evaluations quoted all found | no error found |
+| Gemini (Google), version not noted | free, `--prompt-only` | no failure: code block, tags intact, the 54 plies commented on, 18 playable variations, the 56 evaluations quoted all found | the colors of the bishops confused twice, a fianchetto prepared with no bishop left, the queenside said developed with the c1 bishop still at home |
+| ChatGPT (OpenAI), version not noted | free, `--prompt-only` | 1 failure: the 19 variations are written inside the comments, none is playable. Twelve suffixes `?` or `??` added to the moves | a piece down announced as level material, a check that is not one, a recapture said to be forced while the other rook could take |
+| Copilot (Microsoft), version not noted | free, `--prompt-only` | 1 failure: the Site tag returned as an HTML link. No code block, 18 playable variations | a piece down announced twice as level material, three moves said to be forced while others were legal |
+
+The errors of the last column were checked one by one on the position, with python-chess. **The list is not exhaustive.**
+
+What this series shows:
+
+- **The English prompts do the job.** Three of the five answers quote evaluations, 206 in all, every one found in the data of the engine; ChatGPT and Copilot quote none. Each answer comments on every mistake and blunder of its table.
+- **The errors of the player, and only theirs.** The five reviews give three errors of the player, none of the opponent. With the zip, Claude even set aside the two costliest by the figures, 21.Qb1 and 22.Kh2, played in a position already lost, and said why.
+- **Where a variation starts is understood.** The 91 variations of the five answers, those of ChatGPT included, are legal and drawn from the lines of the engine, and none repeats the moves played.
+- **The free plans keep their faults of 21 November.** ChatGPT still writes the variations inside the comments and adds suffixes to the moves, Copilot still gives no code block and turns the Site tag into a link. Gemini passes the checker, not the check on the board.
+- **Claude checks itself.** With the short prompt, it says it replayed its variations with python-chess and checked its explanations with Stockfish, which the prompt does not ask for. It comments on each move there, in 2178 words; with the zip, on 18 moves, as the full prompt asks, in 1062 words.
+- **The checker does not judge the stories.** Gemini passes it with no failure, and four errors on the board.
+
+#### 27 November 2026, the two routes, with the prompts as released
+
+The game is [`example-games/player-notes.pgn`](example-games/player-notes.pgn), 49 plies, scored 1-0 in a position lost for the player: `commented-game.pgn` without the analysis of Lichess, its clocks kept, and three notes of the player added.\
+They test the last instructions: one quotes a percentage, "I was 80% sure", one calls 9.Nb5 the best move of the game, a blunder for the engine, and one is in French, "Ici je pensais gagner une pièce", here I thought I was winning a piece.
+
+The game was collected once per route: the table of the zip marks 22 mistakes and blunders, that of the short prompt 23.\
+The zip went to Claude on both plans, the short prompt to all five.
+
+| LLM | Plan, route | Report of `verify-analysis.py` | Notes and clocks | On the board |
+|---|---|---|---|---|
+| Claude Sonnet 5.5 (Anthropic), effort Max | subscription, zip | no failure, no warning: the 22 mistakes and blunders commented on, 23 playable variations, the 62 evaluations quoted all found | the three notes kept, the percentage written "80 percent", the clocks left out; at 9.Nb5, "Stockfish disagrees" | one error, in the final summary: 9.axb4 called "a free bishop", while the a6 knight defends it |
+| Claude Sonnet 5.5 (Anthropic), effort High | free, zip | no failure, no warning: the 22 mistakes and blunders commented on, 23 playable variations, the 33 evaluations quoted all found. The quota ran out before the final summary | the three notes kept, the percentage written "80 percent", the clocks left out; the note of 9.Nb5 refuted on the board, the French note quoted, then translated | 9.axb4 "a clean piece", while it wins a bishop for a pawn; after 11.Ne4, "a piece down for the rest of the game", while material is level again after 23...Bxb8 |
+| Claude Sonnet 5.5 (Anthropic), effort Max | subscription, `--prompt-only` | no failure: the 49 plies commented on, 31 playable variations, the 113 evaluations quoted all found | the three notes kept as written, the clocks left out; "Stockfish disagrees with your note" at 9.Nb5 and 11.Ne4 | no error found |
+| Claude Sonnet 5.5 (Anthropic), effort Max | free, `--prompt-only` | no failure: the 49 plies commented on, 31 playable variations, the 54 evaluations quoted all found | the three notes kept as written, the clocks left out; at 9.Nb5, "the table has a different view" | 3.g4 "before a single piece is developed", while Nf3 is out; 4.Nfd2 "leaves your h-pawn loose", while Rh1 defends it; the bishop of 8...Bb4 "free", twice |
+| ChatGPT (OpenAI), version not noted | free, `--prompt-only` | no failure: the 49 plies commented on, 28 playable variations | none of the three notes kept as written: two paraphrased, the one of 9.Nb5 dropped; the clocks left out | 12...e3 "a passed pawn", while the e2 pawn stands in front of it; 13.O-O "connecting your rooks", with Bc1 and Qd1 between them; 16...gxf4 "opening the f-file", while it opens the g-file; 23.Nxb8 "a rook won", while it wins the exchange; level material called an advantage for Black |
+| Gemini (Google), version not noted | free, `--prompt-only` | 1 failure: 22...Qd7 changed into 22...Qe7. 39 plies commented on, the 20 variations written inside the comments | none of the three notes kept, the clocks left out | 8...Bb4 "a pin", while no piece is pinned; 24...Nxg2 "recaptures", after a move that took nothing; level material at the end called a large advantage for Black |
+| Copilot (Microsoft), version not noted | free, `--prompt-only` | 5 failures: the copy of its answer holds the whole PGN on one line, tags included. Put back on separate lines: no failure, the 49 plies commented on, 15 playable variations | the three notes kept, with their clocks | 4.Nfd2 "attacks the bishop", which nothing attacks; 12...e3 "a passed pawn"; 21.Nxa7 attacking the rooks, which nothing attacks |
+
+The errors of the last column were checked one by one on the position, with python-chess. **The list is not exhaustive.**
+
+What this series shows:
+
+- **The notes of the player get through Claude and Copilot.** Claude keeps them in its four answers, ahead of its own comment, and contradicts the note of 9.Nb5, three times in the name of the engine, once on the board. With the zip, it writes the percentage in words and translates the French note after quoting it. Copilot keeps them too, ChatGPT paraphrases two and drops the third, Gemini keeps none. The checker counts them, "0 kept out of 3" for ChatGPT, without a failure.
+- **The clocks are left out, except by Copilot**, which keeps the three that stood with the notes.
+- **A move changed, for the first time in these trials.** Gemini returns 22...Qe7 instead of 22...Qd7. The game stays legal to the end: only the checker sees it.
+- **The zip goes through on a free plan.** Claude returned a complete PGN, with its overview, its 22 mistakes and blunders commented on and its 23 variations. The quota of tokens ran out before the final summary: it is full again after about six hours, according to the author, so a player in no hurry can get the whole analysis without paying.
+- **Claude is ahead again.** Its four answers hold their figures, and with the zip on the subscription its clocks, database figures, material and FEN are all right. With the short prompt on the subscription, no error is found on the board. The other three call the bishop of 8...Bb4 free at some point, while the a6 knight defends it: taking it costs a pawn.
+- **ChatGPT changed its form, not its stories.** For the first time, its variations stand outside the comments, all playable, and the checker finds no failure. Its stories keep their errors, two of them shared: the e3 pawn called passed, with Copilot, and level material called an advantage for Black, with Gemini.
+- **The checker does not judge the stories.** ChatGPT passes it with no failure, and five errors on the board in the table.
+
+## 8. Checking the returned PGN
+
+`verify-analysis.py` is an additional tool, independent of the collection: it checks what the LLM returned to you.
+
+An LLM can return a PGN that looks right and is not: an illegal move in a variation, an arranged figure, a blunder passed over in silence.\
+`verify-analysis.py` compares the returned PGN with the archive that the LLM received, and gives the same report for each LLM tried.
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn
+./verify-analysis.py analysis-my-game-20261125-142017.zip llm-annotated.pgn
 ```
 
-Copiez la conversation dans un fichier texte pour faire contrôler aussi les positions et les évaluations qu'elle cite :
+Copy the conversation into a text file to have the positions and the evaluations it quotes checked too:
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn --synthese conversation.txt --nom "Nom du modèle"
+./verify-analysis.py analysis-my-game-20261125-142017.zip llm-annotated.pgn --summary llm-conversation.txt --name "Model name"
 ```
 
-Si le LLM n'a rendu aucun PGN, mettez un tiret à la place du fichier :
+If the LLM returned no PGN, put a dash instead of the file:
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261119-164140.zip - --synthese conversation.txt
+./verify-analysis.py analysis-my-game-20261125-142017.zip - --summary llm-conversation.txt
 ```
 
-Pour un PGN obtenu avec le prompt court de `--prompt-seul`, ajoutez la même option, et donnez le dossier de travail gardé par `--garder-dossier` :
+For a PGN obtained with the short prompt of `--prompt-only`, add the same option, and give the working folder kept by `--keep-folder`:
 
 ```bash
-./ianalyze.py ma-partie.pgn --prompt-seul --garder-dossier
+./ianalyze.py my-game.pgn --prompt-only --keep-folder
 ```
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261119-164140 analyse-llm.pgn --prompt-seul
+./verify-analysis.py analysis-my-game-20261125-142017 llm-annotated.pgn --prompt-only
 ```
 
-Le prompt court demande moins que le prompt complet. Avec cette option, les contrôles qu'il ne fonde pas sont sautés : lignes de 79 caractères, résumé avant le premier coup, NAG, `%`, tiret cadratin, notation suffixe, balises Annotator et PlyCount, longueur des variantes, nombre de FEN. Restent la lecture, la ligne principale, les accolades, les balises recopiées, le marqueur de fin, les erreurs et gaffes commentées, les évaluations citées et les variantes.
+The short prompt asks for less than the full prompt. With this option, the checks that it does not ask for are skipped: lines of 79 characters, overview before the first move, NAGs, `%`, semicolon, em dash, suffix notation, castling written with zeros, alphabetical order of the other tags, Annotator and PlyCount tags, length of the variations, number of FEN. What remains: the reading, a single game in the file, the main line, the braces, the words outside the braces, the tags copied, the end marker, the mistakes and blunders commented on, the evaluations quoted and the variations.\
+The moves that the original game writes in another notation, `e2-e4` or `bxa8Q`, are accepted as they are: the short prompt asks to copy them without changing a single one.
 
-Si vous avez convenu avec le LLM d'un périmètre, les 20 premiers coups par exemple, le script le lit dans votre réponse à la question de démarrage et n'attend aucun commentaire au-delà.   
-Quand le périmètre a été fixé dans la conversation, donnez-le :
+If you agreed on a scope with the LLM, the first 20 moves for example, the script reads it in your answer to the startup question and expects no comment beyond it.\
+When the scope was set in the conversation, give it:
 
 ```bash
-./verifier-analyse.py analyse-ma-partie-20261119-164140.zip analyse-llm.pgn --perimetre 20
+./verify-analysis.py analysis-my-game-20261125-142017.zip llm-annotated.pgn --scope 20
 ```
 
-Le script accepte le zip ou son dossier décompressé, et se relance tout seul dans l'environnement virtuel d'IAnalyze, à son emplacement par défaut.   
-Un dossier qui contient plusieurs collectes est refusé : donnez celui de la collecte que le LLM a reçue.
+The script accepts the zip or its unzipped folder, and restarts by itself in the virtual environment of IAnalyze, at its default location.\
+A folder that holds several collections is refused: give the one of the collection that the LLM received.
 
-Il n'a pas d'option `--venv`. Si votre environnement est ailleurs, lancez-le avec le Python de cet environnement : `~/venv/echecs/bin/python3 verifier-analyse.py ...`
+It has no `--venv` option. If your environment is elsewhere, run it with the Python of that environment: `~/venv/chess/bin/python3 verify-analysis.py ...`
 
-### Ce qui est contrôlé
+### What is checked
 
-| Contrôle | Défauts relevés |
+| Check | Flaws found |
 |---|---|
-| Lecture | fichier hors UTF-8, coup illégal dans la partie ou dans une variante, ligne vide dans le corps de la partie |
-| Ligne principale | différente de la partie d'origine |
-| Format | ligne de plus de 79 caractères, accolade ouvrante ou fermante dans un commentaire, `%`, tiret cadratin, notation suffixe, balises absentes ou dans le désordre, marqueur de fin |
-| Coups commentés | erreur ou gaffe de Stockfish laissée sans commentaire dans le périmètre convenu, NAG de position contraire à l'évaluation du moteur |
-| Évaluations | chiffre ou mat cité qui n'existe nulle part dans les données du moteur |
-| Variantes | variante écrite à l'intérieur d'un commentaire, donc non jouable, variante illégale ou trop longue |
-| Conversation | FEN invalide ou étrangère à la partie, tiret cadratin |
+| Reading | file outside UTF-8, illegal move in the game or in a variation, blank line in the body of the game, second game in the file |
+| Main line | different from the original game |
+| Format | line of more than 79 characters, opening or closing brace in a comment, word outside the braces, move written with a `P`, castling written with zeros, `%`, em dash, suffix notation, tags missing or out of order, end marker |
+| Commented moves | mistake or blunder of Stockfish left without a comment within the agreed scope, position NAG contrary to the evaluation of the engine; for information, the quality NAGs of another opinion than the engine. The notes that the original game already carried, which both prompts ask to keep, are set aside first: only the text of the LLM is judged |
+| Evaluations | figure or mate quoted that exists nowhere in the data of the engine; a `#7` without a sign, which may be a rank, is only a warning |
+| Variations | variation written inside a comment, hence not playable, illegal or too long variation |
+| Conversation | FEN invalid or foreign to the game, em dash |
 
-Deux de ces défauts viennent de vrais PGN de LLM et méritent une explication :
+Three of these flaws come from real PGNs of LLMs and deserve an explanation:
 
-- **La ligne vide dans le corps de la partie.** python-chess y voit la fin de la partie et n'en lit pas la suite. Le script la relève où qu'elle soit, même si elle ne cache qu'une variante ou le marqueur de fin, puis poursuit ses contrôles sur le fichier une fois la ligne retirée.
-- **La variante écrite entre accolades.** Ce n'est que du texte, SCID ne la rejoue pas. Le script la rejoue lui-même pour dire si elle est légale et si elle vient d'une ligne du moteur.
+- **The blank line in the body of the game.** python-chess sees the end of the game there and does not read what follows. The script finds it wherever it is, even if it only hides a variation or the end marker, then goes on with its checks on the file once the line is removed. Inside a comment, python-chess reads on up to the closing brace: the report says so, and still counts the line as a fault, the prompt forbidding it and another reader stopping there.
+- **The words outside the braces.** python-chess skips them without a word: free text written between two moves is lost, and a move written `Pg2xf3`, or a castling written `0-0`, is read all the same, which hides the flaw. The script names each of these words, line by line.
+- **The variation written between braces.** It is only text, SCID does not replay it. The script replays it itself to say whether it is legal and whether it comes from a line of the engine.
 
-### Lire le bilan
+### Reading the report
 
-| Repère | Sens |
+| Marker | Meaning |
 |---|---|
-| `OK` | conforme |
-| `ECHEC` | contraire à une consigne impérative du prompt |
-| `ATTENTION` | à regarder de près, sans être forcément fautif |
-| `INFO` | mesure donnée pour comparer les LLM entre eux |
+| `OK` | compliant |
+| `FAIL` | contrary to a mandatory instruction of the prompt |
+| `WARNING` | to be looked at closely, without being necessarily wrong |
+| `INFO` | measure given to compare the LLMs with one another |
 
-Code de retour : 0 sans `ECHEC`, 1 avec au moins un `ECHEC`, 2 si un fichier ne peut pas être lu ou si l'archive n'est pas celle d'IAnalyze.   
-Avec le code 2, aucun contrôle n'a eu lieu.
+Exit code: 0 without `FAIL`, 1 with at least one `FAIL`, 2 if a file cannot be read or if the archive is not an IAnalyze one.\
+With the code 2, no check took place.
 
-### Ce que le script ne fait pas
+### What the script does not do
 
-Il ne juge pas la qualité du commentaire. Une explication fausse mais bien formée passe : un LLM peut placer une dame sur la mauvaise case dans une phrase sans qu'aucun contrôle ne le voie.   
-Cette lecture reste la vôtre.
+It does not judge the quality of the commentary. A wrong but well-formed explanation goes through: an LLM can put a queen on the wrong square in a sentence without any check seeing it.\
+This reading stays yours.
 
-Trois limites à connaître :
+Limits to know:
 
-- Une évaluation arrondie à une décimale est acceptée : "+0.35" cité "+0.4" ou "+0.3" ne compte pas comme inventé
-- Un nombre écrit sans signe, "7.77", n'est pas pris pour une évaluation : le script le confondrait avec une durée ou un classement. Un chiffre inventé écrit ainsi passe donc
-- Le script repère un chiffre qui n'existe nulle part, pas un vrai chiffre attribué au mauvais coup
+- An evaluation rounded to one decimal is accepted: "+0.35" quoted as "+0.4" or "+0.3" does not count as invented, nor "+0.350", whose third decimal is a zero
+- A number written without a sign, "7.77", is not taken for an evaluation: the script would confuse it with a duration or a rating. An invented figure written this way thus goes through
+- The script finds a figure that exists nowhere, not a real figure given to the wrong move
+- A difference computed by the LLM, "+1.77" between two evaluations, exists nowhere either: it is reported as invented
+- Only the position NAGs that give a side better, `$14` to `$21`, are compared with the engine: `$10`, an equal position, put on a won position, goes through
+- The scope read in your answer is its first number: "moves 15 to 30" counts as the first 15 moves. Give `--scope` when it does not fit
 
-## 9. Sources et liens
+## 9. Sources and links
 
-Ce que le script interroge :
+What the script queries:
 
-- Jeton d'accès personnel : <https://lichess.org/account/oauth/token>, une fois connecté à Lichess
+- Personal access token: <https://lichess.org/account/oauth/token>, once logged in to Lichess
+- Explorer, database of all players: `https://explorer.lichess.org/lichess`
+- Explorer, masters database: `https://explorer.lichess.org/masters`
+- Catalog of openings: [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings), files `a.tsv` to `e.tsv`. They are the ones that the server of the explorer loads too.
 
-- Explorateur, base de tous les joueurs : `https://explorer.lichess.org/lichess`
-- Explorateur, base des maîtres : `https://explorer.lichess.org/masters`
-- Catalogue des ouvertures : [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings), fichiers `a.tsv` à `e.tsv`. (Ce sont ceux que charge aussi le serveur de l'explorateur.)
+What it relies on:
 
-Ce sur quoi il s'appuie :
+- [python-chess](https://python-chess.readthedocs.io/en/latest/), the library that reads the PGN and drives the engine
+- [Stockfish](https://stockfishchess.org/), the engine, and [its UCI options](https://official-stockfish.github.io/docs/stockfish-wiki/UCI-Protocol-and-Stockfish-Commands.html), among them Threads, Hash and MultiPV
+- [PGN specification](https://www.saremba.de/chessgml/standards/pgn/pgn-complete.htm), Steven J. Edwards, 1994
 
-- [python-chess](https://python-chess.readthedocs.io/en/latest/), la bibliothèque qui lit le PGN et pilote le moteur
-- [Stockfish](https://stockfishchess.org/), le moteur, et [ses options UCI](https://official-stockfish.github.io/docs/stockfish-wiki/UCI-Protocol-and-Stockfish-Commands.html), dont Threads, Hash et MultiPV (en anglais)
-- [Spécification PGN](https://www.saremba.de/chessgml/standards/pgn/pgn-complete.htm), Steven J. Edwards, 1994
+Where the time controls come from:
 
-D'où viennent les cadences :
+- Categories of real time: [Speed.scala](https://raw.githubusercontent.com/lichess-org/scalachess/master/core/src/main/scala/Speed.scala), in [scalachess](https://github.com/lichess-org/scalachess), the rules library of Lichess
+- Correspondence, ICCF: [ICCF Rules, in force since 1 January 2026](https://webfiles.iccf.com/rules/2026/2026%20ICCF%20Rules%2C%20260311.pdf), section 2.4 (PDF)
+- Correspondence, clock: [rules of chess-mail.com](https://www.chess-mail.com/index.php?page=reg)
 
-- Catégories du temps réel : [Speed.scala](https://raw.githubusercontent.com/lichess-org/scalachess/master/core/src/main/scala/Speed.scala), dans [scalachess](https://github.com/lichess-org/scalachess), la bibliothèque de règles de Lichess
-- Correspondance, ICCF : [ICCF Rules, en vigueur depuis le 1er janvier 2026](https://webfiles.iccf.com/rules/2026/2026%20ICCF%20Rules%2C%20260311.pdf), section 2.4 (PDF, en anglais)
-- Correspondance, capital de temps : [règlement de chess-mail.com](https://www.chess-mail.com/index.php?page=reg)
+Conventions of the repository:
 
-Conventions du dépôt :
-
-- [Tenez un Changelog](https://keepachangelog.com/fr/1.1.0/) pour `CHANGELOG.md`
-- [Gestion sémantique de version](https://semver.org/lang/fr/) pour les numéros de version
+- [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) for `CHANGELOG.md`
+- [Semantic Versioning](https://semver.org/) for the version numbers
 
 ---
 
-## Licences
+## Licenses
 
-- Catalogue des ouvertures de Lichess (chess-openings) : CC0. Il est téléchargé à l'installation, pas distribué avec ce dépôt.
-- python-chess, installé dans l'environnement virtuel : GPL-3.0-or-later.
-- Stockfish, installé par votre système : GPL-3.0
-- Tout le contenu de ce dépôt est en licence [CC0](LICENSE) : faites-en ce que vous voulez :)
+- Catalog of the openings of Lichess (chess-openings): CC0. It is downloaded at installation, not distributed with this repository.
+- python-chess, installed in the virtual environment: GPL-3.0-or-later.
+- Stockfish, installed by your system: GPL-3.0.
+- All the content of this repository is under the [CC0](LICENSE) license: do whatever you want with it :)
 
 [![CC0](https://mirrors.creativecommons.org/presskit/buttons/88x31/svg/cc-zero.svg)](https://creativecommons.org/publicdomain/zero/1.0/)
 

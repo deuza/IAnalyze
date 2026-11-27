@@ -1,0 +1,15 @@
+[Event "Friendly game"]
+[Site "?"]
+[Date "2026.11.19"]
+[Round "-"]
+[White "MyUsername"]
+[Black "Opponent"]
+[Result "*"]
+[Annotator "Example"]
+[PlyCount "9"]
+
+{ A quiet Italian game, stopped at the fifth move. } 1. e4 { The
+engine gives +1.50 to White, that is 60 % chances of winning. } 1... e5
+
+2. Nf3 Nc6 3. Bc4 { The engine slightly prefers the pin (3. Bb5 a6
+4. Ba4). } 3... Bc5 4. c3 Nf6 5. d3 *

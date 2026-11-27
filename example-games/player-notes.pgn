@@ -1,0 +1,37 @@
+[Event "rated classical game"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "-"]
+[White "MyUsername"]
+[Black "Opponent"]
+[Result "1-0"]
+[WhiteElo "1267"]
+[BlackElo "1224"]
+[Variant "Standard"]
+[TimeControl "1800+3"]
+[ECO "D02"]
+[Opening "Queen's Pawn Game: Zukertort Variation"]
+[Termination "Normal"]
+
+1. Nf3 { [%clk 0:30:00] } 1... d5 { [%clk 0:30:00] } 2. d4 { [%clk 0:29:56] }
+2... f6 { [%clk 0:29:53] } 3. g4
+{ [%clk 0:29:50] An early g4 to surprise him: I was 80% sure he would not take it. }
+3... Bxg4 { [%clk 0:29:50] } 4. Nfd2 { [%clk 0:29:17] } 4... Nh6
+{ [%clk 0:29:32] } 5. h3 { [%clk 0:29:15] } 5... Bf5 { [%clk 0:29:22] } 6. Bg2
+{ [%clk 0:29:10] } 6... e6 { [%clk 0:29:15] } 7. Nc3 { [%clk 0:29:08] } 7...
+Na6 { [%clk 0:28:41] } 8. a3 { [%clk 0:28:42] } 8... Bb4 { [%clk 0:28:12] } 9.
+Nb5
+{ [%clk 0:27:58] Best move of the game: the knight goes to c7 and Black cannot hold. }
+9... c5 { [%clk 0:26:51] } 10. c3 { [%clk 0:27:16] } 10... Ba5
+{ [%clk 0:26:31] } 11. Ne4 { [%clk 0:25:22] Ici je pensais gagner une pièce. }
+11... dxe4 { [%clk 0:26:04] } 12. f3 { [%clk 0:24:29] } 12... e3
+{ [%clk 0:25:33] } 13. O-O { [%clk 0:23:46] } 13... O-O { [%clk 0:24:43] } 14.
+Bxe3 { [%clk 0:22:47] } 14... Bc7 { [%clk 0:23:38] } 15. f4 { [%clk 0:21:32] }
+15... g5 { [%clk 0:23:09] } 16. Bxb7 { [%clk 0:20:55] } 16... Rb8
+{ [%clk 0:22:50] } 17. b4 { [%clk 0:20:28] } 17... Bxh3 { [%clk 0:22:31] } 18.
+Bg2 { [%clk 0:20:21] } 18... g4 { [%clk 0:22:26] } 19. a4 { [%clk 0:19:44] }
+19... Nf5 { [%clk 0:22:20] } 20. Bc1 { [%clk 0:19:35] } 20... e5
+{ [%clk 0:20:42] } 21. Nxa7 { [%clk 0:18:52] } 21... Nh4 { [%clk 0:20:10] } 22.
+Nc6 { [%clk 0:18:23] } 22... Qd7 { [%clk 0:19:12] } 23. Nxb8 { [%clk 0:18:20] }
+23... Bxb8 { [%clk 0:18:54] } 24. b5 { [%clk 0:18:03] } 24... Nxg2
+{ [%clk 0:18:19] } 25. bxa6 { [%clk 0:17:39] } 1-0
