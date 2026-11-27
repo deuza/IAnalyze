@@ -56,6 +56,17 @@ The report repeats the environment (system, Python, python-chess, Stockfish), th
 
 The number of checks depends on the version and on the mode chosen. Under macOS, a check of T44 is always skipped: it creates a file whose name is not UTF-8, which its file system refuses.
 
+**Machines tested.** For version 5.0.0, the whole suite, `--network` included, was run on these machines on 27 November 2026, without a failure:
+
+| System | Processor | Python | python-chess | Stockfish | Passed | Skipped |
+|---|---|---|---|---|---|---|
+| Debian 13 (trixie) | x86_64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 |
+| Debian 13 (trixie), on a Raspberry Pi | aarch64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 |
+| macOS 27.3, with Homebrew | arm64, Apple M1 | 3.15.2 | 1.11.2 | 19 | 853 | 1 (T44) |
+| Ubuntu 24.04.5 LTS, in a container | x86_64 | 3.13.18 | 1.11.2 | 16 | 855 | 0 |
+
+The shell was dash under Linux, the `/bin/sh` of the system under macOS. In the container, the offline tests also passed under posh.
+
 ## 2. What the tests do not touch
 
 - **Your settings and your catalog**: the tests name their own, in a temporary directory deleted at the end.

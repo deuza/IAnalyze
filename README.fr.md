@@ -36,7 +36,7 @@ Avec un compte gratuit, ou pour un autre LLM, l'option `--prompt-only` écrit un
 
 Un outil supplémentaire, `verify-analysis.py`, contrôle le PGN que le LLM vous a rendu : voir la section 8.
 
-Plateformes : Debian et macOS (Homebrew).\
+Plateformes : Debian et macOS (Homebrew). [TESTS.fr.md](TESTS.fr.md#1-lancer-les-tests) donne les machines sur lesquelles toute la suite de tests est passée, dont un Raspberry Pi et un Apple M1.\
 Python 3.10 ou plus récent, et python-chess, que le script installe lui-même dans un environnement virtuel dédié.
 
 Le script, ses messages, l'archive et le prompt sont en anglais depuis la version 5.0.0, et l'analyse est demandée en anglais. La documentation tient en quatre fichiers, chacun en anglais et en français :

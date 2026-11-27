@@ -36,7 +36,7 @@ With a free account, or for another LLM, the `--prompt-only` option writes a sho
 
 An additional tool, `verify-analysis.py`, checks the PGN that the LLM returned to you: see section 8.
 
-Platforms: Debian and macOS (Homebrew).\
+Platforms: Debian and macOS (Homebrew). [TESTS.md](TESTS.md#1-running-the-tests) lists the machines on which the whole test suite passed, a Raspberry Pi and an Apple M1 among them.\
 Python 3.10 or more recent, and python-chess, which the script installs by itself in a dedicated virtual environment.
 
 The script, its messages, the archive and the prompt are in English since version 5.0.0, and the analysis is asked for in English. The documentation fits in four files, each one also in French, under the same name ending in `.fr.md`:

@@ -26,6 +26,10 @@ and the project applies [Semantic Versioning](https://semver.org/).
   with it.
 - `TECHNICAL.fr.md`, the French version of `TECHNICAL.md`, kept up to
   date with it.
+- `TESTS.md` and `TESTS.fr.md` list the machines on which the whole
+  suite passed for this version: Debian 13 on x86_64 and on a
+  Raspberry Pi, macOS 27.3 on an Apple M1, Ubuntu 24.04 in a
+  container. The README points to them.
 - README, section Licenses: the icon of the CC0 license, linked to the
   page of the license, and a link to `LICENSE` in the sentence on the
   license of the repository.

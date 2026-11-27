@@ -58,6 +58,17 @@ Le rapport reprend l'environnement (système, Python, python-chess, Stockfish), 
 
 Le nombre de contrôles dépend de la version et du mode choisi. Sous macOS, un contrôle de T44 est toujours sauté : il crée un fichier au nom non UTF-8, ce que son système de fichiers refuse.
 
+**Machines essayées.** Pour la version 5.0.0, toute la suite, `--network` compris, a tourné sur ces machines le 27 novembre 2026, sans un échec :
+
+| Système | Processeur | Python | python-chess | Stockfish | Réussis | Sautés |
+|---|---|---|---|---|---|---|
+| Debian 13 (trixie) | x86_64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 |
+| Debian 13 (trixie), sur un Raspberry Pi | aarch64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 |
+| macOS 27.3, avec Homebrew | arm64, Apple M1 | 3.15.2 | 1.11.2 | 19 | 853 | 1 (T44) |
+| Ubuntu 24.04.5 LTS, dans un conteneur | x86_64 | 3.13.18 | 1.11.2 | 16 | 855 | 0 |
+
+Le shell était dash sous Linux, le `/bin/sh` du système sous macOS. Dans le conteneur, les tests hors réseau sont aussi passés sous posh.
+
 ## 2. Ce que les tests ne touchent pas
 
 - **Vos réglages et votre catalogue** : les tests désignent les leurs, dans un répertoire temporaire supprimé à la fin.

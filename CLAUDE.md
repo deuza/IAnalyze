@@ -33,6 +33,10 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
   dossier ne laisse rien, hors le jeton (~/.lichess_token) ; vider
   local/ garde les réglages.
 - Le comportement doit rester identique sur les deux.
+- Machines d'essai de la suite, pour la 5.0.0 : Debian 13 sur PC et
+  sur Raspberry Pi (aarch64), macOS 27.3 sur M1, et le conteneur
+  Ubuntu de Claude. TESTS.md en tient le tableau, sans nom de machine
+  ni chemin personnel.
 - Python : modules hors apt installés dans un venv dédié, jamais dans
   l'environnement système. Signale tout nouveau module requis.
 
@@ -68,7 +72,9 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
   modification/suppression de CLAUDE.md, réglé par ce même git rm.
 - Une publication suit toujours le même rite : sur dev, un commit
   "Version X.Y.Z" (VERSION, titre de la version dans le CHANGELOG et
-  ses références de liens) ; sur main, la fusion de dev, intitulée
+  ses références de liens) ; la suite --network relancée sur chaque
+  machine d'essai, et le tableau des machines de TESTS.md mis à jour,
+  dans les deux langues ; sur main, la fusion de dev, intitulée
   "IAnalyze X.Y.Z", puis "Fusion de la branche dev." et un résumé ;
   une étiquette vX.Y.Z annotée et signée (git tag -s) ; une release
   GitHub du même nom. Claude en rédige les messages et les notes.
