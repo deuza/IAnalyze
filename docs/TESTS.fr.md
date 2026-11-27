@@ -6,7 +6,7 @@ Tous les tests sont joués par un seul script, `tests/test-app.sh`, sous Debian 
 
 Ce document dit comment le lancer, puis ce que vérifie chaque test. Le détail, commande par commande, est dans le script, qui fait foi.
 
-Le [README](README.fr.md) explique l'installation et l'usage courant, [EXAMPLES.fr.md](EXAMPLES.fr.md) les commandes et leurs sorties, [TECHNICAL.fr.md](TECHNICAL.fr.md) le fonctionnement du script.
+Le [README](../README.fr.md) explique l'installation et l'usage courant, [EXAMPLES.fr.md](../EXAMPLES.fr.md) les commandes et leurs sorties, [TECHNICAL.fr.md](TECHNICAL.fr.md) le fonctionnement du script.
 
 Le script de tests écrit ses titres, ses contrôles et son rapport en anglais, comme `ianalyze.py`.
 
@@ -41,11 +41,11 @@ Depuis le dépôt, après l'installation décrite dans le README :
 
 Le script trouve le dépôt d'après son propre chemin : il se lance aussi bien depuis `tests/`, en `./test-app.sh`, que de n'importe où.
 
-| Commande | Ce qu'elle joue | Durée |
-|---|---|---|
-| `./tests/test-app.sh` | les tests hors réseau, sans jeton | environ 5 minutes dans le conteneur du tableau ci-dessous, les trois cinquièmes de son passage avec `--network` |
-| `./tests/test-app.sh --network` | les mêmes, puis ceux qui demandent le réseau et votre jeton Lichess, sauf T24 | de 7 minutes sur un Apple M1 à 25 sur un Raspberry Pi 4 : voir le tableau ci-dessous |
-| `./tests/test-app.sh --network GAME` | de même, avec T24 : le téléchargement de la partie que vous désignez | quelques secondes de plus |
+| Commande | Ce qu'elle joue |
+|---|---|
+| `./tests/test-app.sh` | les tests hors réseau, sans jeton |
+| `./tests/test-app.sh --network` | les mêmes, puis ceux qui demandent le réseau et votre jeton Lichess, sauf T24 |
+| `./tests/test-app.sh --network GAME` | de même, avec T24 : le téléchargement de la partie que vous désignez |
 
 **La partie de T24 est à vous de la choisir.** Le dépôt ne désigne aucune partie réelle : T24 télécharge celle que vous donnez après `--network`, par son identifiant ou par son adresse. N'importe quelle partie de Lichess convient, la vôtre ou une autre. Sans elle, T24 est compté parmi les tests sautés, "skipped" dans le bilan, et le script rappelle au départ la commande à lancer. L'identifiant donné n'est pas écrit dans le rapport.
 
@@ -62,14 +62,23 @@ Le nombre de contrôles dépend de la version et du mode choisi. Sous macOS, un 
 
 **Machines essayées.** Pour la version 5.0.0, toute la suite, `--network` compris, a tourné sur ces machines le 27 novembre 2026, sans un échec :
 
-| Système | Processeur | Python | python-chess | Stockfish | Réussis | Sautés | Durée |
-|---|---|---|---|---|---|---|---|
-| Debian 13 (trixie) | x86_64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 | 15 min |
-| Debian 13 (trixie), sur un Raspberry Pi 4 Model B | aarch64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 | 25 min |
-| macOS 27.3, avec Homebrew | arm64, Apple M1 | 3.15.2 | 1.11.2 | 19 | 853 | 1 (T44) | 7 min |
-| Ubuntu 24.04.5 LTS, dans un conteneur | x86_64 | 3.13.18 | 1.11.2 | 16 | 855 | 0 | 8 min |
+| Système | Processeur | Python | python-chess | Stockfish | Réussis | Sautés |
+|---|---|---|---|---|---|---|
+| Debian 13 (trixie) | x86_64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 |
+| Debian 13 (trixie), sur un Raspberry Pi 4 Model B | aarch64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 |
+| macOS 27.3, avec Homebrew | arm64, Apple M1 | 3.15.2 | 1.11.2 | 19 | 853 | 1 (T44) |
+| Ubuntu 24.04.5 LTS, dans un conteneur | x86_64 | 3.13.18 | 1.11.2 | 16 | 855 | 0 |
 
-La durée est celle de tout le passage avec `--network`, du départ écrit dans le rapport à l'heure du fichier. Le shell était dash sous Linux, le `/bin/sh` du système sous macOS. Dans le conteneur, les tests hors réseau sont aussi passés sous posh.
+Le shell était dash sous Linux, le `/bin/sh` du système sous macOS. Dans le conteneur, les tests hors réseau sont aussi passés sous posh.
+
+**Derniers passages.** Les derniers passages réussis de la suite, sur le contenu de ce commit, dans le conteneur du tableau ci-dessus, sous dash :
+
+| Passage | Réussi le (UTC) | Réussis | Échecs | Sautés |
+|---|---|---|---|---|
+| hors réseau | 27 novembre 2026, 20 h 14 | 768 | 0 | 0 |
+| `--network`, avec T24 | 27 novembre 2026, 20 h 22 | 856 | 0 | 0 |
+
+L'heure est celle de la fin du passage, l'heure du fichier du rapport. Ce tableau suit chaque changement du dépôt, le tableau des machines chaque version.
 
 ## 2. Ce que les tests ne touchent pas
 

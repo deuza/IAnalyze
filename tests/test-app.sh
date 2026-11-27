@@ -3,7 +3,7 @@
 # test-app.sh: tests of ianalyze.py, on macOS and on Debian
 #
 # This script runs all the tests of the project, described one by one in
-# TESTS.md, then writes a report that you can send back as it is.
+# docs/TESTS.md, then writes a report that you can send back as it is.
 #
 #     sh tests/test-app.sh       offline tests: encodings, archive,
 #                                settings, time control, engine, check
@@ -22,7 +22,7 @@
 #
 # The script finds the repository from its own path: it runs from the
 # root of the repository, as above, from tests/ as sh test-app.sh, or
-# from anywhere else. The durations are in TESTS.md, section 1.
+# from anywhere else. The durations are in docs/TESTS.md, section 1.
 #
 # Nothing is written in the repository, except the report, in tests/,
 # nor in your directories: everything happens in a temporary directory,

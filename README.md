@@ -11,14 +11,10 @@
 
 Version française : [README.fr.md](README.fr.md)
 
-IAnalyze prepares the analysis of a chess game by an LLM *(called the analyst in the rest of this document)*.
+IAnalyze prepares the analysis of one of your chess games by an LLM *(called the analyst in the rest of this document)*, Claude above all.
 
-It adds the Stockfish evaluations to it: one line per ply, and behind each weak move the best move and its continuation.\
-Its script, `ianalyze.py`, gathers the PGN, the statistics of the Lichess explorer, the catalog of openings and the Stockfish evaluations, then writes two files: a zip archive and the prompt that goes with it.
-
-The idea comes from the program [Lucas Chess](https://lucaschess.pythonanywhere.com/), whose analysis prompt fits in a few lines followed by the game.
-
-*The script produces no analysis: it gives the analyst reliable figures, and the prompt makes it stick to them.*
+You give it a game, it gathers the figures: the Stockfish evaluation of each move, computed on your machine, with the best move and its continuation behind each weak move, the statistics of the Lichess explorer and the name of the opening.\
+It writes them into a zip archive, with the prompt that goes with it.
 
 ```bash
 ./ianalyze.py my-game.pgn
@@ -29,92 +25,49 @@ analysis-my-game-20261125-142017.zip
 analysis-my-game-20261125-142017.prompt.txt
 ```
 
-You paste the content of the prompt.txt file into a new conversation with Claude, you attach the zip file, and you get back an annotated PGN and a summary.
+You paste the content of the prompt.txt file into a new conversation with Claude, you attach the zip file, and you get back your game, annotated move by move, and a summary of your errors.\
+The LLM explains, it does not compute: the evaluations come from Stockfish, the theory comes from the explorer and the catalog.
+
+*The script produces no analysis: it gives the analyst reliable figures, and the prompt makes it stick to them.*
+
+The idea comes from the program [Lucas Chess](https://lucaschess.pythonanywhere.com/), whose analysis prompt fits in a few lines followed by the game.
 
 **IAnalyze is made for Claude:**\
-With a free account, or for another LLM, the `--prompt-only` option writes a short prompt that carries the game and the Stockfish evaluations, to be pasted alone, without an attachment: see section 7.
+With a free account, or for another LLM, the `--prompt-only` option writes a short prompt that carries the game and the Stockfish evaluations, to be pasted alone, without an attachment: see section 4.
 
-An additional tool, `verify-analysis.py`, checks the PGN that the LLM returned to you: see section 8.
+An additional tool, `verify-analysis.py`, checks the PGN that the LLM returned to you: see section 5.
 
-Platforms: Debian and macOS (Homebrew). [TESTS.md](TESTS.md#1-running-the-tests) lists the machines on which the whole test suite passed, a Raspberry Pi 4 and an Apple M1 among them.\
-Python 3.10 or more recent, and python-chess, which the script installs by itself in a dedicated virtual environment.
-
-The script, its messages, the archive and the prompt are in English since version 5.0.0, and the analysis is asked for in English. The documentation fits in four files, each one also in French, under the same name ending in `.fr.md`:
-
-- this README, to install IAnalyze and analyze a game
-- [EXAMPLES.md](EXAMPLES.md), the quick reference: every command, every option, and what the terminal shows
-- [TECHNICAL.md](TECHNICAL.md), for how the script works, its use from another program, and the detail of the files produced
-- [TESTS.md](TESTS.md), to run the tests and know what each one checks
+The script, its messages, the archive and the prompt are in English since version 5.0.0, and the analysis is asked for in English.
 
 ## Contents
 
-- [1. Overview](#1-overview)
-- [2. Requirements and installation](#2-requirements-and-installation)
-- [3. Usage](#3-usage)
-- [4. Common options](#4-common-options)
-- [5. Result](#5-result)
-- [6. Analysis prompt](#6-analysis-prompt)
-- [7. Choosing an LLM](#7-choosing-an-llm)
-- [8. Checking the returned PGN](#8-checking-the-returned-pgn)
-- [9. Sources and links](#9-sources-and-links)
+- [1. Installation](#1-installation)
+   - [Lichess token](#lichess-token)
+   - [What the installation does](#what-the-installation-does)
+- [2. Analyzing a game](#2-analyzing-a-game)
+   - [The game](#the-game)
+   - [The questions of the script](#the-questions-of-the-script)
+   - [Your settings](#your-settings)
+   - [What you get](#what-you-get)
+   - [Sending it to the analyst](#sending-it-to-the-analyst)
+- [3. Common options](#3-common-options)
+- [4. Choosing an LLM](#4-choosing-an-llm)
+   - [With the zip and the prompt](#with-the-zip-and-the-prompt)
+   - [With `--prompt-only`](#with---prompt-only)
+   - [Trust the figures, check the stories](#trust-the-figures-check-the-stories)
+- [5. Checking the returned PGN](#5-checking-the-returned-pgn)
+   - [Reading the report](#reading-the-report)
+   - [What it does not judge](#what-it-does-not-judge)
+- [6. Going further](#6-going-further)
 - [Licenses](#licenses)
 
 ---
 
-## 1. Overview
+## 1. Installation
 
-The script gathers and formats:
+Debian or macOS, with Python 3.10 or more recent.
 
-- **the PGN** of the game, read from a local file or downloaded from Lichess
-- **the statistics of the Lichess explorer**, position by position, to locate the exit from theory
-- **the Stockfish evaluation** of each move, computed on your machine
-
-The whole chain takes three steps:
-
-1. `./ianalyze.py my-game.pgn`
-
-   The script collects, computes, and writes two files: `analysis-<label>-<YYYYMMDD-HHMMSS>.zip` and `analysis-<label>-<YYYYMMDD-HHMMSS>.prompt.txt`, the label being the name of the PGN (section 5).
-
-2. In a new conversation with an LLM, you paste the content of the prompt and you attach the archive.
-
-   If the LLM does not open zip files, unzip the archive and send it all its files (see section 6).
-
-3. The LLM returns an annotated PGN and a summary.
-
-   It explains, it does not compute: the evaluations come from Stockfish, the theory comes from the explorer and the catalog.
-
-The prompt is drawn from the template `prompt-template.txt`, kept next to the script.\
-It always describes the summary that this version of the script has just written: the two cannot diverge.
-
-The files of the repository:
-
-| File | Role |
-|---|---|
-| `ianalyze.py` | the script, in a single file |
-| `prompt-template.txt` | the template from which the prompt of each game is drawn (section 6) |
-| `prompt-only-template.txt` | the template of the short prompt of `--prompt-only` (section 7) |
-| `verify-analysis.py` | the additional tool that checks the PGN returned by the LLM (section 8) |
-| [`EXAMPLES.md`](EXAMPLES.md) | the quick reference: commands, options and outputs |
-| [`TECHNICAL.md`](TECHNICAL.md) | the technical documentation |
-| [`TESTS.md`](TESTS.md) | the tests: how to run them, what each one checks |
-| [`CHANGELOG.md`](CHANGELOG.md) | the history of the versions |
-| [`README.fr.md`](README.fr.md) | the French version of this README |
-| [`EXAMPLES.fr.md`](EXAMPLES.fr.md) | the French version of EXAMPLES.md |
-| [`TECHNICAL.fr.md`](TECHNICAL.fr.md) | the French version of TECHNICAL.md |
-| [`TESTS.fr.md`](TESTS.fr.md) | the French version of TESTS.md |
-| [`LICENSE`](LICENSE) | the license of the code (see Licenses) |
-| `tests/` | the test suite, `test-app.sh`, its test game, `test.pgn`, and the files of its checks, described in [TESTS.md](TESTS.md) |
-| `example-games/` | the games of the examples of [EXAMPLES.md](EXAMPLES.md), among them a real anonymized game for a first try |
-
-## 2. Requirements and installation
-
-Everything is installed in your home directory, on Debian as on macOS.
-
-Only the installation of the Debian packages requires root rights.
-
-**1. The packages**
-
-On Debian, as root:
+On Debian, the packages are installed as root:
 
 ```bash
 apt install git python3-venv stockfish
@@ -126,58 +79,17 @@ On macOS, with Homebrew, whose Python already provides the venv module:
 brew install git python stockfish
 ```
 
-**2. The repository**, under the account of the player:
+Then, under your own account:
 
 ```bash
 git clone https://github.com/deuza/IAnalyze.git
-```
-
-```bash
 cd IAnalyze
-```
-
-**3. The virtual environment and the catalog**, under the same account:
-
-```bash
 ./ianalyze.py --install-venv
-```
-
-```bash
 ./ianalyze.py --install-catalog
 ```
 
-Each player of the machine repeats steps 2 and 3 under their own account: nothing is shared, nothing needs to be copied.
-
-### What these two commands do
-
-**`--install-venv`** creates a dedicated virtual environment and installs python-chess in it, which Debian does not package.\
-The script then restarts in it by itself: you keep calling it with the system's Python.
-
-**`--install-catalog`** downloads the catalog of the named openings of Lichess, kept locally.\
-Run it again from time to time to update it.
-
-**Stockfish is mandatory**: its evaluation is part of every collection.
-
-### Default locations
-
-The same on both platforms, except for the engine.
-
-Everything the script creates for itself stays in the folder of the application: deleting this folder leaves nothing behind, except your token.
-
-The `local/` folder only keeps what the script can rebuild by itself, the virtual environment and the catalog: emptying it brings the application back to a fresh state without touching your settings.
-
-| | Location |
-|---|---|
-| `--venv` | `local/venv`, in the folder of the application |
-| `--catalog` | `local/`, in the folder of the application |
-| settings | `settings.ini`, at the root of the folder of the application, like any other settings file named by `--settings` |
-| token | `~/.lichess_token` |
-| `--stockfish`, Debian | the binary found in the PATH, otherwise `/usr/games/stockfish` |
-| `--stockfish`, macOS | the binary found in the PATH, otherwise `/opt/homebrew/bin/stockfish` |
-
-Up to version 4.0.2, the virtual environment and the catalog were kept in `~/.local/share/IAnalyze`, the settings in `~/.config/IAnalyze`.
-
-The script no longer reads them there: run `--install-venv` and `--install-catalog` again, then delete these two directories. Your settings are asked again on the first run in a terminal.
+Each player of the machine repeats these four commands under their own account: nothing is shared, nothing needs to be copied.\
+All that remains is the Lichess token, below.
 
 ### Lichess token
 
@@ -209,37 +121,25 @@ It warns you if the file can be read by anyone other than you.
 Without a token, run the script with `--no-explorer`.\
 If Lichess refuses the token, wrong, expired or revoked, the script stops at the first request, before the engine: create a new one, or run again with `--no-explorer`.
 
-### Personal settings
+### What the installation does
 
-Your username, your usual time control and your rating are kept in `settings.ini`, at the root of the folder of the application.
+**`--install-venv`** creates a dedicated virtual environment and installs python-chess in it, the library that reads the games, which Debian does not package.\
+The script then restarts in it by itself: you keep calling it with the system's Python.
 
-The script asks for them only once, on the first run in a terminal.
+**`--install-catalog`** downloads the catalog of the named openings of Lichess, kept locally.\
+Run it again from time to time to update it.
 
-```ini
-[player]
-usernames = MyUsername, OtherUsername
-time_control = 15+10
-rating = 1300
-```
+**Stockfish is mandatory**: its evaluation is part of every collection.
 
-You can edit this file by hand, or delete it with `--purge-settings`: your answers will then be asked again.
+Everything the script creates for itself stays in the folder of the application: deleting this folder leaves nothing behind, except your token.\
+The `local/` folder only keeps what the script can rebuild by itself, the virtual environment and the catalog: emptying it brings the application back to a fresh state without touching your settings.
 
-**The usernames** are looked up in the White and Black tags of the game, ignoring case, to deduce your side: each one as the whole name or as a run of its words, never as a part of a word.\
-`Max` is found in `Max Power`, not in `Maxime` nor in `Max_Power`: write each of your usernames whole.
+The exact locations, and those of the versions before 5.0.0, are in [docs/TECHNICAL.md](docs/TECHNICAL.md#2-files-of-the-repository), section 2.\
+The machines on which the whole test suite passed, a Raspberry Pi 4 and an Apple M1 among them, are listed in [docs/TESTS.md](docs/TESTS.md#1-running-the-tests).
 
-**The rating** is a number of approximate Elo points, from 100 to 3500, or "unknown".
+## 2. Analyzing a game
 
-It is passed on to the analyst, who adapts the explanations to it. Without it, the Elo of your tag in the game is used.
-
-**The time control** is written `15+10` for real time, minutes per player then increment in seconds, and `14 days` for correspondence with a fixed delay.
-
-**Another player** of the same machine keeps their settings in a file of their own, named by `--settings`: `--settings player2.ini`. The option takes a file name ending in `.ini` and not starting with a dot, kept in the folder of the application next to `settings.ini`, never a path. In a terminal, a name whose file does not exist yet is created only after confirmation, so that a typo does not start a new file.
-
-**For a single run** that leaves your settings aside, the game of a friend for example, `--no-settings` neither reads nor writes any settings file.
-
-The other forms of correspondence, the optional key `annotator` and the way the script rewrites this file are described in [TECHNICAL.md](TECHNICAL.md), section 6.
-
-## 3. Usage
+### The game
 
 ```bash
 ./ianalyze.py SOURCE [options]
@@ -278,7 +178,7 @@ The script refuses rather than analyze wrongly:
 - a game written in French notation (R, D, T, F, C) or in figurines: without this refusal, "Cf3" would be read "f3", a pawn move, and the analysis would be about another game than yours
 - a damaged PGN: brace or parenthesis never closed, free text outside the braces
 
-The error message names what is refused. The forms of address accepted and the detail of these checks are in [TECHNICAL.md](TECHNICAL.md), section 4.
+The error message names what is refused. The forms of address accepted and the detail of these checks are in [docs/TECHNICAL.md](docs/TECHNICAL.md#4-the-game-its-source-and-its-checks), section 4.
 
 ### The questions of the script
 
@@ -304,61 +204,45 @@ correspondence, 14 days per move
 correspondence, clock of 5 days + 36 hours per move, maximum of 20 days
 ```
 
-An answer is 255 characters at most.\
-A player name or a username can contain neither a quote, nor a backslash, nor a square bracket, nor a brace: it goes into a tag of the PGN, which these signs would make unreadable.
-
-A refused answer is asked again.
-
 To run a collection without answering anything, add `--no-questions`.\
 The prompt then tells the LLM that your answers were not collected, and it asks you for them itself before analyzing.
 
-The script does not ask its questions either when it is not run by hand in a terminal, from another program for example: see [TECHNICAL.md](TECHNICAL.md), section 5.
+The limits of an answer, and what changes when the script is not run by hand in a terminal, are in [docs/TECHNICAL.md](docs/TECHNICAL.md#5-startup-questions-and-terminal), section 5.
 
-## 4. Common options
+### Your settings
 
-A few options are enough for most uses:
+Your username, your usual time control and your rating are kept in `settings.ini`, at the root of the folder of the application.
 
-| Option | Effect |
-|---|---|
-| `--no-explorer` | no opening statistics: neither token nor catalog is needed |
-| `--no-questions` | no question: the LLM will ask them itself |
-| `--prompt-only` | a short prompt to be pasted alone, without an archive, for a free account or an LLM that does not open zip files (section 7) |
-| `--keep-folder` | keeps the unzipped folder next to the archive |
-| `--output-dir DIR` | writes the files into the directory DIR |
-| `--database masters` | queries the masters database instead of the one of all the Lichess players |
-| `--depth D` | search depth of Stockfish, 18 by default: the greater it is, the longer the computation |
-| `--stockfish-moves N` | limits the engine to the first N moves |
-| `--usernames LIST` | your usernames, for this collection only |
-| `--settings NAME` | another settings file, by its name, in the folder of the application: one profile per player |
-| `--no-settings` | neither reads nor writes any settings file, for this run only |
+The script asks for them only once, on the first run in a terminal.
 
-```bash
-./ianalyze.py my-game.pgn --no-explorer --output-dir ~/analyses
+```ini
+[player]
+usernames = MyUsername, OtherUsername
+time_control = 15+10
+rating = 1300
 ```
 
-All the options are in [EXAMPLES.md](EXAMPLES.md), each one with its command and what the terminal shows.\
-`./ianalyze.py --help` gives a summary of them.
+You can edit this file by hand, or delete it with `--purge-settings`: your answers will then be asked again.
 
-## 5. Result
+**The usernames** are looked up in the White and Black tags of the game, ignoring case, to deduce your side: each one as the whole name or as a run of its words, never as a part of a word.\
+`Max` is found in `Max Power`, not in `Maxime` nor in `Max_Power`: write each of your usernames whole.
+
+**The rating** is a number of approximate Elo points, from 100 to 3500, or "unknown".
+
+It is passed on to the analyst, who adapts the explanations to it. Without it, the Elo of your tag in the game is used.
+
+**The time control** is written `15+10` for real time, minutes per player then increment in seconds, and `14 days` for correspondence with a fixed delay.
+
+**Another player** of the same machine keeps their settings in a file of their own, named by `--settings`: `--settings player2.ini`. The option takes a file name ending in `.ini` and not starting with a dot, kept in the folder of the application next to `settings.ini`, never a path. In a terminal, a name whose file does not exist yet is created only after confirmation, so that a typo does not start a new file.
+
+**For a single run** that leaves your settings aside, the game of a friend for example, `--no-settings` neither reads nor writes any settings file.
+
+The other forms of correspondence, the optional key `annotator` and the way the script rewrites this file are described in [docs/TECHNICAL.md](docs/TECHNICAL.md#6-settings), section 6.
+
+### What you get
 
 Archive: `analysis-<label>-<YYYYMMDD-HHMMSS>.zip`, the label being the name of the PGN without extension, or the Lichess identifier.\
 A folder or an archive of the same name adds a suffix -2, -3...
-
-On failure, the working folder is kept as it is for diagnosis.
-
-The label is sanitized (see [TECHNICAL.md](TECHNICAL.md), section 11): the log then announces it with "Folder name sanitized: ..."
-
-Content:
-
-| File | Content |
-|---|---|
-| `summary.md` | the summary, which the analyst reads first |
-| `game.pgn` | the PGN, headers filled in if need be |
-| `game-original.pgn` | the PGN given, if headers were missing |
-| `context.md` | the answers to the startup questions |
-| `explorer/NNN-<uci>.json` | one raw answer per ply queried |
-| `stockfish/evaluations.json` | the complete evaluations of the engine, whole variations |
-| `collection.json` | exact parameters of the collection, without the token. `pgn_encoding` and `pgn_remarks` say how the PGN was decoded, `prompt_written` names the prompt |
 
 Next to the archive, and not inside it:
 
@@ -371,22 +255,18 @@ The log gives its path; standard output only carries the path of the archive.
 
 With `--prompt-only`, there is no archive: standard output carries the path of the prompt.
 
-The content of each of these files is detailed in [TECHNICAL.md](TECHNICAL.md), section 10.
+On failure, the working folder is kept as it is for diagnosis.
 
-## 6. Analysis prompt
+The archive holds the summary that the analyst reads first, `summary.md`, the game, your answers, and the raw data of the engine and of the explorer.\
+The content of each of its files is detailed in [docs/TECHNICAL.md](docs/TECHNICAL.md#10-files-produced), section 10.
 
-The data is not enough: the analyst must be told what to do with it.\
-This text lives in the template `prompt-template.txt`, which you can edit freely, without touching the script.
-
-At each collection, the script draws the prompt of the game from it: it fills in the values and keeps only the passages that apply.
-
-To write your own template, the list of the markers, the values and the conditions is in [TECHNICAL.md](TECHNICAL.md), section 12.
-
-The prompt follows what the collection really did. Without the explorer, it asks for neither frequency nor most played move.\
-With `--stockfish-moves`, it says how far the engine evaluated. With `--multipv 1`, it does not announce three moves per position.
+### Sending it to the analyst
 
 The prompt is pasted as a message, in a new conversation, with the archive as an attachment.\
 It is valid for one game: pasting it in each conversation is what guarantees that it matches the archive.
+
+The prompt follows what the collection really did. Without the explorer, it asks for neither frequency nor most played move.\
+With `--stockfish-moves`, it says how far the engine evaluated. With `--multipv 1`, it does not announce three moves per position.
 
 Not every LLM opens a zip file, and not every LLM runs code.
 
@@ -403,9 +283,38 @@ The prompt provides for both cases:
 - **The LLM runs code**: it builds the PGN with python-chess and proves its legality.
 - **The LLM does not run code**: it writes the PGN itself, says so, and lets you open the file to confirm.
 
-## 7. Choosing an LLM
+The prompt is drawn from the template `prompt-template.txt`, kept next to the script, which you can edit freely, without touching the script.\
+At each collection, the script draws the prompt of the game from it: it fills in the values and keeps only the passages that apply.\
+To write your own template, the list of the markers, the values and the conditions is in [docs/TECHNICAL.md](docs/TECHNICAL.md#12-prompt-template), section 12.
 
-**Go for Claude**: this is the advice of this repository, and it comes from the trials described below. The other LLMs were only tried on their free plans: see [Trials run](#trials-run).
+## 3. Common options
+
+A few options are enough for most uses:
+
+| Option | Effect |
+|---|---|
+| `--no-explorer` | no opening statistics: neither token nor catalog is needed |
+| `--no-questions` | no question: the LLM will ask them itself |
+| `--prompt-only` | a short prompt to be pasted alone, without an archive, for a free account or an LLM that does not open zip files (section 4) |
+| `--keep-folder` | keeps the unzipped folder next to the archive |
+| `--output-dir DIR` | writes the files into the directory DIR |
+| `--database masters` | queries the masters database instead of the one of all the Lichess players |
+| `--depth D` | search depth of Stockfish, 18 by default: the greater it is, the longer the computation |
+| `--stockfish-moves N` | limits the engine to the first N moves |
+| `--usernames LIST` | your usernames, for this collection only |
+| `--settings NAME` | another settings file, by its name, in the folder of the application: one profile per player |
+| `--no-settings` | neither reads nor writes any settings file, for this run only |
+
+```bash
+./ianalyze.py my-game.pgn --no-explorer --output-dir ~/analyses
+```
+
+All the options are in [EXAMPLES.md](EXAMPLES.md), each one with its command and what the terminal shows.\
+`./ianalyze.py --help` gives a summary of them.
+
+## 4. Choosing an LLM
+
+**Go for Claude**: this is the advice of this repository, and it comes from the trials described in [docs/TRIALS.md](docs/TRIALS.md). The other LLMs were only tried on their free plans.
 
 With the zip, Claude is the only one that returned a PGN usable as it is.\
 With the short prompt, with a subscription as with a free account, it returned the cleanest PGNs, and its explanations are the ones that best stood the check on the board.
@@ -420,9 +329,7 @@ Two routes lead to an analysis, and it is the first choice on both:
 
 **With a free account, take `--prompt-only` and Claude. Choose the model `Sonnet 5.5` with the effort `Max`.**\
 This is the combination that gave the best result without paying anything.\
-The zip also goes through on a free plan, if you can wait for the quota to come back: see [the series of 27 November 2026](#27-november-2026-the-two-routes-with-the-prompts-as-released).
-
-The first two series of trials were run with version 4.0, whose prompts were in French. The English prompts of version 5.0.0 went through a trial of their own, then a third series, on 25 and 26 November 2026, and a fourth with the prompts as released, on 27 November 2026, which point the same way.
+The zip also goes through on a free plan, if you can wait for the quota to come back: see [the series of 27 November 2026](docs/TRIALS.md#27-november-2026-the-two-routes-with-the-prompts-as-released).
 
 ### With the zip and the prompt
 
@@ -458,13 +365,12 @@ What you should know about this mode:
 - The prompt weighs about 4 KB for `game-lichess-org.pgn`, 39 plies, and 11 KB for `commented-game.pgn`, 49 plies: each weak move adds its best move and its continuation
 - It carries neither the summary nor the `.json` files: the LLM only has the game, the table of the engine and, with the explorer, a sentence on the opening
 - No archive is written, the prompt is the only file produced
-- The fourteen answers tried, over three series, quote no evaluation that the table does not hold. Thirteen returned the whole game, every move commented; on 27 November 2026, Gemini changed a move and commented on 39 plies out of 49
 
-To check the returned PGN with `verify-analysis.py --prompt-only` (section 8), add `--keep-folder` to the collection: the checker needs the evaluations that were used for the prompt.
+To check the returned PGN with `verify-analysis.py --prompt-only` (section 5), add `--keep-folder` to the collection: the checker needs the evaluations that were used for the prompt.
 
 ### Trust the figures, check the stories
 
-This is what the four series of trials have in common.
+This is what all the trials have in common.
 
 **The figures hold.** No LLM invented an evaluation, with the zip as with the short prompt.\
 What comes from the table of the engine is copied faithfully: the losses, the best moves, their continuations.
@@ -475,141 +381,7 @@ What the LLM deduces from the position on its own can be wrong: a sacrifice that
 When a comment surprises you, set up the pieces and look.\
 The script `verify-analysis.py` checks the form of the PGN and the figures quoted, it does not judge what is told.
 
-### Trials run
-
-Four series and a trial on its own, a single trial per LLM, per plan and per route, one game each time.
-
-**This is not a benchmark.**\
-A single trial says nothing about the consistency of a model. But the series point the same way, and the advice of this section rests on nothing else than what was seen.
-
-**The other LLMs were only tried on their free plans.**\
-ChatGPT, Gemini and Copilot were never tried on a paid plan. Their paid models may well be more precise, as Claude was on its subscription on 21 and 27 November 2026, but these trials cannot say so.
-
-#### 20 November 2026, with the zip and the prompt
-
-A game of 49 plies, the same zip and the same prompt for all, the one of version 4.0.0, before the instructions and the option `--prompt-seul`, now `--prompt-only`, that these trials led to add.
-
-| LLM, as it names itself | Plan | PGN returned | Report of `verify-analysis.py` |
-|---|---|---|---|
-| Claude Opus 5.5 (Anthropic) | subscription | yes, built with python-chess | no failure: 24 mistakes and blunders commented on out of 24, 27 playable variations |
-| GPT-6 (OpenAI) | free | yes, written by hand, python-chess could not be installed | 3 failures: a blank line stops the reading, the 25 variations are inside the comments, a NAG contradicts the engine |
-| M365 Copilot (Microsoft) | free | yes, the game without any comment | 3 failures: it says it found only three files in the archive, and comments on nothing |
-| Gemini (Google), version not noted | free | no | it announces a file that does not exist, then loses the thread of the conversation |
-
-What this series shows:
-
-- **The data holds everywhere.** None of the four invented an evaluation, and all give the same three main errors, with the right losses.
-- **Building the PGN is what separates them.** Only the LLM that built its file with python-chess returned a PGN usable as it is.
-- **The substance can be good under a faulty form.** The 25 variations written by hand by GPT-6 were all legal and drawn from the lines of the engine.
-- **The game was recorded as won in a lost position.** Two LLMs out of four told the story of a deserved win, hence the line added to the summary (see [TECHNICAL.md](TECHNICAL.md), section 10).
-
-The free plan of Claude also announces file creation and code execution, on other models than the one of this trial, according to [its pricing page](https://claude.com/pricing), read on 20 November 2026 and again on 25 November 2026.
-
-It was tried with the zip file on 27 November 2026, below.
-
-#### 21 November 2026, with `--prompt-seul`, now `--prompt-only`
-
-A game of 39 plies, won by the player, and the same short prompt pasted alone into five conversations. It is `example-games/game-lichess-org.pgn`.\
-The table of the engine marks ten weak moves in it, two of them by the player.
-
-The five answers share the essentials:
-
-- The main line is copied without a single move changed
-- The 39 plies are commented on, all the mistakes and blunders of the table included
-- 126 evaluations are quoted in the PGNs, all taken from the table
-
-What separates them:
-
-| LLM | Plan | Form of the PGN | On the board |
-|---|---|---|---|
-| Claude Sonnet 5.5 (Anthropic) | subscription | compliant: code block, tags intact, 10 playable continuations out of 10 | no error found |
-| Claude Sonnet 5.5 (Anthropic), effort Max | free | compliant, likewise | one error: an escape square announced for the king while it is attacked |
-| ChatGPT (OpenAI), version not noted | free | the continuations are written inside the comments, none is playable. Ten suffixes `?!` or `??` added to the moves, five HTML tags in the comments | a sacrifice that is not one, the wrong knight named on a capture, a mate in one announced for a mate in two |
-| Gemini (Google), version not noted | free | 7 playable continuations out of 10. It speaks of the player in the third person, then writes twice "erreur de ma part", my mistake, in their place | the same false sacrifice, the color of the bishops swapped on three moves, a file announced as open that is not |
-| Copilot (Microsoft), version not noted | free | no code block: the Site tag is returned as an HTML link. 10 playable continuations out of 10 | the same false sacrifice, and a hanging knight that nothing points out |
-
-The errors of the last column were checked one by one on the position, with python-chess. **The list is not exhaustive.**
-
-What this series shows:
-
-- **The short prompt does the job.** Without an attachment and without code execution, the five answers are readable and their figures are right. This is better than what the whole chain had given the day before with the three other LLMs.
-- **Claude is ahead on both plans.** Its two PGNs are compliant, and its explanations are the ones that best resist the check: no error found on one side, a single one on the other. The free account almost matches the subscription, twice as long: 1968 words of comments against 943.
-- **The same trap caught three LLMs out of four.** A bishop takes a pawn on h7 with check, defended by its queen: the king cannot take it back. ChatGPT, Gemini and Copilot speak of a sacrifice. Claude writes, in the trial of the free account, "ici il n'y a aucun sacrifice, le pion tombe gratuitement": there is no sacrifice here, the pawn falls for free. The trials were run in French.
-- **Asking for three errors makes one up.** The player had made only two. ChatGPT, Gemini and Copilot presented a third one, Claude answered both times that there were only two. Both prompts now give the real number of weak moves of the player (see [TECHNICAL.md](TECHNICAL.md), section 12).
-- **The checker would have seen almost nothing.** In `--prompt-only` mode, it checks the tags, the main line and the figures quoted. The continuations written in the text, the HTML tags and the false stories go through: rereading them is up to you.
-
-#### 25 November 2026, with the zip and the English prompt
-
-A single trial, the first of the English prompts of version 5.0.0, before their release.\
-A correspondence game of 39 plies, won by the player, sent with its zip to GPT-6 (OpenAI), on the free plan.
-
-- It announced case B, python-chess could not be installed, and wrote its PGN by hand. The figures of its answer are all right.
-- `verify-analysis.py` ends on 2 failures: a variation placed after the move that it should replace, `( 19... Kg8 20. Qh7# )` after 19.Qh5+, is illegal there, and python-chess stops reading the main line at ply 37 out of 39. Without this variation, the PGN passes with no failure.
-- Its three costliest errors were those of the opponent, and `$7`, forced move, sat on the check instead of the reply.
-- It put `$6` on seven moves that the engine does not classify.
-
-These four points led to the last changes of version 5.0.0: the prompts say where a variation starts, where `$7` goes and whose errors to give, and the checker lists such NAGs as other opinions.
-
-The prompts changed once more on 27 November 2026, after these trials: the notes of the player are kept, the commands of a site left out, the game of the short prompt stands in a code block, and the review keeps to the agreed scope.\
-These last instructions went through the series of 27 November 2026, below.
-
-#### 26 November 2026, the two routes, with the English prompts
-
-A correspondence game of 54 plies, lost by the player, mated on move 27, and the English prompts of version 5.0.0, before their release.\
-The usage limits of the free plans did not allow both routes: ChatGPT, Gemini and Copilot only received the short prompt, and Claude, on the subscription, both.
-
-The game was collected once per route, two hours apart. The evaluations of Stockfish vary from one run to another: the table of the short prompt marks 12 mistakes and blunders, 7 of them by the player, and the archive 11.
-
-| LLM | Plan, route | Report of `verify-analysis.py` | On the board |
-|---|---|---|---|
-| Claude Sonnet 5.5 (Anthropic), effort Max | subscription, zip | no failure, no warning: the 11 mistakes and blunders commented on, 17 playable variations, the 59 evaluations quoted all found | no error found |
-| Claude Sonnet 5.5 (Anthropic), effort Max | subscription, `--prompt-only` | no failure: code block, tags intact, the 54 plies commented on, 19 playable variations, the 91 evaluations quoted all found | no error found |
-| Gemini (Google), version not noted | free, `--prompt-only` | no failure: code block, tags intact, the 54 plies commented on, 18 playable variations, the 56 evaluations quoted all found | the colors of the bishops confused twice, a fianchetto prepared with no bishop left, the queenside said developed with the c1 bishop still at home |
-| ChatGPT (OpenAI), version not noted | free, `--prompt-only` | 1 failure: the 19 variations are written inside the comments, none is playable. Twelve suffixes `?` or `??` added to the moves | a piece down announced as level material, a check that is not one, a recapture said to be forced while the other rook could take |
-| Copilot (Microsoft), version not noted | free, `--prompt-only` | 1 failure: the Site tag returned as an HTML link. No code block, 18 playable variations | a piece down announced twice as level material, three moves said to be forced while others were legal |
-
-The errors of the last column were checked one by one on the position, with python-chess. **The list is not exhaustive.**
-
-What this series shows:
-
-- **The English prompts do the job.** Three of the five answers quote evaluations, 206 in all, every one found in the data of the engine; ChatGPT and Copilot quote none. Each answer comments on every mistake and blunder of its table.
-- **The errors of the player, and only theirs.** The five reviews give three errors of the player, none of the opponent. With the zip, Claude even set aside the two costliest by the figures, 21.Qb1 and 22.Kh2, played in a position already lost, and said why.
-- **Where a variation starts is understood.** The 91 variations of the five answers, those of ChatGPT included, are legal and drawn from the lines of the engine, and none repeats the moves played.
-- **The free plans keep their faults of 21 November.** ChatGPT still writes the variations inside the comments and adds suffixes to the moves, Copilot still gives no code block and turns the Site tag into a link. Gemini passes the checker, not the check on the board.
-- **Claude checks itself.** With the short prompt, it says it replayed its variations with python-chess and checked its explanations with Stockfish, which the prompt does not ask for. It comments on each move there, in 2178 words; with the zip, on 18 moves, as the full prompt asks, in 1062 words.
-- **The checker does not judge the stories.** Gemini passes it with no failure, and four errors on the board.
-
-#### 27 November 2026, the two routes, with the prompts as released
-
-The game is [`example-games/player-notes.pgn`](example-games/player-notes.pgn), 49 plies, scored 1-0 in a position lost for the player: `commented-game.pgn` without the analysis of Lichess, its clocks kept, and three notes of the player added.\
-They test the last instructions: one quotes a percentage, "I was 80% sure", one calls 9.Nb5 the best move of the game, a blunder for the engine, and one is in French, "Ici je pensais gagner une pièce", here I thought I was winning a piece.
-
-The game was collected once per route: the table of the zip marks 22 mistakes and blunders, that of the short prompt 23.\
-The zip went to Claude on both plans, the short prompt to all five.
-
-| LLM | Plan, route | Report of `verify-analysis.py` | Notes and clocks | On the board |
-|---|---|---|---|---|
-| Claude Sonnet 5.5 (Anthropic), effort Max | subscription, zip | no failure, no warning: the 22 mistakes and blunders commented on, 23 playable variations, the 62 evaluations quoted all found | the three notes kept, the percentage written "80 percent", the clocks left out; at 9.Nb5, "Stockfish disagrees" | one error, in the final summary: 9.axb4 called "a free bishop", while the a6 knight defends it |
-| Claude Sonnet 5.5 (Anthropic), effort High | free, zip | no failure, no warning: the 22 mistakes and blunders commented on, 23 playable variations, the 33 evaluations quoted all found. The quota ran out before the final summary | the three notes kept, the percentage written "80 percent", the clocks left out; the note of 9.Nb5 refuted on the board, the French note quoted, then translated | 9.axb4 "a clean piece", while it wins a bishop for a pawn; after 11.Ne4, "a piece down for the rest of the game", while material is level again after 23...Bxb8 |
-| Claude Sonnet 5.5 (Anthropic), effort Max | subscription, `--prompt-only` | no failure: the 49 plies commented on, 31 playable variations, the 113 evaluations quoted all found | the three notes kept as written, the clocks left out; "Stockfish disagrees with your note" at 9.Nb5 and 11.Ne4 | no error found |
-| Claude Sonnet 5.5 (Anthropic), effort Max | free, `--prompt-only` | no failure: the 49 plies commented on, 31 playable variations, the 54 evaluations quoted all found | the three notes kept as written, the clocks left out; at 9.Nb5, "the table has a different view" | 3.g4 "before a single piece is developed", while Nf3 is out; 4.Nfd2 "leaves your h-pawn loose", while Rh1 defends it; the bishop of 8...Bb4 "free", twice |
-| ChatGPT (OpenAI), version not noted | free, `--prompt-only` | no failure: the 49 plies commented on, 28 playable variations | none of the three notes kept as written: two paraphrased, the one of 9.Nb5 dropped; the clocks left out | 12...e3 "a passed pawn", while the e2 pawn stands in front of it; 13.O-O "connecting your rooks", with Bc1 and Qd1 between them; 16...gxf4 "opening the f-file", while it opens the g-file; 23.Nxb8 "a rook won", while it wins the exchange; level material called an advantage for Black |
-| Gemini (Google), version not noted | free, `--prompt-only` | 1 failure: 22...Qd7 changed into 22...Qe7. 39 plies commented on, the 20 variations written inside the comments | none of the three notes kept, the clocks left out | 8...Bb4 "a pin", while no piece is pinned; 24...Nxg2 "recaptures", after a move that took nothing; level material at the end called a large advantage for Black |
-| Copilot (Microsoft), version not noted | free, `--prompt-only` | 5 failures: the copy of its answer holds the whole PGN on one line, tags included. Put back on separate lines: no failure, the 49 plies commented on, 15 playable variations | the three notes kept, with their clocks | 4.Nfd2 "attacks the bishop", which nothing attacks; 12...e3 "a passed pawn"; 21.Nxa7 attacking the rooks, which nothing attacks |
-
-The errors of the last column were checked one by one on the position, with python-chess. **The list is not exhaustive.**
-
-What this series shows:
-
-- **The notes of the player get through Claude and Copilot.** Claude keeps them in its four answers, ahead of its own comment, and contradicts the note of 9.Nb5, three times in the name of the engine, once on the board. With the zip, it writes the percentage in words and translates the French note after quoting it. Copilot keeps them too, ChatGPT paraphrases two and drops the third, Gemini keeps none. The checker counts them, "0 kept out of 3" for ChatGPT, without a failure.
-- **The clocks are left out, except by Copilot**, which keeps the three that stood with the notes.
-- **A move changed, for the first time in these trials.** Gemini returns 22...Qe7 instead of 22...Qd7. The game stays legal to the end: only the checker sees it.
-- **The zip goes through on a free plan.** Claude returned a complete PGN, with its overview, its 22 mistakes and blunders commented on and its 23 variations. The quota of tokens ran out before the final summary: it is full again after about six hours, according to the author, so a player in no hurry can get the whole analysis without paying.
-- **Claude is ahead again.** Its four answers hold their figures, and with the zip on the subscription its clocks, database figures, material and FEN are all right. With the short prompt on the subscription, no error is found on the board. The other three call the bishop of 8...Bb4 free at some point, while the a6 knight defends it: taking it costs a pawn.
-- **ChatGPT changed its form, not its stories.** For the first time, its variations stand outside the comments, all playable, and the checker finds no failure. Its stories keep their errors, two of them shared: the e3 pawn called passed, with Copilot, and level material called an advantage for Black, with Gemini.
-- **The checker does not judge the stories.** ChatGPT passes it with no failure, and five errors on the board in the table.
-
-## 8. Checking the returned PGN
+## 5. Checking the returned PGN
 
 `verify-analysis.py` is an additional tool, independent of the collection: it checks what the LLM returned to you.
 
@@ -642,8 +414,7 @@ For a PGN obtained with the short prompt of `--prompt-only`, add the same option
 ./verify-analysis.py analysis-my-game-20261125-142017 llm-annotated.pgn --prompt-only
 ```
 
-The short prompt asks for less than the full prompt. With this option, the checks that it does not ask for are skipped: lines of 79 characters, overview before the first move, NAGs, `%`, semicolon, em dash, suffix notation, castling written with zeros, alphabetical order of the other tags, Annotator and PlyCount tags, length of the variations, number of FEN. What remains: the reading, a single game in the file, the main line, the braces, the words outside the braces, the tags copied, the end marker, the mistakes and blunders commented on, the evaluations quoted and the variations.\
-The moves that the original game writes in another notation, `e2-e4` or `bxa8Q`, are accepted as they are: the short prompt asks to copy them without changing a single one.
+The short prompt asks for less than the full prompt: with this option, the checks that it does not ask for are skipped.
 
 If you agreed on a scope with the LLM, the first 20 moves for example, the script reads it in your answer to the startup question and expects no comment beyond it.\
 When the scope was set in the conversation, give it:
@@ -657,23 +428,7 @@ A folder that holds several collections is refused: give the one of the collecti
 
 It has no `--venv` option. If your environment is elsewhere, run it with the Python of that environment: `~/venv/chess/bin/python3 verify-analysis.py ...`
 
-### What is checked
-
-| Check | Flaws found |
-|---|---|
-| Reading | file outside UTF-8, illegal move in the game or in a variation, blank line in the body of the game, second game in the file |
-| Main line | different from the original game |
-| Format | line of more than 79 characters, opening or closing brace in a comment, word outside the braces, move written with a `P`, castling written with zeros, `%`, em dash, suffix notation, tags missing or out of order, end marker |
-| Commented moves | mistake or blunder of Stockfish left without a comment within the agreed scope, position NAG contrary to the evaluation of the engine; for information, the quality NAGs of another opinion than the engine. The notes that the original game already carried, which both prompts ask to keep, are set aside first: only the text of the LLM is judged |
-| Evaluations | figure or mate quoted that exists nowhere in the data of the engine; a `#7` without a sign, which may be a rank, is only a warning |
-| Variations | variation written inside a comment, hence not playable, illegal or too long variation |
-| Conversation | FEN invalid or foreign to the game, em dash |
-
-Three of these flaws come from real PGNs of LLMs and deserve an explanation:
-
-- **The blank line in the body of the game.** python-chess sees the end of the game there and does not read what follows. The script finds it wherever it is, even if it only hides a variation or the end marker, then goes on with its checks on the file once the line is removed. Inside a comment, python-chess reads on up to the closing brace: the report says so, and still counts the line as a fault, the prompt forbidding it and another reader stopping there.
-- **The words outside the braces.** python-chess skips them without a word: free text written between two moves is lost, and a move written `Pg2xf3`, or a castling written `0-0`, is read all the same, which hides the flaw. The script names each of these words, line by line.
-- **The variation written between braces.** It is only text, SCID does not replay it. The script replays it itself to say whether it is legal and whether it comes from a line of the engine.
+What it checks, and the rules of each check, are in [docs/TECHNICAL.md](docs/TECHNICAL.md#13-the-checker-in-detail), section 13.
 
 ### Reading the report
 
@@ -687,45 +442,23 @@ Three of these flaws come from real PGNs of LLMs and deserve an explanation:
 Exit code: 0 without `FAIL`, 1 with at least one `FAIL`, 2 if a file cannot be read or if the archive is not an IAnalyze one.\
 With the code 2, no check took place.
 
-### What the script does not do
+### What it does not judge
 
 It does not judge the quality of the commentary. A wrong but well-formed explanation goes through: an LLM can put a queen on the wrong square in a sentence without any check seeing it.\
 This reading stays yours.
 
-Limits to know:
+The limits of its checks are in [docs/TECHNICAL.md](docs/TECHNICAL.md#13-the-checker-in-detail), section 13.
 
-- An evaluation rounded to one decimal is accepted: "+0.35" quoted as "+0.4" or "+0.3" does not count as invented, nor "+0.350", whose third decimal is a zero
-- A number written without a sign, "7.77", is not taken for an evaluation: the script would confuse it with a duration or a rating. An invented figure written this way thus goes through
-- The script finds a figure that exists nowhere, not a real figure given to the wrong move
-- A difference computed by the LLM, "+1.77" between two evaluations, exists nowhere either: it is reported as invented
-- Only the position NAGs that give a side better, `$14` to `$21`, are compared with the engine: `$10`, an equal position, put on a won position, goes through
-- The scope read in your answer is its first number: "moves 15 to 30" counts as the first 15 moves. Give `--scope` when it does not fit
+## 6. Going further
 
-## 9. Sources and links
+- [EXAMPLES.md](EXAMPLES.md): the quick reference, every command, every option, and what the terminal shows
+- [docs/TECHNICAL.md](docs/TECHNICAL.md): how the script works, its use from another program, the detail of the files produced, and the guide to take over the project
+- [docs/TESTS.md](docs/TESTS.md): the test suite, test by test
+- [docs/TRIALS.md](docs/TRIALS.md): the trials of the LLMs, on which the advice of section 4 rests
+- [CHANGELOG.md](CHANGELOG.md): the history of the versions
 
-What the script queries:
-
-- Personal access token: <https://lichess.org/account/oauth/token>, once logged in to Lichess
-- Explorer, database of all players: `https://explorer.lichess.org/lichess`
-- Explorer, masters database: `https://explorer.lichess.org/masters`
-- Catalog of openings: [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings), files `a.tsv` to `e.tsv`. They are the ones that the server of the explorer loads too.
-
-What it relies on:
-
-- [python-chess](https://python-chess.readthedocs.io/en/latest/), the library that reads the PGN and drives the engine
-- [Stockfish](https://stockfishchess.org/), the engine, and [its UCI options](https://official-stockfish.github.io/docs/stockfish-wiki/UCI-Protocol-and-Stockfish-Commands.html), among them Threads, Hash and MultiPV
-- [PGN specification](https://www.saremba.de/chessgml/standards/pgn/pgn-complete.htm), Steven J. Edwards, 1994
-
-Where the time controls come from:
-
-- Categories of real time: [Speed.scala](https://raw.githubusercontent.com/lichess-org/scalachess/master/core/src/main/scala/Speed.scala), in [scalachess](https://github.com/lichess-org/scalachess), the rules library of Lichess
-- Correspondence, ICCF: [ICCF Rules, in force since 1 January 2026](https://webfiles.iccf.com/rules/2026/2026%20ICCF%20Rules%2C%20260311.pdf), section 2.4 (PDF)
-- Correspondence, clock: [rules of chess-mail.com](https://www.chess-mail.com/index.php?page=reg)
-
-Conventions of the repository:
-
-- [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) for `CHANGELOG.md`
-- [Semantic Versioning](https://semver.org/) for the version numbers
+Each document also exists in French, under the same name ending in `.fr.md`, the CHANGELOG aside.\
+The sources that the script queries and relies on are listed in [docs/TECHNICAL.md](docs/TECHNICAL.md#14-sources-and-links), section 14.
 
 ---
 

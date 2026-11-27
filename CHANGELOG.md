@@ -7,8 +7,40 @@ and the project applies [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `docs/TRIALS.md` and `docs/TRIALS.fr.md`: the trials of the LLMs,
+  taken out of section 7 of the README, with how they were run and how
+  each answer is judged.
+- `docs/TECHNICAL.md` and `docs/TECHNICAL.fr.md`, section 15, "Taking
+  over the project": the layout of `ianalyze.py`, the tables to know,
+  how to add an option, the functions of the checker, the helpers of the
+  test suite, the conventions, the checks before a commit with the
+  remarks known and accepted, the branches and the publication of a
+  version.
+- `docs/TECHNICAL.md` and `docs/TECHNICAL.fr.md`, section 14, the
+  sources and links, taken from section 9 of the README.
+- `docs/TESTS.md` and `docs/TESTS.fr.md`, section 1, the last runs of
+  the suite that passed, offline and with `--network`: their date and
+  time, in UTC, and their counts, updated with each change.
+
 ### Changed
 
+- `TECHNICAL.md`, `TESTS.md` and their French versions move to `docs/`,
+  next to `TRIALS.md`. The README, `EXAMPLES.md` and the CHANGELOG stay
+  at the root.
+- The README, in both languages, is written for the player: an
+  installation block, a detailed table of contents, and six sections,
+  installation, analyzing a game, common options, choosing an LLM,
+  checking the returned PGN, going further. How the script works goes to
+  `docs/TECHNICAL.md`: where the script keeps what it creates (section
+  2), the limits of an answer (section 5), the content of the archive
+  (section 10), the table of the checks of `verify-analysis.py`, three
+  flaws seen in real PGNs and what it does not judge (section 13).
+- The links follow the move, in `EXAMPLES.md` and in the documents of
+  `docs/`, and so do the references to the sections of the README. The
+  header of `tests/test-app.sh` and the notes of the two prompt
+  templates name `docs/TESTS.md` and `docs/TECHNICAL.md`.
 - The test suite moves to `tests/`: `tests/test-app.sh`, its test game
   `tests/test.pgn`, the PGNs that the script refuses in `tests/refused`
   and the annotated PGNs written for `EXAMPLES.md` in `tests/llm`.
@@ -19,12 +51,18 @@ and the project applies [Semantic Versioning](https://semver.org/).
   writes its report in `tests/`, takes a relative `VENV`, `STOCKFISH` or
   `TOKEN` from the directory it is started from, as any command does,
   and its messages give the command as it was typed. Its header no
-  longer gives durations, which `TESTS.md` gives.
+  longer gives durations.
 - T83 also collects `example-games/player-notes.pgn`.
 - `EXAMPLES.md` and `EXAMPLES.fr.md` say where to replay each example:
   from `example-games` for the games and the checker, from
   `tests/refused` for the refused PGNs. The outputs of the page are
   unchanged.
+
+### Removed
+
+- The durations of the runs of the suite, in `docs/TESTS.md` and
+  `docs/TESTS.fr.md`: they depend on the machine and on the network.
+  The table of the last runs gives their date and their result.
 
 ## [5.0.0] - 2026-11-27
 

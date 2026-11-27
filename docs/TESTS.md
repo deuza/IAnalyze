@@ -6,7 +6,7 @@ All the tests are run by a single script, `tests/test-app.sh`, under Debian as u
 
 This document says how to run it, then what each test checks. The detail, command by command, is in the script, which is authoritative.
 
-The [README](README.md) explains the installation and everyday use, [EXAMPLES.md](EXAMPLES.md) the commands and their outputs, [TECHNICAL.md](TECHNICAL.md) how the script works.
+The [README](../README.md) explains the installation and everyday use, [EXAMPLES.md](../EXAMPLES.md) the commands and their outputs, [TECHNICAL.md](TECHNICAL.md) how the script works.
 
 ## Contents
 
@@ -39,11 +39,11 @@ From the repository, after the installation described in the README:
 
 The script finds the repository from its own path: it runs as well from `tests/`, as `./test-app.sh`, and from anywhere else.
 
-| Command | What it runs | Duration |
-|---|---|---|
-| `./tests/test-app.sh` | the offline tests, without a token | about 5 minutes in the container of the table below, three fifths of its run with `--network` |
-| `./tests/test-app.sh --network` | the same, then those that need the network and your Lichess token, except T24 | from 7 minutes on an Apple M1 to 25 on a Raspberry Pi 4: see the table below |
-| `./tests/test-app.sh --network GAME` | likewise, with T24: the download of the game you name | a few more seconds |
+| Command | What it runs |
+|---|---|
+| `./tests/test-app.sh` | the offline tests, without a token |
+| `./tests/test-app.sh --network` | the same, then those that need the network and your Lichess token, except T24 |
+| `./tests/test-app.sh --network GAME` | likewise, with T24: the download of the game you name |
 
 **The game of T24 is yours to choose.** The repository names no real game: T24 downloads the one you give after `--network`, by its identifier or by its address. Any Lichess game will do, yours or another one. Without it, T24 is counted as skipped, and the script reminds you of the command to run when it starts. The identifier given is not written in the report.
 
@@ -60,14 +60,23 @@ The number of checks depends on the version and on the mode chosen. Under macOS,
 
 **Machines tested.** For version 5.0.0, the whole suite, `--network` included, was run on these machines on 27 November 2026, without a failure:
 
-| System | Processor | Python | python-chess | Stockfish | Passed | Skipped | Duration |
-|---|---|---|---|---|---|---|---|
-| Debian 13 (trixie) | x86_64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 | 15 min |
-| Debian 13 (trixie), on a Raspberry Pi 4 Model B | aarch64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 | 25 min |
-| macOS 27.3, with Homebrew | arm64, Apple M1 | 3.15.2 | 1.11.2 | 19 | 853 | 1 (T44) | 7 min |
-| Ubuntu 24.04.5 LTS, in a container | x86_64 | 3.13.18 | 1.11.2 | 16 | 855 | 0 | 8 min |
+| System | Processor | Python | python-chess | Stockfish | Passed | Skipped |
+|---|---|---|---|---|---|---|
+| Debian 13 (trixie) | x86_64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 |
+| Debian 13 (trixie), on a Raspberry Pi 4 Model B | aarch64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 |
+| macOS 27.3, with Homebrew | arm64, Apple M1 | 3.15.2 | 1.11.2 | 19 | 853 | 1 (T44) |
+| Ubuntu 24.04.5 LTS, in a container | x86_64 | 3.13.18 | 1.11.2 | 16 | 855 | 0 |
 
-The duration is that of the whole run with `--network`, from the start written in the report to the time of the file. The shell was dash under Linux, the `/bin/sh` of the system under macOS. In the container, the offline tests also passed under posh.
+The shell was dash under Linux, the `/bin/sh` of the system under macOS. In the container, the offline tests also passed under posh.
+
+**Last runs.** The last runs of the suite that passed, on the content of this commit, in the container of the table above, under dash:
+
+| Run | Passed on (UTC) | Passed | Failed | Skipped |
+|---|---|---|---|---|
+| offline | 27 November 2026, 20:14 | 768 | 0 | 0 |
+| `--network`, with T24 | 27 November 2026, 20:22 | 856 | 0 | 0 |
+
+The time is that of the end of the run, the time of the file of the report. This table follows each change of the repository, the table of the machines each version.
 
 ## 2. What the tests do not touch
 

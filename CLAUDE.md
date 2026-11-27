@@ -16,12 +16,14 @@ son propre chemin et écrit son rapport dans tests/ ; test.pgn, sa
 partie d'essai ; refused/ et llm/, les PGN refusés et les PGN annotés
 qu'EXAMPLES cite et que T83 contrôle), example-games/ (les parties
 analysables des exemples d'EXAMPLES.md),
-README.md (installation et usage courant), README.fr.md (sa version
-française), EXAMPLES.md (commandes, options et sorties, sur le plan
-d'une page de manuel), EXAMPLES.fr.md (sa version française),
-TECHNICAL.md (fonctionnement), TECHNICAL.fr.md (sa version
-française), TESTS.md (lancement des tests et tableau de tous les
-tests), TESTS.fr.md (sa version française), CHANGELOG.md.
+README.md (installation et usage courant, pour le joueur),
+README.fr.md (sa version française), EXAMPLES.md (commandes,
+options et sorties, sur le plan d'une page de manuel),
+EXAMPLES.fr.md (sa version française), docs/ (pour qui reprend le
+projet : TECHNICAL.md, le fonctionnement, et en section 15 le guide
+du développeur ; TESTS.md, le lancement des tests et le tableau de
+tous les tests ; TRIALS.md, les essais des LLM ; chacun avec sa
+version française en .fr.md), CHANGELOG.md.
 
 ## Plateformes
 
@@ -38,8 +40,8 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
 - Le comportement doit rester identique sur les deux.
 - Machines d'essai de la suite, pour la 5.0.0 : Debian 13 sur PC et
   sur Raspberry Pi 4 (aarch64), macOS 27.3 sur M1, et le conteneur
-  Ubuntu de Claude. TESTS.md en tient le tableau, sans nom de machine
-  ni chemin personnel.
+  Ubuntu de Claude. docs/TESTS.md en tient le tableau, sans nom de
+  machine ni chemin personnel.
 - Python : modules hors apt installés dans un venv dédié, jamais dans
   l'environnement système. Signale tout nouveau module requis.
 
@@ -76,8 +78,8 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
 - Une publication suit toujours le même rite : sur dev, un commit
   "Version X.Y.Z" (VERSION, titre de la version dans le CHANGELOG et
   ses références de liens) ; la suite --network relancée sur chaque
-  machine d'essai, et le tableau des machines de TESTS.md mis à jour,
-  dans les deux langues ; sur main, la fusion de dev, intitulée
+  machine d'essai, et le tableau des machines de docs/TESTS.md mis à
+  jour, dans les deux langues ; sur main, la fusion de dev, intitulée
   "IAnalyze X.Y.Z", puis "Fusion de la branche dev." et un résumé ;
   une étiquette vX.Y.Z annotée et signée (git tag -s) ; une release
   GitHub du même nom. Claude en rédige les messages et les notes.
@@ -91,9 +93,10 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
   questions, aide), options, réglages, archive (noms et contenu),
   modèles de prompt, vérificateur, commentaires, docstrings,
   documentation et noms des fichiers du dépôt.
-- Documentation bilingue : README, EXAMPLES, TECHNICAL et TESTS ont
-  chacun leur version française, `<nom>.fr.md`, au vouvoiement, sur le
-  même plan, tenue à jour avec la version anglaise dans le même lot.
+- Documentation bilingue : README, EXAMPLES, et dans docs/ TECHNICAL,
+  TESTS et TRIALS ont chacun leur version française, `<nom>.fr.md`,
+  au vouvoiement, sur le même plan, tenue à jour avec la version
+  anglaise dans le même lot.
   Commandes et sorties y sont les mêmes, en anglais. Le CHANGELOG
   reste en anglais seul.
 - Restent en français : les noms de fonctions, de variables et de
@@ -222,7 +225,7 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
   dire Black ([w/b]) depuis le lot 3b, signalé dans le CHANGELOG ;
   verify-analysis.py ne lira plus les archives 4.x ; le prompt traduit
   ne se valide qu'avec un vrai LLM, par l'utilisateur : fait le
-  27 novembre 2026, sur les prompts publiés (README, section 7).
+  27 novembre 2026, sur les prompts publiés (docs/TRIALS.md).
 - Glossaire, à compléter au fil des lots : partie = game ; coup = move ;
   demi-coup = ply ; trait = side to move ; Blancs, Noirs = White,
   Black ; camp = side ; cadence = time control ; correspondance =
@@ -267,10 +270,16 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
 - Chaque ajout de comportement s'accompagne d'un test dans test-app.sh
   et d'une mise à jour de la documentation, dans ses deux langues :
   EXAMPLES.md pour une option ou un message, avec sa sortie réelle,
-  README.md si l'usage courant change, TECHNICAL.md pour le
-  fonctionnement, TESTS.md pour les tests. TESTS.md porte une ligne
-  par test : un test ajouté y reçoit sa ligne, un test modifié y voit
-  la sienne mise à jour.
+  README.md si l'usage courant change, docs/TECHNICAL.md pour le
+  fonctionnement, docs/TESTS.md pour les tests. docs/TESTS.md porte
+  une ligne par test : un test ajouté y reçoit sa ligne, un test
+  modifié y voit la sienne mise à jour.
+- Le README s'adresse au joueur : installation, usage, choix du LLM,
+  vérification du PGN rendu. Le fonctionnement va dans
+  docs/TECHNICAL.md, dont la section 15, le guide du développeur,
+  suit tout changement de l'organisation du code, des tables, des
+  outils de la suite, des remarques connues des contrôles ou du rite
+  de publication.
 
 ## Vérifications avant livraison
 
@@ -278,6 +287,17 @@ Lance ce qui est disponible : python3 -m py_compile, flake8, ruff check,
 mypy, bandit, codespell, vulture. Dis lesquels manquent et ne prétends
 jamais avoir vérifié ce que tu n'as pas lancé. Idem pour ce qui n'a pas
 pu être testé (par exemple un vrai jeton Lichess).
+
+La suite se lance à chaque lot, sur un clone où le patch est appliqué :
+hors réseau, puis avec --network, l'une après l'autre. Avec --network,
+TOKEN désigne le fichier factice et le proxy injecte le vrai jeton
+(voir Sécurité) ; T24 prend une partie publique de Lichess, dont
+l'identifiant ne s'écrit nulle part dans le dépôt. Une fois les deux
+passages réussis, le tableau "Last runs" de docs/TESTS.md, section 1,
+et celui de docs/TESTS.fr.md en reçoivent, dans le même lot, la date et
+l'heure de fin en UTC, l'heure du fichier du rapport, et les comptes.
+Aucune durée, ni là ni ailleurs : elle dépend de la machine et du
+réseau.
 
 Pièges de la suite, vus en vrai :
 
@@ -329,9 +349,10 @@ factice, et le vrai jeton n'entre jamais dans le bac à sable.
   comptent que les faits : prises, échecs, attaques, défenses,
   matériel, cases, pendules, chiffres de la base ; jamais les
   opinions, ni les mots comme "ouverte" pour "demi-ouverte".
-- README, section 7, dans les deux langues : une sous-section par
-  série, son tableau, ce qu'elle montre ; la partie dans
-  example-games, avec sa ligne dans EXAMPLES.
+- docs/TRIALS.md, dans les deux langues : une section par série, son
+  tableau, ce qu'elle montre ; le conseil du README, section 4, s'en
+  tient à ce qu'elles montrent ; la partie dans example-games, avec
+  sa ligne dans EXAMPLES.
 
 ## Façon de travailler
 
