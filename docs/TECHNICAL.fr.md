@@ -974,7 +974,7 @@ Deux pièges ont été rencontrés en vrai :
 
 ### Contrôles avant un commit
 
-Sur les scripts : `python3 -m py_compile`, `flake8`, `ruff check`, `mypy`, `bandit`, `codespell` et `vulture`. Sur la suite : `shellcheck`, `checkbashisms`, et `sh -n`, `dash -n`, `bash -n`, `posh -n`. Puis, quand le code, les modèles de prompt ou les tests changent, la suite elle-même, hors réseau sous `sh` et sous `posh`, et avec `--network` : la date et l'heure des derniers passages réussis vont dans [TESTS.fr.md](TESTS.fr.md#1-lancer-les-tests), section 1. Un changement de la seule documentation n'en a pas besoin.
+Sur les scripts : `python3 -m py_compile`, `flake8`, `ruff check`, `mypy`, `bandit`, `codespell` et `vulture`. `mypy` doit voir python-chess, rangé dans l'environnement virtuel : `mypy --python-executable local/venv/bin/python3 ianalyze.py verify-analysis.py`. Sans cette option, il signale les importations de python-chess comme introuvables. Sur la suite : `shellcheck`, `checkbashisms`, et `sh -n`, `dash -n`, `bash -n`, `posh -n`. Puis, quand le code, les modèles de prompt ou les tests changent, la suite elle-même, hors réseau sous `sh` et sous `posh`, et avec `--network` : la date et l'heure des derniers passages réussis vont dans [TESTS.fr.md](TESTS.fr.md#1-lancer-les-tests), section 1. Un changement de la seule documentation n'en a pas besoin.
 
 Certaines remarques sont connues et acceptées :
 

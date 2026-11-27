@@ -7,6 +7,8 @@ and the project applies [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [5.0.1] - 2026-11-27
+
 ### Added
 
 - `docs/TRIALS.md` and `docs/TRIALS.fr.md`: the trials of the LLMs,
@@ -1322,7 +1324,8 @@ downloaded from Lichess, the statistics of the masters database of the
 explorer and, on request with `--avec-stockfish`, the evaluations of
 the engine, all in a zip archive with `synthese.md`.
 
-[Unreleased]: https://github.com/deuza/IAnalyze/compare/v5.0.0...dev
+[Unreleased]: https://github.com/deuza/IAnalyze/compare/v5.0.1...dev
+[5.0.1]: https://github.com/deuza/IAnalyze/compare/v5.0.0...v5.0.1
 [5.0.0]: https://github.com/deuza/IAnalyze/compare/v4.0.2...v5.0.0
 [4.0.2]: https://github.com/deuza/IAnalyze/compare/v4.0.1...v4.0.2
 [4.0.1]: https://github.com/deuza/IAnalyze/compare/v4.0.0...v4.0.1

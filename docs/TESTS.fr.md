@@ -75,8 +75,8 @@ Le shell était dash sous Linux, le `/bin/sh` du système sous macOS. Dans le co
 
 | Passage | Réussi le (UTC) | Réussis | Échecs | Sautés |
 |---|---|---|---|---|
-| hors réseau | 27 novembre 2026, 20 h 14 | 768 | 0 | 0 |
-| `--network`, avec T24 | 27 novembre 2026, 20 h 22 | 856 | 0 | 0 |
+| hors réseau | 27 novembre 2026, 20 h 50 | 768 | 0 | 0 |
+| `--network`, avec T24 | 27 novembre 2026, 20 h 57 | 856 | 0 | 0 |
 
 L'heure est celle de la fin du passage, l'heure du fichier du rapport. Ce tableau suit chaque changement du code, des modèles ou des tests : un changement de la seule documentation ne relance pas la suite. Le tableau des machines suit chaque version.
 

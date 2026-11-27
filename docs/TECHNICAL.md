@@ -972,7 +972,7 @@ Two traps were met for real:
 
 ### Checks before a commit
 
-On the scripts: `python3 -m py_compile`, `flake8`, `ruff check`, `mypy`, `bandit`, `codespell` and `vulture`. On the suite: `shellcheck`, `checkbashisms`, and `sh -n`, `dash -n`, `bash -n`, `posh -n`. Then, when the code, the prompt templates or the tests change, the suite itself, offline under `sh` and under `posh`, and with `--network`: the date and the time of the last runs that passed go into [TESTS.md](TESTS.md#1-running-the-tests), section 1. A change of the documentation alone does not need it.
+On the scripts: `python3 -m py_compile`, `flake8`, `ruff check`, `mypy`, `bandit`, `codespell` and `vulture`. `mypy` must see python-chess, which lives in the virtual environment: `mypy --python-executable local/venv/bin/python3 ianalyze.py verify-analysis.py`. Without this option, it reports the imports of python-chess as missing. On the suite: `shellcheck`, `checkbashisms`, and `sh -n`, `dash -n`, `bash -n`, `posh -n`. Then, when the code, the prompt templates or the tests change, the suite itself, offline under `sh` and under `posh`, and with `--network`: the date and the time of the last runs that passed go into [TESTS.md](TESTS.md#1-running-the-tests), section 1. A change of the documentation alone does not need it.
 
 Some remarks are known and accepted:
 

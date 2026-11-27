@@ -284,9 +284,11 @@ version française en .fr.md), CHANGELOG.md.
 ## Vérifications avant livraison
 
 Lance ce qui est disponible : python3 -m py_compile, flake8, ruff check,
-mypy, bandit, codespell, vulture. Dis lesquels manquent et ne prétends
-jamais avoir vérifié ce que tu n'as pas lancé. Idem pour ce qui n'a pas
-pu être testé (par exemple un vrai jeton Lichess).
+mypy, bandit, codespell, vulture. mypy se lance avec --python-executable
+local/venv/bin/python3, sans quoi il ne voit pas python-chess. Dis
+lesquels manquent et ne prétends jamais avoir vérifié ce que tu n'as pas
+lancé. Idem pour ce qui n'a pas pu être testé (par exemple un vrai jeton
+Lichess).
 
 La suite se lance à chaque lot qui touche à ce qu'elle teste : le code
 (ianalyze.py, verify-analysis.py), les modèles de prompt, tests/ ou
