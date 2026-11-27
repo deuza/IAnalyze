@@ -27,18 +27,36 @@ and the project applies [Semantic Versioning](https://semver.org/).
 - README, section Licenses: the icon of the CC0 license, linked to the
   page of the license, and a link to `LICENSE` in the sentence on the
   license of the repository.
-- `example-games/tag-with-moves.pgn` and
-  `example-games/null-move-in-check.pgn`, for the two new error
-  messages of `EXAMPLES.md`.
-
+- `example-games/tag-with-moves.pgn`,
+  `example-games/bracket-among-moves.pgn` and
+  `example-games/null-move-in-check.pgn`, for the new error messages of
+  `EXAMPLES.md`, and `example-games/llm-faulty-words.pgn`, for the new
+  checks of `verify-analysis.py`.
 - `verify-analysis.py` checks the words of the PGN returned outside the
-  comments: free text, a move written with a `P`, a hyphen between two
-  squares, and, for the full prompt, castling written with zeros are
-  failures named with their line. python-chess skipped them, or read
-  them, without a word. The tail of a comment cut too early by a
-  closing brace stays counted in that single flaw.
-- `verify-analysis.py` reports a second game in the file returned:
-  only the first one is read and checked.
+  comments: free text, a line that starts with a bracket among the
+  moves, a move written with a `P`, a hyphen between two squares, and,
+  for the full prompt, castling written with zeros are failures named
+  with their line. python-chess skipped them, or read them, without a
+  word. The tail of a comment cut too early by a closing brace stays
+  counted in that single flaw. With `--prompt-only`, a word that the
+  original game itself writes outside standard notation, `e2-e4` or
+  `bxa8Q`, is accepted: the short prompt asks to copy the moves
+  without changing a single one.
+- `verify-analysis.py` reports a second game in the file returned, as
+  one failure: only the first one is read and checked, its end marker
+  included.
+- `verify-analysis.py` sets aside the notes that the original game
+  already carried, which both prompts now ask to keep, before it
+  judges the comments, whatever their line breaks, one after a hyphen
+  included, and counts them in its report: "notes of the original
+  game: 2 kept out of 2". A figure quoted in a note is not an
+  evaluation made up by the LLM, and a mistake that only carries its
+  original note is not held as commented on.
+- The value `{{FENCE}}` of the prompt templates: the fence of the code
+  block that holds the game in the short prompt, a run of backquotes
+  longer than any run of the game, three at least. With a fixed fence
+  of three, a comment of the PGN that held such a line closed the
+  block.
 - `test-app.sh`, T93 to T98: W/D/L and the variations of Black; the
   catalog installed and checked without the network, from local
   sources; the thresholds of the explorer, the retry after a 429, the
@@ -46,7 +64,7 @@ and the project applies [Semantic Versioning](https://semver.org/).
   local servers; the errors of the PGN, of the arguments, of the engine
   and of the archive, `--pv-length` included; Ctrl-C during the engine
   phase; an unexpected error with and without `--debug`, on a copy with
-  an injected fault. New cases in T37, T49, T51, T54, T65, T70, T73,
+  an injected fault. New cases in T37, T45, T49, T51, T54, T65, T70,
   T74, T82, T83, T85 and T90, and the conversation and the PGN of the
   short prompt of `EXAMPLES.md` go through T83.
 - The link references of this file, for `[Unreleased]` and the three
@@ -293,11 +311,11 @@ and the project applies [Semantic Versioning](https://semver.org/).
   named `.<name>.partial` and `.<folder>.partial.zip`, formerly
   `.partiel`.
 - `EXAMPLES.md` is in English, and gives the commands, options and
-  real outputs of this version, taken on 25 November 2026. The
+  real outputs of this version, taken on 25 and 27 November 2026. The
   options and messages of the settings have their examples:
   confirmation of a new name given to `--settings`, refusal of a
   path, warning for a file that is not a settings file,
-  `--no-settings`, refusal of a settings file of version 4 by
+  `--no-settings`, refusal of a settings file of the former format by
   `--purge-settings`. Its earlier French text, brought up to date,
   is now `EXAMPLES.fr.md`.
 - `TESTS.md` is in English, and describes the tests of this version,
@@ -367,11 +385,9 @@ and the project applies [Semantic Versioning](https://semver.org/).
   the notes of the player at most, never instructions: a comment could
   give orders to the LLM. The short prompt gives the game in a code
   block.
-- The report of `test-app.sh` is in English throughout: the labels of
-  the cases of T65 and T74, a note of T74, outputs of the interrupted
-  archiving and of T76, the name of the model and the evaluations
-  quoted by T73 were still in French.
-
+- The messages and the labels of the report of `test-app.sh` are in
+  English. The names of the files that the tests write, such as
+  `t-francais.pgn`, stay French, like the identifiers of the script.
 - A token refused by the explorer, HTTP 401, stops the run with the
   exit code 1, before the engine, and advises to replace it or to run
   again with `--no-explorer`. The collection went on, and Stockfish ran
@@ -389,40 +405,57 @@ and the project applies [Semantic Versioning](https://semver.org/).
   both being asked for the start of the answer; the notation no longer
   lists `P`; the notes of the player are kept in the PGN returned, the
   commands `[%clk]` and `[%eval]` that a site writes in the comments
-  left out, `%` being forbidden there; the final summary keeps to the
-  agreed scope, like the comments; the loss `mate` also covers a mate
-  found by the move played. The summary says the same of `mate`.
+  left out, `%` being forbidden there, and a `%` of a note written
+  "percent"; the other format constraints bear on the text of the LLM,
+  not on a note kept, and a note that contradicts section 3, a figure
+  left by the analysis of a site for example, must be said so; the
+  final summary keeps to the agreed scope, like the comments, and a
+  scope that holds fewer errors than a point asks for gives only
+  those; the loss `mate` also covers a mate found by the move played.
+  The summary says the same of `mate`.
 - Short prompt: the comments already in the game are kept, without the
-  commands of a site, and a scope given by the player bounds the
-  comments and the review.
+  commands of a site, a note that contradicts the table must be said
+  so, and a scope given by the player bounds the comments and the
+  review, with only its errors if it holds fewer than asked for.
 - The refusal of `--settings` says that the name must not start with a
-  dot.
-- `test-app.sh`: the runs on a pseudo-terminal, T45 and T79 included,
-  go through a driver with a deadline of 300 seconds, which reads the
-  whole output and returns the exit code of the script; T58 checks the
-  end of the run before an absence; the collision of names of T74 runs
-  on a frozen clock; T23 holds across midnight; the engine processes of
-  M2 are found by `ps`, a name beyond the 15 characters kept by Linux
-  included; the guards of the token compare the token as the script
-  reads it, through a pipe, a byte order mark or a carriage return no
-  longer hiding it; the refusals run with a missing `--token-file`, T85
+  dot, and so does the help. The help of `--usernames` gives the rule
+  of the whole name or run of words.
+- `test-app.sh`: the runs on a pseudo-terminal, T45 and T79 included, go
+  through a driver with a deadline of 300 seconds, which reads the whole
+  output and returns the exit code of the script; a run that the driver
+  had to kill is a failure wherever it happens, and a script that closes
+  its terminal no longer blocks the driver; T97 and the reading of the
+  FIFO of T89 have a deadline of their own; T58 checks the end of the
+  run before an absence; the collision of names of T74 runs on a frozen
+  clock; T23 holds across midnight; the engine processes of M2 are found
+  by `ps`, a name beyond the 15 characters kept by Linux included, and
+  the link through which T55 starts the engine; the guards of the token
+  compare the token as the script reads it, through a pipe, a byte order
+  mark or a carriage return no longer hiding it, and a blank line or an
+  empty file no longer matching everything; the cases of T81 are named
+  by their kind, their content being the dummy token `lip_factice`,
+  which a run with `--network` on a token file holding that same string
+  found in its report, then not written; the totals are displayed before
+  that last guard; the refusals run with a missing `--token-file`, T85
   with a dummy interpreter and T81 with a venv that cannot be created;
   the report is written by a literal replacement of the paths; a
-  relative `VENV`, `STOCKFISH` or `TOKEN` is taken from the
-  repository; a path with a blank, and a missing `unzip`, `python3` or
-  `ps`, stop the suite at the start; no `__pycache__` is written.
+  relative `VENV`, `STOCKFISH` or `TOKEN` is taken from the repository;
+  a path with a blank, and a missing `unzip`, `python3` or `ps`, stop
+  the suite at the start; no `__pycache__` is written.
 - `ianalyze.py` passes mypy without an error, without a change of
   behavior: a separate variable for the bytes of the label, two types
   narrowed, the information of the engine typed as such.
-- Documentation: the dates written in one form, "25 November 2026";
-  the names of the archive, of the folder and of the prompt written
-  `analysis-<label>-<YYYYMMDD-HHMMSS>` everywhere; `EXAMPLES.md` calls
-  `../verify-analysis.py` from `example-games`, says that the count of
-  the variations of the engine varies from one collection to another,
-  and gives the new messages with their real output; `TECHNICAL.md`
-  names the conditions that no template of the repository uses; the
-  checker documents its limits. The versions without a tag lose their
-  brackets.
+- Documentation: the dates written in one form, "25 November 2026"; the
+  names of the archive, of the folder and of the prompt written
+  `analysis-<label>-<YYYYMMDD-HHMMSS>` in the documents and in the help;
+  the README and `EXAMPLES.md` give the rule of the usernames;
+  `TECHNICAL.md` says where the default engine is looked for;
+  `EXAMPLES.md` calls `../verify-analysis.py` from `example-games`, says
+  that the count of the variations of the engine varies from one
+  collection to another, and gives the new messages with their real
+  output; `TECHNICAL.md` names the conditions that no template of the
+  repository uses; the checker documents its limits. The versions
+  without a tag lose their brackets.
 
 ### Removed
 
@@ -459,8 +492,8 @@ and the project applies [Semantic Versioning](https://semver.org/).
   regular file, and a typo in the path rewrote the INI file of another
   program, its comments lost. The path is now written only if it does
   not exist yet, or if it is a regular file that is empty or carries
-  the `[player]` section, or the `[joueur]` section of a file written
-  by an earlier version. Anything else is left untouched: the answers
+  the `[player]` section, or the `[joueur]` section of a file of the
+  former format. Anything else is left untouched: the answers
   serve the current run, and a warning says why they are not kept,
   suggesting `--no-settings` for a device, a FIFO or a directory. The
   flaw dates from version 4.0.0, where the option was `--reglages`.
@@ -541,7 +574,6 @@ and the project applies [Semantic Versioning](https://semver.org/).
 - TESTS.md and TESTS.fr.md describe T03, T14 and T81 as they are, and
   T12, T26 and T55 now check what their rows said. A check of T83 used
   the alternation of GNU grep, which another grep may take literally.
-
 - `--install-venv` on a regular file is refused with its own message:
   `python -m venv` failed on it, and the message asked whether
   `python3-venv` was installed.

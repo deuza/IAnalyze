@@ -522,7 +522,7 @@ PROMPT_VALEURS = ("VERSION", "REPOSITORY", "ARCHIVE", "USERNAMES", "SIDE",
                   "BLUNDER_THRESHOLD", "DEPTH", "MULTIPV",
                   "GAME_PGN", "ENGINE_TABLE", "RESULT_ALERT",
                   "PLAYER_INSTRUCTIONS", "OPENING", "PLIES",
-                  "PLIES_EVALUATED", "PLAYER_WEAK_MOVES")
+                  "PLIES_EVALUATED", "PLAYER_WEAK_MOVES", "FENCE")
 
 #: Number of errors that the short prompt asks for in its review. When
 #: the engine table marks fewer of them for the player, the prompt gives
@@ -3699,6 +3699,20 @@ def reperes_phase(partie: chess.pgn.Game) -> list[str]:
     return lignes
 
 
+def cloture_de_bloc(texte: str) -> str:
+    """
+    Fence of the code block that holds the game in the short prompt: a
+    run of backquotes longer than any run of the text, three at least.
+
+    The game is pasted as it is. With a fixed fence of three backquotes,
+    a comment of the PGN that held such a line closed the block: what
+    followed it stood outside, among the instructions of the prompt.
+    """
+    plus_longue = max((len(suite) for suite in re.findall(r"`+", texte)),
+                      default=0)
+    return "`" * max(3, plus_longue + 1)
+
+
 def tronquer_variante(plateau: chess.Board, pv_uci: list[str],
                       longueur: int) -> str:
     """
@@ -4366,15 +4380,17 @@ usage examples
 result
 ------
 
-  An archive analysis-<game>-<timestamp>.zip in the output directory,
-  containing summary.md and the raw data. The path of the archive is
-  written alone on standard output, everything else goes to standard
-  error. On failure, the working folder is kept as it is for diagnosis.
+  An archive analysis-<label>-<YYYYMMDD-HHMMSS>.zip in the output
+  directory, containing summary.md and the raw data. The path of the
+  archive is written alone on standard output, everything else goes to
+  standard error. On failure, the working folder is kept as it is for
+  diagnosis.
 
   Next to the archive, the analysis prompt of the game, under the name
-  analysis-<game>-<timestamp>.prompt.txt: paste it into the conversation,
-  with the archive as an attachment. It is drawn from the template
-  prompt-template.txt, kept next to the script, which you can edit.
+  analysis-<label>-<YYYYMMDD-HHMMSS>.prompt.txt: paste it into the
+  conversation, with the archive as an attachment. It is drawn from the
+  template prompt-template.txt, kept next to the script, which you can
+  edit.
 
 prerequisites
 -------------
@@ -4522,16 +4538,19 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
                         "outside an interactive terminal")
     g.add_argument("--usernames", dest="pseudos", default=None, metavar="LIST",
                    help="your player names, comma-separated, looked up "
-                        "ignoring case in White and Black to deduce your side "
-                        "(default: those of your settings)")
+                        "ignoring case in White and Black to deduce your "
+                        "side, each one as the whole name or as a run of "
+                        "its words, not as a part of a word (default: those "
+                        "of your settings)")
     # --settings and --no-settings exclude each other: argparse refuses
     # the pair whatever the order, the spelling (--settings=FILE) or the
     # path given, even the default one.
     m = g.add_mutually_exclusive_group()
     m.add_argument("--settings", dest="reglages",
                    default=REGLAGES_DEFAUT, metavar="NAME",
-                   help="name of the settings file, ending in .ini and kept "
-                        "in the folder of the application, where your "
+                   help="name of the settings file, ending in .ini, not "
+                        "starting with a dot, and kept in the folder of the "
+                        "application, where your "
                         "username, your usual time control and your rating "
                         "are kept, asked only once in a terminal (default: "
                         "%(default)s)")
@@ -5169,6 +5188,7 @@ def main(argv: list[str]) -> int:
             "PLIES_EVALUATED": str(evalues),
             "PLAYER_WEAK_MOVES": ("unknown" if faibles is None
                                   else str(faibles)),
+            "FENCE": cloture_de_bloc(texte_partie),
         }
         prompt = archive.with_name(dossier.name + PROMPT_SUFFIXE)
         try:

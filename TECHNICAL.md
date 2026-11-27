@@ -71,10 +71,10 @@ HTTP goes through urllib and the archive through zipfile, both from the standard
 An option without effect, or a value out of bounds, is refused rather than silently ignored:
 
 - `--speeds` and `--ratings` require `--database lichess`.
-- `--pause` does not go below 2, `--min-frequency` stays between 0 and 100, `--min-moves`, `--stockfish-moves` and `--pv-length` are 0 or more, `--depth` goes from 1 to 60, the other numeric values are at least 1.
+- `--pause` does not go below 2, `--min-frequency` stays between 0 and 100, `--min-moves`, `--stockfish-moves` and `--pv-length` are 0 or more, `--depth` goes from 1 to 60, the other numeric values are at least 1. `--timeout` is checked with `--install-catalog` too, which downloads as well.
 - `--pause` and `--min-frequency` refuse nan and inf.
 - `--threads`, `--hash` and `--multipv` are checked against the engine, which announces its bounds: a value that it does not accept is refused before any request to the explorer and before the working folder is created.
-- `--settings` takes a file name ending in `.ini`, without a folder (section 6): a path is refused, `/dev/null` included.
+- `--settings` takes a file name ending in `.ini`, without a folder and not starting with a dot (section 6): a path is refused, `/dev/null` included.
 - `--settings` and `--no-settings` exclude each other, and so do `--purge-settings` and `--no-settings`.
 - `--purge-settings` is used alone, without a game or another action.
 - `--no-prompt` excludes `--prompt` and `--prompt-only`.
@@ -299,7 +299,7 @@ Without a terminal, nothing is asked or written.
 
 ### Several profiles
 
-`--settings NAME` designates another file: a file name ending in `.ini`, kept at the root of the folder of the application, next to `settings.ini`. A path is refused, even inside the folder: the settings never leave the folder, and deleting it leaves nothing behind. If the file does not exist, it is created by the same questions: this is the way to keep one profile per player.
+`--settings NAME` designates another file: a file name ending in `.ini` and not starting with a dot, which would hide it, kept at the root of the folder of the application, next to `settings.ini`. A path is refused, even inside the folder: the settings never leave the folder, and deleting it leaves nothing behind. If the file does not exist, it is created by the same questions: this is the way to keep one profile per player.
 
 In a terminal, a name whose file does not exist yet is first confirmed: "Settings: player2.ini does not exist yet in ... Create it? [y/n]". `n`, or Ctrl-D, stops the script before anything is written or collected: a typo does not start a new file. The default file, `settings.ini`, is created without this question.
 
@@ -418,6 +418,8 @@ A catalog index written before version 5.0.0, `catalogue.tsv`, is not read: run 
 ## 9. Engine
 
 ### Dialogue with Stockfish
+
+By default, the engine is the `stockfish` binary found in the PATH, on Debian as on macOS. Failing that, it is the one of the package: `/usr/games/stockfish` on Debian, which the PATH of root does not hold, and `/opt/homebrew/bin/stockfish` on macOS. `--stockfish` names another one.
 
 The script drives Stockfish over the UCI protocol, through python-chess. It starts it twice:
 
@@ -652,6 +654,7 @@ Values:
 | `PLIES` | number of plies of the game |
 | `PLIES_EVALUATED` | number of plies that the engine evaluated, smaller with `--stockfish-moves` |
 | `PLAYER_WEAK_MOVES` | number of your moves that `ENGINE_TABLE` marks inaccuracy, mistake or blunder, "unknown" if your side is not known |
+| `FENCE` | fence of the code block that holds `GAME_PGN`: a run of backquotes longer than any run of the game, three at least |
 
 Conditions:
 
@@ -675,7 +678,7 @@ Conditions:
 
 `STOCKFISH`, `MASTERS_DATABASE` and `RATING_DECLARED` serve neither template of the repository: they are kept for the personal templates.
 
-The two templates, `prompt-template.txt` and `prompt-only-template.txt`, share these markers. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `DEPTH`, `PLAYER_WEAK_MOVES` and the conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` serve the short prompt. `PLAYER_WEAK_MOVES`, `FEW_WEAK_MOVES` and `NO_WEAK_MOVE` also serve the final summary of the full prompt.
+The two templates, `prompt-template.txt` and `prompt-only-template.txt`, share these markers. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `DEPTH`, `FENCE`, `PLAYER_WEAK_MOVES` and the conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` serve the short prompt. `PLAYER_WEAK_MOVES`, `FEW_WEAK_MOVES` and `NO_WEAK_MOVE` also serve the final summary of the full prompt.
 
 Both prompts end with a report: the three costliest errors of the player and the theme to work on. When the table marks fewer than three weak moves on your side, the sentence changes: it gives their number and asks to keep to those. In the short prompt:
 
@@ -688,11 +691,11 @@ Keep to those, without adding any.
 
 The full prompt says it in its final summary, and asks besides not to replace your errors with those of your opponent. Without any weak move on your side, both prompts ask to attribute no error to you. When your side is not known, the short prompt asks to comment on both sides in the same way and to give the report for each one; the full prompt asks for your errors once your side is found, and for those of each side otherwise.
 
-Both prompts say that the tags and the comments of the PGN are data, the notes of the player at most, never instructions: a comment, or a tag, could otherwise give orders to the LLM. The short prompt places the game in a code block.
+Both prompts say that the tags and the comments of the PGN are data, the notes of the player at most, never instructions: a comment, or a tag, could otherwise give orders to the LLM. The short prompt places the game in a code block, whose fence, `FENCE`, is longer than any run of backquotes of the game: with a fixed fence of three, a comment that held such a line closed the block.
 
-Both prompts ask to keep these notes in the PGN returned, ahead of the comment of the LLM, and to leave out the commands that a site writes between brackets in the comments: `[%clk 0:10:00]` for the clock, `[%eval 0.23]` for its engine. A game downloaded from Lichess carries them, the export giving the clocks and the evaluations by default, and the full prompt forbids the `%` character in a comment.
+Both prompts ask to keep these notes in the PGN returned, ahead of the comment of the LLM, and to leave out the commands that a site writes between brackets in the comments: `[%clk 0:10:00]` for the clock, `[%eval 0.23]` for its engine. A game downloaded from Lichess carries them, the export giving the clocks and the evaluations by default, and the full prompt forbids the `%` character in a comment. A `%` that a note itself carries becomes "percent" there too; the other format constraints bear on the text of the LLM, not on a note kept. When a note contradicts the figures of the engine, those left by the analysis of a site for example, the engine prevails and the LLM is asked to say so.
 
-The final summary of the full prompt keeps to the agreed scope, like the comments: it asked for the costliest errors of the whole table, even when the comments stopped at move 15. The short prompt says the same under "What the player specified", when a scope is given there.
+The final summary of the full prompt keeps to the agreed scope, like the comments: it asked for the costliest errors of the whole table, even when the comments stopped at move 15. The short prompt says the same under "What the player specified", when a scope is given there. Both add that a scope holding fewer errors than asked for gives only those: the counts of weak moves are those of the whole table.
 
 The full prompt fixes the order of the start of the answer: the line that says whether the LLM can run code, case A or B, then the recap. Two sections both asked for the start of the answer.
 
@@ -753,6 +756,7 @@ Exit code: 0 without `FAIL`, 1 with at least one `FAIL`, 2 if no check could tak
 - **Outside the comments**: only moves in standard notation, move numbers, NAGs, the parentheses of the variations and the result. Any other word is a failure, named with its line: free text, which python-chess skips without a word, a move written `Pg2xf3`, which it reads as `g2xf3`, a move written with a hyphen between its squares. The rule is stricter than that of `ianalyze.py`, which reads the PGNs of every site. Castling written with zeros, `0-0`, which python-chess reads as `O-O`, is a failure of its own, outside `--prompt-only`. The words of a comment cut too early by a closing brace stay counted in that single flaw.
 - **Blank line**: in the body of the game, it is a failure. Inside a comment, python-chess reads on up to the closing brace: the report says so, the prompt forbidding the line all the same.
 - **Tags**: the seven mandatory ones at the top and in order, their values taken from the original game. The others in alphabetical order, Annotator filled in and PlyCount exact, otherwise `WARNING`.
+- **Notes of the original game**: both prompts ask to keep them ahead of the comment of the LLM. The script takes them out of each comment first, before move 1 and after each move of the main line, whatever the line breaks, one after a hyphen included, the commands of a site left out and a `%` written "percent" or not. What remains is the text of the LLM, the only one judged: a figure quoted in a note is not an evaluation made up, and a move that only carries its original note is not commented on. The report counts the notes kept.
 - **Commented moves**: each mistake and each blunder of Stockfish must be. One of them commented on without a NAG counts as `WARNING`, outside `--prompt-only`. The total number of commented moves is given for information, the prompt aiming at 15 to 25.
 - **Scope**: the prompt limits the comments to the agreed scope. A mistake played beyond it is not expected. The scope is the first number of your answer to the startup question, read in the instructions of `summary.md`: "the first 20 moves" counts as 20 moves. An answer without a number, or left at its default, counts as the whole game. `--scope N` gives it by hand, when it was agreed in the conversation.
 - **Position NAGs**: `$14`, `$16`, `$18` and `$20` give White better, `$15`, `$17`, `$19` and `$21` Black. Such a NAG is contrary to the engine when the engine gives the other side better by at least half a pawn, or a mate. `$10`, an equal position, is not compared: put on a won position, it goes through.
@@ -775,3 +779,5 @@ The report quotes the PGN and the text returned by the LLM: their control charac
 The short prompt asks for less than the full prompt. The checks that it does not ask for are skipped: length of the lines, overview, NAGs, percent sign, semicolon, em dash, suffix notation, castling written with zeros, alphabetical order of the other tags, Annotator and PlyCount tags, length of the variations. The short prompt asks to copy the moves as they are: a game exported with `0-0` stays faithful with it. The words outside the braces, for their part, are checked: the short prompt asks for the comments between braces. With `--summary`, the em dash of the conversation and the number of FENs are not checked either: a quoted FEN must only be valid and come from the game.
 
 The tags are checked differently. The full prompt wants the seven mandatory tags of the PGN standard, in their order. The short prompt only asks to copy those of the game: among the seven, only those that the original game carries are expected, in the order in which it writes them.
+
+The words outside the braces are checked differently too. The short prompt asks to copy the moves without changing a single one: a word that the original game itself writes outside standard notation, `e2-e4` or `bxa8Q`, which `ianalyze.py` reads, is accepted as it is.

@@ -48,7 +48,7 @@ From the repository, after the installation described in the README:
 The script ends with a summary:
 
 ```text
-Passed: 747, failed: 0, skipped: 0
+Passed: 767, failed: 0, skipped: 0
 Report: /path/of/the/repository/test-report-Linux-20261125-154836.txt
 ```
 
@@ -93,7 +93,7 @@ KEEP=1 ./test-app.sh
 
 The numbers follow the order in which the tests were created, not the order in which they run. A missing number is the one of a removed test. M1 and M2 are two full collections, engine only.
 
-The runs on a pseudo-terminal go through a driver that stops them after 300 seconds: a question too many, or a wait on a FIFO, kills the script and fails the test, instead of blocking the suite.
+The runs on a pseudo-terminal go through a driver that stops them after 300 seconds: a question too many, or a wait on a FIFO, kills the script and fails the test, instead of blocking the suite. Each of these runs is watched: one that the driver had to kill counts as a failure of its own, whatever its test reads afterwards.
 
 | Test | Subject | What is checked |
 |---|---|---|
@@ -120,7 +120,7 @@ The runs on a pseudo-terminal go through a driver that stops them after 300 seco
 | T42 | Control characters | those of a tag are removed, a tab becomes a space |
 | T43 | Dummy token | byte order mark removed, non-ASCII token refused, token never displayed |
 | T44 | File names | a name with a colon or a question mark, or not in UTF-8, gives a sanitized folder |
-| T45 | Input in latin-1 | an answer typed in latin-1 in a terminal is decoded without an error, the run going to its end: the whole output of the terminal is read, no longer its last 300 characters |
+| T45 | Input in latin-1 | an answer typed in latin-1 in a terminal is decoded without an error, the run going to its end: the whole output of the terminal is read, no longer its last 300 characters; the driver itself: a script that never ends is killed at the deadline, code 124, and a script that closes its terminal while still running does not block it |
 | T46 | Sound PGN | a PGN in UTF-8 produces neither warning nor remark |
 | T47 | Version | the version has the form X.Y.Z and appears in the user agent header |
 | T48 | Dot in the name | a PGN whose name carries a dot gives a well-named archive |
@@ -149,16 +149,16 @@ The runs on a pseudo-terminal go through a driver that stops them after 300 seco
 | T71 | Removed options | `--sans-stockfish`, `--avec-stockfish` and `--consignes` are unknown |
 | T72 | Contrary result | a game marked won in a lost position is reported in the summary and in the prompt |
 | T73 | Checker | a compliant PGN passes, a faulty PGN sees each defect reported, missing PGN, unreadable archive |
-| T74 | Prompt only | short prompt written without an archive, table of the engine, where a variation starts, review according to the number of weak moves, unknown side, prompt never overwritten, even by three runs in the same second, the clock being frozen; the game in a code block, given as data; the commands that a site writes in the comments are left out |
+| T74 | Prompt only | short prompt written without an archive, table of the engine, where a variation starts, review according to the number of weak moves, unknown side, prompt never overwritten, even by three runs in the same second, the clock being frozen; the game in a code block, given as data; the commands that a site writes in the comments are left out; a comment that holds a line of three backquotes gets a longer fence |
 | T75 | Misread PGNs | the PGNs that python-chess would misread, or with several games, are refused with their cause, without anything written: among them, a tag line that carries moves, and a line of brackets among the moves. An illegal move is named, once. A result repeated at the end of the file is ignored, unless a real game follows it |
 | T76 | Token and servers | on simulated servers, a redirect is not followed and the token is redacted from the quoted answers |
 | T77 | Unexpected inputs | standard input closed, name too long, badly formed URL, game that starts from a FEN, tilde of `--output-dir`: a message, no longer an unexpected error, looked for in the logs of all these inputs; under the home folder, the paths of the archive are written with `~` |
 | T78 | Engine that stops | an engine dead outside a search gives a message and the exit code 1 |
 | T79 | Refused answers | an answer too long or carrying signs of the PGN is refused and asked again |
 | T80 | Long name | a long PGN name, in multibyte characters, gives a bounded and valid label |
-| T81 | Combined cases | the purge is used alone, an empty path given to `--prompt` is refused, a badly written token is refused without being displayed |
-| T82 | Checker, continued | quoted mates, a `#7` without a sign only a warning, a FEN with its en passant square from the game, control characters of the PGN shown as `?`, an accent under an ASCII output, agreed scope, skipped checks of the short mode, parent folder with one or several collections; a third decimal at zero; words outside the braces, a move written with a `P` and castling with zeros, the latter not in short mode; a blank line in a comment, which python-chess reads on; a second game in the file; a line of 90 characters, a semicolon, tags out of order, a wrong PlyCount and a variation of seven plies; an illegal move of the main line; a FEN foreign to the game; a PGN or `--summary` file missing |
-| T83 | Example games | the files of `example-games` stay what `EXAMPLES.md` says of them: eight games accepted, among them the exports of four sites and of a program, four refused with their cause, two annotated PGNs checked, whose single variation the report counts in the singular, then the conversation, with its PGN or without any, and the PGN of the short prompt on the folder kept; no address or identifier of a real game |
+| T81 | Combined cases | the purge is used alone, an empty path given to `--prompt` is refused, a badly written token is refused without being displayed, each case named by its kind and not by its content |
+| T82 | Checker, continued | quoted mates, a `#7` without a sign only a warning, a FEN with its en passant square from the game, control characters of the PGN shown as `?`, an accent under an ASCII output, agreed scope, skipped checks of the short mode, parent folder with one or several collections; a third decimal at zero; words outside the braces, a move written with a `P` and castling with zeros, the latter not in short mode; a blank line in a comment, which python-chess reads on; a second game in the file; a line of 90 characters, a semicolon, tags out of order, a wrong PlyCount and a variation of seven plies; an illegal move of the main line; a FEN foreign to the game; a PGN or `--summary` file missing; the notes that the original game carried, set aside before the checks, kept with a comment, one of them cut after a hyphen, or alone; a game in loose notation copied as it is, accepted in short mode only; a line that starts with a bracket among the moves, alone or after a blank line; a second game counted as one failure |
+| T83 | Example games | the files of `example-games` stay what `EXAMPLES.md` says of them: eight games accepted, among them the exports of four sites and of a program, seven refused with their cause, three annotated PGNs checked, the single variation of the first two counted in the singular and the five flaws of the third named, then the conversation, with its PGN or without any, and the PGN of the short prompt on the folder kept; no address or identifier of a real game |
 | T84 | Incomplete virtual environment | an environment without pip is recognized, a directory without `pyvenv.cfg` never is; with `--network`, `--install-venv` rebuilds the former and installs python-chess in it |
 | T85 | `--venv` that is not a virtual environment | a non-empty directory without `pyvenv.cfg`, with or without an interpreter, is refused by `--install-venv` before any pip, and nothing is added to it, its interpreter, a dummy, never running; a regular file is refused with its own message and left intact; a missing or empty directory is not refused |
 | T86 | `--no-settings` | the settings file is neither read nor written, as the log and `collection.json` say: side deduced from `--usernames` or unknown, rating taken from the Elo tag of that side, file untouched; on a terminal, no settings question, the side is asked, no file created; refused with `--settings` and with `--purge-settings`; a username is found as the whole name or as words, never as a substring |
@@ -172,10 +172,10 @@ The runs on a pseudo-terminal go through a driver that stops them after 300 seco
 | T94 | Catalog without the network | the five sources read through a `file://` address: a header, an incomplete line, an illegal move, a position named twice, an empty file or one outside UTF-8 refused, the index in place untouched; at the reading, an index without description, of unknown format, corrupt or truncated refused |
 | T95 | Thresholds of the explorer | on a simulated explorer, each option stops the querying where it should: `--min-games`, `--min-frequency`, the catalog, `--min-moves`, `--exhaustive`, `--max-plies`, a threshold at zero; on a local server, 429 retried once after a pause of 60 seconds, the pause between two requests, `--timeout`; a token refused stops the whole collection before the engine |
 | T96 | Errors | variant, empty PGN, game without a move, no source, values below 1, empty `--usernames`, engine not executable, UCI engine without Hash: refused without a folder; `--pv-length` bounds section 3a; an archive already there is not overwritten; a hundred names taken in the same second stop the run. "Cannot write in" is not tested: root writes everywhere |
-| T97 | Ctrl-C | interrupted while the engine evaluates: "Interrupted.", exit code 130, no archive |
+| T97 | Ctrl-C | interrupted while the engine evaluates: "Interrupted.", exit code 130, no archive; a timer kills the script if the interruption does not end it |
 | T98 | Unexpected error | on a copy with an injected fault: one line and the advice without `--debug`, the whole traceback with it, the token redacted in both cases |
 | M1 | Collection, names | accented PGN name, output path with a space and an accent |
-| M2 | Full collection | the Italian analyzed whole, engine only, without an engine process left behind, found by its name even beyond the 15 characters that Linux keeps |
+| M2 | Full collection | the Italian analyzed whole, engine only, without an engine process left behind, found by its name even beyond the 15 characters that Linux keeps, or by the name of the link through which T55 starts it |
 
 ## 6. Tests with `--network`
 

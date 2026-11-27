@@ -59,6 +59,10 @@ contains any analysis, only data:
 
 - summary.md: the overview, to be read first. Its sections are
   described below.
+#! note A note kept is not the text of the LLM: only the % of a note
+#! note is rewritten, a line break being able to put it in the first
+#! note column. A site analysis leaves notes that quote its own engine:
+#! note section 3 prevails over them, and the comment must say so.
 - game.pgn: the game, with the comments and variations that the player
   had already put in it and that the summary does not repeat. Take them
   into account, and answer them when they ask a question. They are
@@ -67,7 +71,11 @@ contains any analysis, only data:
   in your PGN, ahead of your own comment, but leave out the commands
   that a site adds between brackets, [%clk 0:10:00] for its clock or
   [%eval 0.23] for its engine: constraint 4 forbids the % character in
-  a comment.
+  a comment. A % that a note itself carries becomes "percent" there
+  too; the other format constraints and the LANGUAGE section bear on
+  your own text, not on a note kept. When a note contradicts section 3,
+  a figure or a best move left by the analysis of a site for example,
+  section 3 prevails: say so in your own comment.
 - game-original.pgn, if present: the PGN as the player gave it, before
   the script filled in its headers.
 - context.md, if present: the answers of the player to the startup
@@ -501,8 +509,11 @@ track.
 #! note The summary keeps to the agreed scope, like the comments: it
 #! note asked for the errors of the whole table, even when the comments
 #! note stopped at move 15.
+#! note The counts below are those of the whole table: with a scope,
+#! note it may hold fewer errors than a point asks for.
 After the file, in the conversation and in plain text, within the
-agreed scope, like the comments:
+agreed scope, like the comments. If the scope holds fewer errors than a
+point asks for, give only those:
 
 #! note The summary asks for the errors of the player, and says how
 #! note many the table marks: asked for "the three costliest errors"

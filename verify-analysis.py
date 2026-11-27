@@ -25,9 +25,10 @@ check.
                 the PGN answers the short prompt of ianalyze.py
                 --prompt-only. This prompt asks for less: the checks it
                 does not ground are skipped (lines of 79 characters,
-                summary before move 1, NAG, percent, em dash, Annotator
-                and PlyCount tags, length of the variations, number of
-                FEN)
+                summary before move 1, NAG, percent, em dash, semicolon,
+                suffix notation, castling with zeros, alphabetical order
+                of the tags, Annotator and PlyCount tags, length of the
+                variations, number of FEN)
     --scope N
                 scope agreed with the LLM, in moves: the mistakes and
                 blunders played after move N are not expected. Without
@@ -37,12 +38,13 @@ check.
 What is checked:
 
   1. the PGN reads, in UTF-8, without an illegal move, variations
-     included;
+     included, and holds a single game;
   2. the main line is that of the original game;
-  3. the format requested by the prompt: line length, braces, percent,
-     em dash, suffix notation, tags, result;
+  3. the format requested by the prompt: line length, braces, words
+     outside the braces, castling, percent, em dash, suffix notation,
+     tags, result;
   4. each mistake and each blunder found by Stockfish is commented on,
-     within the agreed scope;
+     within the agreed scope, the notes of the original game set aside;
   5. each evaluation quoted does exist in the engine data;
   6. the variations: number, length, support from an engine line, and
      those that an LLM wrongly writes inside a comment;
@@ -170,6 +172,15 @@ RE_MOT_RENDU = re.compile(r"[^\s{}();]+")
 #: without a word. It is looked for before RE_JETON_RENDU, which would
 #: take its first zero for a move number.
 RE_ROQUE_ZERO = re.compile(r"0-0(?:-0)?[+#]?[!?]{0,2}(?![\w=-])")
+
+#: A tag line as python-chess reads it: a single tag, alone on its line,
+#: the bracket in the first column. The pattern of ianalyze.py.
+RE_BALISE_PGN = re.compile(
+    r"\[([A-Za-z0-9][A-Za-z0-9_+#=:-]*)\s+\"([^\r]*)\"\]\s*$")
+
+#: A command that a site writes in a comment, "[%clk 0:10:00]" or
+#: "[%eval 0.23]": both prompts ask to leave it out of the notes kept.
+RE_COMMANDE = re.compile(r"\[%[^\]]*\]")
 
 #: Position evaluation NAGs, according to the side they give as better.
 NAG_BLANCS_MIEUX = {14, 16, 18, 20}
@@ -303,23 +314,16 @@ def retirer_lignes_vides(texte: str) -> tuple[str, list[int]]:
     The blank lines at the end of the file do not count.
 
     The body of the first game ends where the tags of another game
-    start: a bracket in the first column after a blank line, outside a
-    comment. That blank line separates two games, it is kept, and so is
-    what follows it: removing it merged the second game into the first,
-    whose moves then became illegal.
+    start: see fin_premiere_partie. The blank line found there separates
+    two games, it is kept, and so is what follows it: removing it merged
+    the second game into the first, whose moves then became illegal.
     """
     lignes = texte.split("\n")
     debut = 0
     while debut < len(lignes) and (lignes[debut].startswith("[")
                                    or not lignes[debut].strip()):
         debut += 1
-    dedans = lignes_en_commentaire(texte)
-    limite = len(lignes)
-    for k in range(debut + 1, len(lignes)):
-        if (lignes[k].startswith("[") and not lignes[k - 1].strip()
-                and k + 1 not in dedans):
-            limite = k
-            break
+    limite = fin_premiere_partie(texte)
     fin = limite
     while fin > debut and not lignes[fin - 1].strip():
         fin -= 1
@@ -329,6 +333,31 @@ def retirer_lignes_vides(texte: str) -> tuple[str, list[int]]:
     if limite < len(lignes):
         repare += "\n" + "\n".join(lignes[limite:])
     return repare, retirees
+
+
+def fin_premiere_partie(texte: str) -> int:
+    """
+    Index of the line where the tags of a second game start, or the
+    number of lines of the text if there is none.
+
+    A second game starts with a tag in the first column, after a blank
+    line and outside a comment. The line must have the whole form of a
+    tag: a line that merely starts with a bracket, "[White is better
+    here]", is text written among the moves. Taken for the start of a
+    game, it hid the blank line before it, and the report then gave a
+    truncated main line without its cause.
+    """
+    lignes = texte.split("\n")
+    debut = 0
+    while debut < len(lignes) and (lignes[debut].startswith("[")
+                                   or not lignes[debut].strip()):
+        debut += 1
+    dedans = lignes_en_commentaire(texte)
+    for k in range(debut + 1, len(lignes)):
+        if (RE_BALISE_PGN.match(lignes[k]) and not lignes[k - 1].strip()
+                and k + 1 not in dedans):
+            return k
+    return len(lignes)
 
 
 def lire_partie(texte: str) -> chess.pgn.Game | None:
@@ -515,6 +544,55 @@ def commentaires(partie: chess.pgn.Game) -> list[tuple[str, str]]:
     return trouves
 
 
+def note_d_origine(commentaire: str) -> str:
+    """
+    A comment of the original game as the prompts ask to keep it: without
+    the commands of a site, spaces and line breaks reduced to one space.
+    """
+    return " ".join(RE_COMMANDE.sub(" ", commentaire).split())
+
+
+def retirer_notes(partie: chess.pgn.Game,
+                  origine: chess.pgn.Game) -> tuple[int, int]:
+    """
+    Removes from the comments of the returned game the notes that the
+    original game already carried, and returns how many of them the LLM
+    kept, out of how many.
+
+    Both prompts ask to keep these notes ahead of the comment of the
+    LLM. Left in place, they were judged as its text: the evaluations of
+    a site quoted in a note counted as made up, and a mistake that only
+    carried its original note counted as commented on. Each note is
+    looked for at the same place, before move 1 or after the same move
+    of the main line, whatever the line breaks, and with its "%" written
+    "percent" as the full prompt asks. What remains is the text of the
+    LLM, on which the following checks are made. The two games must have
+    the same main line.
+    """
+    gardees = total = 0
+    paires: list[tuple[chess.pgn.GameNode, chess.pgn.GameNode]] = [
+        (partie, origine)]
+    paires += list(zip(partie.mainline(), origine.mainline()))
+    for rendu, source in paires:
+        note = note_d_origine(source.comment)
+        if not note:
+            continue
+        total += 1
+        for forme in (note, note.replace("%", " percent"),
+                      note.replace("%", "percent")):
+            # A line break may also follow a hyphen: textwrap.fill, which
+            # the full prompt suggests for the comments, cuts "well-known"
+            # after its hyphen when the word straddles the margin.
+            motif = r"\s+".join(re.escape(mot).replace(r"\-", r"-\s*")
+                                for mot in forme.split())
+            reste, trouve = re.subn(motif, " ", rendu.comment, count=1)
+            if trouve:
+                rendu.comment = reste.strip()
+                gardees += 1
+                break
+    return gardees, total
+
+
 def accolades_orphelines(texte: str) -> list[str]:
     """
     Lines where a closing brace appears outside any comment.
@@ -543,26 +621,61 @@ def accolades_orphelines(texte: str) -> list[str]:
     return trouvees
 
 
-def mots_hors_commentaires(texte: str) -> tuple[list[str], list[str]]:
+def mots_etrangers(texte: str) -> set[str]:
+    """
+    Words of a PGN that are not in standard notation, outside its
+    comments: those of the original game, which the short prompt asks to
+    copy without changing a single one.
+    """
+    return {mot for _, mot in analyser_mots(texte)[1]}
+
+
+def mots_hors_commentaires(texte: str, admis: frozenset[str] = frozenset()
+                           ) -> tuple[list[str], list[str]]:
     """
     Castlings written with zeros, and words of the body that are neither
-    a PGN element nor in a comment, each list grouped by line.
+    a PGN element nor in a comment, each list grouped by line. The words
+    of `admis` are not reported: see mots_etrangers.
+    """
+    zeros, etrangers = analyser_mots(texte)
+
+    def regrouper(trouves: list[tuple[int, str]]) -> list[str]:
+        par_ligne: dict[int, list[str]] = {}
+        for k, mot in trouves:
+            par_ligne.setdefault(k, []).append(mot)
+        return ["line %d: %s" % (k, " ".join(v)[:60])
+                for k, v in sorted(par_ligne.items())]
+
+    return (regrouper(zeros),
+            regrouper([(k, mot) for k, mot in etrangers
+                       if mot not in admis]))
+
+
+def analyser_mots(texte: str) -> tuple[list[tuple[int, str]],
+                                       list[tuple[int, str]]]:
+    """
+    Castlings written with zeros, and words of the body that are neither
+    a PGN element nor in a comment, each one with its line.
 
     python-chess skips without an error what it does not recognize:
     free text written outside the braces is lost for the reader, a move
     written "Pg2xf3" is read as g2xf3 and castling written "0-0" as
-    O-O, which hides the flaw. Skipped like python-chess does: the tag
-    lines and the escape lines in the first column, the comments between
-    braces and those of a semicolon, up to the end of the line. An
-    unclosed brace ends the search: the rest of the file is a comment
-    for python-chess, and the reading of the game reports it.
+    O-O, which hides the flaw. Skipped like python-chess does: the
+    escape lines in the first column, the comments between braces and
+    those of a semicolon, up to the end of the line, and the lines that
+    have the whole form of a tag, in the first column: the check of the
+    tags says which ones python-chess did not read. Any other line that
+    starts with a bracket, "[White is better here]" among the moves, is
+    text like any other: skipped as a tag, it went through without a
+    word. An unclosed brace ends the search: the rest of the file is a
+    comment for python-chess, and the reading of the game reports it.
 
     A closing brace written in a comment ends it too early: the end of
     the comment falls outside the braces, up to the closing brace left
     over. These words belong to the flaw of the brace, which has its own
     check: they are not reported a second time.
     """
-    zeros: dict[int, list[str]] = {}
+    zeros: list[tuple[int, str]] = []
     etrangers: list[tuple[int, str]] = []
     # Foreign words met since the end of the last comment: they are the
     # tail of that comment if a closing brace left over follows them.
@@ -575,9 +688,21 @@ def mots_hors_commentaires(texte: str) -> tuple[list[str], list[str]]:
         if c == "\n":
             ligne += 1
             i += 1
-        elif c.isspace() or c in "()":
+            continue
+        if c.isspace() or c in "()":
             i += 1
-        elif c == "{":
+            continue
+        if c == ";" or (c == "%" and colonne_un):
+            fin = texte.find("\n", i)
+            i = n if fin < 0 else fin
+            continue
+        if c == "[" and colonne_un:
+            fin = texte.find("\n", i)
+            fin = n if fin < 0 else fin
+            if RE_BALISE_PGN.match(texte, i, fin):
+                i = fin
+                continue
+        if c == "{":
             fin = texte.find("}", i)
             if fin < 0:
                 break
@@ -588,13 +713,10 @@ def mots_hors_commentaires(texte: str) -> tuple[list[str], list[str]]:
             # Closing brace left over, which accolades_orphelines reports.
             del etrangers[depuis:]
             i += 1
-        elif c == ";" or (c in "[%" and colonne_un):
-            fin = texte.find("\n", i)
-            i = n if fin < 0 else fin
         else:
             m = RE_ROQUE_ZERO.match(texte, i)
             if m:
-                zeros.setdefault(ligne, []).append(m.group(0))
+                zeros.append((ligne, m.group(0)))
                 i = m.end()
                 continue
             m = RE_JETON_RENDU.match(texte, i)
@@ -607,15 +729,7 @@ def mots_hors_commentaires(texte: str) -> tuple[list[str], list[str]]:
                 continue
             etrangers.append((ligne, m.group(0)))
             i = m.end()
-
-    def regrouper(trouves: dict[int, list[str]]) -> list[str]:
-        return ["line %d: %s" % (k, " ".join(v)[:60])
-                for k, v in sorted(trouves.items())]
-
-    par_ligne: dict[int, list[str]] = {}
-    for k, mot in etrangers:
-        par_ligne.setdefault(k, []).append(mot)
-    return regrouper(zeros), regrouper(par_ligne)
+    return zeros, etrangers
 
 
 def lignes_en_commentaire(texte: str) -> set[int]:
@@ -663,7 +777,8 @@ def balises_du_texte(texte: str) -> list[str]:
 def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
                      origine: chess.pgn.Game, demi_coups: int,
                      court: bool = False,
-                     balises_origine: list[str] | None = None) -> None:
+                     balises_origine: list[str] | None = None,
+                     mots_origine: frozenset[str] = frozenset()) -> None:
     """
     Mandatory format constraints of the prompt.
 
@@ -673,6 +788,10 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
     `balises_origine` then gives the names of the tags of the original
     game, in the order in which its file writes them: among the seven
     mandatory tags of the standard, only those are expected.
+    `mots_origine` gives the words of the original game that are not in
+    standard notation, "e2-e4" or "bxa8Q", which ianalyze.py reads: the
+    short prompt asks to copy the moves without changing a single one,
+    and a faithful copy got a failure for them.
     """
     b.titre("3. Format")
     lignes = texte.split("\n")
@@ -693,7 +812,8 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
     # rest without a word, and reads "Pg2xf3" or "0-0" all the same.
     # Castling with zeros is only a fault for the full prompt, which
     # forbids it: the short one asks to copy the moves as they are.
-    zeros, etrangers = mots_hors_commentaires(texte)
+    zeros, etrangers = mots_hors_commentaires(
+        texte, mots_origine if court else frozenset())
     b.controle(not etrangers, "outside the braces, only moves in standard "
                "notation, move numbers, NAGs and the result", etrangers)
     if not court:
@@ -764,8 +884,13 @@ def controler_format(b: Bilan, texte: str, partie: chess.pgn.Game,
                    'PlyCount tag: "%s", expected "%d"'
                    % (compte, demi_coups), grave=False)
 
-    # End marker: the last word of the file, outside the comments.
-    mots = hors_commentaires.split()
+    # End marker: the last word of the game, outside the comments. The
+    # search stops where a second game starts: its own marker was read
+    # instead, and the second game, already reported in 1, cost a second
+    # failure here.
+    premiere = lignes[:fin_premiere_partie(texte)]
+    mots = re.sub(r"\{[^}]*\}", " ", "\n".join(
+        x for x in premiere if not x.startswith("["))).split()
     marqueur = mots[-1] if mots else ""
     b.controle(marqueur == partie.headers.get("Result"),
                'end marker "%s" identical to the Result tag "%s"'
@@ -795,9 +920,15 @@ def perimetre_convenu(synthese_archive: str) -> int | None:
 def controler_couverture(b: Bilan, partie: chess.pgn.Game,
                          evaluations: list[dict],
                          court: bool = False,
-                         perimetre: int | None = None) -> None:
+                         perimetre: int | None = None,
+                         notes: tuple[int, int] = (0, 0)) -> None:
     """
     Each mistake and each blunder must be commented on.
+
+    `notes` counts the notes of the original game that the LLM kept, out
+    of how many: retirer_notes has already taken them out of the
+    comments, a move that only carries its original note is not held as
+    commented on.
 
     The short prompt asks for neither a summary before the first move nor
     NAGs: with `court`, these two points are not checked.
@@ -830,6 +961,9 @@ def controler_couverture(b: Bilan, partie: chess.pgn.Game,
                                        COMMENTES_MIN, COMMENTES_MAX))
     b.noter("INFO", "%d move(s) carrying a NAG"
             % sum(1 for n in noeuds if n.nags))
+    if notes[1]:
+        b.noter("INFO", "notes of the original game: %d kept out of %d, set "
+                "aside before the checks on the text of the LLM" % notes)
 
     if perimetre:
         b.noter("INFO", "agreed scope: %s, the mistakes and blunders played "
@@ -1281,13 +1415,19 @@ def main(argv: list[str]) -> int:
 
     texte, partie = controler_lecture(b, brut)
     identique = controler_partie(b, partie, origine)
+    # The notes that the original game already carried are set aside
+    # here, once the two main lines are known to match: every check
+    # that follows then reads the text of the LLM alone.
+    notes = retirer_notes(partie, origine) if identique else (0, 0)
     controler_format(b, texte, partie, origine,
                      len(ligne_principale(origine)), options.prompt_seul,
-                     balises_du_texte(fichiers["game.pgn"]))
+                     balises_du_texte(fichiers["game.pgn"]),
+                     frozenset(mots_etrangers(fichiers["game.pgn"])))
     if identique:
         controler_couverture(
             b, partie, evaluations, options.prompt_seul,
-            options.perimetre or perimetre_convenu(fichiers["summary.md"]))
+            options.perimetre or perimetre_convenu(fichiers["summary.md"]),
+            notes)
     else:
         # Without the same main line, the plies no longer
         # match: these checks would make no sense.

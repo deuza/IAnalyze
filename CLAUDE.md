@@ -48,6 +48,10 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
   L'utilisateur applique, commite à son nom et pousse. Avant le lot
   suivant, vérifie qu'origin/dev contient exactement le patch, puis
   recale-toi dessus.
+- L'utilisateur dépose le patch et le message dans /root/dev/, le
+  dossier parent de son dépôt, /root/dev/IAnalyze : les commandes
+  livrées se lancent dans le dépôt, sur `../<lot>.patch` et
+  `../<lot>.msg`.
 - CLAUDE.md est le fichier de Claude : il le tient à jour lui-même, à
   chaque lot qui change ce qu'il décrit, sans attendre qu'on le lui
   demande.

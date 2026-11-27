@@ -50,7 +50,7 @@ Depuis le dépôt, après l'installation décrite dans le README :
 Le script se termine par un bilan :
 
 ```text
-Passed: 747, failed: 0, skipped: 0
+Passed: 767, failed: 0, skipped: 0
 Report: /path/of/the/repository/test-report-Linux-20261125-154836.txt
 ```
 
@@ -95,7 +95,7 @@ KEEP=1 ./test-app.sh
 
 Les numéros suivent l'ordre de création des tests, pas celui de leur passage. Un numéro absent est celui d'un test retiré. M1 et M2 sont deux collectes complètes, moteur seul.
 
-Les lancements sur pseudo-terminal passent par un pilote qui les arrête au bout de 300 secondes : une question de trop, ou une attente sur une FIFO, tue le script et fait échouer le test, au lieu de bloquer la suite.
+Les lancements sur pseudo-terminal passent par un pilote qui les arrête au bout de 300 secondes : une question de trop, ou une attente sur une FIFO, tue le script et fait échouer le test, au lieu de bloquer la suite. Chacun de ces lancements est surveillé : celui que le pilote a dû tuer compte pour un échec à lui seul, quoi que son test lise ensuite.
 
 | Test | Sujet | Ce qui est vérifié |
 |---|---|---|
@@ -122,7 +122,7 @@ Les lancements sur pseudo-terminal passent par un pilote qui les arrête au bout
 | T42 | Caractères de contrôle | ceux d'une balise sont retirés, une tabulation devient une espace |
 | T43 | Jeton factice | marque d'ordre retirée, jeton non ASCII refusé, jeton jamais affiché |
 | T44 | Noms de fichiers | un nom à deux-points ou point d'interrogation, ou non UTF-8, donne un dossier assaini |
-| T45 | Saisie en latin-1 | une réponse tapée en latin-1 dans un terminal est décodée sans erreur, le lancement allant à son terme : toute la sortie du terminal est lue, et plus ses 300 derniers caractères |
+| T45 | Saisie en latin-1 | une réponse tapée en latin-1 dans un terminal est décodée sans erreur, le lancement allant à son terme : toute la sortie du terminal est lue, et plus ses 300 derniers caractères ; le pilote lui-même : un script qui ne finit pas est tué au délai de garde, code 124, et un script qui ferme son terminal en restant en vie ne le bloque pas |
 | T46 | PGN sain | un PGN en UTF-8 ne produit ni avertissement ni remarque |
 | T47 | Version | la version a la forme X.Y.Z et figure dans l'en-tête d'agent |
 | T48 | Point dans le nom | un PGN dont le nom porte un point donne une archive bien nommée |
@@ -151,16 +151,16 @@ Les lancements sur pseudo-terminal passent par un pilote qui les arrête au bout
 | T71 | Options retirées | `--sans-stockfish`, `--avec-stockfish` et `--consignes` sont inconnues |
 | T72 | Résultat contraire | une partie notée gagnée dans une position perdue est signalée dans la synthèse et le prompt |
 | T73 | Vérificateur | un PGN conforme passe, un PGN fautif voit chaque défaut relevé, PGN absent, archive illisible |
-| T74 | Prompt seul | prompt court écrit sans archive, tableau du moteur, point de départ d'une variante, bilan selon le nombre de coups faibles, camp inconnu, prompt jamais écrasé, même par trois lancements dans la même seconde, l'horloge étant figée ; la partie dans un bloc de code, présentée comme des données ; les commandes qu'un site écrit dans les commentaires sont retirées |
+| T74 | Prompt seul | prompt court écrit sans archive, tableau du moteur, point de départ d'une variante, bilan selon le nombre de coups faibles, camp inconnu, prompt jamais écrasé, même par trois lancements dans la même seconde, l'horloge étant figée ; la partie dans un bloc de code, présentée comme des données ; les commandes qu'un site écrit dans les commentaires sont retirées ; un commentaire qui porte une ligne de trois accents graves reçoit une clôture plus longue |
 | T75 | PGN lus de travers | les PGN que python-chess lirait de travers, ou à plusieurs parties, sont refusés avec leur cause, sans rien écrire : parmi eux, une ligne de balise qui porte des coups, et une ligne de crochets parmi les coups. Un coup illégal est nommé, une seule fois. Un résultat répété en fin de fichier est ignoré, sauf s'il est suivi d'une vraie partie |
 | T76 | Jeton et serveurs | sur des serveurs simulés, une redirection n'est pas suivie et le jeton est expurgé des réponses citées |
 | T77 | Entrées inattendues | entrée standard fermée, nom trop long, URL mal formée, partie qui part d'une FEN, tilde de `--output-dir` : un message, plus une erreur inattendue, cherchée dans les journaux de toutes ces entrées ; sous le dossier personnel, les chemins de l'archive sont écrits avec `~` |
 | T78 | Moteur qui s'arrête | un moteur mort hors d'une recherche donne un message et le code 1 |
 | T79 | Réponses refusées | une réponse trop longue ou porteuse de signes du PGN est refusée et redemandée |
 | T80 | Nom long | un nom de PGN long, en caractères de plusieurs octets, donne une étiquette bornée et valide |
-| T81 | Cas combinés | la purge s'emploie seule, un chemin vide donné à `--prompt` est refusé, un jeton mal écrit est refusé sans être affiché |
-| T82 | Vérificateur, suite | mats cités, un `#7` sans signe seulement un avertissement, une FEN avec sa case en passant venue de la partie, caractères de contrôle du PGN montrés en `?`, un accent sous une sortie ASCII, périmètre convenu, contrôles sautés du mode court, dossier parent à une ou plusieurs collectes ; une troisième décimale nulle ; des mots hors des accolades, un coup écrit avec un `P` et un roque en zéros, ce dernier hors mode court ; une ligne vide dans un commentaire, que python-chess lit jusqu'au bout ; une seconde partie dans le fichier ; une ligne de 90 caractères, un point-virgule, des balises dans le désordre, un PlyCount faux et une variante de sept demi-coups ; un coup illégal de la ligne principale ; une FEN étrangère à la partie ; un fichier PGN ou `--summary` absent |
-| T83 | Parties d'exemples | les fichiers de `example-games` restent ce qu'`EXAMPLES.fr.md` en dit : huit parties acceptées, dont les exports de quatre sites et d'un logiciel, quatre refusées avec leur cause, deux PGN annotés contrôlés, dont le bilan compte l'unique variante au singulier, puis la conversation, avec son PGN ou sans aucun, et le PGN du prompt court sur le dossier gardé ; aucune adresse ni identifiant de partie réelle |
+| T81 | Cas combinés | la purge s'emploie seule, un chemin vide donné à `--prompt` est refusé, un jeton mal écrit est refusé sans être affiché, chaque cas nommé par sa nature et non par son contenu |
+| T82 | Vérificateur, suite | mats cités, un `#7` sans signe seulement un avertissement, une FEN avec sa case en passant venue de la partie, caractères de contrôle du PGN montrés en `?`, un accent sous une sortie ASCII, périmètre convenu, contrôles sautés du mode court, dossier parent à une ou plusieurs collectes ; une troisième décimale nulle ; des mots hors des accolades, un coup écrit avec un `P` et un roque en zéros, ce dernier hors mode court ; une ligne vide dans un commentaire, que python-chess lit jusqu'au bout ; une seconde partie dans le fichier ; une ligne de 90 caractères, un point-virgule, des balises dans le désordre, un PlyCount faux et une variante de sept demi-coups ; un coup illégal de la ligne principale ; une FEN étrangère à la partie ; un fichier PGN ou `--summary` absent ; les notes que portait la partie d'origine, mises de côté avant les contrôles, gardées avec un commentaire, l'une coupée après un trait d'union, ou seules ; une partie en notation libre recopiée telle quelle, acceptée en mode court seulement ; une ligne qui commence par un crochet parmi les coups, seule ou après une ligne vide ; une seconde partie comptée pour un seul échec |
+| T83 | Parties d'exemples | les fichiers de `example-games` restent ce qu'`EXAMPLES.fr.md` en dit : huit parties acceptées, dont les exports de quatre sites et d'un logiciel, sept refusées avec leur cause, trois PGN annotés contrôlés, l'unique variante des deux premiers comptée au singulier et les cinq défauts du troisième nommés, puis la conversation, avec son PGN ou sans aucun, et le PGN du prompt court sur le dossier gardé ; aucune adresse ni identifiant de partie réelle |
 | T84 | Environnement virtuel incomplet | un environnement sans pip est reconnu, un répertoire sans `pyvenv.cfg` ne l'est jamais ; avec `--network`, `--install-venv` reconstruit le premier et y installe python-chess |
 | T85 | `--venv` qui n'est pas un environnement virtuel | un répertoire non vide sans `pyvenv.cfg`, avec ou sans interpréteur, est refusé par `--install-venv` avant tout pip, et rien n'y est ajouté, son interpréteur, factice, ne tournant jamais ; un fichier ordinaire est refusé avec son propre message et laissé intact ; un répertoire absent ou vide n'est pas refusé |
 | T86 | `--no-settings` | le fichier de réglages n'est ni lu ni écrit, ce que disent le journal et `collection.json` : camp déduit de `--usernames` ou inconnu, niveau tiré de la balise Elo de ce camp, fichier intact ; sur un terminal, aucune question de réglages, le camp est demandé, aucun fichier créé ; refusée avec `--settings` et avec `--purge-settings` ; un pseudo est trouvé comme nom entier ou comme mots, jamais comme sous-chaîne |
@@ -174,10 +174,10 @@ Les lancements sur pseudo-terminal passent par un pilote qui les arrête au bout
 | T94 | Catalogue sans réseau | les cinq sources lues par une adresse `file://` : un en-tête, une ligne incomplète, un coup illégal, une position nommée deux fois, un fichier vide ou hors UTF-8 refusés, l'index en place intact ; à la lecture, un index sans description, de format inconnu, corrompu ou tronqué refusé |
 | T95 | Seuils de l'explorateur | sur un explorateur simulé, chaque option arrête l'interrogation où il faut : `--min-games`, `--min-frequency`, le catalogue, `--min-moves`, `--exhaustive`, `--max-plies`, un seuil à zéro ; sur un serveur local, 429 repris une fois après une pause de 60 secondes, la pause entre deux requêtes, `--timeout` ; un jeton refusé arrête toute la collecte avant le moteur |
 | T96 | Erreurs | variante, PGN vide, partie sans coup, sans source, valeurs sous 1, `--usernames` vide, moteur non exécutable, moteur UCI sans Hash : refusés sans dossier ; `--pv-length` borne la section 3a ; une archive déjà là n'est pas écrasée ; cent noms pris dans la même seconde arrêtent le lancement. "Cannot write in" n'est pas testé : root écrit partout |
-| T97 | Ctrl-C | interrompu pendant que le moteur évalue : "Interrupted.", code de retour 130, pas d'archive |
+| T97 | Ctrl-C | interrompu pendant que le moteur évalue : "Interrupted.", code de retour 130, pas d'archive ; une minuterie tue le script si l'interruption ne l'arrête pas |
 | T98 | Erreur inattendue | sur une copie à faute injectée : une ligne et le conseil sans `--debug`, la trace entière avec, le jeton expurgé dans les deux cas |
 | M1 | Collecte, noms | nom de PGN accentué, chemin de sortie avec espace et accent |
-| M2 | Collecte complète | l'italienne analysée en entier, moteur seul, sans processus du moteur laissé derrière, trouvé par son nom même au-delà des 15 caractères que garde Linux |
+| M2 | Collecte complète | l'italienne analysée en entier, moteur seul, sans processus du moteur laissé derrière, trouvé par son nom même au-delà des 15 caractères que garde Linux, ou par le nom du lien par lequel T55 le lance |
 
 ## 6. Tests avec `--network`
 

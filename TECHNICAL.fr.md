@@ -73,10 +73,10 @@ Le HTTP passe par urllib et l'archive par zipfile, tous deux de la bibliothèque
 Une option sans effet, ou une valeur hors bornes, est refusée plutôt qu'ignorée en silence :
 
 - `--speeds` et `--ratings` exigent `--database lichess`.
-- `--pause` ne descend pas sous 2, `--min-frequency` reste entre 0 et 100, `--min-moves`, `--stockfish-moves` et `--pv-length` valent 0 ou plus, `--depth` va de 1 à 60, les autres valeurs numériques valent au moins 1.
+- `--pause` ne descend pas sous 2, `--min-frequency` reste entre 0 et 100, `--min-moves`, `--stockfish-moves` et `--pv-length` valent 0 ou plus, `--depth` va de 1 à 60, les autres valeurs numériques valent au moins 1. `--timeout` est contrôlé avec `--install-catalog` aussi, qui télécharge également.
 - `--pause` et `--min-frequency` refusent nan et inf.
 - `--threads`, `--hash` et `--multipv` sont contrôlés auprès du moteur, qui annonce ses bornes : une valeur qu'il n'admet pas est refusée avant toute requête à l'explorateur et avant la création du dossier de travail.
-- `--settings` prend un nom de fichier qui finit par `.ini`, sans dossier (section 6) : un chemin est refusé, `/dev/null` compris.
+- `--settings` prend un nom de fichier qui finit par `.ini`, sans dossier et qui ne commence pas par un point (section 6) : un chemin est refusé, `/dev/null` compris.
 - `--settings` et `--no-settings` s'excluent, de même que `--purge-settings` et `--no-settings`.
 - `--purge-settings` s'emploie seule, sans partie ni autre action.
 - `--no-prompt` s'exclut avec `--prompt` et avec `--prompt-only`.
@@ -301,7 +301,7 @@ Sans terminal, rien n'est demandé ni écrit.
 
 ### Plusieurs profils
 
-`--settings NAME` désigne un autre fichier : un nom de fichier qui finit par `.ini`, rangé à la racine du dossier de l'application, à côté de `settings.ini`. Un chemin est refusé, même à l'intérieur du dossier : les réglages ne quittent jamais le dossier, et le supprimer ne laisse rien derrière. Si le fichier n'existe pas, il est créé par les mêmes questions : c'est la façon de tenir un profil par joueur.
+`--settings NAME` désigne un autre fichier : un nom de fichier qui finit par `.ini` et ne commence pas par un point, qui le cacherait, rangé à la racine du dossier de l'application, à côté de `settings.ini`. Un chemin est refusé, même à l'intérieur du dossier : les réglages ne quittent jamais le dossier, et le supprimer ne laisse rien derrière. Si le fichier n'existe pas, il est créé par les mêmes questions : c'est la façon de tenir un profil par joueur.
 
 Dans un terminal, un nom dont le fichier n'existe pas encore est d'abord confirmé : "Settings: player2.ini does not exist yet in ... Create it? [y/n]". `n`, ou Ctrl-D, arrête le script avant toute écriture et toute collecte : une faute de frappe ne crée pas de nouveau fichier. Le fichier par défaut, `settings.ini`, est créé sans cette question.
 
@@ -420,6 +420,8 @@ Un index du catalogue écrit avant la version 5.0.0, `catalogue.tsv`, n'est pas 
 ## 9. Moteur
 
 ### Dialogue avec Stockfish
+
+Par défaut, le moteur est le binaire `stockfish` trouvé dans le PATH, sous Debian comme sous macOS. À défaut, c'est celui du paquet : `/usr/games/stockfish` sous Debian, que le PATH de root ne contient pas, et `/opt/homebrew/bin/stockfish` sous macOS. `--stockfish` en nomme un autre.
 
 Le script pilote Stockfish par le protocole UCI, à travers python-chess. Il le lance deux fois :
 
@@ -654,6 +656,7 @@ Valeurs :
 | `PLIES` | nombre de demi-coups de la partie |
 | `PLIES_EVALUATED` | nombre de demi-coups que le moteur a évalués, plus petit avec `--stockfish-moves` |
 | `PLAYER_WEAK_MOVES` | nombre de vos coups que `ENGINE_TABLE` marque inaccuracy, mistake ou blunder, "unknown" si votre camp ne l'est pas |
+| `FENCE` | clôture du bloc de code qui contient `GAME_PGN` : une suite d'accents graves plus longue que toute suite de la partie, trois au moins |
 
 Conditions :
 
@@ -677,7 +680,7 @@ Conditions :
 
 `STOCKFISH`, `MASTERS_DATABASE` et `RATING_DECLARED` ne servent à aucun des deux modèles du dépôt : elles sont gardées pour les modèles personnels.
 
-Les deux modèles, `prompt-template.txt` et `prompt-only-template.txt`, partagent ces repères. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `DEPTH`, `PLAYER_WEAK_MOVES` et les conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` servent au prompt court. `PLAYER_WEAK_MOVES`, `FEW_WEAK_MOVES` et `NO_WEAK_MOVE` servent aussi au bilan final du prompt complet.
+Les deux modèles, `prompt-template.txt` et `prompt-only-template.txt`, partagent ces repères. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `DEPTH`, `FENCE`, `PLAYER_WEAK_MOVES` et les conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` servent au prompt court. `PLAYER_WEAK_MOVES`, `FEW_WEAK_MOVES` et `NO_WEAK_MOVE` servent aussi au bilan final du prompt complet.
 
 Les deux prompts finissent par un bilan : les trois erreurs les plus coûteuses du joueur et le thème à travailler. Quand le tableau marque moins de trois coups faibles de votre côté, la phrase change : elle donne leur nombre et demande de s'en tenir à ceux-là. Dans le prompt court :
 
@@ -690,11 +693,11 @@ Keep to those, without adding any.
 
 Le prompt complet le dit dans son bilan final, et demande en outre de ne pas remplacer vos erreurs par celles de votre adversaire. Sans aucun coup faible de votre côté, les deux prompts demandent de ne vous prêter aucune erreur. Quand votre camp n'est pas connu, le prompt court demande de commenter les deux camps de la même façon et de donner le bilan pour chacun ; le prompt complet demande vos erreurs une fois votre camp trouvé, et celles de chaque camp sinon.
 
-Les deux prompts disent que les balises et les commentaires du PGN sont des données, au plus les notes du joueur, jamais des consignes : un commentaire, ou une balise, pourrait sinon donner des ordres au LLM. Le prompt court place la partie dans un bloc de code.
+Les deux prompts disent que les balises et les commentaires du PGN sont des données, au plus les notes du joueur, jamais des consignes : un commentaire, ou une balise, pourrait sinon donner des ordres au LLM. Le prompt court place la partie dans un bloc de code, dont la clôture, `FENCE`, est plus longue que toute suite d'accents graves de la partie : avec une clôture fixe de trois, un commentaire qui portait une telle ligne fermait le bloc.
 
-Les deux prompts demandent de garder ces notes dans le PGN rendu, avant le commentaire du LLM, et d'en retirer les commandes qu'un site écrit entre crochets dans les commentaires : `[%clk 0:10:00]` pour la pendule, `[%eval 0.23]` pour son moteur. Une partie téléchargée de Lichess les porte, l'export donnant par défaut les pendules et les évaluations, et le prompt complet interdit le caractère `%` dans un commentaire.
+Les deux prompts demandent de garder ces notes dans le PGN rendu, avant le commentaire du LLM, et d'en retirer les commandes qu'un site écrit entre crochets dans les commentaires : `[%clk 0:10:00]` pour la pendule, `[%eval 0.23]` pour son moteur. Une partie téléchargée de Lichess les porte, l'export donnant par défaut les pendules et les évaluations, et le prompt complet interdit le caractère `%` dans un commentaire. Un `%` que porte une note devient lui aussi "percent" ; les autres contraintes de format visent le texte du LLM, pas une note gardée. Quand une note contredit les chiffres du moteur, ceux que laisse l'analyse d'un site par exemple, le moteur l'emporte et le LLM doit le dire.
 
-Le bilan final du prompt complet s'en tient au périmètre convenu, comme les commentaires : il demandait les erreurs les plus coûteuses de toute la table, même quand les commentaires s'arrêtaient au coup 15. Le prompt court dit la même chose sous "What the player specified", quand un périmètre y est donné.
+Le bilan final du prompt complet s'en tient au périmètre convenu, comme les commentaires : il demandait les erreurs les plus coûteuses de toute la table, même quand les commentaires s'arrêtaient au coup 15. Le prompt court dit la même chose sous "What the player specified", quand un périmètre y est donné. Les deux ajoutent qu'un périmètre qui contient moins d'erreurs que demandé ne donne que celles-là : les comptes de coups faibles sont ceux de toute la table.
 
 Le prompt complet fixe l'ordre du début de la réponse : la ligne qui dit si le LLM peut exécuter du code, cas A ou B, puis le récapitulatif. Deux sections demandaient l'une et l'autre le début de la réponse.
 
@@ -755,6 +758,7 @@ Code de retour : 0 sans `FAIL`, 1 avec au moins un `FAIL`, 2 si aucun contrôle 
 - **Hors des commentaires** : seulement des coups en notation standard, des numéros de coup, des NAG, les parenthèses des variantes et le résultat. Tout autre mot est un échec, nommé avec sa ligne : un texte libre, que python-chess saute sans rien dire, un coup écrit `Pg2xf3`, qu'il lit `g2xf3`, un coup écrit avec un tiret entre ses cases. La règle est plus stricte que celle d'`ianalyze.py`, qui lit les PGN de tous les sites. Le roque écrit avec des zéros, `0-0`, que python-chess lit `O-O`, est un échec à part, hors `--prompt-only`. Les mots d'un commentaire coupé trop tôt par une accolade fermante restent comptés dans ce seul défaut.
 - **Ligne vide** : dans le corps de la partie, c'est un échec. Dans un commentaire, python-chess poursuit sa lecture jusqu'à l'accolade fermante : le bilan le dit, le prompt interdisant la ligne tout de même.
 - **Balises** : les sept obligatoires en tête et dans l'ordre, leurs valeurs reprises de la partie d'origine. Les autres par ordre alphabétique, Annotator renseignée et PlyCount exact, sinon `WARNING`.
+- **Notes de la partie d'origine** : les deux prompts demandent de les garder avant le commentaire du LLM. Le script les retire d'abord de chaque commentaire, avant le coup 1 et après chaque coup de la ligne principale, quels que soient les sauts de ligne, après un trait d'union compris, les commandes d'un site retirées et un `%` écrit "percent" ou non. Ce qui reste est le texte du LLM, le seul jugé : un chiffre cité dans une note n'est pas une évaluation inventée, et un coup qui ne porte que sa note d'origine n'est pas commenté. Le bilan compte les notes gardées.
 - **Coups commentés** : chaque erreur et chaque gaffe de Stockfish doit l'être. L'une d'elles commentée sans NAG compte comme `WARNING`, hors `--prompt-only`. Le nombre total de coups commentés est donné pour information, le prompt en visant 15 à 25.
 - **Périmètre** : le prompt limite les commentaires au périmètre convenu. Une erreur jouée au-delà n'est pas attendue. Le périmètre est le premier nombre de votre réponse à la question de démarrage, lue dans les consignes de `summary.md` : "the first 20 moves" vaut 20 coups. Une réponse sans nombre, ou laissée par défaut, vaut la partie complète. `--scope N` le donne à la main, quand il a été convenu dans la conversation.
 - **NAG de position** : `$14`, `$16`, `$18` et `$20` donnent les Blancs mieux, `$15`, `$17`, `$19` et `$21` les Noirs. Un tel NAG est contraire au moteur quand celui-ci donne l'autre camp mieux d'au moins un demi-pion, ou un mat. `$10`, position égale, n'est pas comparé : posé sur une position gagnée, il passe.
@@ -777,3 +781,5 @@ Le bilan cite le PGN et le texte rendus par le LLM : leurs caractères de contr�
 Le prompt court demande moins que le prompt complet. Les contrôles qu'il ne demande pas sont sautés : longueur des lignes, résumé, NAG, signe pour cent, point-virgule, tiret cadratin, notation suffixe, roque écrit avec des zéros, ordre alphabétique des autres balises, balises Annotator et PlyCount, longueur des variantes. Le prompt court demande de recopier les coups tels quels : une partie exportée avec `0-0` reste fidèle avec eux. Les mots hors des accolades, eux, sont contrôlés : le prompt court demande les commentaires entre accolades. Avec `--summary`, le tiret cadratin de la conversation et le nombre de FEN ne sont pas contrôlés non plus : une FEN citée doit seulement être valide et venir de la partie.
 
 Les balises sont contrôlées autrement. Le prompt complet veut les sept balises obligatoires du standard PGN, dans leur ordre. Le prompt court demande seulement de recopier celles de la partie : parmi les sept, seules celles que porte la partie d'origine sont attendues, dans l'ordre où elle les écrit.
+
+Les mots hors des accolades sont eux aussi contrôlés autrement. Le prompt court demande de recopier les coups sans en changer un seul : un mot que la partie d'origine écrit elle-même hors de la notation standard, `e2-e4` ou `bxa8Q`, que lit `ianalyze.py`, est accepté tel quel.

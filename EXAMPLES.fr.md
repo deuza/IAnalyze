@@ -104,8 +104,8 @@ cd example-games
 | `game-lichess-org.pgn` | une vraie partie de 20 coups, anonymisée, telle que Lichess l'exporte : c'est celle des essais du 21 novembre 2026 (README, section 7) |
 | `commented-game.pgn` | une autre vraie partie de Lichess, 25 coups, anonymisée, exportée avec l'analyse du site : commentaires, variantes et horloges |
 | `game-chess-com.pgn`, `game-chess-mail.pgn`, `game-ajedrezmail.pgn`, `game-lucas-chess.pgn` | quatre vraies parties, anonymisées, telles que ces sites et ce logiciel les exportent |
-| `french-notation.pgn`, `two-games.pgn`, `position.pgn`, `unclosed-brace.pgn`, `tag-with-moves.pgn`, `null-move-in-check.pgn` | six fichiers que le script refuse, pour les messages d'erreur |
-| `llm-annotated.pgn`, `llm-faulty.pgn`, `llm-short.pgn` | trois PGN annotés écrits pour l'exemple, à la place de ceux qu'un LLM rendrait |
+| `french-notation.pgn`, `two-games.pgn`, `position.pgn`, `unclosed-brace.pgn`, `tag-with-moves.pgn`, `bracket-among-moves.pgn`, `null-move-in-check.pgn` | sept fichiers que le script refuse, pour les messages d'erreur |
+| `llm-annotated.pgn`, `llm-faulty.pgn`, `llm-faulty-words.pgn`, `llm-short.pgn` | quatre PGN annotés écrits pour l'exemple, à la place de ceux qu'un LLM rendrait |
 | `llm-conversation.txt` | le texte d'une conversation, pour l'option `--summary` du vérificateur |
 
 Ces fichiers sont en anglais, sauf `french-notation.pgn`, dont la notation française est justement le sujet.
@@ -413,6 +413,50 @@ Check of an analysis returned by an LLM
   warnings : 0
 ```
 
+Un autre PGN fautif montre les défauts que python-chess lit sans rien dire.\
+Celui-ci porte une ligne vide dans un commentaire, un texte écrit hors des accolades, un roque écrit avec des zéros, un rang écrit `#7` et une seconde partie :
+
+```bash
+./verify-analysis.py analysis-my-game-20261125-152942.zip llm-faulty-words.pgn --name "Model tried"
+```
+
+```text
+Check of an analysis returned by an LLM
+  model      : Model tried
+  archive    : analysis-my-game-20261125-152942.zip
+  PGN        : llm-faulty-words.pgn
+
+=== 1. Reading the PGN ===
+...
+  FAIL      blank line in the body of the game: inside a comment, python-chess reads on, but another PGN reader may take it for the end of the game
+            - line 13
+  INFO      the following checks are made on the file once these lines are removed
+  FAIL      a single game in the file
+            - 1 more game after the first one, which alone is checked
+...
+=== 2. Main line ===
+...
+=== 3. Format ===
+...
+  FAIL      outside the braces, only moves in standard notation, move numbers, NAGs and the result
+            - line 15: and castling comes next
+  FAIL      castling written with the letter O, never the digit zero
+            - line 17: 0-0
+...
+=== 4. Commented moves ===
+...
+=== 5. Evaluations quoted in the PGN ===
+...
+  WARNING   1 "#N" written without a sign and not found in the data of the engine: a rank, "mistake #7", rather than a mate?
+            - 1. e4: #7
+...
+=== 6. Variations ===
+...
+=== Totals ===
+  failures : 4
+  warnings : 1
+```
+
 ## OPTIONS
 
 ### Général
@@ -460,7 +504,8 @@ options:
 
 *Défaut : `30`*
 
-Délai réseau maximal par requête, en secondes : export PGN, explorateur, téléchargement du catalogue.
+Délai réseau maximal par requête, en secondes : export PGN, explorateur, téléchargement du catalogue.\
+Il vaut au moins 1, avec `--install-catalog` aussi, qui télécharge également.
 
 ```bash
 ./ianalyze.py my-game.pgn --no-explorer --no-questions --timeout 60
@@ -595,7 +640,7 @@ Rien n'est retenu à votre place : le prompt dit alors au LLM que vos réponses 
 
 *Défaut : ceux de vos réglages*
 
-Vos noms de joueur, séparés par des virgules, cherchés sans tenir compte de la casse dans White et Black pour déduire votre camp.\
+Vos noms de joueur, séparés par des virgules, cherchés sans tenir compte de la casse dans White et Black pour déduire votre camp : chacun comme le nom entier ou comme une suite de ses mots, jamais comme un morceau de mot. `Max` est trouvé dans `Max Power`, pas dans `Maxime` ni dans `Max_Power`.\
 Le premier sert à compléter une balise vide. L'option remplace, le temps d'un lancement, les pseudos du fichier de réglages.
 
 `my-game.pgn` oppose MyUsername, avec les Blancs, à Opponent.\
@@ -1642,6 +1687,18 @@ Une balise occupe une ligne entière, avant les coups de sa partie. python-chess
 Corrupt PGN: line 4 is not a well-formed tag, [Name "value"] alone on its line: python-chess would skip it, together with what it carries.
 ```
 
+Il en va de même d'une ligne qui commence par un crochet parmi les coups :
+
+```bash
+./ianalyze.py bracket-among-moves.pgn --no-explorer --no-questions
+```
+
+```text
+[10:47:00] Virtual environment: restarting with ~/IAnalyze/local/venv/bin/python3
+[10:47:00] Reading the local PGN: bracket-among-moves.pgn
+Corrupt PGN: line 9 starts with a bracket among the moves. A tag goes before the moves of its game, and python-chess would read as moves what the brackets hold.
+```
+
 ### Coup nul joué en échec
 
 Un coup nul, `--`, passe le trait. Joué en échec, il laisse le roi attaqué : les positions qui suivent sont illégales, et le moteur ne peut pas les évaluer.
@@ -1798,7 +1855,7 @@ Le modèle désigné par `--prompt` porte ici une valeur mal écrite.
 
 ```text
 [15:36:58] Virtual environment: restarting with ~/IAnalyze/local/venv/bin/python3
-Prompt template ~/faulty-template.txt, line 21: unknown value {{VERSON}}, accepted values: VERSION, REPOSITORY, ARCHIVE, USERNAMES, SIDE, RATING, TIME_CONTROL, ANNOTATOR, DATABASE, INACCURACY_THRESHOLD, MISTAKE_THRESHOLD, BLUNDER_THRESHOLD, DEPTH, MULTIPV, GAME_PGN, ENGINE_TABLE, RESULT_ALERT, PLAYER_INSTRUCTIONS, OPENING, PLIES, PLIES_EVALUATED, PLAYER_WEAK_MOVES
+Prompt template ~/faulty-template.txt, line 21: unknown value {{VERSON}}, accepted values: VERSION, REPOSITORY, ARCHIVE, USERNAMES, SIDE, RATING, TIME_CONTROL, ANNOTATOR, DATABASE, INACCURACY_THRESHOLD, MISTAKE_THRESHOLD, BLUNDER_THRESHOLD, DEPTH, MULTIPV, GAME_PGN, ENGINE_TABLE, RESULT_ALERT, PLAYER_INSTRUCTIONS, OPENING, PLIES, PLIES_EVALUATED, PLAYER_WEAK_MOVES, FENCE
 ```
 
 ### Fichier de réglages à l'ancien format
@@ -1868,6 +1925,7 @@ Ce que le script lit :
 | `~/.lichess_token` | votre jeton Lichess, en mode 600 |
 | `prompt-template.txt`, `prompt-only-template.txt` | les modèles de prompt, à côté du script |
 | `/usr/games/stockfish` | le moteur sous Debian, quand le PATH ne le contient pas, celui de root par exemple. Sinon, celui du PATH |
+| `/opt/homebrew/bin/stockfish` | le moteur sous macOS, quand le PATH ne le contient pas |
 
 Ce qu'il écrit, dans le répertoire courant ou dans celui de `--output-dir` :
 

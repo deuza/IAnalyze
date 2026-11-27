@@ -27,10 +27,10 @@
 #
 # Your token, with --network: this script does not display it, does not
 # copy it and does not pass it in any command line. It is ianalyze.py
-# that reads it. The script itself only uses it as a pattern file for
-# grep (option -f), to check that it appears neither in an archive nor
-# in the report. If it were found in the report, the report would not be
-# written.
+# that reads it. The script itself only has it read by the function of
+# ianalyze.py, and passes it through a pipe to grep, as a pattern, to
+# check that it appears neither in an archive nor in the report. If it
+# were found in the report, the report would not be written.
 #
 # Load on Lichess, with --network: about 70 requests to the explorer,
 # spaced 2 seconds apart by ianalyze.py, 10 catalog files from GitHub
@@ -207,7 +207,6 @@ cp = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cp)
 print(cp.extraire_id(os.environ["PARTIE"]) or "")
 ' 2>/dev/null)
-    rm -rf "$DEPOT/__pycache__"
     if [ -z "$ID_PARTIE" ]; then
         echo "This is not a Lichess game: $PARTIE" >&2
         echo "Give its identifier, 8 characters, or its address:" >&2
@@ -417,7 +416,6 @@ printf '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6 5. d3 *\n' > italienne.pgn
 
 titre "T01, T02: compilation and help"
 verifier "T01 py_compile" python3 -m py_compile "$SCRIPT"
-rm -rf "$DEPOT/__pycache__"
 "$SCRIPT" --help > aide 2> journal
 egal "T02 --help, exit code" 0 $?
 egal "T02 --min-moves quoted 4 times" 4 "$(grep -c -- --min-moves aide)"
@@ -461,7 +459,6 @@ EOF
 egal "T84 without pip, without pyvenv.cfg, complete" "True False False" \
     "$(cat sortie-t84)"
 joindre journal-t84 5
-rm -rf "$DEPOT/__pycache__"
 
 titre "T85: --venv that is not a virtual environment, refused"
 # A directory with an interpreter but no pyvenv.cfg, like /usr, and a
@@ -514,7 +511,6 @@ EOF
 egal "T85 fake, other, empty, missing, complete" \
     "True True False False False" "$(cat sortie-t85)"
 joindre journal-t85 5
-rm -rf "$DEPOT/__pycache__"
 
 titre "T05: minimal collection"
 lancer italienne.pgn $O
@@ -766,12 +762,15 @@ import signal
 import sys
 import time
 
-DELAI = 300
+DELAI = int(os.environ.get("T_PTY_DELAI", "300"))
 script = os.environ["SCRIPT"]
 pid, fd = pty.fork()
 if pid == 0:
     os.execv(script, [script] + sys.argv[2:])
 vu = b""
+# True once the script has closed its terminal: there is nothing more
+# to read from it, and nothing must be written to it.
+ferme = False
 debut = time.monotonic()
 
 
@@ -779,16 +778,34 @@ def depasse():
     return time.monotonic() - debut > DELAI
 
 
-def lire():
-    global vu
-    while not depasse() and select.select([fd], [], [], 1)[0]:
+def lire(reste=False):
+    """
+    Reads what the terminal shows, up to one second of silence. With
+    reste, only what is already there is read, the deadline being
+    passed: what the script wrote last is not lost.
+    """
+    global vu, ferme
+    while ((reste or not depasse())
+           and select.select([fd], [], [], 0 if reste else 1)[0]):
         try:
             bloc = os.read(fd, 65536)
         except OSError:
+            ferme = True
             return
         if not bloc:
+            ferme = True
             return
         vu += bloc
+
+
+def montrer():
+    # Bytes, and not text: under a locale that is neither UTF-8 nor C,
+    # writing the U+FFFD of an answer echoed in latin-1 stopped the
+    # driver on UnicodeEncodeError.
+    sys.stdout.flush()
+    sys.stdout.buffer.write(
+        vu.decode("utf-8", "replace").replace("\r", "").encode("utf-8"))
+    sys.stdout.buffer.flush()
 
 
 for reponse in sys.argv[1].split("|"):
@@ -808,13 +825,21 @@ while True:
     if depasse():
         os.kill(pid, signal.SIGKILL)
         os.waitpid(pid, 0)
-        lire()
-        sys.stdout.write(vu.decode("utf-8", "replace").replace("\r", ""))
+        lire(reste=True)
+        montrer()
         sys.stdout.write("\nt-pty: deadline of %d seconds reached, script "
                          "killed\n" % DELAI)
         sys.exit(124)
     avant = len(vu)
     lire()
+    if ferme:
+        # A script that closed its terminal while still running: lire()
+        # then returns at once. The end of stream was written in a tight
+        # loop until the terminal was full, and the write blocked for
+        # good, the deadline being never looked at again. Nothing is
+        # written, and the loop waits for the end of the script.
+        time.sleep(0.2)
+        continue
     silences = silences + 1 if len(vu) == avant else 0
     if silences >= 15:
         try:
@@ -823,21 +848,41 @@ while True:
             pass
         silences = 0
 # What the script wrote just before ending.
-lire()
-sys.stdout.write(vu.decode("utf-8", "replace").replace("\r", ""))
+lire(reste=True)
+montrer()
 code = os.waitstatus_to_exitcode(statut)
 sys.exit(128 - code if code < 0 else code)
 EOF
+
+# piloter script answers options...: runs the driver on the script,
+# keeps what the terminal showed in "sortie-pty" and the exit code in
+# RC_PTY. Seventeen of the twenty runs only read that text, or a file
+# written before the engine: a run that the driver had killed at its
+# deadline, code 124, went through. It is now a failure of its own,
+# wherever it happens.
+piloter() {
+    piloter_script=$1
+    shift
+    SCRIPT="$piloter_script" python3 t-pty.py "$@" > sortie-pty 2>&1
+    RC_PTY=$?
+    if [ "$RC_PTY" = 124 ]; then
+        NB_ECHEC=$((NB_ECHEC + 1))
+        noter "  FAIL   pseudo-terminal driver: deadline reached, script killed"
+        printf '    FAIL: pseudo-terminal driver, deadline reached\n' >&2
+        tail -n 5 sortie-pty > ligne
+        joindre ligne
+    fi
+}
 
 titre "T45: answer typed in latin-1 on a pseudo-terminal"
 # The second answer, Zo\351, is in latin-1: the script must read it,
 # not stop on it. The whole output of the terminal is read, and no
 # longer its last 300 characters.
 rm -rf analysis-italienne-*
-SCRIPT="$SCRIPT" python3 t-pty.py "$(printf 'w|Zo\351|||||')" \
+piloter "$SCRIPT" "$(printf 'w|Zo\351|||||')" \
     italienne.pgn --no-explorer --depth 1 --keep-folder --venv "$VENV" \
-    --settings "$REGL" > sortie-pty 2>&1
-egal "T45 exit code" 0 "$?"
+    --settings "$REGL"
+egal "T45 exit code" 0 "$RC_PTY"
 cat analysis-italienne-*/game.pgn > extrait 2>/dev/null
 verifier "T45 game.pgn carries [Black \"Zoé\"]" contient extrait '[Black "Zoé"]'
 egal "T45 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
@@ -845,6 +890,21 @@ verifier "T45 the run went to its end" contient sortie-pty "Folder kept on reque
 tail -n 5 sortie-pty > ligne
 joindre ligne
 rm -rf analysis-italienne-*
+# The driver itself. A script that never ends is killed at the
+# deadline, here three seconds, and the driver exits with code 124. A
+# script that closes its terminal while still running no longer blocks
+# the driver: it waits for the end of the script and gives its exit
+# code.
+printf '#!/bin/sh\nexec sleep 600\n' > t-attente
+printf '#!/bin/sh\nexec 0<&- 1>&- 2>&-\nsleep 3\nexit 5\n' > t-ferme
+chmod +x t-attente t-ferme
+T_PTY_DELAI=3 SCRIPT=./t-attente python3 t-pty.py "" > sortie-pty 2>&1
+egal "T45 driver: a script that never ends is killed, code 124" 124 "$?"
+verifier "T45 driver: the deadline reached is said" \
+    contient sortie-pty "deadline of 3 seconds reached, script killed"
+T_PTY_DELAI=60 SCRIPT=./t-ferme python3 t-pty.py "" > sortie-pty 2>&1
+egal "T45 driver: terminal closed by a running script, its code given" \
+    5 "$?"
 
 titre "T79: refused answers, too long or carrying PGN signs"
 # The name of the opponent goes into a PGN tag: a quote or a bracket
@@ -852,11 +912,11 @@ titre "T79: refused answers, too long or carrying PGN signs"
 # question asked again, the third one is kept.
 rm -rf analysis-italienne-*
 LONGUE=$(printf '%300s' '' | tr ' ' a)
-SCRIPT="$SCRIPT" python3 t-pty.py \
+piloter "$SCRIPT" \
     "w|Ev\"il] [White \"Pirate\"] {x}|$LONGUE|Bob|||||" \
     italienne.pgn --no-explorer --depth 1 --keep-folder --venv "$VENV" \
-    --settings "$REGL" > sortie-pty 2>&1
-egal "T79 exit code" 0 "$?"
+    --settings "$REGL"
+egal "T79 exit code" 0 "$RC_PTY"
 cat analysis-italienne-*/game.pgn > extrait 2>/dev/null
 verifier "T79 name kept after two refusals" contient extrait '[Black "Bob"]'
 egal "T79 a single White tag, no extra sign" "1 0" \
@@ -888,7 +948,6 @@ verifier "T80 label bounded in bytes, spaces as hyphens" \
     cmp -s attendu-t80 sortie-t80
 joindre sortie-t80
 joindre journal-t80 5
-rm -rf "$DEPOT/__pycache__"
 
 titre "T46, T47: sound PGN and version"
 lancer italienne.pgn $O
@@ -911,7 +970,6 @@ EOF
 egal "T47 version in the X.Y.Z format, repeated in the user agent header" \
     "True True" "$(cat sortie-t47)"
 joindre journal-t47 5
-rm -rf "$DEPOT/__pycache__"
 
 # --- Archive ----------------------------------------------------------------
 
@@ -983,7 +1041,6 @@ analysis-essai-1.zip
 EOF
 verifier "T53 six expected lines" cmp -s attendu-r1 sortie-r1
 joindre sortie-r1
-rm -rf "$DEPOT/__pycache__"
 
 # --- Simulated explorer and options ----------------------------------------
 
@@ -1049,7 +1106,6 @@ cat > attendu-t49 <<'EOF'
 EOF
 verifier "T49 four expected lines" cmp -s attendu-t49 sortie-t49
 joindre sortie-t49
-rm -rf "$DEPOT/__pycache__"
 
 titre "T94: catalog installed and checked without the network"
 # The five source files are written here, and read through a file://
@@ -1452,7 +1508,6 @@ verifier "T76 redirects, redacted answer, damaged answers" \
     cmp -s attendu-t76 sortie-t76
 joindre sortie-t76
 joindre journal-t76 5
-rm -rf "$DEPOT/__pycache__"
 
 titre "T50: non-finite values"
 for option in "--pause nan" "--pause inf" "--min-frequency nan"; do
@@ -1493,7 +1548,6 @@ EOF
 printf 'AbCd1234\nAbCd1234\nAbCd1234\nAbCd1234\nAbCd1234\nNone\nNone\nNone\nNone\nNone\nNone\n' > attendu-t54
 verifier "T54 identifiers extracted" cmp -s attendu-t54 sortie-t54
 joindre sortie-t54
-rm -rf "$DEPOT/__pycache__"
 
 # --- Null move and explorer -------------------------------------------------
 
@@ -1540,7 +1594,6 @@ EOF
 verifier "T56 stop at the null move, two requests, no exit" \
     cmp -s attendu-t56 sortie-t56
 joindre sortie-t56
-rm -rf "$DEPOT/__pycache__"
 
 # --- Settings ---------------------------------------------------------------
 
@@ -1549,8 +1602,8 @@ P="--no-explorer --depth 1 --keep-folder --venv $VENV"
 
 titre "T57: first run, settings asked then saved"
 rm -rf analysis-italienne-*
-SCRIPT="$SCRIPT" python3 t-pty.py "y|Zoe42, zoe|r|15|10|1300|w||||||" \
-    italienne.pgn $P --settings t-reglages.ini > sortie-pty 2>&1
+piloter "$SCRIPT" "y|Zoe42, zoe|r|15|10|1300|w||||||" \
+    italienne.pgn $P --settings t-reglages.ini
 verifier "T57 new settings file, created after confirmation" \
     contient sortie-pty "Settings: t-reglages.ini does not exist yet in"
 verifier "T57 three answers asked only once" \
@@ -1578,24 +1631,24 @@ joindre ligne
 
 titre "T58: second run, priority of --usernames"
 rm -rf analysis-italienne-*
-SCRIPT="$SCRIPT" python3 t-pty.py "w||||||" italienne.pgn $P \
-    --settings t-reglages.ini > sortie-pty 2>&1
+piloter "$SCRIPT" "w||||||" italienne.pgn $P \
+    --settings t-reglages.ini
 # The absence of a question proves nothing if the run stopped early:
 # its end is checked first.
-egal "T58 exit code" 0 "$?"
+egal "T58 exit code" 0 "$RC_PTY"
 verifier "T58 the run went to its end" \
     contient sortie-pty "Folder kept on request"
 egal "T58 no more settings question" 0 \
     "$(grep -c -E 'Settings|Your' sortie-pty)"
 printf '[White "Alice"]\n[Black "Zoe42"]\n\n1. e4 e5 *\n' > t-noms.pgn
-SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
-    --settings t-reglages.ini > sortie-pty 2>&1
+piloter "$SCRIPT" "||||" t-noms.pgn $P \
+    --settings t-reglages.ini
 cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T58 side deduced from the username of the settings" \
     contient extrait "Player's side: Black, deduced from the headers"
 rm -rf analysis-t-noms-*
-SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
-    --settings t-reglages.ini --usernames Alice > sortie-pty 2>&1
+piloter "$SCRIPT" "||||" t-noms.pgn $P \
+    --settings t-reglages.ini --usernames Alice
 cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T58 --usernames wins over the settings" \
     contient extrait "Player's side: White, deduced from the headers"
@@ -1612,8 +1665,8 @@ else
     egal "T59 outside a terminal, no file created" absent absent
 fi
 rm -rf analysis-italienne-*
-SCRIPT="$SCRIPT" python3 t-pty.py "y||||b|Moi|Lui|||||" italienne.pgn $P \
-    --settings t-vide.ini > sortie-pty 2>&1
+piloter "$SCRIPT" "y||||b|Moi|Lui|||||" italienne.pgn $P \
+    --settings t-vide.ini
 verifier "T59 without a username, the player name is asked" \
     contient sortie-pty "Your player name? (Enter: ?)"
 grep -v '^#' t-vide.ini > extrait 2>/dev/null
@@ -1637,8 +1690,8 @@ verifier "T60 badly formed file, remedy given" \
     contient journal "or delete it"
 printf '[player]\nusernames = Alice\nrating = 1500\n\n' > t-plus.ini
 printf '[perso]\nnote = 100 %% à moi\n' >> t-plus.ini
-SCRIPT="$SCRIPT" python3 t-pty.py "c|d|14|||||" t-noms.pgn $P \
-    --settings t-plus.ini > sortie-pty 2>&1
+piloter "$SCRIPT" "c|d|14|||||" t-noms.pgn $P \
+    --settings t-plus.ini
 grep -v '^#' t-plus.ini > extrait 2>/dev/null
 cat > attendu <<'EOF'
 
@@ -1658,8 +1711,8 @@ rm -rf analysis-t-noms-*
 titre "T62: time control checked, wrong answers refused"
 printf '[player]\nusernames = Alice\nrating = unknown\n' > t-cad.ini
 printf 'time_control = Ploum ploum\n' >> t-cad.ini
-SCRIPT="$SCRIPT" python3 t-pty.py "x|r|abc|-5|0|0|r|15|10|||||" t-noms.pgn \
-    $P --settings t-cad.ini > sortie-pty 2>&1
+piloter "$SCRIPT" "x|r|abc|-5|0|0|r|15|10|||||" t-noms.pgn \
+    $P --settings t-cad.ini
 verifier "T62 unreadable time control of the settings asked again" \
     contient sortie-pty "the saved time control,"
 egal "T62 type refused once" 1 \
@@ -1674,16 +1727,16 @@ egal "T62 no unexpected error" 0 "$(grep -c 'Unexpected error' sortie-pty)"
 grep -E 'be read|answer|exist' sortie-pty > ligne 2>/dev/null
 joindre ligne
 rm -rf analysis-t-noms-*
-SCRIPT="$SCRIPT" python3 t-pty.py "r|5|0||||" t-noms.pgn $P \
-    --settings t-cad.ini > sortie-pty 2>&1
+piloter "$SCRIPT" "r|5|0||||" t-noms.pgn $P \
+    --settings t-cad.ini
 cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T62 time control of the game different from the usual one" \
     contient extrait "- Time control: blitz, 5 minutes without increment"
 rm -rf analysis-t-noms-*
 printf '[White "Alice"]\n[Black "Bob"]\n' > t-tc.pgn
 printf '[TimeControl "600+5"]\n\n1. e4 e5 *\n' >> t-tc.pgn
-SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-tc.pgn $P \
-    --settings t-cad.ini > sortie-pty 2>&1
+piloter "$SCRIPT" "||||" t-tc.pgn $P \
+    --settings t-cad.ini
 egal "T62 TimeControl tag: no question" 0 \
     "$(grep -c 'Time control of the game' sortie-pty)"
 cat analysis-t-tc-*/context.md > extrait 2>/dev/null
@@ -1695,9 +1748,9 @@ rm -rf analysis-t-tc-*
 
 titre "T63: correspondence, three systems checked"
 printf '[player]\nusernames = Alice\nrating = unknown\n' > t-corr.ini
-SCRIPT="$SCRIPT" python3 t-pty.py \
+piloter "$SCRIPT" \
     "c|x|c|0|0h|||c|5|36|36h|2||c|5|36h|20||||||" t-noms.pgn $P \
-    --settings t-corr.ini > sortie-pty 2>&1
+    --settings t-corr.ini
 egal "T63 system refused once" 1 \
     "$(grep -c 'answer: d, p or c' sortie-pty)"
 egal "T63 increment without a unit refused once" 1 \
@@ -1715,16 +1768,16 @@ joindre ligne
 rm -rf analysis-t-noms-*
 printf '[player]\nusernames = Alice\nrating = unknown\n' > t-corr.ini
 printf 'time_control = 10 moves in 50 days\n' >> t-corr.ini
-SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
-    --settings t-corr.ini > sortie-pty 2>&1
+piloter "$SCRIPT" "||||" t-noms.pgn $P \
+    --settings t-corr.ini
 cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T63 standard ICCF: 10 moves in 50 days" \
     contient extrait "- Time control: correspondence, 10 moves in 50 days (default)"
 rm -rf analysis-t-noms-*
 printf '[player]\nusernames = Alice\nrating = unknown\n' > t-corr.ini
 printf 'time_control = 50d+3d, maximum 50d, bank 75d\n' >> t-corr.ini
-SCRIPT="$SCRIPT" python3 t-pty.py "||||" t-noms.pgn $P \
-    --settings t-corr.ini > sortie-pty 2>&1
+piloter "$SCRIPT" "||||" t-noms.pgn $P \
+    --settings t-corr.ini
 cat analysis-t-noms-*/context.md > extrait 2>/dev/null
 verifier "T63 ICCF Triple Block: clock, increment, maximum, bank" \
     contient extrait "clock of 50 days + 3 days per move, maximum of 50 days, bank of 75 days"
@@ -1733,8 +1786,8 @@ joindre ligne
 rm -rf analysis-t-noms-*
 # Settings file missing: the username is asked first, then, for lack
 # of a username, the side.
-SCRIPT="$SCRIPT" python3 t-pty.py "y||c|p|10|40||w|||||" t-noms.pgn $P \
-    --settings t-vide2.ini > sortie-pty 2>&1
+piloter "$SCRIPT" "y||c|p|10|40||w|||||" t-noms.pgn $P \
+    --settings t-vide2.ini
 verifier "T63 moves per period typed on the keyboard" \
     contient t-vide2.ini "time_control = 10 moves in 40 days"
 rm -rf analysis-t-noms-*
@@ -1759,7 +1812,6 @@ verifier "T63 English plural: 0 days, 1 day, 2 days" \
     cmp -s attendu-t63 sortie-t63
 joindre sortie-t63
 joindre journal-t63 5
-rm -rf "$DEPOT/__pycache__"
 
 titre "T61: no more username in the script"
 egal "T61 help of --usernames without a hard-coded value" 1 \
@@ -1905,7 +1957,6 @@ verifier "T65 with the explorer, a single database branch" \
     cmp -s attendu-t65 sortie-t65
 joindre sortie-t65
 joindre journal-t65 5
-rm -rf "$DEPOT/__pycache__"
 # The final summary asks for the errors of the player, as the review of
 # the short prompt does (T74): asked for "the three costliest errors"
 # without being told whose, an LLM gave those of the opponent. Four
@@ -1946,7 +1997,6 @@ verifier "T65 final summary: errors of the player, according to their count" \
     cmp -s attendu-t65 sortie-t65
 joindre sortie-t65
 joindre journal-t65 5
-rm -rf "$DEPOT/__pycache__"
 # With --stockfish-moves, the weak moves are counted over the plies
 # evaluated only: "no weak move", or their number, must be bounded to
 # them in both prompts, the rest of the game left to the estimate of the
@@ -1986,7 +2036,6 @@ verifier "T65 partial coverage: the weak moves bounded to the plies evaluated" \
     cmp -s attendu-t65 sortie-t65
 joindre sortie-t65
 joindre journal-t65 5
-rm -rf "$DEPOT/__pycache__"
 # The final summary of the full prompt and the review of the short one
 # keep to the agreed scope, like the comments: they asked for the errors
 # of the whole table. The short prompt says so where the player gives
@@ -2019,7 +2068,6 @@ verifier "T65 scope: the summary and the review keep to it" \
     cmp -s attendu-t65 sortie-t65
 joindre sortie-t65
 joindre journal-t65 5
-rm -rf "$DEPOT/__pycache__"
 
 titre "T66: faulty template refused before the collection"
 rm -f analysis-t-pr-*
@@ -2115,8 +2163,8 @@ titre "T68: rating in Elo points, checked"
 printf '[player]\nusernames = Alice\ntime_control = 14 days\nrating = strong\n' \
     > t-niv.ini
 rm -rf analysis-t-pr-*
-SCRIPT="$SCRIPT" python3 t-pty.py "abc|50|9999|1450|||||" t-pr.pgn $P \
-    --settings t-niv.ini > sortie-pty 2>&1
+piloter "$SCRIPT" "abc|50|9999|1450|||||" t-pr.pgn $P \
+    --settings t-niv.ini
 verifier "T68 unreadable rating of the settings asked again" \
     contient sortie-pty "the saved rating,"
 egal "T68 three answers refused" 3 \
@@ -2206,7 +2254,6 @@ EOF
 egal "T86 username as the whole name or as words, not as a substring" \
     "None Black White White" "$(cat sortie-t86)"
 joindre journal-t86 5
-rm -rf "$DEPOT/__pycache__"
 verifier "T86 rating taken from the Elo tag of that side" \
     contient extrait "- rating: 1500 Elo, from the BlackElo tag of the game"
 verifier "T86 settings file untouched" cmp -s t-86-avant.ini t-86/settings.ini
@@ -2215,8 +2262,8 @@ rm -rf analysis-t-pr-*
 # create it, are not asked, and the side is asked instead.
 rm -f t-86/settings.ini
 rm -rf analysis-t-noms-*
-SCRIPT=t-86/ianalyze.py python3 t-pty.py "b|||||" t-noms.pgn $P \
-    --no-settings > sortie-pty 2>&1
+piloter t-86/ianalyze.py "b|||||" t-noms.pgn $P \
+    --no-settings
 egal "T86 on a terminal, no settings question" 0 \
     "$(grep -c -E 'Settings:|Your username|Your usual|Your rating' sortie-pty)"
 verifier "T86 on a terminal, the side is asked" \
@@ -2269,7 +2316,6 @@ verifier "T87 one key for each option, none left over or repeated" \
     cmp -s attendu-t87 sortie-t87
 joindre sortie-t87
 joindre journal-t87 5
-rm -rf "$DEPOT/__pycache__"
 # The keys actually written: those of the table, then those that the
 # collection adds, and no other one.
 rm -rf analysis-t-pr-*
@@ -2295,7 +2341,6 @@ EOF
 egal "T87 keys of collection.json, depth and output directory" "True 1 ." \
     "$(cat sortie-t87)"
 joindre journal-t87 5
-rm -rf "$DEPOT/__pycache__"
 rm -rf analysis-t-pr-*
 
 titre "T88: ranks of the variations, English ordinals"
@@ -2316,7 +2361,6 @@ egal "T88 from 1st to 112th" \
     "1st 2nd 3rd 4th 10th 11th 12th 13th 21st 22nd 23rd 101st 111th 112th" \
     "$(cat sortie-t88)"
 joindre journal-t88 5
-rm -rf "$DEPOT/__pycache__"
 
 titre "T93: W/D/L adding up to 100, variations of Black"
 # Rounded one by one, 15, 970 and 15 per thousand gave 2/97/2, and 5,
@@ -2354,7 +2398,6 @@ EOF
 verifier "T93 seven expected lines" cmp -s attendu-t93 sortie-t93
 joindre sortie-t93
 joindre journal-t93 5
-rm -rf "$DEPOT/__pycache__"
 
 titre "T89: settings written only over a settings file"
 # The settings are written through a neighboring file renamed over the
@@ -2376,7 +2419,11 @@ printf '[joueur]\npseudos = Zoe42\n' > t89-ancien.ini
 SCRIPT="$SCRIPT" "$PYVENV" - > sortie-t89 2> journal-t89 <<'EOF'
 import importlib.util
 import os
+import signal
 
+# A regression that opened the FIFO would wait on it for good: the
+# alarm ends the process, and the comparison below then fails.
+signal.alarm(60)
 spec = importlib.util.spec_from_file_location("cp", os.environ["SCRIPT"])
 cp = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cp)
@@ -2413,12 +2460,11 @@ verifier "T89 old format written, its section kept" cmp -s attendu extrait
 find . -maxdepth 1 -name '*.partial' > ligne
 egal "T89 no partial file left" 0 "$(lignes ligne)"
 joindre journal-t89 5
-rm -rf "$DEPOT/__pycache__"
 # On a terminal, as with --settings /dev/null: the answers serve this
 # run, and the warning says why they are not kept.
 rm -rf analysis-italienne-*
-SCRIPT="$SCRIPT" python3 t-pty.py "Zoe42|r|15|10|1300|w||||||" \
-    italienne.pgn $P --settings t89-fifo.ini > sortie-pty 2>&1
+piloter "$SCRIPT" "Zoe42|r|15|10|1300|w||||||" \
+    italienne.pgn $P --settings t89-fifo.ini
 verifier "T89 on a terminal, warning" \
     contient sortie-pty "/t89-fifo.ini: it is not a regular file."
 egal "T89 on a terminal, nothing saved" 0 \
@@ -2461,8 +2507,8 @@ joindre journal 3
 # typo must not start a new file. An unreadable answer makes the
 # question come again; n stops before anything is written or collected.
 rm -rf analysis-italienne-*
-SCRIPT="$SCRIPT" python3 t-pty.py "x|n" italienne.pgn $P \
-    --settings t-nouveau.ini > sortie-pty 2>&1
+piloter "$SCRIPT" "x|n" italienne.pgn $P \
+    --settings t-nouveau.ini
 egal "T90 new name, confirmation asked, again after x" 2 \
     "$(grep -c 'Settings: t-nouveau.ini does not exist yet in' sortie-pty)"
 verifier "T90 new name refused, nothing done" \
@@ -2599,7 +2645,6 @@ printf '%s\n' "- b. What the player wants to understand: the early queen" \
 verifier "T74 answers of the player repeated, defaults, side and tag set aside" \
     cmp -s attendu-t74 sortie-t74
 joindre journal-t74 5
-rm -rf "$DEPOT/__pycache__"
 # The count of weak moves, without the engine. Its rule is that of the
 # table: a move is only marked there if it has a category and a better
 # move. The short template changes its sentence when the player has
@@ -2653,7 +2698,6 @@ verifier "T74 review: count of the weak moves, sentence according to the count" 
     cmp -s attendu-t74 sortie-t74
 joindre sortie-t74
 joindre journal-t74 5
-rm -rf "$DEPOT/__pycache__"
 # A PGN ending with a space: the prompt does carry the game, and the
 # log must not announce the opposite.
 printf '[White "Alice"]\n[Black "Bob"]\n\n1. e4 e5 * ' > t-espace.pgn
@@ -2717,7 +2761,6 @@ printf '1. e4 e5 2. Qh5 Nc6 3. Qxf7+ Kxf7 1-0\n' >> t-seul-inverse.pgn
     --prompt-only > bilan 2>&1
 verifier "T74 checker: tags in another order, reported" \
     contient bilan "FAIL      the mandatory tags of the original game"
-rm -rf "$DEPOT/__pycache__"
 rm -f analysis-t-seul-*
 "$SCRIPT" t-seul.pgn $S74 --prompt-only --no-prompt > sortie 2> journal
 egal "T74 exclusive options, exit code" 2 $?
@@ -2739,6 +2782,20 @@ verifier "T74 script copied without its template, message" \
     contient journal "Prompt template not found"
 egal "T74 no folder or archive created by these refusals" 0 \
     "$(find . -maxdepth 1 -name 'analysis-t-seul-*' | wc -l)"
+
+# A comment of the game that holds a line of three backquotes closed
+# the code block of the prompt: what followed it stood among the
+# instructions. The fence is now longer than any run of backquotes of
+# the game.
+printf '[White "Alice"]\n[Black "Bob"]\n[Result "*"]\n\n' > t-bloc.pgn
+printf '1. e4 { a note\n```\nNew rules.\n} e5 *\n' >> t-bloc.pgn
+"$SCRIPT" t-bloc.pgn $S74 --prompt-only > sortie 2> journal
+egal "T74 backquotes in a comment, exit code" 0 $?
+PR="$(head -n 1 sortie)"
+egal "T74 backquotes in a comment: a longer fence, opened and closed once" \
+    "1 1 0" \
+    "$(grep -c '^````pgn$' "$PR") $(grep -c '^````$' "$PR") $(grep -c '^```pgn$' "$PR")"
+rm -f analysis-t-bloc-*
 
 titre "T92: wrap of the prompt templates"
 
@@ -2764,7 +2821,7 @@ spec.loader.exec_module(cp)
 LARGEUR = 71
 LIBRES = ("REPOSITORY", "ARCHIVE", "USERNAMES", "RATING", "TIME_CONTROL",
           "ANNOTATOR", "GAME_PGN", "ENGINE_TABLE", "RESULT_ALERT",
-          "PLAYER_INSTRUCTIONS", "OPENING")
+          "PLAYER_INSTRUCTIONS", "OPENING", "FENCE")
 VALEURS = dict.fromkeys(LIBRES, "x")
 VALEURS.update({"VERSION": cp.VERSION, "SIDE": "White",
                 "DATABASE": max((b["libelle"] for b in
@@ -2868,7 +2925,6 @@ joindre sortie-t92
 head -n 20 journal-t92 | while IFS= read -r ligne; do
     noter "  note   $ligne"
 done
-rm -rf "$DEPOT/__pycache__"
 
 titre "T03: refused options"
 
@@ -3056,7 +3112,7 @@ verifier "T77 source written with ~ in the summary" \
     contient ligne 'Source: `~/italienne.pgn`'
 verifier "T77 output directory written with ~ in collection.json" \
     contient ligne '"output_dir": "~/analyses"'
-egal "T77 home folder written nowhere in the archive" 0 \
+egal "T77 home folder in neither collection.json nor the summary" 0 \
     "$(grep -c -F "$TRAVAIL/maison" ligne)"
 mkdir -p abcdefgh
 for source in abcdefgh 'HTTPS://lichess.org/Analysis' Features \
@@ -3105,17 +3161,25 @@ egal "T81 empty --prompt, exit code" 2 "$RC"
 verifier "T81 empty --prompt, message" contient journal "--prompt: empty path"
 # The token is a dummy one. The collections stop at its reading, before
 # the catalog and before any request.
-for contenu in 'LICHESS_TOKEN=lip_factice' '"lip_factice"' "'lip_factice'"; do
+# The labels name each case by its kind, and no longer by its content:
+# the report then carried the dummy token nine times, and a run with
+# --network whose token file held that same string, the way a sandbox
+# runs it, ended on "report NOT written".
+while IFS='|' read -r genre contenu; do
     printf '%s\n' "$contenu" > t-jeton-faux
     chmod 600 t-jeton-faux
     lancer italienne.pgn --no-questions --depth 1 \
         --token-file t-jeton-faux --catalog "$TRAVAIL/nulle-part"
-    egal "T81 token written $contenu, exit code" 1 "$RC"
-    verifier "T81 token written $contenu, refused" \
+    egal "T81 token written as $genre, exit code" 1 "$RC"
+    verifier "T81 token written as $genre, refused" \
         contient journal "must contain the token alone"
-    egal "T81 token written $contenu, not displayed" 0 \
+    egal "T81 token written as $genre, not displayed" 0 \
         "$(grep -c 'lip_factice' journal)"
-done
+done <<'FIN'
+an assignment|LICHESS_TOKEN=lip_factice
+a word between double quotes|"lip_factice"
+a word between single quotes|'lip_factice'
+FIN
 
 titre "T27: token file missing"
 
@@ -3204,11 +3268,14 @@ processus_moteur() {
     # characters that Linux keeps of the name: an engine named
     # stockfish-ubuntu-x86-64-avx2 was never found. ps gives that name,
     # or the path of the binary under macOS; a name of 15 characters or
-    # more is accepted when the binary name starts with it.
+    # more is accepted when the binary name starts with it. T55 starts
+    # the engine through a link named moteur-essai: a process is named
+    # after the link, and those were never counted.
     ps -A -o pid= -o comm= 2>/dev/null \
         | awk -v nom="$(basename "$STOCKFISH")" '
             { pid = $1; sub(/^ *[0-9]+ /, ""); sub(/.*\//, "")
-              if ($0 == nom || (length($0) >= 15 && index(nom, $0) == 1))
+              if ($0 == nom || $0 == "moteur-essai" ||
+                  (length($0) >= 15 && index(nom, $0) == 1))
                   print pid }' \
         | sort | tr '\n' ' '
 }
@@ -3307,7 +3374,6 @@ EOF
         cmp -s attendu-t51 sortie-t51
     joindre sortie-t51
     joindre journal-t51 5
-    rm -rf "$DEPOT/__pycache__"
     joindre lignes
     joindre journal
 
@@ -3632,6 +3698,7 @@ EOF
 import os
 import signal
 import subprocess
+import threading
 import time
 
 proc = subprocess.Popen(
@@ -3641,6 +3708,12 @@ proc = subprocess.Popen(
      "--stockfish", os.environ["STOCKFISH"]],
     stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
     preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_DFL))
+# The deadline of the loop below is only looked at when a line comes,
+# and nothing then stopped the script: the reading that follows waited
+# for the end of an analysis at depth 40. This timer kills the script
+# whatever happens, and the check then fails on its exit code.
+garde = threading.Timer(120, proc.kill)
+garde.start()
 vu = []
 debut = time.monotonic()
 for ligne in proc.stderr:
@@ -3653,6 +3726,7 @@ for ligne in proc.stderr:
         break
 reste = proc.stderr.read()
 code = proc.wait(timeout=60)
+garde.cancel()
 print(code, "Interrupted." in reste, len(vu) > 0)
 EOF
     egal "T97 exit code 130, Interrupted. said" "130 True True" \
@@ -3968,7 +4042,6 @@ EOF
             cmp -s attendu-t73c sortie-t73c
         joindre sortie-t73c 12
         joindre journal-t73c 5
-        rm -rf "$DEPOT/__pycache__"
         "$PYVENV" "$VERIF" /nulle/part.zip t-conforme.pgn > bilan 2>&1
         egal "T73 unreadable archive, exit code" 2 "$?"
         # A PGN coming from Windows, with lines of 79 characters ending
@@ -4140,14 +4213,12 @@ EOF
             cmp -s attendu-t82 sortie-t82
         joindre sortie-t82
         joindre journal-t82 5
-        rm -rf "$DEPOT/__pycache__"
         # The same from a real collection, answered on a terminal: the
         # scope given at the startup question bounds the check without
         # --scope. The line written by the script was never read before.
         mkdir -p t-82-p
-        SCRIPT="$SCRIPT" python3 t-pty.py "w||the first 4 moves|||" \
-            t-legal.pgn $P --settings "$REGL" --output-dir t-82-p \
-            > sortie-pty 2>&1
+        piloter "$SCRIPT" "w||the first 4 moves|||" \
+            t-legal.pgn $P --settings "$REGL" --output-dir t-82-p
         ARCH82P=$(find t-82-p -name 'analysis-*.zip' | head -n 1)
         "$PYVENV" "$VERIF" "$ARCH82P" t-82-quatre.pgn --prompt-only \
             > bilan 2>&1
@@ -4266,6 +4337,104 @@ FIN
         egal "T82 --summary file missing, exit code" 2 "$?"
         verifier "T82 --summary file missing, said" \
             contient bilan "Cannot read: "
+        # The notes that the game already carried. Both prompts ask to
+        # keep them ahead of the comment of the LLM: left in place, they
+        # were judged as its text. A figure quoted in a note counted as
+        # an evaluation made up, and a blunder that only carried its
+        # original note counted as commented on.
+        {
+            printf '[White "Alice"]\n[Black "Bob"]\n[Result "1-0"]\n\n'
+            printf '1. e4 { [%%eval 0.3] [%%clk 0:10:00] } e5 2. Nf3 d6 '
+            printf '3. Bc4 Bg4 { (0.30 to -47.11) Nc6 was best, 50%% sure. } '
+            printf '4. Nc3 g6 5. Nxe5 Bxd1 { A well-known note of mine. } '
+            printf '6. Bxf7+ Ke7 7. Nd5# 1-0\n'
+        } > t-82-notes.pgn
+        lancer t-82-notes.pgn $MOTEUR $RAPIDE --keep-folder
+        egal "T82 game with notes, exit code" 0 "$RC"
+        DOSSIER82N="${ARCH%.zip}"
+        PARTIE="$DOSSIER82N/game.pgn" "$PYVENV" - 2>> journal-t82 <<'EOF'
+import os
+import re
+
+import chess.pgn
+
+for nom in ("gardees", "seules"):
+    with open(os.environ["PARTIE"], encoding="utf-8") as f:
+        jeu = chess.pgn.read_game(f)
+    for rang, noeud in enumerate(jeu.mainline(), 1):
+        # The note as the prompts ask to keep it: without the commands
+        # of a site, its "%" written "percent".
+        note = " ".join(re.sub(r"\[%[^\]]*\]", " ", noeud.comment).split())
+        note = note.replace("%", " percent")
+        if nom == "gardees":
+            # textwrap.fill, which the full prompt suggests, may cut a
+            # word after its hyphen: the note must be found all the same.
+            note = note.replace("well-known", "well-\nknown")
+            note = (note + " Move %d." % rang).strip()
+        noeud.comment = note
+    with open("t-82-%s.pgn" % nom, "w", encoding="utf-8") as f:
+        print(jeu, file=f)
+EOF
+        "$PYVENV" "$VERIF" "$DOSSIER82N" t-82-gardees.pgn --prompt-only \
+            > bilan 2>&1
+        egal "T82 notes kept ahead of the comments, exit code" 0 "$?"
+        verifier "T82 notes kept: counted and set aside" contient bilan \
+            "notes of the original game: 2 kept out of 2"
+        egal "T82 notes kept: the figure of a note is not an evaluation quoted" \
+            0 "$(grep -c -e '-47.11' bilan)"
+        "$PYVENV" "$VERIF" "$DOSSIER82N" t-82-seules.pgn --prompt-only \
+            > bilan 2>&1
+        egal "T82 notes alone, without a comment of the LLM, exit code" 1 "$?"
+        verifier "T82 notes alone: the blunder is not held as commented on" \
+            contient bilan "5... Bxd1 (blunder)"
+        joindre bilan 12
+        rm -rf "$DOSSIER82N" "$ARCH" "${ARCH%.zip}.prompt.txt"
+        # A game in loose notation, which ianalyze.py reads. The short
+        # prompt asks to copy the moves without changing a single one:
+        # a faithful copy got a failure for them. The full prompt asks
+        # for standard notation, and keeps the failure.
+        printf '[White "Alice"]\n[Black "Bob"]\n[Result "*"]\n\n' \
+            > t-82-libre.pgn
+        printf '1. e2-e4 e7-e5 2. Ng1-f3 Nb8-c6 *\n' >> t-82-libre.pgn
+        lancer t-82-libre.pgn $MOTEUR --depth 1 --keep-folder
+        DOSSIER82L="${ARCH%.zip}"
+        "$PYVENV" "$VERIF" "$DOSSIER82L" t-82-libre.pgn --prompt-only \
+            > bilan 2>&1
+        egal "T82 loose notation copied as it is, short prompt: accepted" \
+            "0 0" "$? $(grep -c 'FAIL      outside the braces' bilan)"
+        "$PYVENV" "$VERIF" "$DOSSIER82L" t-82-libre.pgn > bilan 2>&1
+        verifier "T82 loose notation, full prompt: reported" contient bilan \
+            "line 5: e2-e4 e7-e5 Ng1-f3 Nb8-c6"
+        rm -rf "$DOSSIER82L" "$ARCH" "${ARCH%.zip}.prompt.txt"
+        # A line that starts with a bracket among the moves is text: it
+        # was skipped as a tag. After a blank line, it was taken for the
+        # tags of a second game, and the blank line was no longer named.
+        printf '[White "Alice"]\n[Black "Bob"]\n[Result "1-0"]\n\n' \
+            > t-82-crochet.pgn
+        cp t-82-crochet.pgn t-82-crochet-vide.pgn
+        printf '1. e4 e5 2. Nf3 d6 3. Bc4 Bg4\n[White is better here]\n' \
+            >> t-82-crochet.pgn
+        printf '1. e4 e5 2. Nf3 d6 3. Bc4 Bg4\n\n[White is better here]\n' \
+            >> t-82-crochet-vide.pgn
+        for fichier in t-82-crochet.pgn t-82-crochet-vide.pgn; do
+            printf '4. Nc3 g6 5. Nxe5 Bxd1 6. Bxf7+ Ke7 7. Nd5# 1-0\n' \
+                >> "$fichier"
+        done
+        "$PYVENV" "$VERIF" "$DOSSIER82" t-82-crochet.pgn > bilan 2>&1
+        verifier "T82 bracket line among the moves, reported as text" \
+            contient bilan "line 6: [White is better here]"
+        "$PYVENV" "$VERIF" "$DOSSIER82" t-82-crochet-vide.pgn > bilan 2>&1
+        verifier "T82 blank line before a bracket line, still named" \
+            contient bilan "FAIL      blank line in the body of the game"
+        # A second game in the file is one failure, not two: its end
+        # marker was read as that of the first game.
+        cp t-legal.pgn t-82-deux.pgn
+        printf '\n[White "Alice"]\n[Black "Bob"]\n[Result "*"]\n\n1. d4 d5 *\n' \
+            >> t-82-deux.pgn
+        "$PYVENV" "$VERIF" "$DOSSIER82" t-82-deux.pgn > bilan 2>&1
+        egal "T82 second game: reported once, the end marker left alone" \
+            "1 0" \
+            "$(grep -c 'FAIL      a single game in the file' bilan) $(grep -c 'FAIL      end marker' bilan)"
         # Parent folder: the only complete collection is taken and named,
         # an interrupted collection beside it does not get mixed in, and two
         # complete collections are refused rather than chosen.
@@ -4365,7 +4534,6 @@ EOF
             cmp -s attendu-t91 sortie-t91
         joindre sortie-t91
         joindre journal-t91 5
-        rm -rf "$DEPOT/__pycache__"
     else
         sauter "T91: test.pgn or verify-analysis.py missing from the repository"
     fi
@@ -4398,6 +4566,7 @@ two-games|The PGN contains 2 games
 position|does not start from the initial position
 unclosed-brace|brace
 tag-with-moves|line 4 is not a well-formed tag
+bracket-among-moves|line 9 starts with a bracket among the moves
 null-move-in-check|played in check, at move 2, by Black
 FIN
         # The annotated PGNs of the page go through the checker, on
@@ -4421,6 +4590,15 @@ FIN
         # wrote "the 1 variations are written inside the comments".
         verifier "T83 llm-faulty.pgn, its only variation, in the singular" \
             contient bilan "no playable variation: the only variation is written inside a comment"
+        # A second faulty PGN, for the flaws that python-chess reads
+        # without a word: a blank line inside a comment, a second game,
+        # text outside the braces, castling with zeros, and a rank
+        # written "#7", which is only a warning.
+        "$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH" \
+            "$EX/llm-faulty-words.pgn" > bilan 2>&1
+        egal "T83 llm-faulty-words.pgn, failures" 1 "$?"
+        egal "T83 llm-faulty-words.pgn, its five flaws named" "1 1 1 1 1" \
+            "$(grep -c 'inside a comment, python-chess reads on' bilan) $(grep -c 'FAIL      a single game in the file' bilan) $(grep -c 'line 15: and castling comes next' bilan) $(grep -c 'line 17: 0-0' bilan) $(grep -c -F '1. e4: #7' bilan)"
         # The other files of the page: the conversation of the LLM, with
         # its PGN or without any, and the PGN of the short prompt, read
         # on the folder kept by --prompt-only. The evaluations depend on
@@ -4449,7 +4627,6 @@ FIN
         # count of absences would then stay at 0 whatever the files.
         egal "T83 no real game: neither address nor identifier" 0 \
             "$(cat "$EX"/* | grep -c -i -E 'lichess\.org/|GameId')"
-        rm -rf "$DEPOT/__pycache__"
     else
         sauter "T83: example-games missing from the repository"
     fi
@@ -4541,9 +4718,18 @@ sys.stdout.write(cp.lire_jeton(os.environ["JETON"]) + "\n")
 ' 2>/dev/null || cat "$JETON"
 }
 
-# Does the file contain the token? Only a count comes out.
+# Does the file contain the token? Only a count comes out. The blank
+# lines are taken out of the patterns: an empty pattern matches every
+# line, and with no pattern at all grep printed nothing, which the
+# guards took for a token found. Without a token to look for, the count
+# is 0.
 compte_jeton() {
-    motifs_jeton | grep -a -c -F -f /dev/stdin "$1" 2>/dev/null
+    if motifs_jeton | grep -q '[^[:space:]]'; then
+        motifs_jeton | grep -v '^[[:space:]]*$' \
+            | grep -a -c -F -f /dev/stdin "$1" 2>/dev/null
+    else
+        echo 0
+    fi
 }
 
 # --- Test games -------------------------------------------------------------
@@ -4866,6 +5052,10 @@ noter "  skipped : $NB_SAUTE"
 # reads (motifs_jeton): a blank line of the file no longer makes grep
 # take everything for a match, and a byte order mark or a carriage
 # return no longer hides it.
+# The totals are displayed first: a report held back no longer hides
+# them.
+printf '\nPassed: %d, failed: %d, skipped: %d\n' \
+    "$NB_OK" "$NB_ECHEC" "$NB_SAUTE" >&2
 if [ "$RESEAU" = 1 ] && [ "$(compte_jeton "$BRUT")" != "0" ]; then
     printf '\nThe token appears in the report: report NOT written.\n' >&2
     printf 'Run again with KEEP=1 and report it without sending anything.\n' >&2
@@ -4894,8 +5084,6 @@ function remplacer(s, a, b,    sortie, i) {
     print remplacer(ligne, ENVIRON["T_PARTIE"], "<GAME>")
 }' "$BRUT" > "$RAPPORT"
 
-printf '\nPassed: %d, failed: %d, skipped: %d\n' \
-    "$NB_OK" "$NB_ECHEC" "$NB_SAUTE" >&2
 printf 'Report: %s\n' "$RAPPORT" >&2
 
 [ "$NB_ECHEC" -eq 0 ]

@@ -224,6 +224,9 @@ rating = 1300
 
 You can edit this file by hand, or delete it with `--purge-settings`: your answers will then be asked again.
 
+**The usernames** are looked up in the White and Black tags of the game, ignoring case, to deduce your side: each one as the whole name or as a run of its words, never as a part of a word.\
+`Max` is found in `Max Power`, not in `Maxime` nor in `Max_Power`: write each of your usernames whole.
+
 **The rating** is a number of approximate Elo points, from 100 to 3500, or "unknown".
 
 It is passed on to the analyst, who adapts the explanations to it. Without it, the Elo of your tag in the game is used.
@@ -418,7 +421,7 @@ Two routes lead to an analysis, and it is the first choice on both:
 **With a free account, take `--prompt-only` and Claude. Choose the model `Sonnet 5.5` with the effort `Max`.**\
 This is the combination that gave the best result without paying anything.
 
-The first two series of trials were run with version 4.0, whose prompts were in French. The English prompts of version 5.0.0 went through a trial of their own, then a third series, on November 25 and 26, 2026, which point the same way.
+The first two series of trials were run with version 4.0, whose prompts were in French. The English prompts of version 5.0.0 went through a trial of their own, then a third series, on 25 and 26 November 2026, which point the same way.
 
 ### With the zip and the prompt
 
@@ -543,6 +546,9 @@ A correspondence game of 39 plies, won by the player, sent with its zip to GPT-6
 
 These four points led to the last changes of version 5.0.0: the prompts say where a variation starts, where `$7` goes and whose errors to give, and the checker lists such NAGs as other opinions.
 
+The prompts changed once more on 27 November 2026, after these trials: the notes of the player are kept, the commands of a site left out, the game of the short prompt stands in a code block, and the review keeps to the agreed scope.\
+These last instructions have not been tried on an LLM yet.
+
 #### 26 November 2026, the two routes, with the English prompts
 
 A correspondence game of 54 plies, lost by the player, mated on move 27, and the English prompts of version 5.0.0, before their release.\
@@ -565,7 +571,7 @@ What this series shows:
 - **The English prompts do the job.** Three of the five answers quote evaluations, 206 in all, every one found in the data of the engine; ChatGPT and Copilot quote none. Each answer comments on every mistake and blunder of its table.
 - **The errors of the player, and only theirs.** The five reviews give three errors of the player, none of the opponent. With the zip, Claude even set aside the two costliest by the figures, 21.Qb1 and 22.Kh2, played in a position already lost, and said why.
 - **Where a variation starts is understood.** The 91 variations of the five answers, those of ChatGPT included, are legal and drawn from the lines of the engine, and none repeats the moves played.
-- **The free plans keep their faults of November 21.** ChatGPT still writes the variations inside the comments and adds suffixes to the moves, Copilot still gives no code block and turns the Site tag into a link. Gemini passes the checker, not the check on the board.
+- **The free plans keep their faults of 21 November.** ChatGPT still writes the variations inside the comments and adds suffixes to the moves, Copilot still gives no code block and turns the Site tag into a link. Gemini passes the checker, not the check on the board.
 - **Claude checks itself.** With the short prompt, it says it replayed its variations with python-chess and checked its explanations with Stockfish, which the prompt does not ask for. It comments on each move there, in 2178 words; with the zip, on 18 moves, as the full prompt asks, in 1062 words.
 - **The checker does not judge the stories.** Gemini passes it with no failure, and four errors on the board.
 
@@ -602,7 +608,8 @@ For a PGN obtained with the short prompt of `--prompt-only`, add the same option
 ./verify-analysis.py analysis-my-game-20261125-142017 llm-annotated.pgn --prompt-only
 ```
 
-The short prompt asks for less than the full prompt. With this option, the checks that it does not ask for are skipped: lines of 79 characters, overview before the first move, NAGs, `%`, semicolon, em dash, suffix notation, castling written with zeros, alphabetical order of the other tags, Annotator and PlyCount tags, length of the variations, number of FEN. What remains: the reading, a single game in the file, the main line, the braces, the words outside the braces, the tags copied, the end marker, the mistakes and blunders commented on, the evaluations quoted and the variations.
+The short prompt asks for less than the full prompt. With this option, the checks that it does not ask for are skipped: lines of 79 characters, overview before the first move, NAGs, `%`, semicolon, em dash, suffix notation, castling written with zeros, alphabetical order of the other tags, Annotator and PlyCount tags, length of the variations, number of FEN. What remains: the reading, a single game in the file, the main line, the braces, the words outside the braces, the tags copied, the end marker, the mistakes and blunders commented on, the evaluations quoted and the variations.\
+The moves that the original game writes in another notation, `e2-e4` or `bxa8Q`, are accepted as they are: the short prompt asks to copy them without changing a single one.
 
 If you agreed on a scope with the LLM, the first 20 moves for example, the script reads it in your answer to the startup question and expects no comment beyond it.\
 When the scope was set in the conversation, give it:
@@ -623,12 +630,12 @@ It has no `--venv` option. If your environment is elsewhere, run it with the Pyt
 | Reading | file outside UTF-8, illegal move in the game or in a variation, blank line in the body of the game, second game in the file |
 | Main line | different from the original game |
 | Format | line of more than 79 characters, opening or closing brace in a comment, word outside the braces, move written with a `P`, castling written with zeros, `%`, em dash, suffix notation, tags missing or out of order, end marker |
-| Commented moves | mistake or blunder of Stockfish left without a comment within the agreed scope, position NAG contrary to the evaluation of the engine; for information, the quality NAGs of another opinion than the engine |
+| Commented moves | mistake or blunder of Stockfish left without a comment within the agreed scope, position NAG contrary to the evaluation of the engine; for information, the quality NAGs of another opinion than the engine. The notes that the original game already carried, which both prompts ask to keep, are set aside first: only the text of the LLM is judged |
 | Evaluations | figure or mate quoted that exists nowhere in the data of the engine; a `#7` without a sign, which may be a rank, is only a warning |
 | Variations | variation written inside a comment, hence not playable, illegal or too long variation |
 | Conversation | FEN invalid or foreign to the game, em dash |
 
-Two of these flaws come from real PGNs of LLMs and deserve an explanation:
+Three of these flaws come from real PGNs of LLMs and deserve an explanation:
 
 - **The blank line in the body of the game.** python-chess sees the end of the game there and does not read what follows. The script finds it wherever it is, even if it only hides a variation or the end marker, then goes on with its checks on the file once the line is removed. Inside a comment, python-chess reads on up to the closing brace: the report says so, and still counts the line as a fault, the prompt forbidding it and another reader stopping there.
 - **The words outside the braces.** python-chess skips them without a word: free text written between two moves is lost, and a move written `Pg2xf3`, or a castling written `0-0`, is read all the same, which hides the flaw. The script names each of these words, line by line.

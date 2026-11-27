@@ -224,6 +224,9 @@ rating = 1300
 
 Vous pouvez modifier ce fichier à la main, ou le supprimer avec `--purge-settings` : vos réponses seront alors redemandées.
 
+**Les pseudos** sont cherchés dans les balises White et Black de la partie, sans tenir compte de la casse, pour déduire votre camp : chacun comme le nom entier ou comme une suite de ses mots, jamais comme un morceau de mot.\
+`Max` est trouvé dans `Max Power`, pas dans `Maxime` ni dans `Max_Power` : écrivez chacun de vos pseudos en entier.
+
 **Le niveau** est un nombre de points Elo approximatifs, de 100 à 3500, ou "unknown".
 
 Il est transmis à l'analyste, qui y adapte ses explications. Sans lui, c'est l'Elo de votre balise dans la partie qui sert.
@@ -543,6 +546,9 @@ Une partie par correspondance de 39 demi-coups, gagnée par le joueur, envoyée 
 
 Ces quatre points ont amené les derniers changements de la version 5.0.0 : les prompts disent où commence une variante, où va `$7` et de qui donner les erreurs, et le vérificateur range ces NAG parmi les autres avis.
 
+Les prompts ont encore changé le 27 novembre 2026, après ces essais : les notes du joueur sont gardées, les commandes d'un site retirées, la partie du prompt court tient dans un bloc de code, et le bilan s'en tient au périmètre convenu.\
+Ces dernières consignes n'ont pas encore été essayées avec un LLM.
+
 #### Le 26 novembre 2026, les deux routes, avec les prompts anglais
 
 Une partie par correspondance de 54 demi-coups, perdue par le joueur, mat au 27e coup, et les prompts anglais de la version 5.0.0, avant leur publication.\
@@ -602,7 +608,8 @@ Pour un PGN obtenu avec le prompt court de `--prompt-only`, ajoutez la même opt
 ./verify-analysis.py analysis-my-game-20261125-142017 llm-annotated.pgn --prompt-only
 ```
 
-Le prompt court demande moins que le prompt complet. Avec cette option, les contrôles qu'il ne demande pas sont sautés : lignes de 79 caractères, résumé avant le premier coup, NAG, `%`, point-virgule, tiret cadratin, notation suffixe, roque écrit avec des zéros, ordre alphabétique des autres balises, balises Annotator et PlyCount, longueur des variantes, nombre de FEN. Restent la lecture, une seule partie dans le fichier, la ligne principale, les accolades, les mots hors des accolades, les balises recopiées, le marqueur de fin, les erreurs et gaffes commentées, les évaluations citées et les variantes.
+Le prompt court demande moins que le prompt complet. Avec cette option, les contrôles qu'il ne demande pas sont sautés : lignes de 79 caractères, résumé avant le premier coup, NAG, `%`, point-virgule, tiret cadratin, notation suffixe, roque écrit avec des zéros, ordre alphabétique des autres balises, balises Annotator et PlyCount, longueur des variantes, nombre de FEN. Restent la lecture, une seule partie dans le fichier, la ligne principale, les accolades, les mots hors des accolades, les balises recopiées, le marqueur de fin, les erreurs et gaffes commentées, les évaluations citées et les variantes.\
+Les coups que la partie d'origine écrit dans une autre notation, `e2-e4` ou `bxa8Q`, sont acceptés tels quels : le prompt court demande de les recopier sans en changer un seul.
 
 Si vous avez convenu avec le LLM d'un périmètre, les 20 premiers coups par exemple, le script le lit dans votre réponse à la question de démarrage et n'attend aucun commentaire au-delà.\
 Quand le périmètre a été fixé dans la conversation, donnez-le :
@@ -623,12 +630,12 @@ Il n'a pas d'option `--venv`. Si votre environnement est ailleurs, lancez-le ave
 | Lecture | fichier hors UTF-8, coup illégal dans la partie ou dans une variante, ligne vide dans le corps de la partie, seconde partie dans le fichier |
 | Ligne principale | différente de la partie d'origine |
 | Format | ligne de plus de 79 caractères, accolade ouvrante ou fermante dans un commentaire, mot hors des accolades, coup écrit avec un `P`, roque écrit avec des zéros, `%`, tiret cadratin, notation suffixe, balises absentes ou dans le désordre, marqueur de fin |
-| Coups commentés | erreur ou gaffe de Stockfish laissée sans commentaire dans le périmètre convenu, NAG de position contraire à l'évaluation du moteur ; pour information, les NAG de qualité d'un autre avis que le moteur |
+| Coups commentés | erreur ou gaffe de Stockfish laissée sans commentaire dans le périmètre convenu, NAG de position contraire à l'évaluation du moteur ; pour information, les NAG de qualité d'un autre avis que le moteur. Les notes que la partie d'origine portait déjà, que les deux prompts demandent de garder, sont d'abord mises de côté : seul le texte du LLM est jugé |
 | Évaluations | chiffre ou mat cité qui n'existe nulle part dans les données du moteur ; un `#7` sans signe, qui peut être un rang, n'est qu'un avertissement |
 | Variantes | variante écrite à l'intérieur d'un commentaire, donc non jouable, variante illégale ou trop longue |
 | Conversation | FEN invalide ou étrangère à la partie, tiret cadratin |
 
-Deux de ces défauts viennent de vrais PGN de LLM et méritent une explication :
+Trois de ces défauts viennent de vrais PGN de LLM et méritent une explication :
 
 - **La ligne vide dans le corps de la partie.** python-chess y voit la fin de la partie et n'en lit pas la suite. Le script la relève où qu'elle soit, même si elle ne cache qu'une variante ou le marqueur de fin, puis poursuit ses contrôles sur le fichier une fois la ligne retirée. Dans un commentaire, python-chess lit jusqu'à l'accolade fermante : le bilan le dit, et compte la ligne comme une faute tout de même, le prompt l'interdisant et un autre lecteur s'y arrêtant.
 - **Les mots hors des accolades.** python-chess les saute sans rien dire : un texte libre écrit entre deux coups est perdu, et un coup écrit `Pg2xf3`, ou un roque écrit `0-0`, est lu quand même, ce qui cache la faute. Le script nomme chacun de ces mots, ligne par ligne.
