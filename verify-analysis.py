@@ -73,6 +73,7 @@ the application.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import decimal
 import io
 import json
@@ -81,8 +82,8 @@ import os
 import pathlib
 import re
 import sys
-import zlib
 import zipfile
+import zlib
 
 #: Interpreter of the virtual environment of IAnalyze, in the local/
 #: folder of the application, next to this script: the same place as
@@ -107,6 +108,11 @@ except ImportError:
 # English. The report repeats all of them: these lines would be
 # duplicates.
 logging.getLogger("chess.pgn").setLevel(logging.CRITICAL)
+
+#: Control characters, line feed and tab set aside. The report quotes the
+#: PGN and the text returned by the LLM: an escape sequence there would be
+#: played by the terminal. Each one is shown as "?".
+RE_CONTROLES = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
 
 #: The seven mandatory tags of the PGN standard, in their order.
 SEPT_BALISES = ("Event", "Site", "Date", "Round", "White", "Black", "Result")
@@ -729,7 +735,9 @@ def controler_chiffres(b: Bilan, textes: list[tuple[str, str]],
                 for mode in (decimal.ROUND_HALF_UP, decimal.ROUND_DOWN):
                     connues.add("%s%s" % (m.group(1), valeur.quantize(
                         decimal.Decimal("0.1"), rounding=mode)))
-    citees, inconnues = 0, []
+    citees = 0
+    inconnues: list[str] = []
+    douteuses: list[str] = []
     for lieu, texte in textes:
         for brut in RE_EVALUATION.findall(texte):
             citees += 1
@@ -739,12 +747,21 @@ def controler_chiffres(b: Bilan, textes: list[tuple[str, str]],
             lu = lu.replace("\u2212", "-").replace("\u2013", "-")
             # A mate quoted without a sign is White's: "#2" means
             # "#+2", the form of the folder.
+            sans_signe = re.match(r"#\d", lu) is not None
             lu = re.sub(r"^#(\d)", r"#+\1", lu)
-            if lu not in connues:
-                inconnues.append("%s: %s" % (lieu, brut))
+            if lu in connues:
+                continue
+            # Without a sign, "#7" may be a rank, "mistake #7", as well as
+            # a mate: not found, it is only a warning.
+            (douteuses if sans_signe else inconnues).append(
+                "%s: %s" % (lieu, brut))
     b.noter("INFO", "%d evaluation(s) quoted" % citees)
     b.controle(not inconnues, "all are found in the data of the engine (%d "
                "not found)" % len(inconnues), inconnues)
+    if douteuses:
+        b.noter("WARNING", "%d \"#N\" written without a sign and not found "
+                "in the data of the engine: a rank, \"mistake #7\", rather "
+                "than a mate?" % len(douteuses), douteuses)
 
 
 def lignes_du_moteur(evaluations: list[dict]) -> dict[int, list[list[str]]]:
@@ -941,7 +958,10 @@ def controler_synthese(b: Bilan, texte: str, evaluations: list[dict],
             continue
         if not plateau.is_valid():
             invalides.append(fen)
-        elif clef(fen) not in connues:
+        # The standard writes the en passant square after any double
+        # step of a pawn, python-chess only when the capture can be
+        # played: the FEN quoted is compared in the writing of the folder.
+        elif clef(plateau.fen()) not in connues:
             etrangeres.append(fen)
     b.controle(not invalides, "all the FEN are valid positions",
                invalides)
@@ -955,15 +975,29 @@ def controler_synthese(b: Bilan, texte: str, evaluations: list[dict],
 
 def afficher(b: Bilan, code: int) -> int:
     """Writes the report and returns the exit code."""
-    print("\n".join(b.lignes))
-    print("")
+    print("\n".join(RE_CONTROLES.sub("?", ligne) for ligne in b.lignes))
+    print()
     print("=== Totals ===")
     print("  failures : %d" % b.echecs)
     print("  warnings : %d" % b.attentions)
     return code
 
 
+def configurer_sortie() -> None:
+    """
+    A character that the output encoding cannot represent, the "é" of a
+    name under PYTHONIOENCODING=ascii for example, becomes "?" instead of
+    stopping the report on UnicodeEncodeError: the rule of ianalyze.py.
+    """
+    for flux in (sys.stdout, sys.stderr):
+        reconfigurer = getattr(flux, "reconfigure", None)
+        if reconfigurer is not None:
+            with contextlib.suppress(ValueError, OSError):
+                reconfigurer(errors="replace")
+
+
 def main(argv: list[str]) -> int:
+    configurer_sortie()
     p = argparse.ArgumentParser(
         description="Checks the annotated PGN returned by an LLM from an "
                     "IAnalyze archive.")

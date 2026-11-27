@@ -561,7 +561,7 @@ The errors of the last column were checked one by one on the position, with pyth
 
 What this series shows:
 
-- **The English prompts do the job.** The 206 evaluations quoted in the five answers are all found in the data of the engine, and each answer comments on every mistake and blunder of its table.
+- **The English prompts do the job.** Three of the five answers quote evaluations, 206 in all, every one found in the data of the engine; ChatGPT and Copilot quote none. Each answer comments on every mistake and blunder of its table.
 - **The errors of the player, and only theirs.** The five reviews give three errors of the player, none of the opponent. With the zip, Claude even set aside the two costliest by the figures, 21.Qb1 and 22.Kh2, played in a position already lost, and said why.
 - **Where a variation starts is understood.** The 91 variations of the five answers, those of ChatGPT included, are legal and drawn from the lines of the engine, and none repeats the moves played.
 - **The free plans keep their faults of November 21.** ChatGPT still writes the variations inside the comments and adds suffixes to the moves, Copilot still gives no code block and turns the Site tag into a link. Gemini passes the checker, not the check on the board.
@@ -601,7 +601,7 @@ For a PGN obtained with the short prompt of `--prompt-only`, add the same option
 ./verify-analysis.py analysis-my-game-20261125-142017 llm-annotated.pgn --prompt-only
 ```
 
-The short prompt asks for less than the full prompt. With this option, the checks that it does not ask for are skipped: lines of 79 characters, overview before the first move, NAGs, `%`, em dash, suffix notation, Annotator and PlyCount tags, length of the variations, number of FEN. What remains: the reading, the main line, the braces, the tags copied, the end marker, the mistakes and blunders commented on, the evaluations quoted and the variations.
+The short prompt asks for less than the full prompt. With this option, the checks that it does not ask for are skipped: lines of 79 characters, overview before the first move, NAGs, `%`, semicolon, em dash, suffix notation, alphabetical order of the other tags, Annotator and PlyCount tags, length of the variations, number of FEN. What remains: the reading, the main line, the braces, the tags copied, the end marker, the mistakes and blunders commented on, the evaluations quoted and the variations.
 
 If you agreed on a scope with the LLM, the first 20 moves for example, the script reads it in your answer to the startup question and expects no comment beyond it.\
 When the scope was set in the conversation, give it:
@@ -623,7 +623,7 @@ It has no `--venv` option. If your environment is elsewhere, run it with the Pyt
 | Main line | different from the original game |
 | Format | line of more than 79 characters, opening or closing brace in a comment, `%`, em dash, suffix notation, tags missing or out of order, end marker |
 | Commented moves | mistake or blunder of Stockfish left without a comment within the agreed scope, position NAG contrary to the evaluation of the engine; for information, the quality NAGs of another opinion than the engine |
-| Evaluations | figure or mate quoted that exists nowhere in the data of the engine |
+| Evaluations | figure or mate quoted that exists nowhere in the data of the engine; a `#7` without a sign, which may be a rank, is only a warning |
 | Variations | variation written inside a comment, hence not playable, illegal or too long variation |
 | Conversation | FEN invalid or foreign to the game, em dash |
 

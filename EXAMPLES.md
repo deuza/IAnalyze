@@ -102,7 +102,7 @@ cd example-games
 | `game-lichess-org.pgn` | a real game of 20 moves, anonymized, as Lichess exports it: the one of the trials of 21 November 2026 (README, section 7) |
 | `commented-game.pgn` | another real game from Lichess, 25 moves, anonymized, exported with the analysis of the site: comments, variations and clocks |
 | `game-chess-com.pgn`, `game-chess-mail.pgn`, `game-ajedrezmail.pgn`, `game-lucas-chess.pgn` | four real games, anonymized, as these sites and this program export them |
-| `french-notation.pgn`, `two-games.pgn`, `position.pgn`, `unclosed-brace.pgn` | four files that the script refuses, for the error messages |
+| `french-notation.pgn`, `two-games.pgn`, `position.pgn`, `unclosed-brace.pgn`, `tag-with-moves.pgn`, `null-move-in-check.pgn` | six files that the script refuses, for the error messages |
 | `llm-annotated.pgn`, `llm-faulty.pgn`, `llm-short.pgn` | three annotated PGNs written for the examples, in place of those an LLM would return |
 | `llm-conversation.txt` | the text of a conversation, for the `--summary` option of the checker |
 
@@ -656,7 +656,7 @@ Settings: player3.ini does not exist yet in ~/IAnalyze. Create it? [y/n] n
 Nothing done: check the name given to --settings, or use --no-settings to run without settings.
 ```
 
-An existing file that is not a settings file, without the `[player]` section, is never rewritten: the answers only serve the current run, a warning says why, and the file stays as it was.\
+An existing file that is not a settings file, without the `[player]` section or the `[joueur]` section of the former format, is never rewritten: the answers only serve the current run, a warning says why, and the file stays as it was.\
 Here `notes.ini`, at the root of the application folder, is an INI file that has nothing to do with IAnalyze:
 
 ```bash
@@ -1607,6 +1607,34 @@ The game does not start from the initial position, it starts from a FEN tag. IAn
 Corrupt PGN: the comment opened by a brace on line 1 is never closed.
 ```
 
+### Moves on a tag line
+
+A tag takes a whole line, before the moves of its game. python-chess would skip this line, its moves with it, and the analysis would be about another game than yours. A line of brackets among the moves is refused as well: python-chess would play the moves that it holds.
+
+```bash
+./ianalyze.py tag-with-moves.pgn --no-explorer --no-questions
+```
+
+```text
+[18:49:51] Virtual environment: restarting with ~/IAnalyze/local/venv/bin/python3
+[18:49:51] Reading the local PGN: tag-with-moves.pgn
+Corrupt PGN: line 4 is not a well-formed tag, [Name "value"] alone on its line: python-chess would skip it, together with what it carries.
+```
+
+### Null move played in check
+
+A null move, `--`, passes the turn. Played in check, it leaves the king attacked: the positions that follow are illegal, and the engine cannot evaluate them.
+
+```bash
+./ianalyze.py null-move-in-check.pgn --no-explorer --no-questions
+```
+
+```text
+[18:49:52] Virtual environment: restarting with ~/IAnalyze/local/venv/bin/python3
+[18:49:52] Reading the local PGN: null-move-in-check.pgn
+Corrupt PGN: null move "--" played in check, at move 2, by Black. Passing leaves the king attacked: the positions that follow are illegal, and the engine cannot evaluate them.
+```
+
 ### Unknown option
 
 Here a former French name, no longer accepted since version 5.0.0. The exit code is 2.
@@ -1705,9 +1733,9 @@ The template named by `--prompt` carries here a misspelled value.
 Prompt template ~/faulty-template.txt, line 21: unknown value {{VERSON}}, accepted values: VERSION, REPOSITORY, ARCHIVE, USERNAMES, SIDE, RATING, TIME_CONTROL, ANNOTATOR, DATABASE, INACCURACY_THRESHOLD, MISTAKE_THRESHOLD, BLUNDER_THRESHOLD, DEPTH, MULTIPV, GAME_PGN, ENGINE_TABLE, RESULT_ALERT, PLAYER_INSTRUCTIONS, OPENING, PLIES, PLIES_EVALUATED, PLAYER_WEAK_MOVES
 ```
 
-### Settings file of an earlier version
+### Settings file in the former format
 
-A `settings.ini` written by version 4 carries the `[joueur]` section, not `[player]`: `--purge-settings` refuses it, as it refuses any file that is not a settings file, with the exit code 1. Delete it by hand.
+A `settings.ini` in the former format carries the `[joueur]` section, not `[player]`: the `reglages.ini` of version 4 copied by hand, or a file written by a development version of 5.0.0. `--purge-settings` refuses it, as it refuses any file that is not a settings file, with the exit code 1. Delete it by hand, or run a collection first: it asks the settings questions again and adds the `[player]` section.
 
 ```bash
 ./ianalyze.py --purge-settings

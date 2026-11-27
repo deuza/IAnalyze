@@ -104,7 +104,7 @@ cd example-games
 | `game-lichess-org.pgn` | une vraie partie de 20 coups, anonymisée, telle que Lichess l'exporte : c'est celle des essais du 21 novembre 2026 (README, section 7) |
 | `commented-game.pgn` | une autre vraie partie de Lichess, 25 coups, anonymisée, exportée avec l'analyse du site : commentaires, variantes et horloges |
 | `game-chess-com.pgn`, `game-chess-mail.pgn`, `game-ajedrezmail.pgn`, `game-lucas-chess.pgn` | quatre vraies parties, anonymisées, telles que ces sites et ce logiciel les exportent |
-| `french-notation.pgn`, `two-games.pgn`, `position.pgn`, `unclosed-brace.pgn` | quatre fichiers que le script refuse, pour les messages d'erreur |
+| `french-notation.pgn`, `two-games.pgn`, `position.pgn`, `unclosed-brace.pgn`, `tag-with-moves.pgn`, `null-move-in-check.pgn` | six fichiers que le script refuse, pour les messages d'erreur |
 | `llm-annotated.pgn`, `llm-faulty.pgn`, `llm-short.pgn` | trois PGN annotés écrits pour l'exemple, à la place de ceux qu'un LLM rendrait |
 | `llm-conversation.txt` | le texte d'une conversation, pour l'option `--summary` du vérificateur |
 
@@ -218,15 +218,15 @@ analysis-my-game-20261125-152955.zip
 Par son adresse, ou par son identifiant, la suite de 8 caractères qui suit `lichess.org/` :
 
 ```bash
-./ianalyze.py https://lichess.org/<identifiant>
+./ianalyze.py https://lichess.org/<identifier>
 ```
 
 ```bash
-./ianalyze.py <identifiant>
+./ianalyze.py <identifier>
 ```
 
 Le PGN est téléchargé, puis la collecte se déroule comme pour un fichier.\
-L'archive porte l'identifiant de la partie : `analysis-<identifiant>-<date>.zip`.
+L'archive porte l'identifiant de la partie : `analysis-<identifier>-<date>.zip`.
 
 ### Avec l'explorateur
 
@@ -660,7 +660,7 @@ Settings: player3.ini does not exist yet in ~/IAnalyze. Create it? [y/n] n
 Nothing done: check the name given to --settings, or use --no-settings to run without settings.
 ```
 
-Un fichier existant qui n'est pas un fichier de réglages, sans la section `[player]`, n'est jamais réécrit : les réponses ne servent qu'au lancement en cours, un avertissement dit pourquoi, et le fichier reste tel qu'il était.\
+Un fichier existant qui n'est pas un fichier de réglages, sans la section `[player]` ni la section `[joueur]` de l'ancien format, n'est jamais réécrit : les réponses ne servent qu'au lancement en cours, un avertissement dit pourquoi, et le fichier reste tel qu'il était.\
 Ici `notes.ini`, à la racine du dossier de l'application, est un fichier INI sans rapport avec IAnalyze :
 
 ```bash
@@ -860,7 +860,7 @@ analysis-my-game-20261125-153424.zip
 
 #### `--keep-folder`
 
-Pendant la collecte, le script range ses fichiers dans un dossier de travail, `analysis-<partie>-<date>`.\
+Pendant la collecte, le script range ses fichiers dans un dossier de travail, `analysis-<game>-<date>`.\
 Il le compresse ensuite en zip, puis le supprime.
 
 Avec cette option, le dossier reste à côté de l'archive.\
@@ -1611,6 +1611,34 @@ The game does not start from the initial position, it starts from a FEN tag. IAn
 Corrupt PGN: the comment opened by a brace on line 1 is never closed.
 ```
 
+### Des coups sur une ligne de balise
+
+Une balise occupe une ligne entière, avant les coups de sa partie. python-chess sauterait cette ligne, ses coups avec elle, et l'analyse porterait sur une autre partie que la vôtre. Une ligne de crochets parmi les coups est refusée de même : python-chess jouerait les coups qu'elle contient.
+
+```bash
+./ianalyze.py tag-with-moves.pgn --no-explorer --no-questions
+```
+
+```text
+[18:49:51] Virtual environment: restarting with ~/IAnalyze/local/venv/bin/python3
+[18:49:51] Reading the local PGN: tag-with-moves.pgn
+Corrupt PGN: line 4 is not a well-formed tag, [Name "value"] alone on its line: python-chess would skip it, together with what it carries.
+```
+
+### Coup nul joué en échec
+
+Un coup nul, `--`, passe le trait. Joué en échec, il laisse le roi attaqué : les positions qui suivent sont illégales, et le moteur ne peut pas les évaluer.
+
+```bash
+./ianalyze.py null-move-in-check.pgn --no-explorer --no-questions
+```
+
+```text
+[18:49:52] Virtual environment: restarting with ~/IAnalyze/local/venv/bin/python3
+[18:49:52] Reading the local PGN: null-move-in-check.pgn
+Corrupt PGN: null move "--" played in check, at move 2, by Black. Passing leaves the king attacked: the positions that follow are illegal, and the engine cannot evaluate them.
+```
+
 ### Option inconnue
 
 Ici un ancien nom français, refusé depuis la version 5.0.0. Le code de retour vaut 2.
@@ -1709,9 +1737,9 @@ Le modèle désigné par `--prompt` porte ici une valeur mal écrite.
 Prompt template ~/faulty-template.txt, line 21: unknown value {{VERSON}}, accepted values: VERSION, REPOSITORY, ARCHIVE, USERNAMES, SIDE, RATING, TIME_CONTROL, ANNOTATOR, DATABASE, INACCURACY_THRESHOLD, MISTAKE_THRESHOLD, BLUNDER_THRESHOLD, DEPTH, MULTIPV, GAME_PGN, ENGINE_TABLE, RESULT_ALERT, PLAYER_INSTRUCTIONS, OPENING, PLIES, PLIES_EVALUATED, PLAYER_WEAK_MOVES
 ```
 
-### Fichier de réglages d'une version antérieure
+### Fichier de réglages à l'ancien format
 
-Un `settings.ini` écrit par la version 4 porte la section `[joueur]`, et non `[player]` : `--purge-settings` le refuse, comme tout fichier qui n'est pas un fichier de réglages, avec le code de retour 1. Supprimez-le à la main.
+Un `settings.ini` à l'ancien format porte la section `[joueur]`, et non `[player]` : le `reglages.ini` de la version 4 recopié à la main, ou un fichier écrit par une version de développement de la 5.0.0. `--purge-settings` le refuse, comme tout fichier qui n'est pas un fichier de réglages, avec le code de retour 1. Supprimez-le à la main, ou lancez d'abord une collecte : elle repose les questions des réglages et ajoute la section `[player]`.
 
 ```bash
 ./ianalyze.py --purge-settings
@@ -1781,9 +1809,9 @@ Ce qu'il écrit, dans le répertoire courant ou dans celui de `--output-dir` :
 
 | Fichier | Rôle |
 |---|---|
-| `analysis-<partie>-<date>.zip` | l'archive, à joindre à la conversation |
-| `analysis-<partie>-<date>.prompt.txt` | le prompt, à coller dans la conversation |
-| `analysis-<partie>-<date>/` | le dossier de travail, gardé seulement avec `--keep-folder` ou après un échec |
+| `analysis-<game>-<date>.zip` | l'archive, à joindre à la conversation |
+| `analysis-<game>-<date>.prompt.txt` | le prompt, à coller dans la conversation |
+| `analysis-<game>-<date>/` | le dossier de travail, gardé seulement avec `--keep-folder` ou après un échec |
 
 Le contenu de l'archive est décrit dans le README, section 5.
 

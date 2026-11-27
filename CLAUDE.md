@@ -49,9 +49,13 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
   Unreleased pendant le travail).
 - Versions : <https://semver.org/>. La version figure dans le script et
   dans le User-Agent : les deux changent ensemble.
-- La 4.0.0 a été fusionnée dans main, étiquetée et publiée sur GitHub
-  le 21 novembre 2026. main ne porte pas CLAUDE.md : à chaque fusion,
-  le fichier est retiré par "git rm -f CLAUDE.md" avant le commit.
+- main porte la 4.0.2, publiée sur GitHub le 21 novembre 2026 ; les
+  étiquettes v4.0.0, v4.0.1 et v4.0.2 sont sur le dépôt. main ne porte
+  pas CLAUDE.md : à chaque fusion, le fichier est retiré par
+  "git rm -f CLAUDE.md" avant le commit. main n'est pas un ancêtre de
+  dev : son dernier commit, bef21e6, est une fusion qui retire
+  CLAUDE.md. La fusion de dev dans main bute donc sur un conflit
+  modification/suppression de CLAUDE.md, réglé par ce même git rm.
 - Un seul bump par fusion dans main, jamais par fournée de travail sur
   dev : entre deux fusions, tout s'accumule sous Unreleased. Annonce le
   niveau choisi et sa raison avant de l'appliquer.

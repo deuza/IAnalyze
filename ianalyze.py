@@ -63,6 +63,7 @@ import sys
 import tempfile
 import time
 import traceback
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -169,6 +170,12 @@ except ImportError:
 #: displayed.
 logging.getLogger("chess.engine").addFilter(
     lambda avis: "null moves" not in avis.getMessage())
+
+#: python-chess also writes each illegal move of a PGN on standard error,
+#: in English, before the script refuses the game with the same move:
+#: the message came twice. Its log of the PGN reading is silenced, the
+#: refusal giving the move.
+logging.getLogger("chess.pgn").setLevel(logging.CRITICAL)
 
 
 def python_du_venv(venv: str) -> pathlib.Path:
@@ -780,7 +787,8 @@ BOMS_LARGES = (
     (codecs.BOM_UTF16_BE, "utf-16-be"),
 )
 
-#: Bytes examined to recognize UTF-16 without a byte order mark.
+#: Bytes examined to recognize UTF-16 or UTF-32 without a byte order
+#: mark.
 ECHANTILLON_UTF16 = 4096
 
 #: Invalid bytes tolerated, per correctly encoded non-ASCII character,
@@ -806,6 +814,30 @@ def utf16_sans_bom(brut: bytes) -> str | None:
         return "utf-16-le"
     if nuls_pairs > 0.4 * len(pairs) and nuls_impairs < 0.05 * len(impairs):
         return "utf-16-be"
+    return None
+
+
+def utf32_sans_bom(brut: bytes) -> str | None:
+    """
+    Recognizes a UTF-32 text that has no byte order mark.
+
+    Each character takes four bytes, and the two high ones are null for
+    any character up to U+FFFF: at positions 2 and 3 of each group in
+    little-endian, at positions 0 and 1 in big-endian, while the low byte
+    is almost never null. Without this test, such a text passed for
+    cp1252 once its null bytes were removed, losing every character
+    beyond latin-1. Returns the name of the codec, or None.
+    """
+    echantillon = brut[:ECHANTILLON_UTF16]
+    groupes = len(echantillon) // 4
+    if groupes < 2:
+        return None
+    nuls = [echantillon[k:4 * groupes:4].count(0) / groupes
+            for k in range(4)]
+    if nuls[2] > 0.9 and nuls[3] > 0.9 and nuls[0] < 0.05:
+        return "utf-32-le"
+    if nuls[0] > 0.9 and nuls[1] > 0.9 and nuls[3] < 0.05:
+        return "utf-32-be"
     return None
 
 
@@ -847,6 +879,12 @@ def decoder_octets(brut: bytes) -> tuple[str, str, list[str]]:
                 remarques.append("byte order mark (BOM) detected, encoding "
                                  "used: %s" % codec)
                 break
+        if large is None:
+            large = utf32_sans_bom(brut)
+            if large is not None:
+                remarques.append("three null bytes out of four and no byte "
+                                 "order mark, encoding used: %s"
+                                 % large)
         if large is None:
             large = utf16_sans_bom(brut)
             if large is not None:
@@ -962,6 +1000,19 @@ RE_NOM_RISQUE = re.compile(
 
 #: Maximum length, in bytes, of the label repeated in the folder name.
 ETIQUETTE_MAX = 80
+
+
+def masquer_maison(valeur: str) -> str:
+    """
+    Writes a path under the home folder with "~", as the shell does: the
+    name of that folder, the login of the user most often, does not go to
+    the LLM with the archive. Any other value is returned as it is. A home
+    folder reduced to "/" is not masked, every path would start with it.
+    """
+    maison = os.path.expanduser("~").rstrip(os.sep)
+    if maison and (valeur == maison or valeur.startswith(maison + os.sep)):
+        return "~" + valeur[len(maison):]
+    return valeur
 
 
 def etiquette_sure(nom: str) -> str:
@@ -1157,6 +1208,14 @@ RE_JETON_PGN = re.compile(
     r"|[!?]{1,2}")
 
 
+#: A tag line as python-chess reads it: a single tag, alone on its line,
+#: the bracket in the first column. python-chess skips a line of the
+#: tags that does not match it, together with whatever it carries, and
+#: reads as moves what the brackets of such a line hold among the moves.
+RE_BALISE_PGN = re.compile(
+    r"\[([A-Za-z0-9][A-Za-z0-9_+#=:-]*)\s+\"([^\r]*)\"\]\s*$")
+
+
 def controler_lexique(texte_pgn: str) -> None:
     """
     Rejects a PGN whose body contains something other than moves.
@@ -1169,19 +1228,34 @@ def controler_lexique(texte_pgn: str) -> None:
     plays no move, it only checks that each word of the body has the form
     of a PGN word.
 
-    Accepted outside the comments: the tags at the start of a line, the
-    move numbers, the moves in English notation, the NAGs, the annotation
-    symbols, the variation parentheses and the result.
+    Accepted outside the comments: the tags, the move numbers, the moves
+    in English notation, the NAGs, the annotation symbols, the variation
+    parentheses and the result. A tag is accepted where python-chess reads
+    it: alone on its line, the bracket in the first column, before the
+    moves of its game. Anywhere else, a line that starts with a bracket
+    would be skipped or read as moves, without a word: it is refused.
     """
     i, n = 0, len(texte_pgn)
     profondeur = 0
     ligne = 1
     debut_de_ligne = True
+    # True where python-chess reads the tags of a game: at the start of
+    # the file, then after the blank line that ends a game. A move, a
+    # comment or a parenthesis ends this zone.
+    zone_balises = True
+    # True once the current line holds something other than spaces.
+    contenu = False
     while i < n:
         c = texte_pgn[i]
+        colonne_un = i == 0 or texte_pgn[i - 1] == "\n"
         if c == "\n":
+            # python-chess ends a game at a blank line: the tags of the next
+            # game may follow it.
+            if not contenu and profondeur == 0:
+                zone_balises = True
             ligne += 1
             debut_de_ligne = True
+            contenu = False
             i += 1
         elif c.isspace():
             i += 1
@@ -1194,15 +1268,36 @@ def controler_lexique(texte_pgn: str) -> None:
             ligne += texte_pgn.count("\n", i, fin)
             i = fin + 1
             debut_de_ligne = False
-        elif c == ";" or (debut_de_ligne and c in "[%"):
-            # End-of-line comment, tag, or escape line: everything runs
-            # to the line feed.
+            zone_balises = False
+            contenu = True
+        elif c == ";" or (c == "%" and colonne_un):
+            # End-of-line comment, or escape line in the first column:
+            # everything runs to the line feed.
             fin = texte_pgn.find("\n", i)
             i = n if fin < 0 else fin
+            contenu = True
+        elif c == "[" and debut_de_ligne:
+            fin = texte_pgn.find("\n", i)
+            fin = n if fin < 0 else fin
+            if not zone_balises:
+                raise SystemExit(
+                    "Corrupt PGN: line %d starts with a bracket among the "
+                    "moves. A tag goes before the moves of its game, and "
+                    "python-chess would read as moves what the brackets "
+                    "hold." % ligne)
+            if not colonne_un or not RE_BALISE_PGN.match(texte_pgn, i, fin):
+                raise SystemExit(
+                    "Corrupt PGN: line %d is not a well-formed tag, "
+                    "[Name \"value\"] alone on its line: python-chess would "
+                    "skip it, together with what it carries." % ligne)
+            i = fin
+            contenu = True
         elif c == "(":
             profondeur += 1
             i += 1
             debut_de_ligne = False
+            zone_balises = False
+            contenu = True
         elif c == ")":
             if profondeur == 0:
                 raise SystemExit(
@@ -1211,6 +1306,8 @@ def controler_lexique(texte_pgn: str) -> None:
             profondeur -= 1
             i += 1
             debut_de_ligne = False
+            zone_balises = False
+            contenu = True
         else:
             m = RE_JETON_PGN.match(texte_pgn, i)
             if m is None:
@@ -1225,6 +1322,8 @@ def controler_lexique(texte_pgn: str) -> None:
                        ligne))
             i = m.end()
             debut_de_ligne = False
+            zone_balises = False
+            contenu = True
     if profondeur:
         raise SystemExit("Corrupt PGN: %d variation(s) opened by a "
                          "parenthesis and never closed." % profondeur)
@@ -1279,6 +1378,20 @@ def charger_partie(texte_pgn: str) -> chess.pgn.Game:
             "from a FEN tag. IAnalyze analyzes a whole game, from the first "
             "move to the last: to study a position, load it into an analysis "
             "board.")
+    # python-chess reads a null move played in check, after a mate for
+    # instance, without an error. Passing leaves the king attacked: the
+    # positions that follow are illegal, and Stockfish dies on them
+    # without saying why. The game is refused here, with the move.
+    plateau = partie.board()
+    for coup in partie.mainline_moves():
+        if not coup and plateau.is_check():
+            raise SystemExit(
+                "Corrupt PGN: null move \"--\" played in check, at move %d, "
+                "by %s. Passing leaves the king attacked: the positions that "
+                "follow are illegal, and the engine cannot evaluate them."
+                % (plateau.fullmove_number,
+                   "White" if plateau.turn == chess.WHITE else "Black"))
+        plateau.push(coup)
 
     # The values of the tags go into the headers of the summary and into
     # the log: tabs and control characters are removed from them right now,
@@ -1777,10 +1890,31 @@ def demander_increment() -> int | None:
                          "or d.\n")
 
 
+def mots_nom(nom: str) -> list[str]:
+    """
+    Words of a name, ignoring case and the forms of the accents:
+    "Müller, Noël" gives "müller" and "noël".
+    """
+    nom = unicodedata.normalize("NFC", nom).casefold()
+    return [mot for mot in re.split(r"[\s,]+", nom) if mot]
+
+
 def est_pseudo(nom: str, pseudos: list[str]) -> bool:
-    """True if the tag contains one of the usernames, ignoring case."""
-    nom = nom.casefold()
-    return any(pseudo.casefold() in nom for pseudo in pseudos)
+    """
+    True if the tag carries one of the usernames, ignoring case: as the
+    whole name, or as a run of its words. "Müller" is found in "Müller,
+    Noël", "zoé blanche" in "Zoé Blanche", but "Max" no longer in
+    "Maxime": looked up as a mere substring, a username found in the
+    name of the opponent alone gave the wrong side.
+    """
+    mots = mots_nom(nom)
+    for pseudo in pseudos:
+        cherches = mots_nom(pseudo)
+        n = len(cherches)
+        if n and any(mots[i:i + n] == cherches
+                     for i in range(len(mots) - n + 1)):
+            return True
+    return False
 
 
 def completer_entetes(partie: chess.pgn.Game, pseudos: list[str]) -> dict:
@@ -1981,9 +2115,10 @@ def purger_reglages(chemin: str) -> None:
 
     With --settings, the name comes from the command line: a typo must not
     destroy another file. Only a file that carries the [player] section,
-    or an empty file, is deleted. The section is looked up in the raw
-    text: a damaged settings file, which configparser would reject, thus
-    stays deletable.
+    or an empty file, is deleted. The section is looked up in the text
+    decoded as the reading does, a settings file in UTF-16 included,
+    without configparser: a damaged settings file, which configparser
+    would reject, thus stays deletable.
     """
     p = chemin_reglages(chemin)
     if not p.exists() and not p.is_symlink():
@@ -1997,10 +2132,10 @@ def purger_reglages(chemin: str) -> None:
     except OSError as e:
         raise SystemExit("--purge-settings: cannot read %s: %s. Nothing is "
                          "deleted." % (p, e)) from e
-    en_tete = re.compile(rb"^[ \t]*\[%s\][ \t]*\r?$"
-                         % re.escape(REGLAGES_SECTION).encode("ascii"),
-                         re.MULTILINE)
-    if brut.strip() and not en_tete.search(brut):
+    texte = decoder_octets(brut)[0]
+    en_tete = re.compile(r"^[ \t]*\[%s\][ \t]*$"
+                         % re.escape(REGLAGES_SECTION), re.MULTILINE)
+    if texte.strip() and not en_tete.search(texte):
         raise SystemExit("--purge-settings: %s is not a settings file, it "
                          "does not carry the [%s] section. Nothing is "
                          "deleted." % (p, REGLAGES_SECTION))
@@ -2077,12 +2212,14 @@ def refus_ecriture_reglages(p: pathlib.Path) -> str | None:
     the INI file of another program, its comments lost. So p is written
     only if it does not exist yet, or if it is a regular file that is
     empty or already a settings file: it carries the [player] section,
-    or the [joueur] section of the files written before version 5.0.0.
-    A device, a FIFO, a directory or any other file is left untouched.
+    or the [joueur] section of the former format, which a settings.ini
+    copied from reglages.ini, or written by a development version of
+    5.0.0, still carries. A device, a FIFO, a directory or any other file
+    is left untouched.
 
-    The section is looked up in the raw text, as for --purge-settings. A
-    file that is not a regular file is never opened: reading a FIFO
-    would block the script.
+    The section is looked up in the decoded text, as for
+    --purge-settings. A file that is not a regular file is never opened:
+    reading a FIFO would block the script.
     """
     try:
         if not p.exists():
@@ -2096,11 +2233,12 @@ def refus_ecriture_reglages(p: pathlib.Path) -> str | None:
         brut = p.read_bytes()
     except OSError as err:
         return "cannot read it: %s" % err
-    sections = b"|".join(re.escape(s).encode("ascii") for s in
-                         (REGLAGES_SECTION, REGLAGES_SECTION_ANCIENNE))
-    en_tete = re.compile(rb"^[ \t]*\[(%s)\][ \t]*\r?$" % sections,
+    texte = decoder_octets(brut)[0]
+    sections = "|".join(re.escape(s) for s in
+                        (REGLAGES_SECTION, REGLAGES_SECTION_ANCIENNE))
+    en_tete = re.compile(r"^[ \t]*\[(%s)\][ \t]*$" % sections,
                          re.MULTILINE)
-    if brut.strip() and not en_tete.search(brut):
+    if texte.strip() and not en_tete.search(texte):
         return ("it is not a settings file, it does not carry the [%s] "
                 "section" % REGLAGES_SECTION)
     return None
@@ -3585,7 +3723,7 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
     a("")
     a("Collected on %s. Source: `%s`."
       % (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-         nettoyer_valeur(source)))
+         masquer_maison(nettoyer_valeur(source))))
     a("This file contains no analysis, only collected data.")
     a("")
 
@@ -3754,7 +3892,7 @@ def ecrire_synthese(chemin: pathlib.Path, partie: chess.pgn.Game,
       "fault: the move played, evaluated apart when it is not among the "
       "first choices, comes out slightly above the first one, and the "
       "two are worth the same."
-      % (stockfish["binaire"], stockfish["depth"],
+      % (masquer_maison(stockfish["binaire"]), stockfish["depth"],
          stockfish["multipv"], len(stockfish["resultats"]),
          len(list(partie.mainline_moves()))))
     a("")
@@ -4440,6 +4578,11 @@ def analyser_arguments(argv: list[str]) -> argparse.Namespace:
     if options.prompt is not None and not options.prompt.strip():
         # Case of an empty variable in a script: --prompt "$MODELE".
         p.error("--prompt: empty path")
+    # --install-catalog downloads too: its timeout is checked before the
+    # early return of the installations. A negative one ended there in
+    # an unexpected error, a null one in an unreachable catalog.
+    if options.delai < 1:
+        p.error("--timeout must be at least 1")
     if (options.installer_venv or options.installer_catalogue
             or options.purge_reglages):
         return options
@@ -4593,10 +4736,12 @@ def main(argv: list[str]) -> int:
         if encodage_pgn == "latin-1":
             # The fallback on latin-1 only happens if the file contains a
             # byte that cp1252 does not define: this is the sign of another
-            # encoding, cp850 or MacRoman for example, whose accented
-            # letters would be removed like control characters. Rather
-            # than silently damaging the names, the script
-            # stops.
+            # encoding, cp850 for example, whose accented letters would be
+            # removed like control characters. Rather than silently
+            # damaging the names, the script stops. A MacRoman file almost
+            # never gets here: nearly all its bytes are defined in cp1252,
+            # and it is read as such, its accents wrong, which only the
+            # remark on the encoding reports.
             raise SystemExit(
                 "PGN encoding not recognized: neither UTF-8, nor UTF-16, nor "
                 "cp1252. Convert the file to UTF-8, for example with iconv, "
@@ -4779,7 +4924,10 @@ def main(argv: list[str]) -> int:
         options.multipv, options.fils, options.hachage)
 
     # -- Record of the parameters, redacted of any sensitive data -----------
-    parametres = {CLEFS_COLLECTE[nom]: valeur
+    # The paths under the home folder are written with "~" (masquer_maison).
+    parametres = {CLEFS_COLLECTE[nom]: (masquer_maison(valeur)
+                                        if isinstance(valeur, str)
+                                        else valeur)
                   for nom, valeur in vars(options).items()}
     parametres["token_present"] = JETON_COURANT is not None
     parametres["catalog_used"] = (catalogue.meta if catalogue is not None

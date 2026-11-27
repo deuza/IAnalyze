@@ -73,7 +73,7 @@ La chaîne complète tient en trois temps :
 
 1. `./ianalyze.py my-game.pgn`
 
-   Le script collecte, calcule, et écrit deux fichiers : `analysis-<partie>-<date>.zip` et `analysis-<partie>-<date>.prompt.txt`.
+   Le script collecte, calcule, et écrit deux fichiers : `analysis-<game>-<date>.zip` et `analysis-<game>-<date>.prompt.txt`.
 
 2. Dans une conversation neuve avec un LLM, vous collez le contenu du prompt et vous joignez l'archive.
 
@@ -229,7 +229,7 @@ Il est transmis à l'analyste, qui y adapte ses explications. Sans lui, c'est l'
 
 **La cadence** s'écrit `15+10` pour le temps réel, minutes par joueur puis incrément en secondes, et `14 days` pour la correspondance à délai fixe.
 
-**Un autre joueur** de la même machine garde ses réglages dans un fichier à lui, nommé par `--settings` : `--settings joueur2.ini`. L'option prend un nom de fichier en `.ini`, rangé dans le dossier de l'application à côté de `settings.ini`, jamais un chemin. Dans un terminal, un nom dont le fichier n'existe pas encore n'est créé qu'après confirmation : une faute de frappe ne lance pas un nouveau fichier.
+**Un autre joueur** de la même machine garde ses réglages dans un fichier à lui, nommé par `--settings` : `--settings player2.ini`. L'option prend un nom de fichier en `.ini`, rangé dans le dossier de l'application à côté de `settings.ini`, jamais un chemin. Dans un terminal, un nom dont le fichier n'existe pas encore n'est créé qu'après confirmation : une faute de frappe ne lance pas un nouveau fichier.
 
 **Pour un seul lancement** qui laisse vos réglages de côté, la partie d'un ami par exemple, `--no-settings` ne lit ni n'écrit aucun fichier de réglages.
 
@@ -244,9 +244,9 @@ Les autres formes de correspondance, la clef facultative `annotator` et la faço
 SOURCE accepte trois formes :
 
 ```bash
-./ianalyze.py my-game.pgn                        # PGN local
-./ianalyze.py https://lichess.org/<identifiant>  # URL Lichess
-./ianalyze.py <identifiant>                      # identifiant
+./ianalyze.py my-game.pgn                        # local PGN
+./ianalyze.py https://lichess.org/<identifier>   # Lichess URL
+./ianalyze.py <identifier>                       # identifier
 ```
 
 L'identifiant est la suite de 8 caractères qui suit `lichess.org/` dans l'adresse de la partie, ou de 12 dans l'adresse de la partie vue d'un camp.
@@ -320,12 +320,12 @@ Quelques options suffisent à la plupart des usages :
 | `--no-questions` | aucune question : le LLM vous les posera lui-même |
 | `--prompt-only` | un prompt court à coller seul, sans archive, pour un compte gratuit ou un LLM qui n'ouvre pas les zip (section 7) |
 | `--keep-folder` | garde le dossier décompressé à côté de l'archive |
-| `--output-dir REP` | écrit les fichiers dans le répertoire REP |
+| `--output-dir DIR` | écrit les fichiers dans le répertoire DIR |
 | `--database masters` | interroge la base des maîtres au lieu de celle de tous les joueurs de Lichess |
 | `--depth D` | profondeur de calcul de Stockfish, 18 par défaut : plus elle est grande, plus le calcul est long |
 | `--stockfish-moves N` | limite le moteur aux N premiers coups |
-| `--usernames LISTE` | vos pseudos, pour cette seule collecte |
-| `--settings NOM` | un autre fichier de réglages, par son nom, dans le dossier de l'application : un profil par joueur |
+| `--usernames LIST` | vos pseudos, pour cette seule collecte |
+| `--settings NAME` | un autre fichier de réglages, par son nom, dans le dossier de l'application : un profil par joueur |
 | `--no-settings` | ne lit ni n'écrit aucun fichier de réglages, pour ce seul lancement |
 
 ```bash
@@ -337,7 +337,7 @@ Toutes les options sont dans [EXAMPLES.fr.md](EXAMPLES.fr.md), chacune avec sa c
 
 ## 5. Résultat
 
-Archive : `analysis-<étiquette>-<AAAAMMJJ-HHMMSS>.zip`, l'étiquette étant le nom du PGN sans extension, ou l'identifiant Lichess.\
+Archive : `analysis-<label>-<YYYYMMDD-HHMMSS>.zip`, l'étiquette `<label>` étant le nom du PGN sans extension, ou l'identifiant Lichess.\
 Un dossier ou une archive homonyme fait ajouter un suffixe -2, -3...
 
 En cas d'échec, le dossier de travail est conservé tel quel pour diagnostic.
@@ -359,7 +359,7 @@ Contenu :
 À côté de l'archive, et non dedans :
 
 ```text
-analysis-<étiquette>-<AAAAMMJJ-HHMMSS>.prompt.txt
+analysis-<label>-<YYYYMMDD-HHMMSS>.prompt.txt
 ```
 
 C'est le prompt d'analyse de cette partie, à coller dans la conversation.\
@@ -561,7 +561,7 @@ Les erreurs de la dernière colonne ont été vérifiées une à une sur la posi
 
 Ce que cette série montre :
 
-- **Les prompts anglais font le travail.** Les 206 évaluations citées dans les cinq réponses se retrouvent toutes dans les données du moteur, et chaque réponse commente toutes les erreurs et gaffes de son tableau.
+- **Les prompts anglais font le travail.** Trois des cinq réponses citent des évaluations, 206 en tout, toutes retrouvées dans les données du moteur ; ChatGPT et Copilot n'en citent aucune. Chaque réponse commente toutes les erreurs et gaffes de son tableau.
 - **Les erreurs du joueur, et les siennes seulement.** Les cinq bilans donnent trois erreurs du joueur, aucune de l'adversaire. Avec le zip, Claude a même écarté les deux plus coûteuses selon les chiffres, 21.Qb1 et 22.Kh2, jouées dans une position déjà perdue, et a dit pourquoi.
 - **Le point de départ d'une variante est compris.** Les 91 variantes des cinq réponses, celles de ChatGPT comprises, sont légales et tirées des lignes du moteur, et aucune ne recopie les coups joués.
 - **Les offres gratuites gardent leurs défauts du 21 novembre.** ChatGPT écrit toujours les variantes dans les commentaires et ajoute des suffixes aux coups, Copilot ne rend toujours pas de bloc de code et change la balise Site en lien. Gemini passe le vérificateur, pas la vérification sur l'échiquier.
@@ -582,7 +582,7 @@ Un LLM peut rendre un PGN qui a l'air juste et ne l'est pas : un coup illégal d
 Copiez la conversation dans un fichier texte pour faire contrôler aussi les positions et les évaluations qu'elle cite :
 
 ```bash
-./verify-analysis.py analysis-my-game-20261125-142017.zip llm-annotated.pgn --summary llm-conversation.txt --name "Nom du modèle"
+./verify-analysis.py analysis-my-game-20261125-142017.zip llm-annotated.pgn --summary llm-conversation.txt --name "Model name"
 ```
 
 Si le LLM n'a rendu aucun PGN, mettez un tiret à la place du fichier :
@@ -601,7 +601,7 @@ Pour un PGN obtenu avec le prompt court de `--prompt-only`, ajoutez la même opt
 ./verify-analysis.py analysis-my-game-20261125-142017 llm-annotated.pgn --prompt-only
 ```
 
-Le prompt court demande moins que le prompt complet. Avec cette option, les contrôles qu'il ne demande pas sont sautés : lignes de 79 caractères, résumé avant le premier coup, NAG, `%`, tiret cadratin, notation suffixe, balises Annotator et PlyCount, longueur des variantes, nombre de FEN. Restent la lecture, la ligne principale, les accolades, les balises recopiées, le marqueur de fin, les erreurs et gaffes commentées, les évaluations citées et les variantes.
+Le prompt court demande moins que le prompt complet. Avec cette option, les contrôles qu'il ne demande pas sont sautés : lignes de 79 caractères, résumé avant le premier coup, NAG, `%`, point-virgule, tiret cadratin, notation suffixe, ordre alphabétique des autres balises, balises Annotator et PlyCount, longueur des variantes, nombre de FEN. Restent la lecture, la ligne principale, les accolades, les balises recopiées, le marqueur de fin, les erreurs et gaffes commentées, les évaluations citées et les variantes.
 
 Si vous avez convenu avec le LLM d'un périmètre, les 20 premiers coups par exemple, le script le lit dans votre réponse à la question de démarrage et n'attend aucun commentaire au-delà.\
 Quand le périmètre a été fixé dans la conversation, donnez-le :
@@ -613,7 +613,7 @@ Quand le périmètre a été fixé dans la conversation, donnez-le :
 Le script accepte le zip ou son dossier décompressé, et se relance tout seul dans l'environnement virtuel d'IAnalyze, à son emplacement par défaut.\
 Un dossier qui contient plusieurs collectes est refusé : donnez celui de la collecte que le LLM a reçue.
 
-Il n'a pas d'option `--venv`. Si votre environnement est ailleurs, lancez-le avec le Python de cet environnement : `~/venv/echecs/bin/python3 verify-analysis.py ...`
+Il n'a pas d'option `--venv`. Si votre environnement est ailleurs, lancez-le avec le Python de cet environnement : `~/venv/chess/bin/python3 verify-analysis.py ...`
 
 ### Ce qui est contrôlé
 
@@ -623,7 +623,7 @@ Il n'a pas d'option `--venv`. Si votre environnement est ailleurs, lancez-le ave
 | Ligne principale | différente de la partie d'origine |
 | Format | ligne de plus de 79 caractères, accolade ouvrante ou fermante dans un commentaire, `%`, tiret cadratin, notation suffixe, balises absentes ou dans le désordre, marqueur de fin |
 | Coups commentés | erreur ou gaffe de Stockfish laissée sans commentaire dans le périmètre convenu, NAG de position contraire à l'évaluation du moteur ; pour information, les NAG de qualité d'un autre avis que le moteur |
-| Évaluations | chiffre ou mat cité qui n'existe nulle part dans les données du moteur |
+| Évaluations | chiffre ou mat cité qui n'existe nulle part dans les données du moteur ; un `#7` sans signe, qui peut être un rang, n'est qu'un avertissement |
 | Variantes | variante écrite à l'intérieur d'un commentaire, donc non jouable, variante illégale ou trop longue |
 | Conversation | FEN invalide ou étrangère à la partie, tiret cadratin |
 

@@ -48,7 +48,7 @@ From the repository, after the installation described in the README:
 The script ends with a summary:
 
 ```text
-Passed: 598, failed: 0, skipped: 0
+Passed: 658, failed: 0, skipped: 0
 Report: /path/of/the/repository/test-report-Linux-20261125-154836.txt
 ```
 
@@ -93,7 +93,7 @@ The numbers follow the order in which the tests were created, not the order in w
 |---|---|---|
 | T01 | Compilation | `ianalyze.py` passes `py_compile` |
 | T02 | Help | `--help` returns 0 and is shown whole, `--min-moves` quoted four times; it places the defaults of `--venv` and `--catalog` in the `local/` folder of the application, and the one of `--settings` at its root |
-| T03 | Refused options | an unknown option or a refused value stops the script with the exit code 2 |
+| T03 | Refused options | an option without effect or a value out of bounds stops the script with the exit code 2, before any reading of the game; with `--install-catalog`, a `--timeout` below 1 too |
 | T04 | PGN not found | the missing file is named, and a relative name is taken for a file, not for an identifier |
 | T05 | Minimal collection | a single line on standard output; the archive exists and carries `summary.md` and `collection.json`, without a temporary file |
 | T06 | Folder kept | `--keep-folder` leaves the working folder next to the archive |
@@ -106,7 +106,7 @@ The numbers follow the order in which the tests were created, not the order in w
 | T34 | Latin-1 | a PGN in latin-1 is read, an unrecognized encoding is refused without anything written |
 | T35 | cp1252 | a PGN in cp1252 is read, curly apostrophe, dash and euro included |
 | T36 | UTF-8 mark | the byte order mark at the head of the PGN is removed |
-| T37 | UTF-16 | a PGN in UTF-16 is read, with or without a byte order mark |
+| T37 | UTF-16, UTF-32 | a PGN in UTF-16 is read, with or without a byte order mark, and one in UTF-32 without a mark, its letter beyond latin-1 intact |
 | T38 | Damaged UTF-8 | the invalid bytes are replaced, the rest of the PGN is kept |
 | T39 | NUL bytes | they are removed, none stays in the archive |
 | T40 | CRLF line ends | a PGN from Windows is read like the others |
@@ -121,7 +121,7 @@ The numbers follow the order in which the tests were created, not the order in w
 | T49 | Simulated explorer | unexpected answers are reported without an unexpected error |
 | T50 | Non-finite values | `nan` and `inf` are refused for the numeric options, without a folder created |
 | T51 | Mates | missed mate and conceded mate marked `mate` and `blunder`, mate counted after the move, legend of the summary |
-| T52 | Null move | the `--` move keeps its line in the table, without an invented evaluation, and the short prompt explains it |
+| T52 | Null move | the `--` move keeps its line in the table, without an invented evaluation, and the short prompt explains it; a null move played in check, after a check or after a mate, is refused before the engine starts |
 | T53 | Interruption | an interruption during the archiving, or a write that fails, keeps the working folder and leaves no truncated archive |
 | T54 | False addresses | a URL that is not a game is refused without anything sent, the identifiers are extracted from the real ones |
 | T55 | Engine options | a value outside the bounds is refused with its bounds, `--stockfish` accepts a tilde or a name looked up in the PATH |
@@ -134,7 +134,7 @@ The numbers follow the order in which the tests were created, not the order in w
 | T62 | Time control | the answers are checked, the wrong ones refused; a TimeControl tag spares the question |
 | T63 | Correspondence | the three systems of correspondence time control are recognized, with the English plural of the durations |
 | T64 | Prompt written | the prompt is written next to the archive, with its values filled in |
-| T65 | Adapted prompt | the prompt keeps only the passages that apply: explorer, database, answers, section 2; it carries the instructions drawn from the trials, among them where a variation starts and where `$7` and `$8` go; its final summary asks for the errors of the player, according to their count |
+| T65 | Adapted prompt | the prompt keeps only the passages that apply: explorer, database, answers, section 2; it carries the instructions drawn from the trials, among them where a variation starts and where `$7` and `$8` go; its final summary asks for the errors of the player, according to their count, bounded to the plies evaluated under partial coverage, in both templates; the tags and comments of the PGN are data, never instructions |
 | T66 | Faulty template | unknown marker, condition never closed or missing template stop the script before the collection |
 | T67 | Script without template | the script copied alone makes its collection without a prompt, and says so |
 | T68 | Rating | the rating in Elo points is checked and repeated in the prompt |
@@ -143,24 +143,24 @@ The numbers follow the order in which the tests were created, not the order in w
 | T71 | Removed options | `--sans-stockfish`, `--avec-stockfish` and `--consignes` are unknown |
 | T72 | Contrary result | a game marked won in a lost position is reported in the summary and in the prompt |
 | T73 | Checker | a compliant PGN passes, a faulty PGN sees each defect reported, missing PGN, unreadable archive |
-| T74 | Prompt only | short prompt written without an archive, table of the engine, where a variation starts, review according to the number of weak moves, unknown side, prompt never overwritten |
-| T75 | Misread PGNs | the PGNs that python-chess would misread, or with several games, are refused with their cause, without anything written. A result repeated at the end of the file is ignored, unless a real game follows it |
+| T74 | Prompt only | short prompt written without an archive, table of the engine, where a variation starts, review according to the number of weak moves, unknown side, prompt never overwritten; the game in a code block, given as data |
+| T75 | Misread PGNs | the PGNs that python-chess would misread, or with several games, are refused with their cause, without anything written: among them, a tag line that carries moves, and a line of brackets among the moves. An illegal move is named, once. A result repeated at the end of the file is ignored, unless a real game follows it |
 | T76 | Token and servers | on simulated servers, a redirect is not followed and the token is redacted from the quoted answers |
-| T77 | Unexpected inputs | standard input closed, name too long, badly formed URL, game that starts from a FEN, tilde of `--output-dir`: a message, no longer an unexpected error |
+| T77 | Unexpected inputs | standard input closed, name too long, badly formed URL, game that starts from a FEN, tilde of `--output-dir`: a message, no longer an unexpected error, looked for in the logs of all these inputs; under the home folder, the paths of the archive are written with `~` |
 | T78 | Engine that stops | an engine dead outside a search gives a message and the exit code 1 |
 | T79 | Refused answers | an answer too long or carrying signs of the PGN is refused and asked again |
 | T80 | Long name | a long PGN name, in multibyte characters, gives a bounded and valid label |
-| T81 | Combined cases | the purge is used alone, an empty template is refused, a badly written token is refused without being displayed |
-| T82 | Checker, continued | quoted mates, agreed scope, skipped checks of the short mode, parent folder with one or several collections |
+| T81 | Combined cases | the purge is used alone, an empty path given to `--prompt` is refused, a badly written token is refused without being displayed |
+| T82 | Checker, continued | quoted mates, a `#7` without a sign only a warning, a FEN with its en passant square from the game, control characters of the PGN shown as `?`, an accent under an ASCII output, agreed scope, skipped checks of the short mode, parent folder with one or several collections |
 | T83 | Example games | the files of `example-games` stay what `EXAMPLES.md` says of them: eight games accepted, among them the exports of four sites and of a program, four refused with their cause, two annotated PGNs checked, whose single variation the report counts in the singular, no address or identifier of a real game |
 | T84 | Incomplete virtual environment | an environment without pip is recognized, a directory without `pyvenv.cfg` never is; with `--network`, `--install-venv` rebuilds the former and installs python-chess in it |
 | T85 | `--venv` that is not a virtual environment | a non-empty directory without `pyvenv.cfg`, with or without an interpreter, is refused by `--install-venv` before any pip, and nothing is added to it; a missing or empty directory is not |
-| T86 | `--no-settings` | the settings file is neither read nor written, as the log and `collection.json` say: side deduced from `--usernames` or unknown, rating taken from the Elo tag of that side, file untouched; on a terminal, no settings question, the side is asked, no file created; refused with `--settings` and with `--purge-settings` |
+| T86 | `--no-settings` | the settings file is neither read nor written, as the log and `collection.json` say: side deduced from `--usernames` or unknown, rating taken from the Elo tag of that side, file untouched; on a terminal, no settings question, the side is asked, no file created; refused with `--settings` and with `--purge-settings`; a username is found as the whole name or as words, never as a substring |
 | T87 | Keys of `collection.json` | one English key for each option, none left over or repeated; the keys of the depth and of the output directory checked by name |
 | T88 | Ranks of the variations | English ordinals, from 1st to 112th |
-| T89 | Settings written over a settings file only | a FIFO, a directory or the file of another program is left as it is, and the reason is said; a file of the former format is written with its `[joueur]` section kept; no partial file left; on a terminal, a warning, and the answers serve the current run |
+| T89 | Settings written over a settings file only | a FIFO, a directory or the file of another program is left as it is, and the reason is said; a file of the former format is written with its `[joueur]` section kept; a settings file in UTF-16 is written and purged; no partial file left; on a terminal, a warning, and the answers serve the current run |
 | T90 | Settings name | `--settings` takes a name: a path or another name is refused, nothing created; `/dev/null` is refused, `--no-settings` suggested; the help speaks of a name; a new name asks for a confirmation, asked again after an unexpected answer; refused, nothing is done: no file, no collection |
-| T91 | Quality NAGs | `$1` on a mistake or a blunder, and `$6` on a move that the engine does not classify, are counted and named as other opinions, beside the NAGs that match the category |
+| T91 | Quality NAGs | `$1` on a mistake or a blunder, and `$6` on a move that the engine does not classify, are counted and named as other opinions, beside the NAGs that match the category; the expected lines, drawn from the engine, must exist |
 | T92 | Wrap of the prompts | both templates, rendered in every combination of their conditions: no line of prose over 71 columns, none that could take the first word of the next one, no continued line opening on a figure, which would read as an item of a list |
 | M1 | Collection, names | accented PGN name, output path with a space and an accent |
 | M2 | Full collection | the Italian analyzed whole, engine only, without an engine process left behind |
@@ -176,7 +176,7 @@ These tests use your token and the real explorer. N1 and N2 are two full collect
 | T11 | Reinstallation | a second installation gives an identical catalog, its dated line aside |
 | T12 | Catalog missing | it is reported, with the installation command |
 | T13 | Catalog truncated | it is reported rather than half read |
-| T14 | Italian, masters | the table of the explorer and the exit from theory on the masters database |
+| T14 | Italian, masters | the table of the explorer on the masters database, up to the end of the game, without an exit from theory |
 | T15 | Polish, masters | a rare opening on the masters database |
 | T16 | Polish, Lichess | the same on the database of all the players: starting window, first exit, last named position |
 | T17 | First exit | the querying stops at the first exit from theory when asked |

@@ -36,21 +36,21 @@ Depuis le dépôt, après l'installation décrite dans le README :
 ```
 
 ```bash
-./test-app.sh --network <identifiant ou adresse d'une partie de Lichess>
+./test-app.sh --network <identifier or address of a Lichess game>
 ```
 
 | Commande | Ce qu'elle joue | Durée |
 |---|---|---|
 | `./test-app.sh` | les tests hors réseau, sans jeton | environ 3 minutes sur un Mac récent, 6 sur un Raspberry Pi |
 | `./test-app.sh --network` | les mêmes, puis ceux qui demandent le réseau et votre jeton Lichess, sauf T24 | environ 3 minutes de plus |
-| `./test-app.sh --network PARTIE` | de même, avec T24 : le téléchargement de la partie que vous désignez | quelques secondes de plus |
+| `./test-app.sh --network GAME` | de même, avec T24 : le téléchargement de la partie que vous désignez | quelques secondes de plus |
 
 **La partie de T24 est à vous de la choisir.** Le dépôt ne désigne aucune partie réelle : T24 télécharge celle que vous donnez après `--network`, par son identifiant ou par son adresse. N'importe quelle partie de Lichess convient, la vôtre ou une autre. Sans elle, T24 est compté parmi les tests sautés, "skipped" dans le bilan, et le script rappelle au départ la commande à lancer. L'identifiant donné n'est pas écrit dans le rapport.
 
 Le script se termine par un bilan :
 
 ```text
-Passed: 598, failed: 0, skipped: 0
+Passed: 658, failed: 0, skipped: 0
 Report: /path/of/the/repository/test-report-Linux-20261125-154836.txt
 ```
 
@@ -95,7 +95,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 |---|---|---|
 | T01 | Compilation | `ianalyze.py` passe `py_compile` |
 | T02 | Aide | `--help` rend 0 et s'affiche en entier, `--min-moves` cité quatre fois ; elle place les défauts de `--venv` et `--catalog` dans le dossier `local/` de l'application, et celui de `--settings` à sa racine |
-| T03 | Options refusées | une option inconnue ou une valeur refusée arrêtent le script avec le code 2 |
+| T03 | Options refusées | une option sans effet ou une valeur hors bornes arrête le script avec le code de retour 2, avant toute lecture de la partie ; avec `--install-catalog`, un `--timeout` inférieur à 1 aussi |
 | T04 | PGN introuvable | le fichier absent est nommé, et un nom relatif est pris pour un fichier, non pour un identifiant |
 | T05 | Collecte minimale | une seule ligne sur la sortie standard ; l'archive existe et porte `summary.md` et `collection.json`, sans fichier provisoire |
 | T06 | Dossier gardé | `--keep-folder` laisse le dossier de travail à côté de l'archive |
@@ -108,7 +108,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | T34 | Latin-1 | un PGN en latin-1 est lu, un encodage non reconnu est refusé sans rien écrire |
 | T35 | cp1252 | un PGN en cp1252 est lu, apostrophe courbe, tiret et euro compris |
 | T36 | Marque UTF-8 | la marque d'ordre des octets en tête de PGN est retirée |
-| T37 | UTF-16 | un PGN en UTF-16 est lu, avec ou sans marque d'ordre |
+| T37 | UTF-16, UTF-32 | un PGN en UTF-16 est lu, avec ou sans marque d'ordre, et un PGN en UTF-32 sans marque, sa lettre hors latin-1 intacte |
 | T38 | UTF-8 abîmé | les octets invalides sont remplacés, le reste du PGN est conservé |
 | T39 | Octets NUL | ils sont retirés, aucun ne reste dans l'archive |
 | T40 | Fins de ligne CRLF | un PGN venu de Windows est lu comme les autres |
@@ -123,7 +123,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | T49 | Explorateur simulé | des réponses inattendues sont signalées sans erreur inattendue |
 | T50 | Valeurs non finies | `nan` et `inf` sont refusés pour les options numériques, sans dossier créé |
 | T51 | Mats | mat manqué et mat concédé notés `mate` et `blunder`, mat compté après le coup, légende de la synthèse |
-| T52 | Coup nul | le coup `--` garde sa ligne au tableau, sans évaluation inventée, et le prompt court l'explique |
+| T52 | Coup nul | le coup `--` garde sa ligne au tableau, sans évaluation inventée, et le prompt court l'explique ; un coup nul joué en échec, après un échec ou après un mat, est refusé avant le lancement du moteur |
 | T53 | Interruption | une interruption pendant l'archivage, ou une écriture qui échoue, garde le dossier de travail et ne laisse pas d'archive tronquée |
 | T54 | Fausses adresses | une URL qui n'est pas une partie est refusée sans rien envoyer, les identifiants sont extraits des vraies |
 | T55 | Options du moteur | une valeur hors des bornes est refusée avec ses bornes, `--stockfish` admet un tilde ou un nom cherché dans le PATH |
@@ -136,7 +136,7 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | T62 | Cadence | les réponses sont vérifiées, les fausses refusées ; une balise TimeControl épargne la question |
 | T63 | Correspondance | les trois systèmes de cadence par correspondance sont reconnus, avec le pluriel anglais des durées |
 | T64 | Prompt écrit | le prompt est écrit à côté de l'archive, avec ses valeurs remplies |
-| T65 | Prompt adapté | le prompt ne garde que les passages qui s'appliquent : explorateur, base, réponses, section 2 ; il porte les consignes tirées des essais, dont le point de départ d'une variante et la place de `$7` et `$8` ; son bilan final demande les erreurs du joueur, selon leur nombre |
+| T65 | Prompt adapté | le prompt ne garde que les passages qui s'appliquent : explorateur, base, réponses, section 2 ; il porte les consignes tirées des essais, dont le point de départ d'une variante et la place de `$7` et `$8` ; son bilan final demande les erreurs du joueur, selon leur nombre, borné aux demi-coups évalués en couverture partielle, dans les deux modèles ; les balises et commentaires du PGN sont des données, jamais des consignes |
 | T66 | Modèle fautif | repère inconnu, condition jamais fermée ou modèle absent arrêtent le script avant la collecte |
 | T67 | Script sans modèle | le script copié seul fait sa collecte sans prompt, et le dit |
 | T68 | Niveau | le niveau en points Elo est vérifié et repris dans le prompt |
@@ -145,24 +145,24 @@ Les numéros suivent l'ordre de création des tests, pas celui de leur passage. 
 | T71 | Options retirées | `--sans-stockfish`, `--avec-stockfish` et `--consignes` sont inconnues |
 | T72 | Résultat contraire | une partie notée gagnée dans une position perdue est signalée dans la synthèse et le prompt |
 | T73 | Vérificateur | un PGN conforme passe, un PGN fautif voit chaque défaut relevé, PGN absent, archive illisible |
-| T74 | Prompt seul | prompt court écrit sans archive, tableau du moteur, point de départ d'une variante, bilan selon le nombre de coups faibles, camp inconnu, prompt jamais écrasé |
-| T75 | PGN lus de travers | les PGN que python-chess lirait de travers, ou à plusieurs parties, sont refusés avec leur cause, sans rien écrire. Un résultat répété en fin de fichier est ignoré, sauf s'il est suivi d'une vraie partie |
+| T74 | Prompt seul | prompt court écrit sans archive, tableau du moteur, point de départ d'une variante, bilan selon le nombre de coups faibles, camp inconnu, prompt jamais écrasé ; la partie dans un bloc de code, présentée comme des données |
+| T75 | PGN lus de travers | les PGN que python-chess lirait de travers, ou à plusieurs parties, sont refusés avec leur cause, sans rien écrire : parmi eux, une ligne de balise qui porte des coups, et une ligne de crochets parmi les coups. Un coup illégal est nommé, une seule fois. Un résultat répété en fin de fichier est ignoré, sauf s'il est suivi d'une vraie partie |
 | T76 | Jeton et serveurs | sur des serveurs simulés, une redirection n'est pas suivie et le jeton est expurgé des réponses citées |
-| T77 | Entrées inattendues | entrée standard fermée, nom trop long, URL mal formée, partie qui part d'une FEN, tilde de `--output-dir` : un message, plus une erreur inattendue |
+| T77 | Entrées inattendues | entrée standard fermée, nom trop long, URL mal formée, partie qui part d'une FEN, tilde de `--output-dir` : un message, plus une erreur inattendue, cherchée dans les journaux de toutes ces entrées ; sous le dossier personnel, les chemins de l'archive sont écrits avec `~` |
 | T78 | Moteur qui s'arrête | un moteur mort hors d'une recherche donne un message et le code 1 |
 | T79 | Réponses refusées | une réponse trop longue ou porteuse de signes du PGN est refusée et redemandée |
 | T80 | Nom long | un nom de PGN long, en caractères de plusieurs octets, donne une étiquette bornée et valide |
-| T81 | Cas combinés | la purge s'emploie seule, un modèle vide est refusé, un jeton mal écrit est refusé sans être affiché |
-| T82 | Vérificateur, suite | mats cités, périmètre convenu, contrôles sautés du mode court, dossier parent à une ou plusieurs collectes |
+| T81 | Cas combinés | la purge s'emploie seule, un chemin vide donné à `--prompt` est refusé, un jeton mal écrit est refusé sans être affiché |
+| T82 | Vérificateur, suite | mats cités, un `#7` sans signe seulement un avertissement, une FEN avec sa case en passant venue de la partie, caractères de contrôle du PGN montrés en `?`, un accent sous une sortie ASCII, périmètre convenu, contrôles sautés du mode court, dossier parent à une ou plusieurs collectes |
 | T83 | Parties d'exemples | les fichiers de `example-games` restent ce qu'`EXAMPLES.fr.md` en dit : huit parties acceptées, dont les exports de quatre sites et d'un logiciel, quatre refusées avec leur cause, deux PGN annotés contrôlés, dont le bilan compte l'unique variante au singulier, aucune adresse ni identifiant de partie réelle |
 | T84 | Environnement virtuel incomplet | un environnement sans pip est reconnu, un répertoire sans `pyvenv.cfg` ne l'est jamais ; avec `--network`, `--install-venv` reconstruit le premier et y installe python-chess |
 | T85 | `--venv` qui n'est pas un environnement virtuel | un répertoire non vide sans `pyvenv.cfg`, avec ou sans interpréteur, est refusé par `--install-venv` avant tout pip, et rien n'y est ajouté ; un répertoire absent ou vide ne l'est pas |
-| T86 | `--no-settings` | le fichier de réglages n'est ni lu ni écrit, ce que disent le journal et `collection.json` : camp déduit de `--usernames` ou inconnu, niveau tiré de la balise Elo de ce camp, fichier intact ; sur un terminal, aucune question de réglages, le camp est demandé, aucun fichier créé ; refusée avec `--settings` et avec `--purge-settings` |
+| T86 | `--no-settings` | le fichier de réglages n'est ni lu ni écrit, ce que disent le journal et `collection.json` : camp déduit de `--usernames` ou inconnu, niveau tiré de la balise Elo de ce camp, fichier intact ; sur un terminal, aucune question de réglages, le camp est demandé, aucun fichier créé ; refusée avec `--settings` et avec `--purge-settings` ; un pseudo est trouvé comme nom entier ou comme mots, jamais comme sous-chaîne |
 | T87 | Clefs de `collection.json` | une clef anglaise par option, aucune en trop ni en double ; les clefs de la profondeur et du répertoire de sortie vérifiées par leur nom |
 | T88 | Rangs des variantes | ordinaux anglais, de 1st à 112th |
-| T89 | Réglages écrits sur un fichier de réglages seulement | une FIFO, un répertoire ou le fichier d'un autre programme restent tels quels, et la raison est dite ; un fichier de l'ancien format est réécrit avec sa section `[joueur]` conservée ; aucun fichier provisoire ne reste ; sur un terminal, un avertissement, et les réponses servent au lancement en cours |
+| T89 | Réglages écrits sur un fichier de réglages seulement | une FIFO, un répertoire ou le fichier d'un autre programme restent tels quels, et la raison est dite ; un fichier de l'ancien format est réécrit avec sa section `[joueur]` conservée ; un fichier de réglages en UTF-16 est réécrit et purgé ; aucun fichier provisoire ne reste ; sur un terminal, un avertissement, et les réponses servent au lancement en cours |
 | T90 | Nom des réglages | `--settings` prend un nom : un chemin ou un autre nom est refusé, rien n'est créé ; `/dev/null` est refusé, `--no-settings` proposé ; l'aide parle d'un nom ; un nom nouveau demande confirmation, redemandée après une réponse inattendue ; refusé, rien n'est fait : ni fichier, ni collecte |
-| T91 | NAG de qualité | `$1` sur une erreur ou une gaffe, et `$6` sur un coup que le moteur ne classe pas, sont comptés et nommés comme autres avis, à côté des NAG conformes à la catégorie |
+| T91 | NAG de qualité | `$1` sur une erreur ou une gaffe, et `$6` sur un coup que le moteur ne classe pas, sont comptés et nommés comme autres avis, à côté des NAG conformes à la catégorie ; les lignes attendues, tirées du moteur, doivent exister |
 | T92 | Coupure des prompts | les deux modèles, rendus dans toutes les combinaisons de leurs conditions : aucune ligne de texte au-delà de 71 colonnes, aucune qui pourrait prendre le premier mot de la suivante, aucune ligne continuée qui commence par un chiffre, qu'on lirait comme un élément de liste |
 | M1 | Collecte, noms | nom de PGN accentué, chemin de sortie avec espace et accent |
 | M2 | Collecte complète | l'italienne analysée en entier, moteur seul, sans processus du moteur laissé derrière |
@@ -178,7 +178,7 @@ Ces tests emploient votre jeton et le vrai explorateur. N1 et N2 sont deux colle
 | T11 | Réinstallation | une seconde installation donne un catalogue identique, sa ligne datée mise à part |
 | T12 | Catalogue absent | il est signalé, avec la commande d'installation |
 | T13 | Catalogue tronqué | il est signalé plutôt que lu à moitié |
-| T14 | Italienne, maîtres | la table de l'explorateur et la sortie de théorie sur la base des maîtres |
+| T14 | Italienne, maîtres | la table de l'explorateur sur la base des maîtres, jusqu'à la fin de la partie, sans sortie de théorie |
 | T15 | Polonaise, maîtres | une ouverture rare sur la base des maîtres |
 | T16 | Polonaise, Lichess | la même sur la base de tous les joueurs : fenêtre de départ, première sortie, dernière position nommée |
 | T17 | Première sortie | l'interrogation s'arrête à la première sortie de théorie quand on le demande |

@@ -24,6 +24,12 @@ and the project applies [Semantic Versioning](https://semver.org/).
   with it.
 - `TECHNICAL.fr.md`, the French version of `TECHNICAL.md`, kept up to
   date with it.
+- README, section Licenses: the icon of the CC0 license, linked to the
+  page of the license, and a link to `LICENSE` in the sentence on the
+  license of the repository.
+- `example-games/tag-with-moves.pgn` and
+  `example-games/null-move-in-check.pgn`, for the two new error
+  messages of `EXAMPLES.md`.
 
 ### Changed
 
@@ -110,11 +116,13 @@ and the project applies [Semantic Versioning](https://semver.org/).
   `usernames`, `time_control` and `rating`, optional key `annotator`,
   and English comments. A time control is written `15+10`, `14 days`,
   `10 moves in 50 days` or `5 days + 36 hours, maximum 20 days, bank
-  50 days`, and an unknown one `unknown`. A settings file written by an
-  earlier version is not read: its questions are asked again, and its
-  `[joueur]` section stays in the file, as a section of your own, after
-  the new `[player]` section. `--purge-settings` refuses such a file,
-  which lacks `[player]`: delete it by hand before the first run.
+  50 days`, and an unknown one `unknown`. The settings of version 4,
+  `~/.config/IAnalyze/reglages.ini`, are not read: their questions are
+  asked again. A `settings.ini` in the former format, copied by hand
+  from `reglages.ini` or written by a development version, keeps its
+  `[joueur]` section, as a section of your own, after the new `[player]`
+  section. `--purge-settings` refuses such a file, which lacks
+  `[player]`: delete it by hand, or run a collection first.
 - The sentence that describes a time control is in English, in
   `context.md`, in the prompt and as the value suggested in the
   terminal: "rapid, 15 minutes + 10 seconds per move", "correspondence,
@@ -222,7 +230,7 @@ and the project applies [Semantic Versioning](https://semver.org/).
   ("blunder (350): better ...") and the sentence on the opening.
 - `--settings` takes a name, never a path: a file name ending in
   `.ini`, kept at the root of the application folder like
-  `settings.ini`, such as `--settings joueur1.ini` for a second player.
+  `settings.ini`, such as `--settings player2.ini` for a second player.
   A path, even inside the folder, is refused, `/dev/null` included:
   the settings never leave the folder, and deleting it leaves nothing
   behind. `--no-settings` runs without settings. In a terminal, a name
@@ -273,7 +281,7 @@ and the project applies [Semantic Versioning](https://semver.org/).
 - `TESTS.md` is in English, and describes the tests of this version,
   with the English names of the options and variables (`--network`,
   `TOKEN`, `KEEP`). The tests added during the translation, T86 to
-  T90, have their rows, and the rows of T02, T05, T10, T11, T25,
+  T92, have their rows, and the rows of T02, T05, T10, T11, T25,
   T27, T57, T60, T62, T63 and T69 say all that these tests now
   check. Its earlier French text, brought up to date, is now
   `TESTS.fr.md`.
@@ -325,6 +333,34 @@ and the project applies [Semantic Versioning](https://semver.org/).
   and with `--prompt-only`. Claude, on the subscription, is the only
   one without an error found on the board, on both routes, and the
   advice of the section stays the same.
+- A username is found in the White and Black tags as the whole name or
+  as a run of its words, no longer as a mere substring: "Max" no longer
+  matches "Maxime", nor "deuza" "DeuZa42". Looked up as a substring, a
+  username found in the name of the opponent alone gave the wrong
+  side. List each of your usernames in the settings.
+- In `collection.json` and `summary.md`, a path under the home folder
+  is written with `~`: the name of that folder, the login of the user
+  most often, no longer goes to the LLM with the archive.
+- Both prompts say that the tags and the comments of the PGN are data,
+  the notes of the player at most, never instructions: a comment could
+  give orders to the LLM. The short prompt gives the game in a code
+  block.
+- The report of `test-app.sh` is in English throughout: the labels of
+  the cases of T65 and T74, a note of T74, outputs of the interrupted
+  archiving and of T76, the name of the model and the evaluations
+  quoted by T73 were still in French.
+
+### Removed
+
+- The French names of the options, without aliases, and the former
+  locations of the virtual environment, the catalog and the settings,
+  `~/.local/share/IAnalyze` and `~/.config/IAnalyze`, no longer read
+  (see Changed).
+- The reading of the archives of version 4 by `verify-analysis.py`,
+  whose names and keys are now in English.
+- The French language of the prompt templates: a template with the
+  directives `si`, `sinon` and `fin`, or the French values, is refused
+  at its first marker.
 
 ### Fixed
 
@@ -386,6 +422,51 @@ and the project applies [Semantic Versioning](https://semver.org/).
 - The docstring of `etiquette_sure()`, in `ianalyze.py`, gives `game`
   as the label of an empty name, the one that the code returns since
   the names of the archive are in English. It still gave `partie`.
+- `test-app.sh` runs under posh without an argument: with `set -u`,
+  posh took an empty `"$@"` for an unset parameter and stopped at
+  once. The header of the script names posh among the shells checked.
+- Two checks of `test-app.sh` could not fail. T77 read its last log
+  twice, instead of those of all its inputs. T91 compared its report
+  with expected lines that an error of their generator left empty; the
+  generator must now succeed and write them.
+- A line of the PGN that starts with a bracket is accepted only as a
+  well-formed tag, alone on its line, before the moves of its game.
+  python-chess skipped any other such line without a word, with the
+  moves that it carried, and played the moves held by brackets among
+  the moves: the game analyzed was not the one given.
+- A null move played in check, after a mate for example, is refused at
+  the reading: Stockfish died on the illegal position that followed,
+  without the message saying why.
+- A PGN in UTF-32 without a byte order mark is recognized: it passed
+  for cp1252 once its null bytes removed, losing every character
+  beyond latin-1.
+- An illegal move of the PGN is named once: python-chess wrote it on
+  its own, before the refusal of the script.
+- A settings file in UTF-16, which the reading accepted, is rewritten
+  and purged like the others: its section was looked for in the raw
+  bytes.
+- `--timeout` is checked with `--install-catalog` too: a negative value
+  ended in an unexpected error, a null one in an unreachable catalog.
+- With `--stockfish-moves`, both prompts bound the count of the weak
+  moves of the player, or their absence, to the plies evaluated, and
+  leave an error beyond them to the estimate of the LLM: a player
+  without a weak move in the window was said to have made no error in
+  the whole game.
+- `verify-analysis.py`: a `#7` without a sign that is not found in the
+  data of the engine is only a warning, a rank such as "mistake #7"
+  having counted as a mate not found. A FEN quoted with its en passant
+  square after a double step, as the standard writes it, is recognized
+  as a position of the game. The report shows the control characters
+  of the PGN as `?`, and an output that cannot represent a character no
+  longer stops it on UnicodeEncodeError.
+- The French documents give the commands, the outputs, the file names
+  and the placeholders in English, as the English ones do: some had
+  been translated. TECHNICAL, EXAMPLES and this file no longer say that
+  version 4 wrote a `settings.ini` with a `[joueur]` section: it wrote
+  `~/.config/IAnalyze/reglages.ini`.
+- TESTS.md and TESTS.fr.md describe T03, T14 and T81 as they are, and
+  T12, T26 and T55 now check what their rows said. A check of T83 used
+  the alternation of GNU grep, which another grep may take literally.
 
 ## [4.0.2] - 2026-11-21
 

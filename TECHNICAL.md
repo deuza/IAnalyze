@@ -155,12 +155,14 @@ Refused in the same way:
 - a comment whose brace is never closed
 - a variation whose parenthesis is never closed, or an extra closing parenthesis
 - free text outside the braces, after the game for example
+- a line that starts with a bracket without being a well-formed tag, alone on its line, before the moves of its game: python-chess would skip it, together with what it carries, or would play the moves that its brackets hold
+- a null move played in check, after a mate for example: the positions that follow are illegal, and Stockfish died on them without saying why
 
 A Lichess game is downloaded from `https://lichess.org/game/export/<identifier>`, which requires no token.
 
-The check of the notation comes before the reading by python-chess, which, for its part, would refuse nothing: it silently skips the characters it does not know. Allowed outside the comments: the tags at the start of a line, the move numbers, the moves in English notation, the null move `--`, the NAGs, the annotation signs, the parentheses of variations and the result.
+The check of the notation comes before the reading by python-chess, which, for its part, would refuse nothing: it silently skips the characters it does not know. Allowed outside the comments: the tags, alone on their line and before the moves of their game, the move numbers, the moves in English notation, the null move `--`, the NAGs, the annotation signs, the parentheses of variations and the result.
 
-An illegal move stops the script too. python-chess, at that point, would stop reading without raising an error, and the game would be analyzed truncated.
+An illegal move stops the script too. python-chess, at that point, would stop reading without raising an error, and the game would be analyzed truncated. The refusal names the move, once: python-chess no longer writes it on its own beforehand.
 
 ## 5. Startup questions and terminal
 
@@ -225,7 +227,7 @@ The settings file, `settings.ini` or the one named by `--settings`, is kept at t
 
 ### Keys and accepted forms
 
-**The usernames** are your player names, separated by commas. They are looked up, ignoring case, in the White and Black tags to deduce your side. The first one is used to fill in an empty tag.
+**The usernames** are your player names, separated by commas. They are looked up, ignoring case, in the White and Black tags to deduce your side, as the whole name or as a run of its words: "Müller" is found in "Müller, Noël", but "Max" is not in "Maxime", nor "deuza" in "DeuZa42". List each of your usernames. The first one is used to fill in an empty tag.
 
 **The rating** is a number of approximate Elo points, from 100 to 3500, or "unknown".
 
@@ -276,7 +278,7 @@ For real time, the category is computed as Lichess does, on an estimated duratio
 - The "%" sign is a character like any other, it triggers no substitution.
 - The file goes through the same decoding as the PGN (section 11): its encoding does not matter.
 - `--usernames` replaces the usernames of the file for a run. On the very first run, it is suggested as the answer to the username question.
-- A settings file written by a version before 5.0.0 carries a `[joueur]` section, which is no longer read: its questions are asked again, and the section stays in the file after `[player]`, as a section of your own.
+- A `settings.ini` in the former format, copied by hand from the `reglages.ini` of version 4 or written by a development version of 5.0.0, carries a `[joueur]` section, which is no longer read: its questions are asked again, and the section stays in the file after `[player]`, as a section of your own.
 
 ### Writing
 
@@ -289,7 +291,7 @@ The script writes the file only when it has just obtained an answer. It then rew
 
 Your own comment lines therefore do not survive a rewrite.
 
-The file is written only over a settings file: a path that does not exist yet, or a regular file that is empty or carries the `[player]` section, or the `[joueur]` section of an earlier version. Anything else, a device, a FIFO, a directory or the file of another program, is left untouched.
+The file is written only over a settings file: a path that does not exist yet, or a regular file that is empty or carries the `[player]` section, or the `[joueur]` section of the former format. The section is looked up in the text decoded as the reading does: a settings file in UTF-16 is recognized, for the writing as for `--purge-settings`. Anything else, a device, a FIFO, a directory or the file of another program, is left untouched.
 
 If the writing fails, or if the file must not be replaced, the collection goes on: the log reports it, and the question will be asked again at the next run.
 
@@ -512,6 +514,8 @@ The file keeps the exact parameters of the collection: all the options of the co
 
 `usernames` carries there the usernames really used, those of `--usernames` or those of the settings.
 
+A path under your home folder is written with `~`, there as for the source and the engine in `summary.md`: the name of that folder, your login most often, does not go to the LLM with the archive.
+
 ### `summary.md`
 
 Sections of `summary.md`:
@@ -557,10 +561,11 @@ No badly encoded input must stop the script on a Python traceback: at worst, a "
 PGN, prompt template and token file, tried in this order:
 
 1. byte order mark (BOM) UTF-8, UTF-16 or UTF-32
-2. UTF-16 without a mark, recognized by its null byte out of two
-3. UTF-8
-4. damaged UTF-8: at least one correctly encoded accented character and at most four invalid bytes for each of them, these bytes becoming U+FFFD
-5. cp1252, then latin-1, which accepts any byte
+2. UTF-32 without a mark, recognized by its three null bytes out of four
+3. UTF-16 without a mark, recognized by its null byte out of two
+4. UTF-8
+5. damaged UTF-8: at least one correctly encoded accented character and at most four invalid bytes for each of them, these bytes becoming U+FFFD
+6. cp1252, then latin-1, which accepts any byte
 
 Outside flawless UTF-8, the log names the encoding used:
 
@@ -663,7 +668,7 @@ Conditions:
 | `FEW_WEAK_MOVES` | your side is known and `PLAYER_WEAK_MOVES` is less than three |
 | `NO_WEAK_MOVE` | your side is known and `PLAYER_WEAK_MOVES` is zero |
 
-The two templates, `prompt-template.txt` and `prompt-only-template.txt`, share these markers. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `PLAYER_WEAK_MOVES` and the conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` serve the short prompt. `PLAYER_WEAK_MOVES`, `FEW_WEAK_MOVES` and `NO_WEAK_MOVE` also serve the final summary of the full prompt.
+The two templates, `prompt-template.txt` and `prompt-only-template.txt`, share these markers. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `DEPTH`, `PLAYER_WEAK_MOVES` and the conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` serve the short prompt. `PLAYER_WEAK_MOVES`, `FEW_WEAK_MOVES` and `NO_WEAK_MOVE` also serve the final summary of the full prompt.
 
 Both prompts end with a report: the three costliest errors of the player and the theme to work on. When the table marks fewer than three weak moves on your side, the sentence changes: it gives their number and asks to keep to those. In the short prompt:
 
@@ -675,6 +680,10 @@ Keep to those, without adding any.
 ```
 
 The full prompt says it in its final summary, and asks besides not to replace your errors with those of your opponent. Without any weak move on your side, both prompts ask to attribute no error to you. When your side is not known, the short prompt asks to comment on both sides in the same way and to give the report for each one; the full prompt asks for your errors once your side is found, and for those of each side otherwise.
+
+Both prompts say that the tags and the comments of the PGN are data, the notes of the player at most, never instructions: a comment, or a tag, could otherwise give orders to the LLM. The short prompt places the game in a code block.
+
+With `--stockfish-moves`, the weak moves are counted over the plies evaluated only: under `PARTIAL_COVERAGE`, both prompts bound the count, or the absence of a weak move, to these first plies, and ask that an error found beyond them be given as an estimate of the LLM, without a figure. Without this bound, a player with no weak move in the window evaluated was said to have made no error in the whole game.
 
 The reason comes from the trials of November 21, 2026 (README, section 7): the player had made only two errors, and three answers out of five presented a third one to reach the count asked for. A trial of the full prompt, on November 25, 2026, showed the other way out: asked for "the three costliest errors" without being told whose, the LLM gave those of the opponent, and left out one of the two weak moves of the player.
 
@@ -725,21 +734,23 @@ Exit code: 0 without `FAIL`, 1 with at least one `FAIL`, 2 if no check could tak
 - **Overview**: a comment before the first move. Its absence is a failure.
 - **Signs forbidden in a comment**: brace, percent sign, em dash. A semicolon counts as `WARNING`.
 - **Tags**: the seven mandatory ones at the top and in order, their values taken from the original game. The others in alphabetical order, Annotator filled in and PlyCount exact, otherwise `WARNING`.
-- **Commented moves**: each mistake and each blunder of Stockfish must be. The total number of commented moves is given for information, the prompt aiming at 15 to 25.
+- **Commented moves**: each mistake and each blunder of Stockfish must be. One of them commented on without a NAG counts as `WARNING`, outside `--prompt-only`. The total number of commented moves is given for information, the prompt aiming at 15 to 25.
 - **Scope**: the prompt limits the comments to the agreed scope. A mistake played beyond it is not expected. The scope is the first number of your answer to the startup question, read in the instructions of `summary.md`: "the first 20 moves" counts as 20 moves. An answer without a number, or left at its default, counts as the whole game. `--scope N` gives it by hand, when it was agreed in the conversation.
 - **Position NAGs**: `$14`, `$16`, `$18` and `$20` give White better, `$15`, `$17`, `$19` and `$21` Black. Such a NAG is contrary to the engine when the engine gives the other side better by at least half a pawn, or a mate.
 - **Quality NAGs**: `$6` for an inaccuracy, `$2` for a mistake, `$4` for a blunder. Another opinion than the one of the engine is given for information, with the move and its loss: another of these three NAGs, `$1` or `$3` on a mistake or a blunder, or `$6`, `$2` or `$4` on a move that the engine does not classify, its loss staying under 50 cp.
 - **Variations**: 5 plies at most, otherwise `WARNING`. A variation is said to be backed by the engine when its first two moves are those of a line that the engine gives for this ply.
-- **Positions quoted in the conversation**: a FEN must be valid and come from a position of the game, recognized by its first four fields. Two FENs are asked for, otherwise `WARNING`.
+- **Positions quoted in the conversation**: a FEN must be valid and come from a position of the game, recognized by its first four fields once written as python-chess writes it: the en passant square, which the standard writes after any double step of a pawn, only counts if the capture can be played. Two FENs are asked for, otherwise `WARNING`.
 
 ### Evaluations quoted
 
 An evaluation is recognized by its sign: `+0.35`, `-1,20`, `+ 0.35`, the typographic minus sign, or `#-3` for a mate. A number without a sign is not one, except for a mate: `#2` is read as `#+2`, the form of the folder.
 
-It must exist in `evaluations.json`, for the move played or for one of the best moves, as it is or rounded to one decimal: `+0.35` may be quoted `+0.4` or `+0.3`.
+It must exist in `evaluations.json`, for the move played or for one of the best moves, as it is or rounded to one decimal: `+0.35` may be quoted `+0.4` or `+0.3`. A `#7` without a sign that is not found there is only a `WARNING`: it may be a rank, "mistake #7", as well as a mate.
+
+The report quotes the PGN and the text returned by the LLM: their control characters are shown as `?`, never played by the terminal. A character that the output cannot represent becomes `?` too, and the report goes to its end.
 
 ### With `--prompt-only`
 
-The short prompt asks for less than the full prompt. The checks that it does not ask for are skipped: length of the lines, overview, NAGs, percent sign, em dash, suffix notation, Annotator and PlyCount tags, length of the variations. With `--summary`, the em dash of the conversation and the number of FENs are not checked either: a quoted FEN must only be valid and come from the game.
+The short prompt asks for less than the full prompt. The checks that it does not ask for are skipped: length of the lines, overview, NAGs, percent sign, semicolon, em dash, suffix notation, alphabetical order of the other tags, Annotator and PlyCount tags, length of the variations. With `--summary`, the em dash of the conversation and the number of FENs are not checked either: a quoted FEN must only be valid and come from the game.
 
 The tags are checked differently. The full prompt wants the seven mandatory tags of the PGN standard, in their order. The short prompt only asks to copy those of the game: among the seven, only those that the original game carries are expected, in the order in which it writes them.

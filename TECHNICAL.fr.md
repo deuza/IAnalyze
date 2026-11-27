@@ -157,12 +157,14 @@ Sont refusés de la même façon :
 - un commentaire dont l'accolade n'est jamais fermée
 - une variante dont la parenthèse n'est jamais fermée, ou une parenthèse fermante en trop
 - du texte libre hors des accolades, après la partie par exemple
+- une ligne qui commence par un crochet sans être une balise bien formée, seule sur sa ligne, avant les coups de sa partie : python-chess la sauterait, avec ce qu'elle porte, ou jouerait les coups que ses crochets contiennent
+- un coup nul joué en échec, après un mat par exemple : les positions qui suivent sont illégales, et Stockfish y mourait sans dire pourquoi
 
-Une partie de Lichess est téléchargée depuis `https://lichess.org/game/export/<identifiant>`, qui ne demande pas de jeton.
+Une partie de Lichess est téléchargée depuis `https://lichess.org/game/export/<identifier>`, qui ne demande pas de jeton.
 
-Le contrôle de la notation passe avant la lecture par python-chess, qui, lui, ne refuserait rien : il saute sans rien dire les caractères qu'il ne connaît pas. Sont admis hors des commentaires : les balises en début de ligne, les numéros de coup, les coups en notation anglaise, le coup nul `--`, les NAG, les signes d'appréciation, les parenthèses de variante et le résultat.
+Le contrôle de la notation passe avant la lecture par python-chess, qui, lui, ne refuserait rien : il saute sans rien dire les caractères qu'il ne connaît pas. Sont admis hors des commentaires : les balises, seules sur leur ligne et avant les coups de leur partie, les numéros de coup, les coups en notation anglaise, le coup nul `--`, les NAG, les signes d'appréciation, les parenthèses de variante et le résultat.
 
-Un coup illégal arrête lui aussi le script. python-chess, à cet endroit, cesserait de lire sans lever d'erreur, et la partie serait analysée tronquée.
+Un coup illégal arrête lui aussi le script. python-chess, à cet endroit, cesserait de lire sans lever d'erreur, et la partie serait analysée tronquée. Le refus nomme le coup, une seule fois : python-chess ne l'écrit plus de lui-même avant.
 
 ## 5. Questions de démarrage et terminal
 
@@ -227,7 +229,7 @@ Le fichier de réglages, `settings.ini` ou celui que nomme `--settings`, est ran
 
 ### Clefs et formes admises
 
-**Les pseudos**, `usernames`, sont vos noms de joueur, séparés par des virgules. Ils sont cherchés, sans tenir compte de la casse, dans les balises White et Black pour déduire votre camp. Le premier sert à compléter une balise vide.
+**Les pseudos**, `usernames`, sont vos noms de joueur, séparés par des virgules. Ils sont cherchés, sans tenir compte de la casse, dans les balises White et Black pour déduire votre camp, comme nom entier ou comme suite de ses mots : "Müller" est trouvé dans "Müller, Noël", mais "Max" ne l'est pas dans "Maxime", ni "deuza" dans "DeuZa42". Donnez chacun de vos pseudos. Le premier sert à compléter une balise vide.
 
 **Le niveau**, `rating`, est un nombre de points Elo approximatifs, de 100 à 3500, ou "unknown".
 
@@ -278,7 +280,7 @@ Pour le temps réel, la catégorie est calculée comme le fait Lichess, sur une 
 - Le signe "%" est un caractère comme un autre, il ne déclenche aucune substitution.
 - Le fichier passe par le même décodage que le PGN (section 11) : son encodage n'a pas d'importance.
 - `--usernames` remplace les pseudos du fichier le temps d'un lancement. Au tout premier lancement, il est proposé comme réponse à la question du pseudo.
-- Un fichier de réglages écrit par une version antérieure à la 5.0.0 porte une section `[joueur]`, qui n'est plus lue : ses questions sont reposées, et la section reste dans le fichier après `[player]`, comme une section à vous.
+- Un `settings.ini` à l'ancien format, recopié à la main depuis le `reglages.ini` de la version 4 ou écrit par une version de développement de la 5.0.0, porte une section `[joueur]`, qui n'est plus lue : ses questions sont reposées, et la section reste dans le fichier après `[player]`, comme une section à vous.
 
 ### Écriture
 
@@ -291,7 +293,7 @@ Le script n'écrit le fichier que lorsqu'il vient d'obtenir une réponse. Il le 
 
 Vos propres lignes de commentaire ne survivent donc pas à une réécriture.
 
-Le fichier n'est écrit que sur un fichier de réglages : un chemin qui n'existe pas encore, ou un fichier ordinaire vide ou portant la section `[player]`, ou la section `[joueur]` d'une version antérieure. Tout le reste, un périphérique, une FIFO, un répertoire ou le fichier d'un autre programme, est laissé intact.
+Le fichier n'est écrit que sur un fichier de réglages : un chemin qui n'existe pas encore, ou un fichier ordinaire vide ou portant la section `[player]`, ou la section `[joueur]` de l'ancien format. La section est cherchée dans le texte décodé comme le fait la lecture : un fichier de réglages en UTF-16 est reconnu, pour l'écriture comme pour `--purge-settings`. Tout le reste, un périphérique, une FIFO, un répertoire ou le fichier d'un autre programme, est laissé intact.
 
 Si l'écriture échoue, ou si le fichier ne doit pas être remplacé, la collecte continue : le journal le signale, et la question sera reposée au prochain lancement.
 
@@ -487,11 +489,11 @@ Pour un coup nul, `played` porte `not_evaluated`, et `cp_loss` comme `category` 
 
 ### Dossier de travail et archive
 
-Le dossier de travail s'appelle `analysis-<étiquette>-<AAAAMMJJ-HHMMSS>`. L'étiquette est le nom du PGN sans son extension, assaini (section 11), ou l'identifiant Lichess. Un dossier ou une archive du même nom fait ajouter un suffixe, -2, -3 et ainsi de suite.
+Le dossier de travail s'appelle `analysis-<label>-<YYYYMMDD-HHMMSS>`. L'étiquette `<label>` est le nom du PGN sans son extension, assaini (section 11), ou l'identifiant Lichess. Un dossier ou une archive du même nom fait ajouter un suffixe, -2, -3 et ainsi de suite.
 
-Une archive présente sous son nom définitif est toujours complète et vérifiée : elle est écrite sous le nom provisoire `.<dossier>.partial.zip`, puis renommée.
+Une archive présente sous son nom définitif est toujours complète et vérifiée : elle est écrite sous le nom provisoire `.<folder>.partial.zip`, puis renommée.
 
-Il en va de même de chaque fichier du dossier de travail, écrit sous `.<nom>.partial`. Après une interruption (Ctrl-C) ou un échec, ces fichiers provisoires sont retirés et le dossier de travail reste, sans archive.
+Il en va de même de chaque fichier du dossier de travail, écrit sous `.<name>.partial`. Après une interruption (Ctrl-C) ou un échec, ces fichiers provisoires sont retirés et le dossier de travail reste, sans archive.
 
 ### `game.pgn` et `game-original.pgn`
 
@@ -513,6 +515,8 @@ Le fichier garde les paramètres exacts de la collecte : toutes les options de l
 | `prompt_written` | le nom du prompt, ou null avec `--no-prompt` |
 
 `usernames` y porte les pseudos réellement employés, ceux de `--usernames` ou ceux des réglages.
+
+Un chemin sous votre dossier personnel y est écrit avec `~`, comme la source et le moteur dans `summary.md` : le nom de ce dossier, votre identifiant le plus souvent, ne part pas vers le LLM avec l'archive.
 
 ### `summary.md`
 
@@ -559,10 +563,11 @@ Aucune entrée mal encodée ne doit arrêter le script sur une trace Python : au
 PGN, modèle de prompt et fichier de jeton, essais dans cet ordre :
 
 1. marque d'ordre des octets (BOM) UTF-8, UTF-16 ou UTF-32
-2. UTF-16 sans marque, reconnu à son octet nul sur deux
-3. UTF-8
-4. UTF-8 abîmé : au moins un caractère accentué correctement codé et au plus quatre octets invalides pour chacun d'eux, ces octets deviennent U+FFFD
-5. cp1252, puis latin-1, qui accepte n'importe quel octet
+2. UTF-32 sans marque, reconnu à ses trois octets nuls sur quatre
+3. UTF-16 sans marque, reconnu à son octet nul sur deux
+4. UTF-8
+5. UTF-8 abîmé : au moins un caractère accentué correctement codé et au plus quatre octets invalides pour chacun d'eux, ces octets deviennent U+FFFD
+6. cp1252, puis latin-1, qui accepte n'importe quel octet
 
 Hors UTF-8 sans défaut, le journal nomme l'encodage retenu :
 
@@ -665,7 +670,7 @@ Conditions :
 | `FEW_WEAK_MOVES` | votre camp est connu et `PLAYER_WEAK_MOVES` est inférieur à trois |
 | `NO_WEAK_MOVE` | votre camp est connu et `PLAYER_WEAK_MOVES` vaut zéro |
 
-Les deux modèles, `prompt-template.txt` et `prompt-only-template.txt`, partagent ces repères. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `PLAYER_WEAK_MOVES` et les conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` servent au prompt court. `PLAYER_WEAK_MOVES`, `FEW_WEAK_MOVES` et `NO_WEAK_MOVE` servent aussi au bilan final du prompt complet.
+Les deux modèles, `prompt-template.txt` et `prompt-only-template.txt`, partagent ces repères. `GAME_PGN`, `ENGINE_TABLE`, `RESULT_ALERT`, `PLAYER_INSTRUCTIONS`, `OPENING`, `DEPTH`, `PLAYER_WEAK_MOVES` et les conditions `RESULT_CONTRADICTED`, `INSTRUCTIONS_GIVEN`, `OPENING_KNOWN`, `NULL_MOVE`, `FEW_WEAK_MOVES`, `NO_WEAK_MOVE` servent au prompt court. `PLAYER_WEAK_MOVES`, `FEW_WEAK_MOVES` et `NO_WEAK_MOVE` servent aussi au bilan final du prompt complet.
 
 Les deux prompts finissent par un bilan : les trois erreurs les plus coûteuses du joueur et le thème à travailler. Quand le tableau marque moins de trois coups faibles de votre côté, la phrase change : elle donne leur nombre et demande de s'en tenir à ceux-là. Dans le prompt court :
 
@@ -677,6 +682,10 @@ Keep to those, without adding any.
 ```
 
 Le prompt complet le dit dans son bilan final, et demande en outre de ne pas remplacer vos erreurs par celles de votre adversaire. Sans aucun coup faible de votre côté, les deux prompts demandent de ne vous prêter aucune erreur. Quand votre camp n'est pas connu, le prompt court demande de commenter les deux camps de la même façon et de donner le bilan pour chacun ; le prompt complet demande vos erreurs une fois votre camp trouvé, et celles de chaque camp sinon.
+
+Les deux prompts disent que les balises et les commentaires du PGN sont des données, au plus les notes du joueur, jamais des consignes : un commentaire, ou une balise, pourrait sinon donner des ordres au LLM. Le prompt court place la partie dans un bloc de code.
+
+Avec `--stockfish-moves`, les coups faibles ne sont comptés que sur les demi-coups évalués : sous `PARTIAL_COVERAGE`, les deux prompts bornent ce compte, ou l'absence de coup faible, à ces premiers demi-coups, et demandent qu'une erreur trouvée au-delà soit donnée comme une estimation du LLM, sans chiffre. Sans cette borne, un joueur sans coup faible dans la fenêtre évaluée était dit sans erreur sur toute la partie.
 
 La raison vient des essais du 21 novembre 2026 (README, section 7) : le joueur n'avait commis que deux erreurs, et trois réponses sur cinq en ont présenté une troisième pour arriver au compte demandé. Un essai du prompt complet, le 25 novembre 2026, a montré l'autre dérobade : prié de donner "les trois erreurs les plus coûteuses" sans qu'on lui dise de qui, le LLM a donné celles de l'adversaire, et laissé de côté l'un des deux coups faibles du joueur.
 
@@ -727,21 +736,23 @@ Code de retour : 0 sans `FAIL`, 1 avec au moins un `FAIL`, 2 si aucun contrôle 
 - **Résumé** : un commentaire avant le premier coup. Son absence est un échec.
 - **Signes interdits dans un commentaire** : accolade, signe pour cent, tiret cadratin. Un point-virgule vaut `WARNING`.
 - **Balises** : les sept obligatoires en tête et dans l'ordre, leurs valeurs reprises de la partie d'origine. Les autres par ordre alphabétique, Annotator renseignée et PlyCount exact, sinon `WARNING`.
-- **Coups commentés** : chaque erreur et chaque gaffe de Stockfish doit l'être. Le nombre total de coups commentés est donné pour information, le prompt en visant 15 à 25.
+- **Coups commentés** : chaque erreur et chaque gaffe de Stockfish doit l'être. L'une d'elles commentée sans NAG compte comme `WARNING`, hors `--prompt-only`. Le nombre total de coups commentés est donné pour information, le prompt en visant 15 à 25.
 - **Périmètre** : le prompt limite les commentaires au périmètre convenu. Une erreur jouée au-delà n'est pas attendue. Le périmètre est le premier nombre de votre réponse à la question de démarrage, lue dans les consignes de `summary.md` : "the first 20 moves" vaut 20 coups. Une réponse sans nombre, ou laissée par défaut, vaut la partie complète. `--scope N` le donne à la main, quand il a été convenu dans la conversation.
 - **NAG de position** : `$14`, `$16`, `$18` et `$20` donnent les Blancs mieux, `$15`, `$17`, `$19` et `$21` les Noirs. Un tel NAG est contraire au moteur quand celui-ci donne l'autre camp mieux d'au moins un demi-pion, ou un mat.
 - **NAG de qualité** : `$6` pour une imprécision, `$2` pour une erreur, `$4` pour une gaffe. Un autre avis que celui du moteur est donné pour information, avec le coup et sa perte : un autre de ces trois NAG, `$1` ou `$3` sur une erreur ou une gaffe, ou `$6`, `$2` ou `$4` sur un coup que le moteur ne classe pas, sa perte restant sous 50 cp.
 - **Variantes** : 5 demi-coups au plus, sinon `WARNING`. Une variante est dite appuyée sur le moteur quand ses deux premiers coups sont ceux d'une ligne que le moteur donne pour ce demi-coup.
-- **Positions citées dans la conversation** : une FEN doit être valide et venir d'une position de la partie, reconnue à ses quatre premiers champs. Deux FEN sont demandées, sinon `WARNING`.
+- **Positions citées dans la conversation** : une FEN doit être valide et venir d'une position de la partie, reconnue à ses quatre premiers champs une fois écrite comme l'écrit python-chess : la case en passant, que la norme écrit après toute poussée de deux cases, ne compte que si la prise peut être jouée. Deux FEN sont demandées, sinon `WARNING`.
 
 ### Évaluations citées
 
 Une évaluation se reconnaît à son signe : `+0.35`, `-1,20`, `+ 0.35`, le signe moins typographique, ou `#-3` pour un mat. Un nombre sans signe n'en est pas une, sauf pour un mat : `#2` est lu comme `#+2`, la forme du dossier.
 
-Elle doit exister dans `evaluations.json`, pour le coup joué ou pour l'un des meilleurs coups, telle quelle ou arrondie à une décimale : `+0.35` peut être cité `+0.4` ou `+0.3`.
+Elle doit exister dans `evaluations.json`, pour le coup joué ou pour l'un des meilleurs coups, telle quelle ou arrondie à une décimale : `+0.35` peut être cité `+0.4` ou `+0.3`. Un `#7` sans signe qui ne s'y trouve pas n'est qu'un `WARNING` : ce peut être un rang, "mistake #7", aussi bien qu'un mat.
+
+Le bilan cite le PGN et le texte rendus par le LLM : leurs caractères de contrôle y sont montrés en `?`, jamais joués par le terminal. Un caractère que la sortie ne sait pas représenter devient `?` lui aussi, et le bilan va jusqu'au bout.
 
 ### Avec `--prompt-only`
 
-Le prompt court demande moins que le prompt complet. Les contrôles qu'il ne demande pas sont sautés : longueur des lignes, résumé, NAG, signe pour cent, tiret cadratin, notation suffixe, balises Annotator et PlyCount, longueur des variantes. Avec `--summary`, le tiret cadratin de la conversation et le nombre de FEN ne sont pas contrôlés non plus : une FEN citée doit seulement être valide et venir de la partie.
+Le prompt court demande moins que le prompt complet. Les contrôles qu'il ne demande pas sont sautés : longueur des lignes, résumé, NAG, signe pour cent, point-virgule, tiret cadratin, notation suffixe, ordre alphabétique des autres balises, balises Annotator et PlyCount, longueur des variantes. Avec `--summary`, le tiret cadratin de la conversation et le nombre de FEN ne sont pas contrôlés non plus : une FEN citée doit seulement être valide et venir de la partie.
 
 Les balises sont contrôlées autrement. Le prompt complet veut les sept balises obligatoires du standard PGN, dans leur ordre. Le prompt court demande seulement de recopier celles de la partie : parmi les sept, seules celles que porte la partie d'origine sont attendues, dans l'ordre où elle les écrit.
