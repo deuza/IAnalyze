@@ -7,6 +7,8 @@ and the project applies [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-11-27
+
 ### Added
 
 - `--no-settings`: for a single run, the settings file is neither read
@@ -67,8 +69,8 @@ and the project applies [Semantic Versioning](https://semver.org/).
   an injected fault. New cases in T37, T45, T49, T51, T54, T65, T70,
   T74, T82, T83, T85 and T90, and the conversation and the PGN of the
   short prompt of `EXAMPLES.md` go through T83.
-- The link references of this file, for `[Unreleased]` and the three
-  tagged versions.
+- The link references of this file, for `[Unreleased]` and each
+  tagged version.
 
 ### Changed
 
@@ -1234,7 +1236,8 @@ downloaded from Lichess, the statistics of the masters database of the
 explorer and, on request with `--avec-stockfish`, the evaluations of
 the engine, all in a zip archive with `synthese.md`.
 
-[Unreleased]: https://github.com/deuza/IAnalyze/compare/v4.0.2...dev
+[Unreleased]: https://github.com/deuza/IAnalyze/compare/v5.0.0...dev
+[5.0.0]: https://github.com/deuza/IAnalyze/compare/v4.0.2...v5.0.0
 [4.0.2]: https://github.com/deuza/IAnalyze/compare/v4.0.1...v4.0.2
 [4.0.1]: https://github.com/deuza/IAnalyze/compare/v4.0.0...v4.0.1
 [4.0.0]: https://github.com/deuza/IAnalyze/releases/tag/v4.0.0

@@ -59,18 +59,24 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
   Unreleased pendant le travail).
 - Versions : <https://semver.org/>. La version figure dans le script et
   dans le User-Agent : les deux changent ensemble.
-- main porte la 4.0.2, publiée sur GitHub le 21 novembre 2026 ; les
-  étiquettes v4.0.0, v4.0.1 et v4.0.2 sont sur le dépôt. main ne porte
-  pas CLAUDE.md : à chaque fusion, le fichier est retiré par
+- main porte la 5.0.0, publiée sur GitHub le 27 novembre 2026 ; les
+  étiquettes v4.0.0, v4.0.1, v4.0.2 et v5.0.0 sont sur le dépôt. main
+  ne porte pas CLAUDE.md : à chaque fusion, le fichier est retiré par
   "git rm -f CLAUDE.md" avant le commit. main n'est pas un ancêtre de
-  dev : son dernier commit, bef21e6, est une fusion qui retire
+  dev : son dernier commit est la fusion de la 5.0.0, qui retire
   CLAUDE.md. La fusion de dev dans main bute donc sur un conflit
   modification/suppression de CLAUDE.md, réglé par ce même git rm.
+- Une publication suit toujours le même rite : sur dev, un commit
+  "Version X.Y.Z" (VERSION, titre de la version dans le CHANGELOG et
+  ses références de liens) ; sur main, la fusion de dev, intitulée
+  "IAnalyze X.Y.Z", puis "Fusion de la branche dev." et un résumé ;
+  une étiquette vX.Y.Z annotée et signée (git tag -s) ; une release
+  GitHub du même nom. Claude en rédige les messages et les notes.
 - Un seul bump par fusion dans main, jamais par fournée de travail sur
   dev : entre deux fusions, tout s'accumule sous Unreleased. Annonce le
   niveau choisi et sa raison avant de l'appliquer.
 
-## Traduction en anglais (en cours, vers la 5.0.0)
+## Traduction en anglais (faite, publiée en 5.0.0)
 
 - Tout passe en anglais, sans alias : sorties (journal, erreurs,
   questions, aide), options, réglages, archive (noms et contenu),
@@ -89,7 +95,7 @@ tests), TESTS.fr.md (sa version française), CHANGELOG.md.
   des variantes, confiés au 4b à ordinal() (1st, 2nd, 3rd, 11th, 21st)
   à la place d'une liste suivie d'un suffixe unique.
 - Rupture de compatibilité, donc version majeure : 5.0.0, appliquée
-  une seule fois, à la fusion dans main.
+  une seule fois, à la fusion dans main du 27 novembre 2026.
 - Pas de migration : l'ancien reglages.ini et l'ancien catalogue.tsv
   sont ignorés, sans message. Un settings.ini à l'ancien format garde
   sa section [joueur], recopiée comme section inconnue après [player].
