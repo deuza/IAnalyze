@@ -68,14 +68,14 @@ version française en .fr.md), CHANGELOG.md.
   Unreleased pendant le travail).
 - Versions : <https://semver.org/>. La version figure dans le script et
   dans le User-Agent : les deux changent ensemble.
-- main porte la 5.0.1, publiée sur GitHub le 27 novembre 2026, comme la
-  5.0.0 ; les étiquettes v4.0.0, v4.0.1, v4.0.2, v5.0.0 et v5.0.1 sont
-  sur le dépôt. main ne porte pas CLAUDE.md : à chaque fusion, le
-  fichier est retiré par "git rm -f CLAUDE.md" avant le commit. main
-  n'est pas un ancêtre de dev : son dernier commit est la fusion de la
-  5.0.1, qui retire CLAUDE.md. La fusion de dev dans main bute donc sur
-  un conflit modification/suppression de CLAUDE.md, réglé par ce même
-  git rm.
+- main porte la 5.0.1, publiée sur GitHub le 28 novembre 2026, au
+  lendemain de la 5.0.0 ; les étiquettes v4.0.0, v4.0.1, v4.0.2, v5.0.0
+  et v5.0.1 sont sur le dépôt. main ne porte pas CLAUDE.md : à chaque
+  fusion, le fichier est retiré par "git rm -f CLAUDE.md" avant le
+  commit. main n'est pas un ancêtre de dev : son dernier commit est la
+  fusion de la 5.0.1, qui retire CLAUDE.md. La fusion de dev dans main
+  bute donc sur un conflit modification/suppression de CLAUDE.md, réglé
+  par ce même git rm.
 - Une publication suit toujours le même rite : sur dev, un commit
   "Version X.Y.Z" (VERSION, titre de la version dans le CHANGELOG et
   ses références de liens) ; la suite --network relancée sur chaque
