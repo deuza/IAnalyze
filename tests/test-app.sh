@@ -3,27 +3,31 @@
 # test-app.sh: tests of ianalyze.py, on macOS and on Debian
 #
 # This script runs all the tests of the project, described one by one in
-# TESTS.md, then writes a report that you can send back as it is.
+# docs/TESTS.md, then writes a report that you can send back as it is.
 #
-#     sh test-app.sh             offline tests: encodings, archive,
+#     sh tests/test-app.sh       offline tests: encodings, archive,
 #                                settings, time control, engine, check
 #                                of the returned PGN. Neither token nor
-#                                Lichess. About 3 minutes on a recent
-#                                Mac, 6 on a Raspberry Pi.
-#     sh test-app.sh --network   the same, then the tests that need the
+#                                Lichess.
+#     sh tests/test-app.sh --network
+#                                the same, then the tests that need the
 #                                network and your token: catalog,
-#                                explorer. About 3 more minutes.
-#     sh test-app.sh --network GAME
+#                                explorer.
+#     sh tests/test-app.sh --network GAME
 #                                likewise, plus T24, which downloads a
 #                                game from Lichess. GAME is the
 #                                identifier or the address of any game
 #                                of the site. The repository provides
 #                                none: without it, T24 is skipped.
 #
-# Nothing is written in the repository, except the report, nor in your
-# directories: everything happens in a temporary directory, deleted at
-# the end. The tests name their own settings file and, with --network,
-# their own catalog: yours are neither read nor modified.
+# The script finds the repository from its own path: it runs from the
+# root of the repository, as above, from tests/ as sh test-app.sh, or
+# from anywhere else. The durations are in docs/TESTS.md, section 1.
+#
+# Nothing is written in the repository, except the report, in tests/,
+# nor in your directories: everything happens in a temporary directory,
+# deleted at the end. The tests name their own settings file and, with
+# --network, their own catalog: yours are neither read nor modified.
 #
 # Your token, with --network: this script does not display it, does not
 # copy it and does not pass it in any command line. It is ianalyze.py
@@ -89,7 +93,7 @@ for argument in ${1+"$@"}; do
             ;;
         *)
             echo "Unknown argument: $argument" >&2
-            echo "Usage: sh test-app.sh [--network [GAME]]" >&2
+            echo "Usage: sh $0 [--network [GAME]]" >&2
             exit 2
             ;;
     esac
@@ -98,27 +102,35 @@ done
 
 # --- Locations --------------------------------------------------------------
 
-DEPOT=$(pwd)
+# The folder of this script, tests/, and the repository, its parent: the
+# suite runs from tests/ as from the root of the repository, or from
+# anywhere else. The directory it is started from is kept for the
+# relative paths that you give.
+ICI=$(pwd)
+DOSSIER_TESTS=$(cd "$(dirname "$0")" && pwd) || exit 2
+DEPOT=$(dirname "$DOSSIER_TESTS")
 SCRIPT="$DEPOT/ianalyze.py"
+# The test game of the repository, next to this script.
+PARTIE_ESSAI="$DOSSIER_TESTS/test.pgn"
 
 # No __pycache__ written by the Python of the tests: it appeared for a
 # moment in the repository, and stayed there after a Ctrl-C.
 PYTHONDONTWRITEBYTECODE=1
 export PYTHONDONTWRITEBYTECODE
 
-# Makes a path absolute against the repository: the tests run in a
+# Makes a path absolute against the directory the suite is started
+# from, as any command reads a relative path: the tests run in a
 # directory of their own, where a relative VENV, STOCKFISH or TOKEN
 # passed the checks of the start, then led nowhere.
 absolu() {
     case $1 in
         /*) printf '%s\n' "$1" ;;
-        *) printf '%s\n' "$DEPOT/$1" ;;
+        *) printf '%s\n' "$ICI/$1" ;;
     esac
 }
 
 if [ ! -f "$SCRIPT" ]; then
-    echo "ianalyze.py not found in $DEPOT." >&2
-    echo "Run this script from the repository directory." >&2
+    echo "ianalyze.py not found in $DEPOT, the folder above tests/." >&2
     exit 2
 fi
 
@@ -135,7 +147,7 @@ PYVENV="$VENV/bin/python3"
 if ! "$PYVENV" -c "import chess" >/dev/null 2>&1; then
     echo "python-chess not found in $VENV." >&2
     echo "Create the environment: ./ianalyze.py --install-venv" >&2
-    echo "or give it: VENV=/path sh test-app.sh" >&2
+    echo "or give it: VENV=/path sh $0" >&2
     exit 2
 fi
 
@@ -184,14 +196,14 @@ done
 # display hundreds of failures that say nothing about the script.
 if [ -z "$STOCKFISH" ] || [ ! -x "$STOCKFISH" ]; then
     echo "Stockfish not found: the tests cannot run without it." >&2
-    echo "Install it, or give it: STOCKFISH=/path sh test-app.sh" >&2
+    echo "Install it, or give it: STOCKFISH=/path sh $0" >&2
     exit 2
 fi
 
 JETON=$(absolu "${TOKEN:-$HOME/.lichess_token}")
 if [ "$RESEAU" = 1 ] && [ ! -f "$JETON" ]; then
     echo "Token file not found: $JETON" >&2
-    echo "Give it: TOKEN=/path sh test-app.sh --network" >&2
+    echo "Give it: TOKEN=/path sh $0 --network" >&2
     exit 2
 fi
 # Identifier of the game of T24, taken from what you gave by the very
@@ -210,16 +222,16 @@ print(cp.extraire_id(os.environ["PARTIE"]) or "")
     if [ -z "$ID_PARTIE" ]; then
         echo "This is not a Lichess game: $PARTIE" >&2
         echo "Give its identifier, 8 characters, or its address:" >&2
-        echo "    sh test-app.sh --network https://lichess.org/<identifier>" >&2
+        echo "    sh $0 --network https://lichess.org/<identifier>" >&2
         exit 2
     fi
 elif [ "$RESEAU" = 1 ]; then
     echo "No game given: T24, the download of a game, will be skipped." >&2
     echo "To play it, give any Lichess game:" >&2
-    echo "    sh test-app.sh --network <identifier or address of the game>" >&2
+    echo "    sh $0 --network <identifier or address of the game>" >&2
 fi
 
-RAPPORT="$DEPOT/test-report-$SYSTEME-$(date +%Y%m%d-%H%M%S).txt"
+RAPPORT="$DOSSIER_TESTS/test-report-$SYSTEME-$(date +%Y%m%d-%H%M%S).txt"
 TRAVAIL=$(mktemp -d "${TMPDIR:-/tmp}/ianalyze-tests.XXXXXX") || exit 2
 # Path cleaned up: on macOS, TMPDIR ends with a slash and the path built
 # carries two of them, which prevented masking it in the report.
@@ -3748,8 +3760,8 @@ EOF
     rm -rf analysis-italienne-*
 
     titre "T70: test.pgn, the test game of the repository"
-    if [ -f "$DEPOT/test.pgn" ]; then
-        cp "$DEPOT/test.pgn" test.pgn
+    if [ -f "$PARTIE_ESSAI" ]; then
+        cp "$PARTIE_ESSAI" test.pgn
         lancer test.pgn $MOTEUR $RAPIDE --usernames "zoé blanche"
         egal "T70 exit code" 0 "$RC"
         egal "T70 no warning" 0 "$(grep -c 'Warning' journal)"
@@ -3806,9 +3818,9 @@ EOF
     fi
 
     titre "T73: verify-analysis.py, check of the PGN returned by an LLM"
-    if [ -f "$DEPOT/test.pgn" ] && [ -f "$DEPOT/verify-analysis.py" ]; then
+    if [ -f "$PARTIE_ESSAI" ] && [ -f "$DEPOT/verify-analysis.py" ]; then
         VERIF="$DEPOT/verify-analysis.py"
-        cp "$DEPOT/test.pgn" test.pgn
+        cp "$PARTIE_ESSAI" test.pgn
         lancer test.pgn $MOTEUR $RAPIDE
         # Two PGNs are built from the archive, as an LLM would do: a
         # compliant one, built with python-chess, and a faulty one, into
@@ -4469,8 +4481,8 @@ EOF
     fi
 
     titre "T91: checker, quality NAGs against the engine"
-    if [ -f "$DEPOT/test.pgn" ] && [ -f "$DEPOT/verify-analysis.py" ]; then
-        cp "$DEPOT/test.pgn" test.pgn
+    if [ -f "$PARTIE_ESSAI" ] && [ -f "$DEPOT/verify-analysis.py" ]; then
+        cp "$PARTIE_ESSAI" test.pgn
         lancer test.pgn $MOTEUR $RAPIDE
         # The PGN carries the NAG of its category on each move that the
         # engine classifies, except for two other opinions: "!" on a
@@ -4550,13 +4562,17 @@ EOF
     fi
 
     titre "T83: example games of the repository"
-    # EXAMPLES.md runs its commands on the files of example-games:
-    # each one must stay what the page says of it, accepted or refused
-    # with its cause. The collections are done in the test directory.
+    # EXAMPLES.md runs its commands on the games of example-games, on
+    # the refused PGNs of tests/refused and on the answers of LLMs of
+    # tests/llm, written for the page: each file must stay what the page
+    # says of it, accepted or refused with its cause. The collections
+    # are done in the test directory.
     EX="$DEPOT/example-games"
-    if [ -d "$EX" ]; then
+    REFUS="$DOSSIER_TESTS/refused"
+    SIMULES="$DOSSIER_TESTS/llm"
+    if [ -d "$EX" ] && [ -d "$REFUS" ] && [ -d "$SIMULES" ]; then
         for partie in my-game polish-opening game-lichess-org commented-game \
-            game-chess-com game-chess-mail game-ajedrezmail \
+            player-notes game-chess-com game-chess-mail game-ajedrezmail \
             game-lucas-chess; do
             lancer "$EX/$partie.pgn" $MOTEUR --depth 1 --threads 1 \
                 --hash 16
@@ -4567,7 +4583,7 @@ EOF
             [ "$partie" = game-chess-mail ] && cp journal t-83-journal
         done
         while IFS='|' read -r partie cause; do
-            lancer "$EX/$partie.pgn" $MOTEUR --depth 1
+            lancer "$REFUS/$partie.pgn" $MOTEUR --depth 1
             egal "T83 $partie.pgn, exit code" 1 "$RC"
             verifier "T83 $partie.pgn, refused with its cause" \
                 contient journal "$cause"
@@ -4585,8 +4601,8 @@ FIN
         # the second one with.
         lancer "$EX/my-game.pgn" $MOTEUR --depth 1 --threads 1 \
             --hash 16
-        "$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH" "$EX/llm-annotated.pgn" \
-            > bilan 2>&1
+        "$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH" \
+            "$SIMULES/llm-annotated.pgn" > bilan 2>&1
         verifier "T83 llm-annotated.pgn, report produced" \
             contient bilan "=== Totals ==="
         # Its single variation starts from a line of the engine, or is
@@ -4595,7 +4611,7 @@ FIN
         egal "T83 llm-annotated.pgn, one variation, in the singular" 1 \
             "$(grep -c -E '1 variation starts from a line of the engine, 0 are|0 variations start from a line of the engine, 1 is the LLM' bilan)"
         "$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH" \
-            "$EX/llm-faulty.pgn" > bilan 2>&1
+            "$SIMULES/llm-faulty.pgn" > bilan 2>&1
         egal "T83 llm-faulty.pgn, failures" 1 "$?"
         # Its only variation is written inside a comment: the report
         # wrote "the 1 variations are written inside the comments".
@@ -4606,7 +4622,7 @@ FIN
         # text outside the braces, castling with zeros, and a rank
         # written "#7", which is only a warning.
         "$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH" \
-            "$EX/llm-faulty-words.pgn" > bilan 2>&1
+            "$SIMULES/llm-faulty-words.pgn" > bilan 2>&1
         egal "T83 llm-faulty-words.pgn, failures" 1 "$?"
         egal "T83 llm-faulty-words.pgn, its five flaws named" "1 1 1 1 1" \
             "$(grep -c 'inside a comment, python-chess reads on' bilan) $(grep -c 'FAIL      a single game in the file' bilan) $(grep -c 'line 15: and castling comes next' bilan) $(grep -c 'line 17: 0-0' bilan) $(grep -c -F '1. e4: #7' bilan)"
@@ -4615,18 +4631,18 @@ FIN
         # on the folder kept by --prompt-only. The evaluations depend on
         # the depth: only the positions quoted are compared here.
         "$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH" \
-            "$EX/llm-annotated.pgn" --summary "$EX/llm-conversation.txt" \
-            > bilan 2>&1
+            "$SIMULES/llm-annotated.pgn" \
+            --summary "$SIMULES/llm-conversation.txt" > bilan 2>&1
         verifier "T83 llm-conversation.txt, its two FEN come from the game" \
             contient bilan "OK        all come from a position of the game"
         "$PYVENV" "$DEPOT/verify-analysis.py" "$ARCH" - \
-            --summary "$EX/llm-conversation.txt" > bilan 2>&1
+            --summary "$SIMULES/llm-conversation.txt" > bilan 2>&1
         verifier "T83 no PGN returned, said" \
             contient bilan "FAIL      no PGN returned"
         lancer "$EX/my-game.pgn" $MOTEUR --depth 1 --threads 1 --hash 16 \
             --prompt-only --keep-folder
         "$PYVENV" "$DEPOT/verify-analysis.py" "${ARCH%.prompt.txt}" \
-            "$EX/llm-short.pgn" --prompt-only > bilan 2>&1
+            "$SIMULES/llm-short.pgn" --prompt-only > bilan 2>&1
         verifier "T83 llm-short.pgn, short mode" \
             contient bilan "prompt     : short (--prompt-only)"
         verifier "T83 llm-short.pgn, main line identical" \
@@ -4637,9 +4653,10 @@ FIN
         # extension, which another grep may take literally, and this
         # count of absences would then stay at 0 whatever the files.
         egal "T83 no real game: neither address nor identifier" 0 \
-            "$(cat "$EX"/* | grep -c -i -E 'lichess\.org/|GameId')"
+            "$(cat "$EX"/* "$REFUS"/* "$SIMULES"/* \
+                | grep -c -i -E 'lichess\.org/|GameId')"
     else
-        sauter "T83: example-games missing from the repository"
+        sauter "T83: example-games, tests/refused or tests/llm missing from the repository"
     fi
 
     titre "M2: full analysis of the Italian, engine only"
@@ -5002,7 +5019,7 @@ if [ -n "$ID_PARTIE" ]; then
         --settings "$REGL" > sortie 2> journal
     egal "T24 by identifier, exit code" 0 $?
 else
-    sauter "T24: no game given. To play it: sh test-app.sh --network <identifier or address of a Lichess game>"
+    sauter "T24: no game given. To play it: sh $0 --network <identifier or address of a Lichess game>"
 fi
 
 # --- Null move and full collection -----------------------------------------------------------

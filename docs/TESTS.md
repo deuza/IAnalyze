@@ -2,11 +2,11 @@
 
 Version française : [TESTS.fr.md](TESTS.fr.md)
 
-All the tests are run by a single script, `test-app.sh`, under Debian as under macOS.
+All the tests are run by a single script, `tests/test-app.sh`, under Debian as under macOS.
 
 This document says how to run it, then what each test checks. The detail, command by command, is in the script, which is authoritative.
 
-The [README](README.md) explains the installation and everyday use, [EXAMPLES.md](EXAMPLES.md) the commands and their outputs, [TECHNICAL.md](TECHNICAL.md) how the script works.
+The [README](../README.md) explains the installation and everyday use, [EXAMPLES.md](../EXAMPLES.md) the commands and their outputs, [TECHNICAL.md](TECHNICAL.md) how the script works.
 
 ## Contents
 
@@ -26,51 +26,62 @@ The [README](README.md) explains the installation and everyday use, [EXAMPLES.md
 From the repository, after the installation described in the README:
 
 ```bash
-./test-app.sh
+./tests/test-app.sh
 ```
 
 ```bash
-./test-app.sh --network
+./tests/test-app.sh --network
 ```
 
 ```bash
-./test-app.sh --network <identifier or address of a Lichess game>
+./tests/test-app.sh --network <identifier or address of a Lichess game>
 ```
 
-| Command | What it runs | Duration |
-|---|---|---|
-| `./test-app.sh` | the offline tests, without a token | about 5 minutes in the container of the table below, three fifths of its run with `--network` |
-| `./test-app.sh --network` | the same, then those that need the network and your Lichess token, except T24 | from 7 minutes on an Apple M1 to 25 on a Raspberry Pi 4: see the table below |
-| `./test-app.sh --network GAME` | likewise, with T24: the download of the game you name | a few more seconds |
+The script finds the repository from its own path: it runs as well from `tests/`, as `./test-app.sh`, and from anywhere else.
+
+| Command | What it runs |
+|---|---|
+| `./tests/test-app.sh` | the offline tests, without a token |
+| `./tests/test-app.sh --network` | the same, then those that need the network and your Lichess token, except T24 |
+| `./tests/test-app.sh --network GAME` | likewise, with T24: the download of the game you name |
 
 **The game of T24 is yours to choose.** The repository names no real game: T24 downloads the one you give after `--network`, by its identifier or by its address. Any Lichess game will do, yours or another one. Without it, T24 is counted as skipped, and the script reminds you of the command to run when it starts. The identifier given is not written in the report.
 
 The script ends with a summary:
 
 ```text
-Passed: 767, failed: 0, skipped: 0
-Report: /path/of/the/repository/test-report-Linux-20261125-154836.txt
+Passed: 768, failed: 0, skipped: 0
+Report: /path/of/the/repository/tests/test-report-Linux-20261125-154836.txt
 ```
 
 The report repeats the environment (system, Python, python-chess, Stockfish), the result of each check and the extracts useful for a diagnosis. You can send it as it is.
 
 The number of checks depends on the version and on the mode chosen. Under macOS, a check of T44 is always skipped: it creates a file whose name is not UTF-8, which its file system refuses.
 
-**Machines tested.** For version 5.0.0, the whole suite, `--network` included, was run on these machines on 27 November 2026, without a failure:
+**Machines tested.** For version 5.0.1, the whole suite, `--network` included, was run on these machines on 27 November 2026, without a failure:
 
-| System | Processor | Python | python-chess | Stockfish | Passed | Skipped | Duration |
-|---|---|---|---|---|---|---|---|
-| Debian 13 (trixie) | x86_64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 | 15 min |
-| Debian 13 (trixie), on a Raspberry Pi 4 Model B | aarch64 | 3.13.5 | 1.11.2 | 17.1 | 855 | 0 | 25 min |
-| macOS 27.3, with Homebrew | arm64, Apple M1 | 3.15.2 | 1.11.2 | 19 | 853 | 1 (T44) | 7 min |
-| Ubuntu 24.04.5 LTS, in a container | x86_64 | 3.13.18 | 1.11.2 | 16 | 855 | 0 | 8 min |
+| System | Processor | Python | python-chess | Stockfish | Passed | Skipped |
+|---|---|---|---|---|---|---|
+| Debian 13 (trixie) | x86_64 | 3.13.5 | 1.11.2 | 17.1 | 856 | 0 |
+| Debian 13 (trixie), on a Raspberry Pi 4 Model B | aarch64 | 3.13.5 | 1.11.2 | 17.1 | 856 | 0 |
+| macOS 27.3, with Homebrew | arm64, Apple M1 | 3.15.2 | 1.11.2 | 19 | 854 | 1 (T44) |
+| Ubuntu 24.04.5 LTS, in a container | x86_64 | 3.13.18 | 1.11.2 | 16 | 856 | 0 |
 
-The duration is that of the whole run with `--network`, from the start written in the report to the time of the file. The shell was dash under Linux, the `/bin/sh` of the system under macOS. In the container, the offline tests also passed under posh.
+The shell was dash under Linux, the `/bin/sh` of the system under macOS. In the container, the offline tests also passed under posh.
+
+**Last runs.** The last runs of the suite that passed, in the container of the table above, under dash, on the code, the prompt templates and the test files of this commit:
+
+| Run | Passed on (UTC) | Passed | Failed | Skipped |
+|---|---|---|---|---|
+| offline | 27 November 2026, 20:50 | 768 | 0 | 0 |
+| `--network`, with T24 | 27 November 2026, 20:57 | 856 | 0 | 0 |
+
+The time is that of the end of the run, the time of the file of the report. This table follows each change of the code, of the templates or of the tests: a change of the documentation alone does not run the suite again. The table of the machines follows each version.
 
 ## 2. What the tests do not touch
 
 - **Your settings and your catalog**: the tests name their own, in a temporary directory deleted at the end.
-- **The repository**: nothing is written in it, except the report. Not even the `__pycache__` of Python: the tests run with `PYTHONDONTWRITEBYTECODE=1`.
+- **The repository**: nothing is written in it, except the report, in `tests/`. Not even the `__pycache__` of Python: the tests run with `PYTHONDONTWRITEBYTECODE=1`.
 - **Your token**: it is neither displayed, nor copied, nor passed in a command line. The script checks, on the contrary, that it appears neither in the archives it checks nor in the report, looking for it as `ianalyze.py` reads it: a byte order mark, a carriage return or the UTF-16 of the file do not hide it.
 
 With `--network`, count about 70 requests to the Lichess explorer, spaced 2 seconds apart, 10 files of the catalog and, if you give a game, 2 exports of that game. PyPI is also asked once, for python-chess, to rebuild a virtual environment (T84).
@@ -94,10 +105,10 @@ The tests that do not deal with the engine set it to the shortest, `--depth 1`.
 | `TOKEN` | token file | `~/.lichess_token` |
 | `KEEP` | `1` keeps the temporary directory | deleted |
 
-A relative path given to `VENV`, `STOCKFISH` or `TOKEN` is taken from the repository: the tests run in a directory of their own.
+A relative path given to `VENV`, `STOCKFISH` or `TOKEN` is taken from the directory you start the suite from, as for any command: the tests run in a directory of their own.
 
 ```bash
-KEEP=1 ./test-app.sh
+KEEP=1 ./tests/test-app.sh
 ```
 
 ## 5. Offline tests
@@ -156,7 +167,7 @@ The runs on a pseudo-terminal go through a driver that stops them after 300 seco
 | T67 | Script without template | the script copied alone makes its collection without a prompt, and says so |
 | T68 | Rating | the rating in Elo points is checked and repeated in the prompt |
 | T69 | Purge of the settings | file deleted, missing file accepted, directory and foreign file refused, damaged or empty settings file deleted all the same |
-| T70 | Test game | `test.pgn` is read whole: comments, variations, en passant capture, promotion, castling, null move; W/D/L on each evaluated line, adding up to 100; a variation that starts with a Black move written `1... e5` |
+| T70 | Test game | `tests/test.pgn` is read whole: comments, variations, en passant capture, promotion, castling, null move; W/D/L on each evaluated line, adding up to 100; a variation that starts with a Black move written `1... e5` |
 | T71 | Removed options | `--sans-stockfish`, `--avec-stockfish` and `--consignes` are unknown |
 | T72 | Contrary result | a game marked won in a lost position is reported in the summary and in the prompt |
 | T73 | Checker | a compliant PGN passes, a faulty PGN sees each defect reported, missing PGN, unreadable archive |
@@ -169,7 +180,7 @@ The runs on a pseudo-terminal go through a driver that stops them after 300 seco
 | T80 | Long name | a long PGN name, in multibyte characters, gives a bounded and valid label |
 | T81 | Combined cases | the purge is used alone, an empty path given to `--prompt` is refused, a badly written token is refused without being displayed, each case named by its kind and not by its content |
 | T82 | Checker, continued | quoted mates, a `#7` without a sign only a warning, a FEN with its en passant square from the game, control characters of the PGN shown as `?`, an accent under an ASCII output, agreed scope, skipped checks of the short mode, parent folder with one or several collections; a third decimal at zero; words outside the braces, a move written with a `P` and castling with zeros, the latter not in short mode; a blank line in a comment, which python-chess reads on; a second game in the file; a line of 90 characters, a semicolon, tags out of order, a wrong PlyCount and a variation of seven plies; an illegal move of the main line; a FEN foreign to the game; a PGN or `--summary` file missing; the notes that the original game carried, set aside before the checks, kept with a comment, one of them cut after a hyphen, or alone; a game in loose notation copied as it is, accepted in short mode only; a line that starts with a bracket among the moves, alone or after a blank line; a second game counted as one failure |
-| T83 | Example games | the files of `example-games` stay what `EXAMPLES.md` says of them: eight games accepted, among them the exports of four sites and of a program, seven refused with their cause, three annotated PGNs checked, the single variation of the first two counted in the singular and the five flaws of the third named, then the conversation, with its PGN or without any, and the PGN of the short prompt on the folder kept; no address or identifier of a real game |
+| T83 | Example games | the files of `example-games`, `tests/refused` and `tests/llm` stay what `EXAMPLES.md` says of them: nine games accepted, among them the exports of four sites and of a program, seven refused with their cause, three annotated PGNs checked, the single variation of the first two counted in the singular and the five flaws of the third named, then the conversation, with its PGN or without any, and the PGN of the short prompt on the folder kept; no address or identifier of a real game |
 | T84 | Incomplete virtual environment | an environment without pip is recognized, a directory without `pyvenv.cfg` never is; with `--network`, `--install-venv` rebuilds the former and installs python-chess in it |
 | T85 | `--venv` that is not a virtual environment | a non-empty directory without `pyvenv.cfg`, with or without an interpreter, is refused by `--install-venv` before any pip, and nothing is added to it, its interpreter, a dummy, never running; a regular file is refused with its own message and left intact; a missing or empty directory is not refused |
 | T86 | `--no-settings` | the settings file is neither read nor written, as the log and `collection.json` say: side deduced from `--usernames` or unknown, rating taken from the Elo tag of that side, file untouched; on a terminal, no settings question, the side is asked, no file created; refused with `--settings` and with `--purge-settings`; a username is found as the whole name or as words, never as a substring |
@@ -220,7 +231,7 @@ The figures of the explorer change every month: these tests check forms and orde
 
 ## 7. The test game
 
-`test.pgn` gathers in a single legal game what has already tripped up a PGN reader:
+`tests/test.pgn` gathers in a single legal game what has already tripped up a PGN reader:
 
 - accented tags
 - comment before the first move, end-of-line comment introduced by a semicolon
@@ -231,7 +242,7 @@ The figures of the explorer change every month: these tests check forms and orde
 The game has no chess interest. It also serves for a full trial, by hand:
 
 ```bash
-./ianalyze.py test.pgn --no-questions
+./ianalyze.py tests/test.pgn --no-questions
 ```
 
 ## 8. The only test to run by hand

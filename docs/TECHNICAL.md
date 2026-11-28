@@ -2,9 +2,9 @@
 
 Version française : [TECHNICAL.fr.md](TECHNICAL.fr.md)
 
-The [README](README.md) is enough to install IAnalyze and analyze a game. [EXAMPLES.md](EXAMPLES.md) gives every command, every option and what they display.
+The [README](../README.md) is enough to install IAnalyze and analyze a game. [EXAMPLES.md](../EXAMPLES.md) gives every command, every option and what they display.
 
-This document goes further. It is meant for whoever wants to understand what the script does, call it from another program, read the files it produces, or write their own prompt template. The tests have their own document, [TESTS.md](TESTS.md).
+This document goes further. It is meant for whoever wants to understand what the script does, call it from another program, read the files it produces, write their own prompt template, or take over the project: section 15 is the guide for that. The tests have their own document, [TESTS.md](TESTS.md), and so do the trials of the LLMs, [TRIALS.md](TRIALS.md).
 
 ## Contents
 
@@ -21,6 +21,8 @@ This document goes further. It is meant for whoever wants to understand what the
 - [11. Encodings and characters](#11-encodings-and-characters)
 - [12. Prompt template](#12-prompt-template)
 - [13. The checker in detail](#13-the-checker-in-detail)
+- [14. Sources and links](#14-sources-and-links)
+- [15. Taking over the project](#15-taking-over-the-project)
 
 ## 1. What the script does, step by step
 
@@ -56,13 +58,34 @@ After step 8, a failure leaves the working folder in place, as it is, for diagno
 | `ianalyze.py` | the collection, in a single file. It only needs python-chess and Stockfish |
 | `verify-analysis.py` | the check of the PGN returned by an LLM (section 13) |
 | `prompt-template.txt`, `prompt-only-template.txt` | the two prompt templates (section 12) |
-| `test-app.sh` | the test suite, for Linux and macOS, described in [TESTS.md](TESTS.md) |
-| `test.pgn` | a test game that gathers the tricky cases of a PGN, described in [TESTS.md](TESTS.md) |
-| `example-games/` | the files quoted in [EXAMPLES.md](EXAMPLES.md): games, refused PGNs, annotated PGNs |
-| `README.md`, `README.fr.md`, `EXAMPLES.md`, `EXAMPLES.fr.md`, `TECHNICAL.md`, `TECHNICAL.fr.md`, `TESTS.md`, `TESTS.fr.md`, `CHANGELOG.md` | the documentation, each document with its French version, and the history of the versions |
+| `tests/test-app.sh` | the test suite, for Linux and macOS, described in [TESTS.md](TESTS.md) |
+| `tests/test.pgn` | a test game that gathers the tricky cases of a PGN, described in [TESTS.md](TESTS.md) |
+| `tests/refused/`, `tests/llm/` | the PGNs that the script refuses and the annotated PGNs written for [EXAMPLES.md](../EXAMPLES.md), which the tests also read |
+| `example-games/` | the games quoted in [EXAMPLES.md](../EXAMPLES.md), ready to be analyzed |
+| `README.md`, `EXAMPLES.md`, and in `docs/`: `TECHNICAL.md`, `TESTS.md`, `TRIALS.md` | the documentation, each document with its French version, under the same name ending in `.fr.md` |
+| `CHANGELOG.md` | the history of the versions, in English only |
 | `LICENSE` | the license, CC0 |
 
 HTTP goes through urllib and the archive through zipfile, both from the standard library of Python.
+
+### Where the script keeps what it creates
+
+The same on both platforms, except for the engine.
+
+Everything the script creates for itself stays in the folder of the application: deleting this folder leaves nothing behind, except your token.\
+The `local/` folder only keeps what the script can rebuild by itself, the virtual environment and the catalog: emptying it brings the application back to a fresh state without touching your settings. `local/` and the settings files are ignored by git.
+
+| | Location |
+|---|---|
+| `--venv` | `local/venv`, in the folder of the application |
+| `--catalog` | `local/`, in the folder of the application |
+| settings | `settings.ini`, at the root of the folder of the application, like any other settings file named by `--settings` |
+| token | `~/.lichess_token` |
+| `--stockfish`, Debian | the binary found in the PATH, otherwise `/usr/games/stockfish` |
+| `--stockfish`, macOS | the binary found in the PATH, otherwise `/opt/homebrew/bin/stockfish` |
+
+Up to version 4.0.2, the virtual environment and the catalog were kept in `~/.local/share/IAnalyze`, the settings in `~/.config/IAnalyze`.\
+The script no longer reads them there: run `--install-venv` and `--install-catalog` again, then delete these two directories. Your settings are asked again on the first run in a terminal.
 
 ## 3. Command line
 
@@ -176,6 +199,13 @@ An illegal move stops the script too. python-chess, at that point, would stop re
 Enter keeps the suggested value. Ctrl-D ends the questions: the remaining ones take their default value.
 
 The settings questions are the exception: interrupted by Ctrl-D, they save nothing and will come back at the next run.
+
+### Limits of an answer
+
+An answer is 255 characters at most.\
+A player name or a username can contain neither a quote, nor a backslash, nor a square bracket, nor a brace: it goes into a tag of the PGN, which these signs would make unreadable.
+
+A refused answer is asked again.
 
 ### What becomes of the answers
 
@@ -490,9 +520,23 @@ For a null move, `played` carries `not_evaluated`, and `cp_loss` as well as `cat
 
 ## 10. Files produced
 
+### Content of the archive, at a glance
+
+| File | Content |
+|---|---|
+| `summary.md` | the summary, which the analyst reads first |
+| `game.pgn` | the PGN, headers filled in if need be |
+| `game-original.pgn` | the PGN given, if headers were missing |
+| `context.md` | the answers to the startup questions |
+| `explorer/NNN-<uci>.json` | one raw answer per ply queried |
+| `stockfish/evaluations.json` | the complete evaluations of the engine, whole variations |
+| `collection.json` | exact parameters of the collection, without the token. `pgn_encoding` and `pgn_remarks` say how the PGN was decoded, `prompt_written` names the prompt |
+
+The prompt, `analysis-<label>-<YYYYMMDD-HHMMSS>.prompt.txt`, is written next to the archive, not inside it.
+
 ### Working folder and archive
 
-The working folder is named `analysis-<label>-<YYYYMMDD-HHMMSS>`. The label is the name of the PGN without its extension, sanitized (section 11), or the Lichess identifier. A folder or an archive of the same name adds a suffix, -2, -3 and so on.
+The working folder is named `analysis-<label>-<YYYYMMDD-HHMMSS>`. The label is the name of the PGN without its extension, sanitized (section 11), or the Lichess identifier: a sanitized label is announced in the log by "Folder name sanitized: ...". A folder or an archive of the same name adds a suffix, -2, -3 and so on.
 
 An archive present under its final name is always complete and checked: it is written under the temporary name `.<folder>.partial.zip`, then renamed.
 
@@ -616,6 +660,8 @@ Startup questions: an answer typed in another encoding than the one of the termi
 
 The prompt of each game is drawn from a template: `prompt-template.txt`, or `prompt-only-template.txt` with `--prompt-only`. You can edit them, or designate your own with `--prompt`.
 
+The prompt always describes the summary that this version of the script has just written: the two cannot diverge.
+
 Two kinds of markers are interpreted:
 
 | Marker | Effect |
@@ -703,7 +749,7 @@ The notation of the PGN returned is the standard one: K, Q, R, B, N, no letter f
 
 With `--stockfish-moves`, the weak moves are counted over the plies evaluated only: under `PARTIAL_COVERAGE`, both prompts bound the count, or the absence of a weak move, to these first plies, and ask that an error found beyond them be given as an estimate of the LLM, without a figure. Without this bound, a player with no weak move in the window evaluated was said to have made no error in the whole game.
 
-The reason comes from the trials of 21 November 2026 (README, section 7): the player had made only two errors, and three answers out of five presented a third one to reach the count asked for. A trial of the full prompt, on 25 November 2026, showed the other way out: asked for "the three costliest errors" without being told whose, the LLM gave those of the opponent, and left out one of the two weak moves of the player.
+The reason comes from the trials of 21 November 2026 ([TRIALS.md](TRIALS.md#21-november-2026-with---prompt-seul-now---prompt-only)): the player had made only two errors, and three answers out of five presented a third one to reach the count asked for. A trial of the full prompt, on 25 November 2026, showed the other way out: asked for "the three costliest errors" without being told whose, the LLM gave those of the opponent, and left out one of the two weak moves of the player.
 
 An unknown or badly written marker, such as `{{ RATING }}`, an "if" never closed, a badly formed directive or a template without a single line of text stop the script before the collection:
 
@@ -721,7 +767,25 @@ A template written before version 5.0.0, with the directives `si`, `sinon` and `
 
 ## 13. The checker in detail
 
-The README says how to run the script and what it checks. This section gives its exact rules.
+The README says how to run the script. This section gives what it checks and its exact rules.
+
+### What is checked, at a glance
+
+| Check | Flaws found |
+|---|---|
+| Reading | file outside UTF-8, illegal move in the game or in a variation, blank line in the body of the game, second game in the file |
+| Main line | different from the original game |
+| Format | line of more than 79 characters, opening or closing brace in a comment, word outside the braces, move written with a `P`, castling written with zeros, `%`, em dash, suffix notation, tags missing or out of order, end marker |
+| Commented moves | mistake or blunder of Stockfish left without a comment within the agreed scope, position NAG contrary to the evaluation of the engine; for information, the quality NAGs of another opinion than the engine. The notes that the original game already carried, which both prompts ask to keep, are set aside first: only the text of the LLM is judged |
+| Evaluations | figure or mate quoted that exists nowhere in the data of the engine; a `#7` without a sign, which may be a rank, is only a warning |
+| Variations | variation written inside a comment, hence not playable, illegal or too long variation |
+| Conversation | FEN invalid or foreign to the game, em dash |
+
+### Three flaws seen in real PGNs
+
+- **The blank line in the body of the game.** python-chess sees the end of the game there and does not read what follows. The script finds it wherever it is, even if it only hides a variation or the end marker, then goes on with its checks on the file once the line is removed. Inside a comment, python-chess reads on up to the closing brace: the report says so, and still counts the line as a fault, the prompt forbidding it and another reader stopping there.
+- **The words outside the braces.** python-chess skips them without a word: free text written between two moves is lost, and a move written `Pg2xf3`, or a castling written `0-0`, is read all the same, which hides the flaw. The script names each of these words, line by line.
+- **The variation written between braces.** It is only text, SCID does not replay it. The script replays it itself to say whether it is legal and whether it comes from a line of the engine.
 
 ### What it reads
 
@@ -758,7 +822,7 @@ Exit code: 0 without `FAIL`, 1 with at least one `FAIL`, 2 if no check could tak
 - **Tags**: the seven mandatory ones at the top and in order, their values taken from the original game. The others in alphabetical order, Annotator filled in and PlyCount exact, otherwise `WARNING`.
 - **Notes of the original game**: both prompts ask to keep them ahead of the comment of the LLM. The script takes them out of each comment first, before move 1 and after each move of the main line, whatever the line breaks, one after a hyphen included, the commands of a site left out and a `%` written "percent" or not. What remains is the text of the LLM, the only one judged: a figure quoted in a note is not an evaluation made up, and a move that only carries its original note is not commented on. The report counts the notes kept.
 - **Commented moves**: each mistake and each blunder of Stockfish must be. One of them commented on without a NAG counts as `WARNING`, outside `--prompt-only`. The total number of commented moves is given for information, the prompt aiming at 15 to 25.
-- **Scope**: the prompt limits the comments to the agreed scope. A mistake played beyond it is not expected. The scope is the first number of your answer to the startup question, read in the instructions of `summary.md`: "the first 20 moves" counts as 20 moves. An answer without a number, or left at its default, counts as the whole game. `--scope N` gives it by hand, when it was agreed in the conversation.
+- **Scope**: the prompt limits the comments to the agreed scope. A mistake played beyond it is not expected. The scope is the first number of your answer to the startup question, read in the instructions of `summary.md`: "the first 20 moves" counts as 20 moves, but "moves 15 to 30" counts as the first 15 moves: give `--scope` when it does not fit. An answer without a number, or left at its default, counts as the whole game. `--scope N` gives it by hand, when it was agreed in the conversation.
 - **Position NAGs**: `$14`, `$16`, `$18` and `$20` give White better, `$15`, `$17`, `$19` and `$21` Black. Such a NAG is contrary to the engine when the engine gives the other side better by at least half a pawn, or a mate. `$10`, an equal position, is not compared: put on a won position, it goes through.
 - **Quality NAGs**: `$6` for an inaccuracy, `$2` for a mistake, `$4` for a blunder. Another opinion than the one of the engine is given for information, with the move and its loss: another of these three NAGs, `$1` or `$3` on a mistake or a blunder, or `$6`, `$2` or `$4` on a move that the engine does not classify, its loss staying under 50 cp.
 - **Variations**: 5 plies at most, otherwise `WARNING`. A variation is said to be backed by the engine when its first two moves are those of a line that the engine gives for this ply.
@@ -781,3 +845,154 @@ The short prompt asks for less than the full prompt. The checks that it does not
 The tags are checked differently. The full prompt wants the seven mandatory tags of the PGN standard, in their order. The short prompt only asks to copy those of the game: among the seven, only those that the original game carries are expected, in the order in which it writes them.
 
 The words outside the braces are checked differently too. The short prompt asks to copy the moves without changing a single one: a word that the original game itself writes outside standard notation, `e2-e4` or `bxa8Q`, which `ianalyze.py` reads, is accepted as it is.
+
+### What it does not judge
+
+It does not judge the quality of the commentary. A wrong but well-formed explanation goes through: an LLM can put a queen on the wrong square in a sentence without any check seeing it.\
+This reading stays yours, and [TRIALS.md](TRIALS.md) shows how often it is needed.
+
+Two limits come on top of those given with each rule above, the rounded evaluations, the computed differences, the position NAGs compared and the scope read:
+
+- A number written without a sign, "7.77", is not taken for an evaluation: the script would confuse it with a duration or a rating. An invented figure written this way thus goes through
+- The script finds a figure that exists nowhere, not a real figure given to the wrong move
+
+## 14. Sources and links
+
+What the script queries:
+
+- Personal access token: <https://lichess.org/account/oauth/token>, once logged in to Lichess
+- Explorer, database of all players: `https://explorer.lichess.org/lichess`
+- Explorer, masters database: `https://explorer.lichess.org/masters`
+- Catalog of openings: [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings), files `a.tsv` to `e.tsv`. They are the ones that the server of the explorer loads too.
+
+What it relies on:
+
+- [python-chess](https://python-chess.readthedocs.io/en/latest/), the library that reads the PGN and drives the engine
+- [Stockfish](https://stockfishchess.org/), the engine, and [its UCI options](https://official-stockfish.github.io/docs/stockfish-wiki/UCI-Protocol-and-Stockfish-Commands.html), among them Threads, Hash and MultiPV
+- [PGN specification](https://www.saremba.de/chessgml/standards/pgn/pgn-complete.htm), Steven J. Edwards, 1994
+
+Where the time controls come from:
+
+- Categories of real time: [Speed.scala](https://raw.githubusercontent.com/lichess-org/scalachess/master/core/src/main/scala/Speed.scala), in [scalachess](https://github.com/lichess-org/scalachess), the rules library of Lichess
+- Correspondence, ICCF: [ICCF Rules, in force since 1 January 2026](https://webfiles.iccf.com/rules/2026/2026%20ICCF%20Rules%2C%20260311.pdf), section 2.4 (PDF)
+- Correspondence, clock: [rules of chess-mail.com](https://www.chess-mail.com/index.php?page=reg)
+
+Conventions of the repository:
+
+- [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) for `CHANGELOG.md`
+- [Semantic Versioning](https://semver.org/) for the version numbers
+
+## 15. Taking over the project
+
+This section is for whoever takes the code over: how it is laid out, how to change it without breaking it, and how a version is published.
+
+### Layout of `ianalyze.py`
+
+The script is a single file, run as a whole by `main()`, in this order:
+
+1. The options, read by `analyser_arguments()`, which builds the command line with argparse, in groups, then checks their consistency.
+2. The actions that stop there: `--install-venv`, by `installer_venv()`, and `--purge-settings`.
+3. The restart in the virtual environment, when python-chess cannot be imported: `relancer_dans_venv()` runs the script again with the Python of the environment, and a marker in the environment prevents a loop. `--install-catalog`, by `installer_catalogue()`, comes after it: it needs python-chess.
+4. The settings: `lire_reglages()`, or `reglages_vides()` with `--no-settings`.
+5. The prompt template, checked before anything is collected: `chemin_modele()`, then `verifier_modele()`.
+6. The game: `lire_fichier_texte()` and `decoder_octets()` for a local file, `extraire_id()` and `telecharger_pgn()` for Lichess, then `charger_partie()`, which first runs the lexical check of `controler_lexique()`.
+7. The token and the catalog, without `--no-explorer`: `lire_jeton()`, `lire_catalogue()`.
+8. The engine, checked before the questions: `verifier_moteur()`, `verifier_options_moteur()`.
+9. The startup questions: `completer_reglages()`, `completer_entetes()`, `recueillir_contexte()`. Every answer goes through `demander()`.
+10. The working folder, then the explorer, `collecter_explorateur()` with the class `Explorateur`, and the engine, `collecter_stockfish()`.
+11. The files: `collection.json`, `summary.md` by `ecrire_synthese()`, the archive by `archiver()`, then the prompt, drawn by `rendre_modele()`.
+
+The path that `annoncer_archive()` writes alone on standard output is that of the archive, or of the prompt with `--prompt-only`.\
+Every text file is written by `ecrire_texte()`, under a temporary name, `.<name>.partial`, then renamed: no file is ever left half written (section 10).
+
+### The tables to know
+
+| Name | Role |
+|---|---|
+| `VERSION` | the version of the script, the only place to change: the User-Agent `UA` derives from it |
+| `CLEFS_COLLECTE` | for each option, its key in `collection.json`: the dest of argparse stay French in the code, the archive is in English |
+| `PROMPT_CONDITIONS`, `PROMPT_VALEURS` | the conditions and the values that a template may use (section 12), computed in `main()` |
+| `REGLAGES_CLEFS` | the keys of `settings.ini`, with their comments |
+| `SEUIL_IMPRECISION`, `SEUIL_ERREUR`, `SEUIL_GAFFE` | the losses, in centipawns, from which a move is an inaccuracy, a mistake or a blunder: 50, 100 and 300 |
+| `EXEMPLES` | the examples at the end of `--help` |
+
+### Adding an option
+
+1. Declare it in its group of `analyser_arguments()`, with its check after the reading of the command line if it needs one.
+2. Give it its key in `CLEFS_COLLECTE`: the name of the option without its two leading dashes, its hyphens becoming underscores, `no_questions` for `--no-questions`. T87 fails as long as an option has no key, or a key no option.
+3. If it has a default in the settings, as `--usernames`: `REGLAGES_CLEFS` and `completer_reglages()`.
+4. If the prompt uses it: a condition or a value, added to `PROMPT_CONDITIONS` or to `PROMPT_VALEURS` and computed in `main()`.
+5. A test in `tests/test-app.sh`, and the documentation in both languages: [EXAMPLES.md](../EXAMPLES.md) with its real output, the README if the everyday use changes, this document, and the line of the test in [TESTS.md](TESTS.md). The CHANGELOG under Unreleased.
+
+### The checker
+
+`verify-analysis.py` reads the archive with `lire_archive()`, then makes its checks in the order of its report:
+
+| Section of the report | Function |
+|---|---|
+| 1. Reading the PGN | `controler_lecture()` |
+| 2. Main line | `controler_partie()`, then `retirer_notes()`, which sets aside the notes of the original game |
+| 3. Format | `controler_format()` |
+| 4. Commented moves | `controler_couverture()` |
+| 5. Evaluations quoted in the PGN | `controler_chiffres()` |
+| 6. Variations | `controler_variantes()` |
+| 7. Conversation: positions quoted, language | `controler_synthese()`, with `--summary` |
+| 8. Evaluations quoted in the conversation | `controler_chiffres()` again |
+
+Sections 4 and 6 only run on a main line identical to the original game. `afficher()` writes the report and its totals.\
+The short mode, `--prompt-only`, skips what the short prompt does not ask for (section 13).
+
+### The test suite
+
+`tests/test-app.sh` is a POSIX shell script: it runs under dash, bash and posh. Its helpers:
+
+| Helper | Role |
+|---|---|
+| `titre` | opens a test: "Tnn: what it checks" |
+| `lancer` | runs the script with the settings file of the tests: standard output in `sortie`, the log in `journal`, the exit code in `RC`, the archive in `ARCH` |
+| `piloter` | runs it on a pseudo-terminal, the answers given in a single argument, separated by vertical bars |
+| `verifier`, `egal` | a check: a command that must succeed, or an expected value |
+| `sauter` | a check that cannot run here |
+| `joindre` | attaches an extract of a file to the report |
+
+Checks are counted, not tests. A test is a `titre`, a run, then its checks, each one labelled with the number of its test; [TESTS.md](TESTS.md) gives it its line.
+
+Two traps were met for real:
+
+- One suite at a time on a machine: M2 counts the engine processes of the whole machine, and sees those of another suite.
+- The pseudo-terminal driver answers after a second of silence: on a slow machine, a Raspberry Pi, the answer can come before the question. A question ends without a line break: a check counts its occurrences, never its lines.
+
+### Conventions
+
+- The names of functions, variables and constants are in French; the comments, the docstrings, the messages and the documentation in English.
+- No em dash, no guillemets, no emoji in the scripts.
+- The README, `EXAMPLES.md` and each document of `docs/` have a French version, `.fr.md`, on the same plan, kept up to date in the same change. The CHANGELOG is in English only.
+- Every change of behavior comes with a test and with its documentation, in both languages.
+- No code is removed to "optimize": a removal that is needed is said in the commit.
+
+### Checks before a commit
+
+On the scripts: `python3 -m py_compile`, `flake8`, `ruff check`, `mypy`, `bandit`, `codespell` and `vulture`. `mypy` must see python-chess, which lives in the virtual environment: `mypy --python-executable local/venv/bin/python3 ianalyze.py verify-analysis.py`. Without this option, it reports the imports of python-chess as missing. On the suite: `shellcheck`, `checkbashisms`, and `sh -n`, `dash -n`, `bash -n`, `posh -n`. Then, when the code, the prompt templates or the tests change, the suite itself, offline under `sh` and under `posh`, and with `--network`: the date and the time of the last runs that passed go into [TESTS.md](TESTS.md#1-running-the-tests), section 1. A change of the documentation alone does not need it.
+
+Some remarks are known and accepted:
+
+- `ruff`, version 0.16 without a configuration file: UP031, the formatting with `%` being the style of the house, three DTZ005, `datetime.now()` without time zone, for a local time wanted, and one S110, the `try`/`except`/`pass` that `bandit` reports too
+- `bandit`: eleven remarks, on the launch of processes, by `subprocess` and `os.execv`, on `urllib` and on this `try`/`except`/`pass`
+- `flake8`: one line of 81 characters, the signature of `ecrire_synthese()`
+- `vulture`: `redirect_request`, a method of urllib redefined
+- `codespell`: the French identifiers
+- `mdl`: MD013, the documents writing one sentence per line
+
+### Branches and versions
+
+- Work goes on the branch `dev`; `main` only receives the published versions.
+- `dev` also carries `CLAUDE.md`, the working notes of the assistant used to develop the project, which `main` does not publish: each merge removes it with `git rm -f CLAUDE.md`. That is why `main` is not an ancestor of `dev`, and why each merge stops on a modify/delete conflict on this file, settled by the same command.
+- The versions follow [Semantic Versioning](https://semver.org/), the CHANGELOG [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): between two merges, everything goes under Unreleased.
+
+A version is published in this order:
+
+1. On `dev`, a commit "Version X.Y.Z": `VERSION`, the title of the version in the CHANGELOG and its link references.
+2. The suite with `--network` run again on each test machine, and the table of the machines of [TESTS.md](TESTS.md#1-running-the-tests), section 1, updated in both languages.
+3. On `main`, the merge of `dev`, titled "IAnalyze X.Y.Z".
+4. An annotated and signed tag, `vX.Y.Z`, made with `git tag -s`.
+5. A GitHub release of the same name.

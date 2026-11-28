@@ -662,7 +662,7 @@ RE_ID_SOURCE = re.compile(r"[A-Za-z0-9]{8}(?:[A-Za-z0-9]{4})?")
 
 #: Version of the script, following semantic versioning. It is repeated
 #: in the user agent header: this is the only place to change.
-VERSION = "5.0.0"
+VERSION = "5.0.1"
 
 #: Address of the project repository, quoted at the top of the analysis
 #: prompt so that the analyst, or anyone the prompt is passed on to,

@@ -1,4 +1,4 @@
-# Output of the script and of the tests run from the repository.
+# Output of the script, and the reports of the tests, written in tests/.
 test-report-*.txt
 analysis-*
 __pycache__/

@@ -11,7 +11,7 @@
 #! note The markers are the same as in prompt-template.txt: a value between
 #! note double braces is replaced, a line starting with "#!" is a
 #! note directive ("if CONDITION", "if not CONDITION", "else", "end",
-#! note "note"). Their list is in TECHNICAL.md.
+#! note "note"). Their list is in docs/TECHNICAL.md.
 #! note
 #! note Keep it short: that is its reason for being.
 #! note ===============================================================

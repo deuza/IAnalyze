@@ -4,7 +4,7 @@ Version française : [EXAMPLES.fr.md](EXAMPLES.fr.md)
 
 This page is the quick reference of IAnalyze, built like a manual page: every command, every option, and what the terminal shows.
 
-The [README](README.md) explains the installation and everyday use. [TECHNICAL.md](TECHNICAL.md) explains how it works.
+The [README](README.md) explains the installation and everyday use. [docs/TECHNICAL.md](docs/TECHNICAL.md) explains how it works.
 
 ## Contents
 
@@ -83,9 +83,9 @@ So that they can be replayed without a Lichess token and without typing anything
 
 ### The games of the examples
 
-All the files quoted on this page are in the `example-games` directory of the repository.
+The files quoted on this page are in three directories of the repository: `example-games` holds the games, `tests/refused` the PGNs that the script refuses, and `tests/llm` the answers of LLMs written for the examples.
 
-To replay an example as it is, go to this directory and call the scripts one level up: `../ianalyze.py` instead of `./ianalyze.py`, and `../verify-analysis.py` instead of `./verify-analysis.py`.
+To replay an example as it is, go to the directory of its file and call the scripts from there: `../ianalyze.py` instead of `./ianalyze.py` from `example-games`, `../../ianalyze.py` from `tests/refused`. The checker reads an archive made in `example-games` and a PGN of `tests/llm`: run `../verify-analysis.py` from `example-games`, with `../tests/llm/` before the name of the PGN and of the conversation of `--summary`.
 
 ```bash
 cd example-games
@@ -99,13 +99,13 @@ cd example-games
 |---|---|
 | `my-game.pgn` | an Italian game of nine plies, the one of almost every example |
 | `polish-opening.pgn` | an opening that leaves theory early, for the options of the explorer |
-| `game-lichess-org.pgn` | a real game of 20 moves, anonymized, as Lichess exports it: the one of the trials of 21 November 2026 (README, section 7) |
+| `game-lichess-org.pgn` | a real game of 20 moves, anonymized, as Lichess exports it: the one of the trials of 21 November 2026 ([docs/TRIALS.md](docs/TRIALS.md#21-november-2026-with---prompt-seul-now---prompt-only)) |
 | `commented-game.pgn` | another real game from Lichess, 25 moves, anonymized, exported with the analysis of the site: comments, variations and clocks |
-| `player-notes.pgn` | the same game, without the analysis of the site, its clocks kept, with three notes of the player: the one of the trials of 27 November 2026 (README, section 7) |
+| `player-notes.pgn` | the same game, without the analysis of the site, its clocks kept, with three notes of the player: the one of the trials of 27 November 2026 ([docs/TRIALS.md](docs/TRIALS.md#27-november-2026-the-two-routes-with-the-prompts-as-released)) |
 | `game-chess-com.pgn`, `game-chess-mail.pgn`, `game-ajedrezmail.pgn`, `game-lucas-chess.pgn` | four real games, anonymized, as these sites and this program export them |
-| `french-notation.pgn`, `two-games.pgn`, `position.pgn`, `unclosed-brace.pgn`, `tag-with-moves.pgn`, `bracket-among-moves.pgn`, `null-move-in-check.pgn` | seven files that the script refuses, for the error messages |
-| `llm-annotated.pgn`, `llm-faulty.pgn`, `llm-faulty-words.pgn`, `llm-short.pgn` | four annotated PGNs written for the examples, in place of those an LLM would return |
-| `llm-conversation.txt` | the text of a conversation, for the `--summary` option of the checker |
+| `tests/refused/`: `french-notation.pgn`, `two-games.pgn`, `position.pgn`, `unclosed-brace.pgn`, `tag-with-moves.pgn`, `bracket-among-moves.pgn`, `null-move-in-check.pgn` | seven files that the script refuses, for the error messages |
+| `tests/llm/`: `llm-annotated.pgn`, `llm-faulty.pgn`, `llm-faulty-words.pgn`, `llm-short.pgn` | four annotated PGNs written for the examples, in place of those an LLM would return |
+| `tests/llm/llm-conversation.txt` | the text of a conversation, for the `--summary` option of the checker |
 
 Your own games can be kept wherever you like: the script takes the path of the PGN you give it, and writes the archive in the current directory, or in the one of `--output-dir`.
 
@@ -131,7 +131,7 @@ Your own games can be kept wherever you like: the script takes the path of the P
 
 ## EXAMPLES
 
-These examples assume that IAnalyze is installed (README, section 2). The two installation commands are described further down, at [`--install-venv`](#--install-venv) and at [`--install-catalog`](#--install-catalog).
+These examples assume that IAnalyze is installed (README, section 1). The two installation commands are described further down, at [`--install-venv`](#--install-venv) and at [`--install-catalog`](#--install-catalog).
 
 ### First collection
 
@@ -228,7 +228,7 @@ The archive carries the identifier of the game: `analysis-<identifier>-<YYYYMMDD
 ### With the explorer
 
 Without `--no-explorer`, the script also queries the Lichess explorer.\
-It needs the token and the catalog of the openings (README, section 2).
+It needs the token and the catalog of the openings (README, section 1).
 
 ```bash
 ./ianalyze.py my-game.pgn --no-questions --database masters
@@ -960,7 +960,7 @@ evaluations.json
 
 Writes a short prompt, to be pasted alone into the conversation, without an attachment: a few instructions, the game, then the evaluations of Stockfish.
 
-It is the road to take with a free account, or with an LLM that does not open zip files or does not run code (README, section 7).\
+It is the road to take with a free account, or with an LLM that does not open zip files or does not run code (README, section 4).\
 The annotated PGN is requested in a code block.
 
 No archive is written: the prompt is the only file produced, and its path is what is written on standard output.\
@@ -1051,7 +1051,7 @@ analysis-my-game-20261125-153457.zip
 ```
 
 The file must exist.\
-To write a template, start from a copy of `prompt-template.txt`: what it may contain is described in [TECHNICAL.md](TECHNICAL.md), section 12.
+To write a template, start from a copy of `prompt-template.txt`: what it may contain is described in [docs/TECHNICAL.md](docs/TECHNICAL.md), section 12.
 
 With `--prompt-only`, the default template is `prompt-only-template.txt`, and it is the one to start from.
 
@@ -1375,7 +1375,7 @@ The log names the number of threads, not the size of the table:
 ...
 ```
 
-These three settings, MultiPV, Threads and Hash for Stockfish, are explained in [TECHNICAL.md](TECHNICAL.md), section 9.
+These three settings, MultiPV, Threads and Hash for Stockfish, are explained in [docs/TECHNICAL.md](docs/TECHNICAL.md), section 9.
 
 #### `--stockfish PATH`
 
@@ -1791,7 +1791,7 @@ Stockfish not found: /nowhere. Install it (apt install stockfish, in /usr/games)
 
 ### Token missing
 
-Without `--no-explorer`, the script needs the Lichess token (README, section 2).
+Without `--no-explorer`, the script needs the Lichess token (README, section 1).
 
 ```bash
 ./ianalyze.py my-game.pgn --no-questions
@@ -1932,7 +1932,7 @@ What it writes, in the current directory or in the one of `--output-dir`:
 | `analysis-<label>-<YYYYMMDD-HHMMSS>.prompt.txt` | the prompt, to be pasted into the conversation |
 | `analysis-<label>-<YYYYMMDD-HHMMSS>/` | the working folder, kept only with `--keep-folder` or after a failure |
 
-The content of the archive is described in the README, section 5.
+The content of the archive is described in [docs/TECHNICAL.md](docs/TECHNICAL.md), section 10.
 
 The settings file, as the script writes it after the first collection:
 
@@ -1967,7 +1967,8 @@ rating = 1300
 ## SEE ALSO
 
 - [README.md](README.md): the installation, everyday use, the choice of the LLM
-- [TECHNICAL.md](TECHNICAL.md): how the script works, the format of the files
-- [TESTS.md](TESTS.md): the test suite, test by test
+- [docs/TECHNICAL.md](docs/TECHNICAL.md): how the script works, the format of the files, the guide to take over the project
+- [docs/TESTS.md](docs/TESTS.md): the test suite, test by test
+- [docs/TRIALS.md](docs/TRIALS.md): the trials of the LLMs
 - [CHANGELOG.md](CHANGELOG.md): the history of the versions
 - `./ianalyze.py --help`: the summary of the options, in the terminal
